@@ -124,6 +124,21 @@ owner decisions raised:
 adversarial challenges and their outcomes:
 ```
 
+## Where the report may be written
+
+If this sprint's report is committed, it goes under `docs/research/` and nowhere
+else. Every sourced value carries its citation, and the document carries the
+status line `NON-AUTHORITATIVE — UNDER REVIEW` at the top.
+
+Nothing in `docs/research/` may be referenced by a runtime, a controller, a test
+expectation, a recommendation or a calculator constant, and nothing in it is
+authority. A value here becomes behaviour only when a governed canon reissue
+adopts it — a new freeze identifier superseding the old, which is an owner act.
+
+Do not copy a sourced value out of `docs/research/` into `CLAUDE.md`,
+`DECISIONS.md`, an owner-decision entry, a run record or an agent definition.
+Quarantine by location is what keeps evidence from silently becoming authority.
+
 **Preserve uncertainty.** The single most valuable output of a research sprint is
 an accurate account of what is still not known. Do not round an open question up
 to an answer because the report would look better finished, and do not offer a

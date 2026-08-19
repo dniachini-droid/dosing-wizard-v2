@@ -113,6 +113,13 @@ confidently wrong.
 - Report flakiness as a defect, with the evidence. A non-deterministic test
   erodes trust in every other test.
 
+## Severity
+
+Use exactly: `BLOCKER`, `CANON_DEFECT`, `CORRECTNESS_GAP`, `EXPECTED_DEBT`,
+`OPTIONAL`. `docs/process/AGENT-ROSTER.md` owns the definitions; read them there.
+`EXPECTED_DEBT` must cite the roadmap entry or recorded decision that defers it —
+without a citation it is not expected debt.
+
 ## Output
 
 ```

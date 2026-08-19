@@ -142,6 +142,16 @@ redone once the decision lands. Work that merely looks separable is not.
 ## Prohibited at all times
 
 - Merging any pull request, or enabling auto-merge.
+- **Approving a pull request, or submitting any review that could satisfy a
+  required-review check.** Claude never approves its own work or anyone else's.
+- **Resolving or unresolving a review thread**, which can make outstanding
+  feedback appear addressed.
+- **Retargeting a pull request's base or head**, or otherwise changing what a
+  review is a review *of*.
+- **Triggering a GitHub Actions workflow run**, which can reach automation that
+  merges.
+- **Editing anything under `.github/`** — workflows, actions and repository
+  automation are a merge path.
 - Pushing to `main`.
 - Force-pushing, or rewriting history on a branch someone else may hold.
 - Modifying anything under `docs/canon/`.
@@ -151,23 +161,78 @@ redone once the decision lands. Work that merely looks separable is not.
 - Filling a gap in canon, a decision or the evidence with an invented value.
 - Treating V1 behaviour, V1 tests, V1 goldens or V1 approvals as authority.
 
-**What is actually enforced, and what is not.** `.claude/settings.json` denies
-merging (`gh pr merge` and both GitHub merge tools), pushes to `main`,
-force-pushes, and edits under `docs/canon/`. An `Edit(path)` deny covers every
-file-editing tool, so `Write` and `NotebookEdit` are covered by the same rule.
+**What is actually enforced, and what is not.**
 
-It does **not** cover: writes to any path via `Bash` redirection or in-place
-stream editing; `git rebase`, `git commit --amend` or `git reset --hard`; or a
-plain `git push` issued while `main` is checked out, which is set to ask rather
-than deny. Those prohibitions rest on instruction and on the Stage 8 diff
-review, not on a permission check.
+Enforced by removing the capability — the strongest control here:
+every GitHub merge, auto-merge, review-approval, review-thread-resolution,
+pull-request-mutation and repository-file-write tool is denied **by name** in
+`.claude/settings.json`. A denied tool cannot be called, so autonomous merge and
+self-approval are not reachable through the GitHub tool surface at all.
 
-The deny rules are a backstop, not the reason — a rule that is only obeyed
-because it is enforced will be evaded by the first path the enforcement misses.
-Nobody currently owns re-checking this list against the prohibitions above; that
-is `integrator`'s job whenever either changes.
+Enforced for file-editing tools only:
+path denies under `docs/canon/`, `.github/` and the governance-definition list.
+An `Edit(path)` rule covers `Edit`, `Write` and `NotebookEdit`. It does **not**
+cover `Bash`.
+
+Not enforced, and it should not be described as though it were:
+writes to any path via shell redirection or in-place stream editing; `git
+rebase`, `git commit --amend`, `git reset --hard`; and the general problem that
+command-string patterns match spellings rather than intent. `main` is **not**
+branch-protected on GitHub (`OD-001`, still open), so no platform-level control
+stands behind any of this.
+
+Those rest on instruction, on the Stage 8 baseline diff, and on the canon digest
+check — not on a permission check. The deny rules are a backstop, not the reason:
+a rule obeyed only because it is enforced will be evaded by the first path the
+enforcement misses. `integrator` owns re-checking this list against the
+prohibitions above whenever either changes.
 
 ---
+
+## Two categories of file, and why the distinction matters
+
+An approval prompt is not an unattended control. Unattended, a prompt has nobody
+to answer it, so it fails closed — which is the right outcome for something a
+run must not do, and exactly the wrong outcome for something a run **must** do.
+Putting both kinds of file behind the same prompt breaks the audit trail while
+pretending to protect the governance.
+
+So the two are separated:
+
+### A. Run output — a run is expected to write these
+
+- `docs/process/runs/**` — the run record. **Mandatory.** A run that cannot write
+  its record has no audit trail, which is worse than the risk the file poses.
+- `docs/process/OPEN-OWNER-DECISIONS.md` — the owner-decision register.
+  Qualitative entries only; never a chemistry value (see below).
+- Whatever the task's own declared scope names.
+
+These carry no approval prompt and no deny rule. They are the run's product.
+
+### B. Governance definition — a run must not write these
+
+- `CLAUDE.md`
+- `.claude/settings.json`
+- `.claude/agents/**`
+- `.claude/skills/**`
+- `.github/**` — workflow and CI definitions, which can create a merge path
+- `docs/process/AGENT-ROSTER.md`
+- `docs/process/OVERNIGHT-AUTONOMY.md` — this document
+- `PRODUCT-VISION.md`, `ROADMAP.md`, `DECISIONS.md`
+
+These define what unattended work is permitted to do. A process that can rewrite
+its own limits has no limits. Changing any of them is an attended, owner-directed
+change, never a stage inside a run — and Stage 8 fails the run if one appears in
+the scope list.
+
+`PROJECT-STATE.md` sits between the two: it must be updatable when the active
+phase, next major step or blockers genuinely change, but not silently. It is
+gated by prompt rather than denied, so an unattended run cannot alter it and an
+attended session can.
+
+**The owner-decision register is not a chemistry route.** It records questions
+qualitatively. Sourced numbers belong under `docs/research/`, marked
+non-authoritative, and reach behaviour only through a governed canon reissue.
 
 ## Audit trail
 

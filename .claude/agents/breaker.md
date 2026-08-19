@@ -117,5 +117,6 @@ findings, ranked:
     observed:
     expected, per: (canon rule ID / decision / requirement, quoted)
     consequence:
-not attacked, and why: (be honest; an unattacked surface is a gap in this review)
+not examined, and why: (every surface you did not attack; an unattacked surface
+  is a gap in this review, and an unstated gap reads as coverage)
 ```

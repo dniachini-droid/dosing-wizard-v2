@@ -38,20 +38,43 @@ freeze identifier, not to reconcile a contradiction. This is stated in every
 relevant agent definition, and `.claude/settings.json` denies edits under
 `docs/canon/`.
 
-**What the deny rules are, and are not.** They match command and path patterns.
-For file editing that is a real control: an `Edit(path)` rule covers every
-file-editing tool. For shell commands it is a backstop and nothing stronger —
-there are more ways to spell "push to main" than a pattern list can enumerate,
-and this list has been found incomplete twice, most recently by this workforce's
-own `breaker` in its first run, which reproduced three working bypasses. Those
-are now denied and the fix was verified by re-running each probe.
+**What the deny rules are, and are not.**
 
-The only control here that does not depend on Claude behaving correctly is
-**GitHub branch protection on `main`**, which is an owner action and is not
-configured. It is filed as `OD-001` in
-`docs/process/OPEN-OWNER-DECISIONS.md`. Until it exists, "Claude never merges"
-rests on instruction plus a pattern list, and this document should not be read
-as claiming otherwise.
+Two different things are in that file and they have different strengths.
+
+**Tool-name denies are real.** A rule naming an MCP tool removes that tool. The
+merge, approval, review-state and repository-write tools are denied by name, and
+a denied tool is not available to be called. This is the strongest control the
+repository has.
+
+**Path denies bind file-editing tools only.** An `Edit(path)` rule covers `Edit`,
+`Write` and `NotebookEdit` for that path. It does **not** cover `Bash`. Any actor
+with a shell can write to a denied path by redirection, so path denies protect
+against subagents — none of which holds a file-editing tool, and only two of
+which hold `Bash` — and do **not** protect against the main session, which has
+both.
+
+**Command-string denies are a backstop and nothing stronger.** They match how a
+command is *spelled*. There are more ways to spell "push to `main`" than a
+pattern list can enumerate, and this list has been found incomplete twice: once
+for rules that were inert because only `Edit(path)` covers file-writing tools,
+and once when this workforce's own `breaker` reproduced three working bypasses in
+its first run. Each of those specific spellings is now denied and each was
+re-probed. **That does not mean the surface is closed, and this document does not
+claim it is.** A pattern list cannot be shown complete; it can only be shown
+incomplete, and it has been, twice.
+
+**No control here is unconditional.** `main` is **not** branch-protected on
+GitHub. Branch protection is the only mechanism in reach that does not depend on
+Claude behaving correctly, and it is an owner action nobody has taken. It is
+filed as `OD-001` and remains **open**. Until it exists, "Claude never merges"
+rests on denied tool names, an incomplete pattern list, and instruction — and
+the honest summary is that a determined or careless shell command could still
+reach `main`.
+
+What genuinely constrains the risk today: the merge and approval **tools** are
+gone by name; the branch a run pushes is not `main`; and Stage 8 reviews the
+whole run against its base commit before anything is pushed.
 
 ---
 
@@ -135,6 +158,17 @@ ambiguous; a change would set product policy; another agent returns
 `canon-conformance-auditor` owns *what the canon already says*.
 `domain-verifier` owns *what the science says*. If an existing authority settles
 it, it is not an owner decision and `advisor` says so and stops.
+
+The tie-break with `domain-verifier` runs one way and is stated in both
+definitions: `domain-verifier` owns whether a claim is *true*; `advisor` owns
+whether a choice is *the owner's*, including choices phrased in chemistry
+vocabulary. Neither routes a question back to the agent that routed it.
+
+**Routing is an instruction to the invoking session, not to an agent.** No agent
+can invoke another — none holds a subagent tool. Wherever a definition says
+"route to `advisor`", the session running the workflow must actually invoke
+`advisor`, and both `overnight-cycle` and `pr-gate` say so at the point it
+applies. An unexecuted route is a decision framed by whoever wanted it resolved.
 
 ---
 
@@ -388,18 +422,36 @@ known cost, and it has a known failure mode: at the next governed reissue every
 copy becomes wrong at once, including the copy inside the agent whose job is to
 catch stale-authority citations.
 
-**Canon is the only authority for which freeze is current.** When a new freeze is
-declared, these must be updated in the same change:
+**Canon is the only authority for which freeze is current.**
+
+As of this writing:
+
+| Identifier | Status |
+|---|---|
+| `SHARED_V2_FREEZE_2` | **CURRENT** — shared architecture |
+| `ALK_V2_FREEZE_4` | **CURRENT** — alkalinity behaviour |
+| `SHARED_V2_FREEZE_1` | **HISTORICAL** — superseded by `SHARED_V2_FREEZE_2` |
+| `ALK_V2_FREEZE_3` | **HISTORICAL** — superseded by `ALK_V2_FREEZE_4` |
+
+The two historical identifiers still appear, as "current", inside
+`docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md`. That document is
+preserved unedited and its freeze identifiers are stale; the discrepancy is
+recorded deliberately in `PROJECT-STATE.md` and is resolved by a governed handoff
+reissue, never by editing it here.
+
+When a new freeze is declared, every location below must be updated in the same
+change. Each carries **current** identifiers and so each goes stale together:
 
 - `CLAUDE.md` — Authority section
 - `PROJECT-STATE.md` — Frozen authority, and the known-discrepancy note
 - `.claude/agents/canon-conformance-auditor.md` — Authority section
-- `docs/process/AGENT-ROSTER.md` — this list, and the `canon-conformance-auditor`
+- `docs/process/AGENT-ROSTER.md` — this table, and the `canon-conformance-auditor`
   entry
 
-`docs/process/V1-AGENT-SALVAGE-AUDIT.md` is deliberately excluded: it is a dated
-record of what was true when the audit ran, and freezing its statements is
-correct.
+Two locations are deliberately **excluded** because they are dated historical
+records whose statements are correct as of their date and must not be updated:
+`docs/process/V1-AGENT-SALVAGE-AUDIT.md` and everything under
+`docs/process/runs/`.
 
 ## Severity vocabulary
 
@@ -417,6 +469,33 @@ reviewers can be compared without translation.
 Two dispositions `adjudicator` may additionally assign:
 `UNCONFIRMED` (reported, not supported by evidence it could verify) and
 `BLOCKED_BY_OWNER_DECISION` (genuine, unresolvable without the owner).
+
+**Every finding-producing reviewer uses this vocabulary and no other**, and every
+one ends its report with a `not examined, and why` section. `adjudicator` may not
+declare a review clean without it, and an unstated gap reads as coverage.
+
+`advisor` is the single documented exception: it produces classifications, not
+findings, and has its own closed vocabulary below. It has no severity field, by
+design.
+
+## Classification vocabulary — `advisor` only
+
+Closed, four values, and **every consumer handles all four**:
+
+| Classification | What it means | What the consumer does |
+|---|---|---|
+| `IMPLEMENTATION_DETAIL` | An existing authority settles it | Proceed; record the cited authority |
+| `OWNER_DECISION` | Changes behaviour, scope, policy, cost or user commitment, and nothing settles it | That part stops; file it in `docs/process/OPEN-OWNER-DECISIONS.md` |
+| `CANON_QUESTION` | Canon may answer it, or the question is what a rule means | Invoke the named agent and act on the answer; unanswered, it blocks that part |
+| `CANON_DEFECT` | Canon self-contradicts or is unimplementable as written | That part stops; the exit is a governed canon reissue, an owner act |
+
+**There is no `MIXED` value.** A question with more than one part is split by
+`advisor` and each part carries one of the four. A classification with no
+consumer would let a part proceed unnoticed, which is the failure this closed set
+exists to prevent.
+
+The two vocabularies do not overlap and are not interchangeable. `CANON_DEFECT`
+appears in both because it is the same finding reached two ways.
 
 ---
 

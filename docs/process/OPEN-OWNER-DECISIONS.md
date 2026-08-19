@@ -92,10 +92,17 @@ backs that with deny rules.
 
 An adversarial review of those deny rules found three working bypasses —
 a fully-qualified refspec (`HEAD:refs/heads/main`), a force refspec (`+HEAD:…`),
-and `gh api --method PUT …/merge`. All three are now denied, and the fix was
-verified. But that is the second time this deny list has been found incomplete,
-and the reason is structural: these rules match **command strings**, and there
-are more ways to spell "push to main" than a pattern list can enumerate.
+and `gh api --method PUT …/merge`. Each of those three spellings is now denied
+and each was re-probed. **That is not the same as the surface being closed**, and
+nothing in this repository should be read as claiming it is: a pattern list can
+be shown incomplete but never shown complete, and this one has been shown
+incomplete twice. The reason is structural — these rules match **command
+strings**, and there are more ways to spell "push to main" than can be
+enumerated.
+
+The GitHub merge, approval and repository-write **tools** are separately denied
+by name, which is a real control: a denied tool cannot be called. The shell
+remains the gap.
 
 `docs/process/V1-AGENT-SALVAGE-AUDIT.md` records that V1's setup guide called
 branch protection "the most important step in the whole guide", and dispositions

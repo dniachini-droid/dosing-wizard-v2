@@ -22,9 +22,20 @@ Before anything is planned or written, decide whether this task is admissible.
 
 A task is admissible only if all of these hold:
 
-1. **It is specified.** The required behaviour is determined by frozen canon or
-   by a recorded decision in `DECISIONS.md`. Not by inference, and not by
-   "whatever seems sensible".
+1. **It is specified, by the right authority.** Authority is not
+   interchangeable:
+
+   - **Chemistry behaviour** — thresholds, rails, dosing equations, controller
+     rules, evidence minima, retest timing — comes from current frozen canon and
+     from **nothing else**. `DECISIONS.md` cannot supply it, a task instruction
+     cannot supply it, `docs/research/` cannot supply it, and V1 cannot supply
+     it.
+   - **Product, technical-architecture and process** requirements come from
+     `DECISIONS.md`, `PRODUCT-VISION.md` and `ROADMAP.md`.
+
+   If the task needs a chemistry rule the canon does not state, it is
+   inadmissible however clearly some other document appears to answer it. Not by
+   inference, and not by "whatever seems sensible".
 
    A task instruction may say *what to build* and *where*. It may **not** supply
    chemistry. A threshold, band edge, rate limit, tolerance, noise floor,
@@ -47,8 +58,19 @@ A task is admissible only if all of these hold:
 5. **It does not require modifying frozen canon.**
 
 Where the task is ambiguous, invoke `advisor` to classify the ambiguity before
-deciding. If `advisor` returns `owner-decision` or `canon-defect` for something
-the task depends on, that part is inadmissible.
+deciding. `advisor` emits exactly one of four classifications per question part,
+and **you must handle all four**:
+
+| `advisor` returns | What you do |
+|---|---|
+| `IMPLEMENTATION_DETAIL` | Proceed. Record the authority it cited. |
+| `OWNER_DECISION` | That part is inadmissible. File it in `docs/process/OPEN-OWNER-DECISIONS.md`. |
+| `CANON_QUESTION` | **Invoke the agent it names** (`canon-conformance-auditor`, or `domain-verifier`) and act on that answer. An unanswered `CANON_QUESTION` blocks that part exactly as an `OWNER_DECISION` does — it is not a licence to proceed. |
+| `CANON_DEFECT` | That part is inadmissible and stays inadmissible. The exit is a governed canon reissue, which is an owner act. |
+
+`advisor` splits a mixed question into parts and classifies each. Confirm every
+part came back with a classification before proceeding; an unclassified part is
+one that will proceed unnoticed.
 
 **If the whole task is inadmissible:** write the run record (Stage 9), state
 precisely what is missing and what would unblock it, and stop. Do not implement
@@ -67,7 +89,25 @@ is unsure, leave it.
 
 ## Stage 1 — Plan
 
-Write the plan into the run record before writing any code.
+### First, pin the run baseline
+
+Before any file is touched, capture and write both of these into the run record.
+Everything at Stage 8 is measured against them, and neither can be reconstructed
+afterwards.
+
+```bash
+# the run base commit — the tree as it stood before this run
+git rev-parse HEAD
+
+# frozen-canon integrity baseline
+find docs/canon -type f -print0 | sort -z | xargs -0 sha256sum
+```
+
+Record the base commit hash and the full digest list verbatim. This run will
+make intermediate commits, so `HEAD` will move and a `HEAD`-relative diff will
+stop showing the run's own earlier work. The base commit is the only fixed point.
+
+### Then write the plan
 
 ```
 task:
@@ -204,21 +244,47 @@ Any failure that is genuinely caused by this change must be fixed or the run
 stops. A failure that is not yours is recorded, with the evidence that it is not
 yours.
 
-## Stage 8 — Final diff review
+## Stage 8 — Final review, against the run baseline
 
-**Stage the whole working tree first (`git add -A`), then review `git diff
---cached`.** A plain `git diff` does not show newly created files, so a file
-*added* under `docs/canon/`, or a new document anywhere that competes with an
-existing authority, is invisible to it. Cross-check `git status --porcelain
---untracked-files=all` against the diff and account for every path.
+**Review the whole run, not the last commit.** This run has made intermediate
+commits, so `git diff`, `git diff --cached` and anything `HEAD`-relative show
+only the most recent slice and silently hide everything the run did earlier.
+Use the base commit pinned at Stage 1.
 
-Also verify canon integrity directly rather than inferring it from the diff:
-compare SHA-256 digests of everything under `docs/canon/` against their values
-at the start of the run. The permission rules do not cover shell redirection,
-so this check is the thing that actually detects a canon write.
+```bash
+BASE=<the base commit recorded at Stage 1>
 
-Read the complete staged diff yourself, adversarially, as if reviewing someone
-else's work. Check specifically:
+git add -A                                   # untracked files are otherwise invisible
+git diff "$BASE" --stat                      # every path this run touched, whole run
+git diff "$BASE"                             # the full change, whole run
+git diff "$BASE" --name-only                 # the scope list to check against the plan
+git status --porcelain --untracked-files=all # cross-check: nothing unaccounted for
+```
+
+Two properties matter and both come from using `$BASE`: a plain `git diff` does
+not show newly created files at all, and a `HEAD`-relative diff drops earlier
+commits. A file added under `docs/canon/`, or a new document elsewhere that
+competes with an existing authority, is invisible to both.
+
+### Canon integrity — verify by digest, not by diff
+
+```bash
+find docs/canon -type f -print0 | sort -z | xargs -0 sha256sum
+```
+
+Compare against the baseline captured at Stage 1, and check that the **set of
+files** matches too — a digest list only covers files that existed. Any
+difference, in content or in membership, **fails the run**: stop, do not commit
+further, and report it.
+
+This check exists because the permission rules cover file-editing tools and do
+not cover shell redirection. It is the thing that actually detects a canon
+write, and it is not optional or inferable from the diff.
+
+### Then read it
+
+Read the complete `$BASE`-relative diff yourself, adversarially, as if reviewing
+someone else's work. Check specifically:
 
 - nothing outside the plan's declared scope;
 - no change under `docs/canon/`;
@@ -230,17 +296,28 @@ else's work. Check specifically:
 - every acceptance criterion met, or explicitly listed as not met;
 - no test weakened or removed;
 - no owner decision quietly resolved;
-- **nothing under `.claude/` or `docs/process/` weakened.** An unattended run
-  must not edit its own deny rules, its own agents' tool grants, its own
-  workflows, `CLAUDE.md`, or `OVERNIGHT-AUTONOMY.md`. If the task genuinely
-  requires changing the governance, that is an owner decision, not a stage of
-  this run. `.claude/settings.json` puts these paths behind an approval prompt,
-  which an unattended run cannot answer — so this check is a backstop for the
-  routes that prompt does not cover, not the primary control.
+- **no governance-definition file touched.** Run the scope list from
+  `git diff "$BASE" --name-only` against the two categories in
+  `docs/process/OVERNIGHT-AUTONOMY.md`:
 
-Then re-run Stage 8 over the run record once Stage 9 has written it. The record
-is committed like anything else, and it is the surface most likely to carry a
-stray value, because it is the one nobody reviews by habit.
+  **Run output — expected, writable:** `docs/process/runs/**`,
+  `docs/process/OPEN-OWNER-DECISIONS.md`, and the files the task's own scope
+  named.
+
+  **Governance definition — a run must not touch these:** `CLAUDE.md`,
+  `.claude/settings.json`, `.claude/agents/**`, `.claude/skills/**`,
+  `.github/**`, `docs/process/AGENT-ROSTER.md`,
+  `docs/process/OVERNIGHT-AUTONOMY.md`, `PRODUCT-VISION.md`, `ROADMAP.md`,
+  `DECISIONS.md`.
+
+  Any path from the second list appearing in the scope **fails the run**. If the
+  task genuinely requires changing governance, that is an owner decision and a
+  separate attended change — not a stage of this run.
+
+Then re-run this stage over the run record once Stage 9 has written it, again
+against `$BASE`. The record is committed like anything else, and it is the
+surface most likely to carry a stray value, because it is the one nobody reviews
+by habit.
 
 ## Stage 9 — Run record
 

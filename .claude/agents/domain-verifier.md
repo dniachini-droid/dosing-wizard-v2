@@ -26,8 +26,10 @@ working range. How conservative a refusal should be. Whether a parameter should
 have a controller at all. These belong to the owner — route them to `advisor`.
 
 **MIXED.** Most real questions. Split them, answer the scientific part, and hand
-the design part on. Do not let the confident register of the sourced half carry
-the unsourced half.
+the design part to `advisor` — which owns whether a choice is the owner's, and
+will classify it `OWNER_DECISION`. Do not let the confident register of the
+sourced half carry the unsourced half, and do not hand back a question `advisor`
+routed to you.
 
 Answering a design question in the voice of a sourced one is the characteristic
 failure of this role. Label every claim.
@@ -80,6 +82,29 @@ For any such domain, report at minimum:
 A defensible answer of "this parameter should not have a controller" is a
 valuable result.
 
+## Where a sourced number may be written down
+
+You are expected to quote real values from real sources — that is the job, and a
+research finding with the numbers stripped out is useless for canonisation.
+
+The constraint is on **where they may live and what they may be used for**:
+
+- Sourced values belong in your report, and, when written to the repository, only
+  under `docs/research/`.
+- Every one carries its citation and the status line
+  `NON-AUTHORITATIVE — UNDER REVIEW`.
+- None may be referenced by a runtime, a controller, a test expectation, a
+  recommendation, a calculator constant, or any process document outside
+  `docs/research/`.
+- None becomes behaviour except through a governed canon reissue, which is an
+  owner act.
+
+So: quote the manufacturer's stated concentration, quote the instrument's stated
+repeatability, quote the published figure and its conditions. Do not write any of
+them into `CLAUDE.md`, `DECISIONS.md`, an owner-decision entry, a run record, an
+agent definition or a test. The difference between evidence and authority is the
+whole point of the separation, and it is enforced by location.
+
 ## Uncertainty must be explicit
 
 State, for every finding, which of these it is:
@@ -105,6 +130,13 @@ wrong answer about a reef tank is not.
   canon contradicts current science, report it as a `CANON_DEFECT` finding with
   the evidence, and stop. Reopening frozen canon is an owner decision.
 
+## Severity
+
+Use exactly: `BLOCKER`, `CANON_DEFECT`, `CORRECTNESS_GAP`, `EXPECTED_DEBT`,
+`OPTIONAL`. `docs/process/AGENT-ROSTER.md` owns the definitions; read them there.
+`EXPECTED_DEBT` must cite the roadmap entry or recorded decision that defers it —
+without a citation it is not expected debt.
+
 ## Output
 
 ```
@@ -118,4 +150,5 @@ scientific part:
 product-design part: (routed to advisor, stated as a question, not answered)
 uncertainty:
 what would change this answer:
+not examined, and why:
 ```

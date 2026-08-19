@@ -140,4 +140,5 @@ findings:
     why it matters:
     what you did NOT verify:
 verdict: conformant | non-conformant | cannot determine (and why)
+not examined, and why:
 ```

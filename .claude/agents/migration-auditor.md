@@ -104,5 +104,6 @@ context completeness: (present | absent | partial, and how absence is represente
 analytical eligibility: (is it explicit? do engines consult it? do they refuse?)
 migration matrix: (version pair -> checks -> verdict)
 V1 containment: (paths by which V1 material could gain authority)
-findings: (id / severity / what / consequence / what you could not verify)
+findings: (id / severity / what / consequence)
+not examined, and why:
 ```

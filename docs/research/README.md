@@ -5,6 +5,30 @@ Future chemistry domains are researched here **before** they are canonised.
 Nothing in this folder is authoritative. A document here becomes binding only when its
 conclusions are carried into a frozen canon document under `docs/canon/`.
 
+## This is the only place a sourced chemistry value may be written
+
+Adopted chemistry — anything that governs behaviour — comes from `docs/canon/` and from
+nowhere else. But research toward a canon reissue has to be able to quote real numbers
+from real sources, because that is how canon gets written. This folder is where that is
+allowed, and the quarantine is by location.
+
+Every document here must:
+
+- carry the status line **`NON-AUTHORITATIVE — UNDER REVIEW`** at the top;
+- cite the source of every value: publication or manufacturer, document, version or
+  edition, and the date consulted;
+- state explicitly that nothing in it may be used by a runtime, controller, engine, test
+  expectation, recommendation or calculator constant.
+
+Nothing here is referenced from `CLAUDE.md`, `DECISIONS.md`, an owner-decision entry, a
+run record, an agent definition or a test. Copying a value out of this folder into any of
+those is how evidence silently becomes authority, and it is the failure this separation
+exists to prevent.
+
+A value in this folder becomes behaviour only through a **governed canon reissue**: a new
+freeze identifier superseding the old one, which is an owner act. Until that happens, a
+number here is evidence under review and nothing more — however well sourced it is.
+
 ## What research must be based on
 
 - current primary literature;
