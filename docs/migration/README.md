@@ -29,6 +29,14 @@ and the migration document is wrong.
 - `DATA-PROVENANCE.md` — provenance and analytical eligibility of the owner's historical
   records.
 
-The final reviewed V1 salvage report is to be supplied separately. Until it arrives, the
-salvage inventory, salvage disposition and unmigrated-canon records are deliberately
-absent rather than reconstructed from memory.
+## What exists now, and what does not
+
+The **agent and routine** portion of the salvage work is complete and lives in
+`docs/process/V1-AGENT-SALVAGE-AUDIT.md`. It inventories and dispositions all 28 V1 agent
+definitions and all 19 V1 routines against a first-hand read of the V1 repository, and it
+records where V1 chemistry sits without reproducing its values.
+
+Still absent, deliberately: the V1 **application-code** salvage inventory, the V1
+journeys and tests, and the unmigrated-V1-canon record. The final reviewed salvage report
+for those is to be supplied separately, and inventing substitutes would fabricate salvage
+findings. Phase 0 is therefore not complete.
