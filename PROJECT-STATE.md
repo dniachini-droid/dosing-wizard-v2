@@ -1,0 +1,130 @@
+# Dosing Wizard V2 — Project State
+
+This document records the *current* state of the project only.
+
+It is deliberately short. Long-lived product direction belongs in `PRODUCT-VISION.md`,
+sequencing belongs in `ROADMAP.md`, and irreversible choices belong in `DECISIONS.md`.
+
+**`PROJECT-STATE.md` must be updated whenever the active phase, the next major step,
+or the blockers materially change.** A stale project state is worse than no project
+state, because it invites work to begin from assumptions that are no longer true.
+
+---
+
+## Project
+
+Dosing Wizard V2
+
+---
+
+## Current phase
+
+Phase 0 — Preserve and found V2
+
+---
+
+## Current status
+
+- Fresh V2 repository created.
+- V1 is a separate read-only reference/salvage source.
+- `PRODUCT-VISION.md` exists.
+- `ROADMAP.md` exists.
+- Shared V2 architecture is frozen.
+- Alk V2 canon is frozen.
+- V1 salvage reconnaissance is complete.
+- No V2 application runtime exists.
+- No technical stack has been selected.
+
+---
+
+## Frozen authority
+
+The following are authoritative and must not be silently altered:
+
+- `SHARED_V2_FREEZE_2`
+- `ALK_V2_FREEZE_4`
+- `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` (copied into this repository from the
+  read-only V1 reference repository, byte-for-byte)
+
+Behavioural questions are answered by the canon document, not by this file, and not by
+recollection of how V1 behaved.
+
+---
+
+## First runtime intent
+
+When application code eventually begins, the intended first runtime scope is:
+
+- full V2 alkalinity domain;
+- calcium measurement-only;
+- magnesium measurement-only;
+- Ca/Mg controllers OFF until their independent canons exist;
+- during the Alk-only phase, the Mg safety interface remains `UNKNOWN` as specified by
+  the frozen canon.
+
+---
+
+## Product direction
+
+- deterministic chemistry engines;
+- whole-tank coordinator;
+- comprehensive reef calculator platform;
+- tank-management workflow;
+- first public target: paid installable PWA/web app;
+- offline-capable core operation;
+- future accounts/cloud sync;
+- optional AI / Ask My Tank layer;
+- possible native clients later.
+
+---
+
+## Next major step
+
+Complete the documentation-only founding package, then research and decide the technical
+architecture for a paid offline-capable PWA before scaffolding application code.
+
+---
+
+## Blockers
+
+None for founding the repository.
+
+If the frozen canon source files cannot be accessed from a cloud session, that must be
+recorded separately as an explicit blocker rather than worked around.
+
+Current access state: both frozen source documents were readable from the read-only V1
+repository and have been copied into `docs/canon/` with verified SHA-256 equality.
+
+---
+
+## Known documentation discrepancies
+
+Recorded rather than silently resolved. Neither the canon nor the handoff has been
+edited; both are byte-for-byte copies.
+
+1. **Handoff freeze identifiers are stale relative to canon.**
+   `docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md` states current freezes
+   `SHARED_V2_FREEZE_1` / `ALK_V2_FREEZE_3`. The canon document supersedes both:
+   it declares `SHARED_V2_FREEZE_1` historical ("Current authority is
+   `SHARED_V2_FREEZE_2`") and `ALK_V2_FREEZE_3` as "superseded by `ALK_V2_FREEZE_4`".
+   The canon is the sole behavioural authority, so the operative freezes are
+   `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_4`. The handoff's process guidance remains
+   usable; only its freeze identifiers are out of date. Resolution belongs to a governed
+   handoff reissue, not to an edit made here.
+
+2. **Phase 0 salvage documents are intentionally absent.**
+   `ROADMAP.md` Phase 0 lists a V1 salvage inventory, a V1 salvage disposition and an
+   unmigrated-V1-canon record. These have been deliberately left uncreated: the final
+   reviewed salvage report is to be supplied separately, and inventing substitutes would
+   fabricate salvage findings. Phase 0 is therefore not yet complete.
+
+---
+
+## Do not do yet
+
+- no V2 chemistry implementation;
+- no Ca/Mg/PO4/NO3 canon invention;
+- no stack selection by assumption;
+- no V1 runtime port;
+- no AI implementation;
+- no billing implementation.
