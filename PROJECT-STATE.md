@@ -32,6 +32,10 @@ Phase 0 — Preserve and found V2
 - Shared V2 architecture is frozen.
 - Alk V2 canon is frozen.
 - V1 salvage reconnaissance is complete.
+- The V1 agent/routine salvage audit is complete and recorded in
+  `docs/process/V1-AGENT-SALVAGE-AUDIT.md`.
+- A project agent roster and reusable review workflows exist under `.claude/`,
+  documented in `docs/process/`.
 - An implementation-specification package for the Alk V2 domain exists under
   `docs/implementation/alk-v2/`. It is specification only: no application runtime, no
   framework, no database, no dependencies.
@@ -133,11 +137,26 @@ edited; both are byte-for-byte copies.
    usable; only its freeze identifiers are out of date. Resolution belongs to a governed
    handoff reissue, not to an edit made here.
 
-2. **Phase 0 salvage documents are intentionally absent.**
+2. **Phase 0 salvage documents are only partly present.**
    `ROADMAP.md` Phase 0 lists a V1 salvage inventory, a V1 salvage disposition and an
-   unmigrated-V1-canon record. These have been deliberately left uncreated: the final
-   reviewed salvage report is to be supplied separately, and inventing substitutes would
-   fabricate salvage findings. Phase 0 is therefore not yet complete.
+   unmigrated-V1-canon record. The *agent and routine* portion of that work now exists
+   as `docs/process/V1-AGENT-SALVAGE-AUDIT.md`, which inventories and dispositions all
+   28 V1 agent definitions and all 19 V1 routines against a first-hand read of the V1
+   repository. It does **not** cover V1 application code, V1 journeys, V1 tests or the
+   unmigrated-V1-canon record; those remain deliberately uncreated, because the final
+   reviewed salvage report is to be supplied separately and inventing substitutes would
+   fabricate salvage findings. Phase 0 is therefore still not complete.
+
+---
+
+## Working practice
+
+Repository operating rules are in `CLAUDE.md`. The project agent roster, its authority
+boundaries and its permissions are documented in `docs/process/AGENT-ROSTER.md`. Rules
+for unattended work and the control model are in
+`docs/process/AUTONOMY-AND-CONTROLS.md`.
+
+Claude may open pull requests. Claude never merges.
 
 ---
 

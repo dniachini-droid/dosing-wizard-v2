@@ -18,9 +18,10 @@ context. It describes what V1 did and why. It does not describe what V2 must do.
 Treat these documents as evidence about the problem, not as specification.
 
 A V1 behaviour, threshold, classifier or data shape found here is a lead. Carrying it
-into V2 requires independent justification: for chemistry, from the frozen canon or from
-research under `docs/research/`; for architecture, from a decision recorded in
-`DECISIONS.md`.
+into V2 requires independent justification: **for chemistry, from the frozen canon and
+from nothing else** — research under `docs/research/` is evidence *toward* a governed
+canon reissue, never a justification for adopting a V1 value; for architecture, from a
+decision recorded in `DECISIONS.md`.
 
 V1's recorded outputs are not V2 expectations. The canon intentionally changes some V1
 behaviour and fixes some V1 bugs, so a V1/V2 difference is not by itself a V2 defect.
