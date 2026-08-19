@@ -1,0 +1,1901 @@
+{
+  "corpusId": "alk-v2-adversarial",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "note": "Adversarial and ordinary scenarios required by the preparation brief that the canon states qualitatively or not at all. Every expectation here is computed by applying frozen canonical formulas (Theil-Sen, ALK-SLOPE-UNCERTAINTY-001, ALK-SUPPORTED-SLOPE-001, ALK-STEP-CAP-001, ALK-046, ALK-ROUNDING-001, ALK-RESPONSE-CLASSIFIER-001) to the stated inputs. No expectation is derived from V1 runtime behaviour (DEC-013).",
+  "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
+  "fixtures": [
+    {
+      "fixtureId": "AD-TRD-001",
+      "title": "Clean flat alkalinity is the only path to STABLE",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-STABLE-001",
+          "ALK-MOVEMENT-001"
+        ],
+        "note": "Identical values make every pairwise slope exactly zero, so S_TS = 0 exactly."
+      },
+      "rulesExercised": [
+        "ALK-STABLE-001",
+        "ALK-SLOPE-UNCERTAINTY-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": 0.0,
+        "sigmaResidDkh": 0.0,
+        "sigmaPointDkh": 0.1,
+        "tBarDays": 3,
+        "sxxDay2": 20,
+        "sigmaSDkhPerDay": 0.02236067977
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": 0.0,
+        "trajectory": "STABLE",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE",
+        "maintenanceBalance": "MATCHED",
+        "consumptionDkhPerDay": 0.6237,
+        "note": "C = 0.0693 x 9.0 - 0 ; maintenanceEstimate = 9.0 mL/day"
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_STABLE",
+        "MAINTENANCE_HOLD_STABLE"
+      ]
+    },
+    {
+      "fixtureId": "AD-TRD-002",
+      "title": "Noisy apparent decline that uncertainty reduces to zero (even-count median)",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SUPPORTED-SLOPE-001",
+          "OI-MEDIAN-001"
+        ],
+        "note": "Six pairwise slopes; the even-count median convention is load-bearing here."
+      },
+      "rulesExercised": [
+        "ALK-SUPPORTED-SLOPE-001",
+        "ALK-SLOPE-UNCERTAINTY-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.6,
+          8.46,
+          8.54,
+          8.4
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "pairwiseSlopesSorted": [
+          -0.07,
+          -0.07,
+          -0.033333333333,
+          -0.015,
+          -0.015,
+          0.04
+        ],
+        "observedSlopeDkhPerDay": -0.024166666667,
+        "medianConvention": "mean of the two central order statistics",
+        "interceptDkh": 8.5725,
+        "residualsDkh": [
+          0.0275,
+          -0.064166666667,
+          0.064166666667,
+          -0.0275
+        ],
+        "madDkh": 0.045833333333,
+        "sigmaResidDkh": 0.0679525,
+        "sigmaPointDkh": 0.1,
+        "sxxDay2": 20,
+        "sigmaSDkhPerDay": 0.02236067977,
+        "supportSubtractionDkhPerDay": 0.02862167011
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": 0.0,
+        "trajectory": "FALLING",
+        "movementEvidence": "UNCERTAINTY_LIMITED"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_UNCERTAINTY_LIMITED",
+        "UNCERTAINTY_FLOOR_APPLIED"
+      ],
+      "forbidden": {
+        "observedSlopeDkhPerDay": -0.033333333333,
+        "note": "A low-median implementation returns -0.0333 and a different recommendation."
+      }
+    },
+    {
+      "fixtureId": "AD-TRD-003",
+      "title": "Noisy apparent rise that uncertainty reduces to zero",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SUPPORTED-SLOPE-001"
+        ],
+        "note": "Exact mirror of AD-TRD-002."
+      },
+      "rulesExercised": [
+        "ALK-SUPPORTED-SLOPE-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.4,
+          8.54,
+          8.46,
+          8.6
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": 0.024166666667,
+        "sigmaSDkhPerDay": 0.02236067977
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": 0.0,
+        "trajectory": "RISING",
+        "movementEvidence": "UNCERTAINTY_LIMITED"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_UNCERTAINTY_LIMITED"
+      ],
+      "forbidden": {
+        "note": "Upper and lower mirrors must be symmetric; any asymmetry without an explicit safety exception is a defect."
+      }
+    },
+    {
+      "fixtureId": "AD-TRD-004",
+      "title": "Single outlier is absorbed by Theil-Sen and invisible to MAD",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "Part II \u00a719.2",
+          "ALK-SLOPE-UNCERTAINTY-001"
+        ],
+        "note": "Documents OI-MADFLOOR-001."
+      },
+      "rulesExercised": [
+        "Part II \u00a719.2",
+        "ALK-SLOPE-UNCERTAINTY-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "alkDkh": [
+          8.6,
+          8.5,
+          7.9,
+          8.3,
+          8.2
+        ],
+        "note": "the t=4 point is 0.50 dKH below the true line"
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.05,
+        "interceptDkh": 8.6,
+        "residualsDkh": [
+          0,
+          0,
+          -0.5,
+          0,
+          0
+        ],
+        "madDkh": 0.0,
+        "sigmaResidDkh": 0.0,
+        "sigmaPointDkh": 0.1,
+        "sxxDay2": 40,
+        "sigmaSDkhPerDay": 0.0158113883
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.02976142297,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "note": "The slope is robust and correct. The uncertainty is NOT raised by the outlier, because the median absolute residual is zero."
+      },
+      "expectedReasonCodes": [
+        "UNCERTAINTY_FLOOR_APPLIED"
+      ],
+      "openIssues": [
+        "OI-MADFLOOR-001",
+        "OI-SUSPECT-001"
+      ],
+      "forbidden": {
+        "note": "Do not add a compensating uncertainty inflation term. The formula is frozen; the defence is the suspicious-reading layer, which alkalinity has not parameterised."
+      }
+    },
+    {
+      "fixtureId": "AD-TRD-005",
+      "title": "Multiple outliers raise sigma_resid above the floor and collapse the supported slope",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SLOPE-UNCERTAINTY-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SLOPE-UNCERTAINTY-001",
+        "ALK-SUPPORTED-SLOPE-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "alkDkh": [
+          8.6,
+          8.32,
+          8.62,
+          8.18,
+          8.4
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.03,
+        "interceptDkh": 8.6,
+        "residualsDkh": [
+          0,
+          -0.22,
+          0.14,
+          -0.24,
+          0.04
+        ],
+        "madDkh": 0.14,
+        "sigmaResidDkh": 0.207564,
+        "sigmaPointDkh": 0.207564,
+        "sxxDay2": 40,
+        "sigmaSDkhPerDay": 0.03281875001,
+        "supportSubtractionDkhPerDay": 0.04200800001
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": 0.0,
+        "trajectory": "FALLING",
+        "movementEvidence": "UNCERTAINTY_LIMITED"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "UNCERTAINTY_RESIDUAL_DOMINATES",
+        "TRAJECTORY_UNCERTAINTY_LIMITED"
+      ]
+    },
+    {
+      "fixtureId": "AD-TRD-006",
+      "title": "Irregular test intervals",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "Part II \u00a72.2",
+          "ALK-SLOPE-UNCERTAINTY-001"
+        ]
+      },
+      "rulesExercised": [
+        "A1",
+        "Part II \u00a719.2",
+        "ALK-SLOPE-UNCERTAINTY-001",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          1.5,
+          5.25,
+          9.0
+        ],
+        "alkDkh": [
+          8.6,
+          8.51,
+          8.285,
+          7.94
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.066666666667,
+        "interceptDkh": 8.605,
+        "madDkh": 0.0175,
+        "sigmaResidDkh": 0.0259455,
+        "sigmaPointDkh": 0.1,
+        "tBarDays": 3.9375,
+        "sxxDay2": 48.796875,
+        "sigmaSDkhPerDay": 0.01431541672
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.04834293326,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "continuousActionCandidateMlPerDay": 9.697589225,
+        "recommendedDoseMlPerDay": 9.7,
+        "deltaEffectDkhPerDay": 0.04851,
+        "predictedPostSlopeDkhPerDay": -0.018156666667
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_INCREASE_RECOMMENDED"
+      ],
+      "forbidden": {
+        "note": "Sxx must use exact elapsed days, not evenly spaced index positions."
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-001",
+      "title": "Same-day tests - independent-cluster selection is undefined",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-008"
+        ],
+        "note": "Constructed specifically to expose OI-INDEPENDENCE-001. The three defensible readings give three different sigma_S."
+      },
+      "rulesExercised": [
+        "ALK-008",
+        "ALK-MOVEMENT-001"
+      ],
+      "input": {
+        "clusterTimesDays": [
+          0.0,
+          0.5,
+          2.0,
+          4.0
+        ],
+        "alkDkh": [
+          8.6,
+          8.55,
+          8.3,
+          8.0
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "candidateReadings": [
+          {
+            "selection": "forward-greedy from earliest",
+            "kept": [
+              0.0,
+              2.0,
+              4.0
+            ],
+            "sxxDay2": 8,
+            "sigmaSDkhPerDay": 0.035355339059
+          },
+          {
+            "selection": "backward-greedy from latest",
+            "kept": [
+              0.5,
+              2.0,
+              4.0
+            ],
+            "sxxDay2": 6.1666666667,
+            "sigmaSDkhPerDay": 0.0402693633
+          },
+          {
+            "selection": "keep all",
+            "kept": [
+              0.0,
+              0.5,
+              2.0,
+              4.0
+            ],
+            "sxxDay2": 9.6875,
+            "sigmaSDkhPerDay": 0.0321287732
+          }
+        ]
+      },
+      "expectedAction": {
+        "movementEvidence": "INSUFFICIENT",
+        "automaticMaintenanceAction": "WITHHELD",
+        "positionSafetyRetestHistory": "unaffected"
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED"
+      ],
+      "openIssues": [
+        "OI-INDEPENDENCE-001"
+      ],
+      "forbidden": {
+        "note": "Do not pick a traversal direction because it is easier to implement."
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-002",
+      "title": "Insufficient elapsed time - three clusters over three days",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-MOVEMENT-001",
+          "ALK-MINIMUM-CADENCE-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-MOVEMENT-001",
+        "ALK-MINIMUM-CADENCE-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          1.5,
+          3.0
+        ],
+        "alkDkh": [
+          8.6,
+          8.45,
+          8.3
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "independentClusters": 3,
+        "spanDays": 3.0,
+        "allSpacingsAtLeast24h": true,
+        "observedSlopeDkhPerDay": -0.1,
+        "sigmaSDkhPerDay": 0.04714045208
+      },
+      "expectedAction": {
+        "movementEvidence": "INSUFFICIENT",
+        "reason": "span 3.0 d < 4 d",
+        "action": "TEST_AGAIN",
+        "automaticMaintenanceAction": "WITHHELD"
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_SPAN",
+        "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE"
+      ],
+      "forbidden": {
+        "note": "Three clusters alone do not satisfy ALK-MOVEMENT-001; the 4-day span is an independent requirement."
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-003",
+      "title": "Dose change mid-window forces segmentation, not one fitted line",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-007",
+          "Part II \u00a711.2"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-007",
+        "Part II \u00a713",
+        "ALK-MOVEMENT-001"
+      ],
+      "input": {
+        "readingDays": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "doseChange": {
+          "atDay": 4.02,
+          "from": 9.0,
+          "to": 10.5,
+          "effectiveAtConfidence": "EXACT"
+        }
+      },
+      "expectedAction": {
+        "currentControlSegment": {
+          "startsAt": "the dose change",
+          "clusters": [
+            "Day 6",
+            "Day 8"
+          ],
+          "spanDays": 2
+        },
+        "movementEvidence": "INSUFFICIENT",
+        "note": "The post-change regime has 2 clusters over 2 days; earliest ordinary sufficiency is Day +6 relative to the change."
+      },
+      "expectedReasonCodes": [
+        "SEGMENT_BOUNDARY_DOSE_CHANGE",
+        "EVIDENCE_INSUFFICIENT_POSTCHANGE_SPAN"
+      ],
+      "forbidden": {
+        "note": "One simple slope must not be fitted across both dose regimes and combined with only the newest dose."
+      },
+      "openIssues": [
+        "OI-DAY4-001",
+        "OI-ANCHOR-001"
+      ]
+    },
+    {
+      "fixtureId": "AD-SEG-004",
+      "title": "Historical internally inconsistent cluster blocks ordinary inference",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-005",
+          "Part II \u00a75.7",
+          "Part II \u00a724",
+          "Part II \u00a749"
+        ],
+        "note": "Documents OI-ANOMCLUSTER-001."
+      },
+      "rulesExercised": [
+        "ALK-005",
+        "Part II \u00a724"
+      ],
+      "input": {
+        "clusters": [
+          {
+            "atDay": 0,
+            "readings": [
+              8.6,
+              8.85
+            ],
+            "spreadDkh": 0.25
+          },
+          {
+            "atDay": 2,
+            "readings": [
+              8.4
+            ]
+          },
+          {
+            "atDay": 4,
+            "readings": [
+              8.2
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "day0ClusterStatus": "ANOMALOUS",
+        "limitDkh": 0.2
+      },
+      "expectedAction": {
+        "movementEvidence": "ANOMALOUS",
+        "ordinaryInference": "blocked",
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "CLUSTER_ANOMALOUS_SPREAD",
+        "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER"
+      ],
+      "openIssues": [
+        "OI-ANOMCLUSTER-001"
+      ],
+      "forbidden": {
+        "note": "Neither silently including the median 8.725 nor silently dropping the cluster; both change the recommendation."
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-001",
+      "title": "Date-only historical evidence is retained but excluded from trend",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "M-13",
+          "DATA-PROVENANCE.md \u00a72"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001"
+      ],
+      "input": {
+        "readings": [
+          {
+            "date": "2025-11-04",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.6
+          },
+          {
+            "date": "2025-11-06",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.4
+          },
+          {
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.3
+          }
+        ]
+      },
+      "expectedAction": {
+        "dateOnlyReadingsVisibleInHistory": true,
+        "dateOnlyReadingsInTrend": false,
+        "positionFrom": "the latest valid reading",
+        "exactElapsedTimeAnalysisAcrossDateOnlyPairs": "NOT_RUN",
+        "dateOnlyStaysDateOnly": true
+      },
+      "expectedReasonCodes": [
+        "TIME_PROVENANCE_DATE_ONLY",
+        "TIME_EXACT_ELAPSED_UNAVAILABLE"
+      ],
+      "forbidden": {
+        "cases": [
+          "defaulting an unknown time to midnight",
+          "defaulting to midday",
+          "inferring a time from testing routine",
+          "inferring a time from entry order",
+          "assigning a timezone that was not recorded"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-CON-001",
+      "title": "Missing dose context makes consumption ineligible, not approximate",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "DATA-PROVENANCE.md \u00a73",
+          "DEC-010",
+          "Part II \u00a770.1"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-CONSUMPTION-ESTIMATE-001",
+        "Part II \u00a770.1"
+      ],
+      "input": {
+        "readings": "genuine historical Alk series",
+        "maintenanceDoseHistoryForPeriod": "ABSENT",
+        "doseChangeRecordsForPeriod": "ABSENT"
+      },
+      "expectedAction": {
+        "position": "available",
+        "trend": "available if time precision permits",
+        "consumption": "NOT_RUN",
+        "potencyLearning": "NOT_RUN",
+        "doseResponseReconstruction": "NOT_RUN",
+        "historicalControllerReplay": "NOT_RUN"
+      },
+      "expectedReasonCodes": [
+        "CONSUMPTION_NOT_RUN_HISTORICAL_CONTEXT_MISSING",
+        "MIGRATION_HISTORICAL_ANALYSIS_INELIGIBLE"
+      ],
+      "forbidden": {
+        "cases": [
+          "inferring a past dose from observed chemistry movement",
+          "back-filling past dose settings from current settings",
+          "assuming a dose was unchanged because no change was recorded",
+          "manufacturing intervention or effective times"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-DEL-001",
+      "title": "Delivery failure inside the interval",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "Part II \u00a713",
+          "SHARED-DELIVERY-BASIS-001"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-DELIVERY-BASIS-001",
+        "Part II \u00a713"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "READING",
+            "atDay": 0
+          },
+          {
+            "kind": "DELIVERY_ANOMALY",
+            "anomalyType": "PUMP_FAILURE",
+            "fromDay": 1,
+            "toDay": 2,
+            "quantifiedEffect": null
+          },
+          {
+            "kind": "READING",
+            "atDay": 2
+          },
+          {
+            "kind": "READING",
+            "atDay": 4
+          }
+        ]
+      },
+      "expectedAction": {
+        "deliveryBasisForTheAffectedInterval": "COMMAND_ONLY_UNCONFIRMED",
+        "segmentBoundaryCreated": true,
+        "currentControlSegment": "starts after the anomaly",
+        "movementEvidence": "INSUFFICIENT"
+      },
+      "expectedReasonCodes": [
+        "DELIVERY_ANOMALY_RECORDED",
+        "SEGMENT_BOUNDARY_DELIVERY_ANOMALY",
+        "DELIVERY_COMMAND_ONLY_UNCONFIRMED"
+      ],
+      "forbidden": {
+        "note": "The programmed rate must not be treated as delivered across a known outage."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-001",
+      "title": "Supported slope non-zero but rounding returns HOLD",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-ROUNDING-001",
+          "AUDIT-011",
+          "ALK-MINIMUM-ACTION-001"
+        ],
+        "note": "Constructed as the exact complement of AD-MNT-003 across the 0.05 mL/day rounding boundary."
+      },
+      "rulesExercised": [
+        "ALK-ROUNDING-001",
+        "ALK-MINIMUM-ACTION-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14
+        ],
+        "alkDkh": [
+          8.6,
+          8.574,
+          8.548,
+          8.522,
+          8.496,
+          8.47,
+          8.444,
+          8.418
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "actuatorIncrementMlPerDay": 0.1
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.013,
+        "sigmaPointDkh": 0.1,
+        "sxxDay2": 168,
+        "sigmaSDkhPerDay": 0.0077151675
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.003124585602,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "continuousActionCandidateMlPerDay": 9.04508781532,
+        "roundedTo": 9.0,
+        "action": "HOLD_CURRENT_DOSE",
+        "reason": "ACTUATOR_RESOLUTION"
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_ACTUATOR_RESOLUTION"
+      ],
+      "forbidden": {
+        "note": "Do not force a one-increment change merely to avoid returning HOLD."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-002",
+      "title": "Ordinary 25% cap binds and lands on an exact rounding tie",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-STEP-CAP-001",
+          "ALK-ROUNDING-001",
+          "AUDIT-006"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-STEP-CAP-001",
+        "ALK-ROUNDING-001",
+        "ALK-PREDICTED-POST-SLOPE-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          8.6,
+          8.1,
+          7.6
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "actuatorIncrementMlPerDay": 0.1
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.25,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "rapidConfirmed": false,
+        "latestIndependentPairSlopeDkhPerDay": -0.25,
+        "rapidThresholdDkhPerDay": 0.3,
+        "positionDkh": 7.6,
+        "tOuterLowDays": 2.4,
+        "note": "|S| 0.25 < 0.30 so not rapid; and T_outerLow 2.4 d > 48 h, so neither 50%-cap limb is available"
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.204745166
+      },
+      "expectedAction": {
+        "rawSupportedDeltaDoseMlPerDay": 2.9544757,
+        "railAsDoseDeltaMlPerDay": 7.215007215,
+        "railBinds": false,
+        "ordinaryCapMlPerDay": 2.25,
+        "capApplied": "ORDINARY_25",
+        "continuousActionCandidateMlPerDay": 11.25,
+        "roundingTie": {
+          "adjacent": [
+            11.2,
+            11.3
+          ],
+          "distanceToContinuous": [
+            0.05,
+            0.05
+          ],
+          "distanceToCurrent": [
+            2.2,
+            2.3
+          ],
+          "chosen": 11.2
+        },
+        "recommendedDoseMlPerDay": 11.2,
+        "deltaDoseMlPerDay": 2.2,
+        "deltaEffectDkhPerDay": 0.15246,
+        "predictedPostSlopeDkhPerDay": -0.09754,
+        "capRecheckAfterRounding": "|2.2| <= 2.25 OK"
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_STEP_CAP_ORDINARY",
+        "MAINTENANCE_INCREASE_RECOMMENDED"
+      ],
+      "forbidden": {
+        "recommendedDoseMlPerDay": 11.3,
+        "note": "The tie resolves toward the current dose. A capped intervention is not expected to stabilise fully on the first step."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-003",
+      "title": "Preferred-band excursion without outer-bound risk still acts, at 25% only",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "AUDIT-008",
+          "ALK-STEP-CAP-001",
+          "ALK-025"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-025",
+        "ALK-STEP-CAP-001",
+        "ALK-FORECAST-SLOPE-001",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          8.3,
+          8.2,
+          8.1
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMinDkh": 8.2,
+        "outerMinDkh": 7.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.05,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "position": "BELOW_RANGE",
+        "tOuterLowDays": 22.0,
+        "rapidConfirmed": false
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.004745166004,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "capApplied": "NONE",
+        "fiftyPercentCapUnlocked": false,
+        "continuousActionCandidateMlPerDay": 9.068472814,
+        "recommendedDoseMlPerDay": 9.1,
+        "deltaEffectDkhPerDay": 0.00693,
+        "predictedPostSlopeDkhPerDay": -0.04307
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_INCREASE_RECOMMENDED",
+        "MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED"
+      ],
+      "forbidden": {
+        "note": "Being outside the preferred range never unlocks the 50% cap. Contrast with AD-MNT-001: a 0.0685 mL/day candidate rounds UP to a real action while 0.0451 rounds to HOLD."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-004",
+      "title": "0.50 dKH/day rail binds ahead of both percentage caps",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-046",
+          "ALK-STEP-CAP-001"
+        ],
+        "note": "A large current dose makes 25% of it exceed the rail, so the rail binds first."
+      },
+      "rulesExercised": [
+        "ALK-046",
+        "ALK-RAPID-001",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "twoPointReadings": {
+          "day0Dkh": 8.0,
+          "day1Dkh": 7.2
+        },
+        "currentDoseMlPerDay": 40.0,
+        "actuatorIncrementMlPerDay": 0.1
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.8,
+        "sigmaSDkhPerDay": 0.1414213562,
+        "rapidConfirmed": true
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.618980664
+      },
+      "expectedAction": {
+        "rawSupportedDeltaDoseMlPerDay": 8.931899913,
+        "ordinaryCapMlPerDay": 10.0,
+        "exceptionalCapMlPerDay": 20.0,
+        "railAsDoseDeltaMlPerDay": 7.215007215,
+        "bindingConstraint": "RATE_RAIL",
+        "continuousActionCandidateMlPerDay": 47.215007215,
+        "recommendedDoseMlPerDay": 47.2,
+        "deltaEffectDkhPerDay": 0.49896,
+        "predictedPostSlopeDkhPerDay": -0.30104
+      },
+      "expectedReasonCodes": [
+        "SAFETY_RATE_RAIL_APPLIED",
+        "TRAJECTORY_RAPID_CONFIRMED"
+      ],
+      "forbidden": {
+        "note": "The rail is a ceiling and is independently binding regardless of which percentage cap is available."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-005",
+      "title": "Maintenance correctly matches consumption",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-CONSUMPTION-ESTIMATE-001",
+          "ALK-MAINTENANCE-SEMANTICS-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-CONSUMPTION-ESTIMATE-001",
+        "ALK-MAINTENANCE-SEMANTICS-001",
+        "ALK-024"
+      ],
+      "input": {
+        "continuesFrom": "AD-TRD-001",
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693
+      },
+      "expectedIntermediateEvidence": {
+        "consumptionDkhPerDay": 0.6237,
+        "physicality": "INTERPRETABLE"
+      },
+      "expectedAction": {
+        "maintenanceEstimateMlPerDay": 9.0,
+        "continuousActionCandidateMlPerDay": 9.0,
+        "maintenanceBalance": "MATCHED",
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "CONSUMPTION_ESTIMATED",
+        "MAINTENANCE_HOLD_STABLE"
+      ]
+    },
+    {
+      "fixtureId": "AD-MNT-006",
+      "title": "Below range and rising with no active plan is undetermined",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-029",
+          "ALK-070"
+        ],
+        "note": "Constructed to expose OI-BELOWRISING-001."
+      },
+      "rulesExercised": [
+        "ALK-029",
+        "ALK-070",
+        "CORE-STABILISE-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.6,
+          7.75,
+          7.9
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMinDkh": 8.2,
+        "activePlan": null,
+        "correction": null,
+        "waterChange": null,
+        "outerBoundBreach": false
+      },
+      "expectedIntermediateEvidence": {
+        "position": "BELOW_RANGE",
+        "observedSlopeDkhPerDay": 0.15,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportedSlopeDkhPerDay": 0.10474516599,
+        "trajectory": "RISING",
+        "maintenanceEstimateMlPerDay": 6.83549,
+        "strictStabiliseFirstWouldRecommendMlPerDay": 7.5
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE",
+        "maintenanceActionStatus": "HELD",
+        "fullCardShows": [
+          "observedSlope",
+          "supportedSlope",
+          "maintenanceEstimate"
+        ]
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_MATRIX_CELL_UNDETERMINED"
+      ],
+      "openIssues": [
+        "OI-BELOWRISING-001"
+      ],
+      "forbidden": {
+        "note": "Do not silently choose between HOLD and a 1.5 mL/day reduction of a tank that is below range and climbing back toward it."
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-007",
+      "title": "Above range and falling with no active plan is undetermined (mirror)",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-030",
+          "ALK-070"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-030",
+        "ALK-070"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          9.4,
+          9.25,
+          9.1
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMaxDkh": 8.8,
+        "activePlan": null,
+        "outerBoundBreach": false
+      },
+      "expectedIntermediateEvidence": {
+        "position": "ABOVE_RANGE",
+        "observedSlopeDkhPerDay": -0.15,
+        "supportedSlopeDkhPerDay": -0.10474516599,
+        "trajectory": "FALLING"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE"
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_MATRIX_CELL_UNDETERMINED"
+      ],
+      "openIssues": [
+        "OI-BELOWRISING-001"
+      ],
+      "forbidden": {
+        "note": "Symmetry requirement: this mirror must resolve the same way as AD-MNT-006, whichever way the owner decides."
+      }
+    },
+    {
+      "fixtureId": "AD-RSP-001",
+      "title": "Day +4 response is EXPECTED - the narrow complement of WG-ALK-007",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RESPONSE-CLASSIFIER-001",
+          "WG-ALK-007"
+        ],
+        "note": "Same evidence structure as WG-ALK-007 with a marginally stronger post slope, showing the band boundary is real and reachable in both directions."
+      },
+      "rulesExercised": [
+        "ALK-RESPONSE-CLASSIFIER-001",
+        "ALK-RESPONSE-DETECTABILITY-001"
+      ],
+      "input": {
+        "preReadings": {
+          "timesDays": [
+            0,
+            2,
+            4
+          ],
+          "alkDkh": [
+            8.6,
+            8.3,
+            8.0
+          ]
+        },
+        "doseChange": {
+          "atDay": 4.02,
+          "from": 9.0,
+          "to": 10.5
+        },
+        "postReadings": {
+          "timesDays": [
+            6,
+            8
+          ],
+          "alkDkh": [
+            7.954,
+            7.862
+          ]
+        }
+      },
+      "expectedIntermediateEvidence": {
+        "sPreDkhPerDay": -0.15,
+        "sigmaPreDkhPerDay": 0.035355339059,
+        "sPostDkhPerDay": -0.046,
+        "sigmaPostDkhPerDay": 0.070710678119,
+        "expectedResponseDkhPerDay": 0.10395,
+        "directedObservedResponseDkhPerDay": 0.104,
+        "sigmaResponseDkhPerDay": 0.079056941504,
+        "responseBandDkhPerDay": 0.101192885125,
+        "check": "R_obs 0.104 > B 0.101193 AND |0.104 - 0.10395| = 0.00005 <= B"
+      },
+      "expectedAction": {
+        "responseAttribution": "EXPECTED",
+        "positionEvent": "NONE",
+        "note": "7.862 is below range, so no overshoot."
+      },
+      "expectedReasonCodes": [
+        "RESPONSE_EXPECTED"
+      ],
+      "forbidden": {
+        "responseAttribution": "INCONCLUSIVE",
+        "note": "A boundary-straddling pair with WG-ALK-007 proves the band is applied exactly, not approximately."
+      }
+    },
+    {
+      "fixtureId": "AD-RSP-002",
+      "title": "Post-change overshoot coexists with OVER_RESPONSE",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-043",
+          "Part I \u00a77.6A",
+          "ALK-RESPONSE-CLASSIFIER-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-043",
+        "ALK-RESPONSE-CLASSIFIER-001"
+      ],
+      "input": {
+        "targetRange": [
+          8.2,
+          8.8
+        ],
+        "sPreDkhPerDay": -0.15,
+        "sigmaPreDkhPerDay": 0.035355339059,
+        "deltaDoseMlPerDay": 1.5,
+        "sPostDkhPerDay": 0.12,
+        "sigmaPostDkhPerDay": 0.035355339059,
+        "latestActualReadingDkh": 8.95,
+        "fittedValueDkh": 8.78
+      },
+      "expectedIntermediateEvidence": {
+        "expectedResponseDkhPerDay": 0.10395,
+        "directedObservedResponseDkhPerDay": 0.27,
+        "responseBandDkhPerDay": 0.064,
+        "overThreshold": 0.16795
+      },
+      "expectedAction": {
+        "responseAttribution": "OVER_RESPONSE",
+        "positionEvent": "OVERSHOOT",
+        "stopDeliberateUpwardMovement": true,
+        "shortenRetest": true
+      },
+      "expectedReasonCodes": [
+        "RESPONSE_OVER_RESPONSE",
+        "RESPONSE_OVERSHOOT"
+      ],
+      "forbidden": {
+        "note": "OVERSHOOT must not be added back into the response enum. Overshoot is measured from 8.95, not from the fitted 8.78. Do not simply undo the previous change."
+      }
+    },
+    {
+      "fixtureId": "AD-RSP-003",
+      "title": "Successful response - still falling but substantially flatter",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-038",
+          "AUDIT-002",
+          "WG-ALK-009"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-038",
+        "ALK-RESPONSE-CLASSIFIER-001"
+      ],
+      "input": {
+        "sPreDkhPerDay": -0.25,
+        "deltaDoseMlPerDay": 3.0,
+        "sPostDkhPerDay": -0.04,
+        "sigmaPreDkhPerDay": 0.035355339059,
+        "sigmaPostDkhPerDay": 0.035355339059
+      },
+      "expectedIntermediateEvidence": {
+        "expectedResponseDkhPerDay": 0.2079,
+        "directedObservedResponseDkhPerDay": 0.21,
+        "responseBandDkhPerDay": 0.064
+      },
+      "expectedAction": {
+        "responseAttribution": "EXPECTED",
+        "interpretation": "The dose change did what the model predicted even though alkalinity is still declining."
+      },
+      "expectedReasonCodes": [
+        "RESPONSE_EXPECTED"
+      ],
+      "forbidden": {
+        "responseAttribution": "NO_DETECTABLE_RESPONSE",
+        "note": "No response means failure to produce the expected CHANGE IN TRAJECTORY, not failure to make the absolute number rise."
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-001",
+      "title": "Alk outer-bound safety return with magnesium UNKNOWN",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SAFETY-MG-OVERRIDE-001",
+          "MIGRATION-MG-GATE-ISOLATION-001",
+          "M-11"
+        ],
+        "note": "The Alk-only runtime forces magnesiumGateState = UNKNOWN unconditionally; WG-ALK-055 covers ALERT_LOW."
+      },
+      "rulesExercised": [
+        "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-SAFETY-MG-OVERRIDE-001",
+        "MIGRATION-MG-GATE-ISOLATION-001"
+      ],
+      "input": {
+        "alkDkh": 6.8,
+        "outerMinDkh": 7.0,
+        "loggedMagnesiumPpm": 1180,
+        "runtime": "ALK_V2_ONLY",
+        "selectedPotencyDkhPerMl": 0.0693
+      },
+      "expectedIntermediateEvidence": {
+        "magnesiumGateState": "UNKNOWN",
+        "safetyDestinationDkh": 7.2,
+        "desiredMovementDkh": 0.4,
+        "safetyCorrectionVolumeMl": 5.7720058
+      },
+      "expectedAction": {
+        "interventionType": "SAFETY_RETURN",
+        "alkSafetyAction": "ALLOWED",
+        "lowMagnesiumWarning": "NONE"
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_LOW",
+        "SAFETY_MG_GATE_UNKNOWN",
+        "MIGRATION_MG_GATE_ISOLATED"
+      ],
+      "forbidden": {
+        "cases": [
+          "deriving magnesiumGateState = ALERT_LOW from 1180 ppm",
+          "inventing a low-Mg condition",
+          "withholding the safety return because Mg state is unknown"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-002",
+      "title": "High breach with interpretable consumption yields a temporary rate, not a one-off volume",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-OUTER-BOUND-ACTION-001",
+          "ALK-SAFETY-CORRECTION-RESOLUTION-001"
+        ],
+        "note": "Constructed to expose OI-SAFETYRATE-001."
+      },
+      "rulesExercised": [
+        "ALK-OUTER-BOUND-ACTION-001",
+        "M-1"
+      ],
+      "input": {
+        "alkDkh": 11.3,
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "consumptionDkhPerDay": 0.6,
+        "consumptionPhysicality": "INTERPRETABLE",
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": "MISSING"
+      },
+      "expectedIntermediateEvidence": {
+        "rDownDkh": 0.5,
+        "sSafetyDkhPerDay": -0.5,
+        "dSafetyTempMlPerDay": 1.443001443
+      },
+      "expectedAction": {
+        "highBreachTemporaryRate": "WITHHELD",
+        "safetyDirection": "REDUCE_ALK_DOSING",
+        "outerBoundState": "BREACHED_HIGH",
+        "nextTestApproxHours": 24
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+        "SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED"
+      ],
+      "openIssues": [
+        "OI-SAFETYRATE-001"
+      ],
+      "forbidden": {
+        "note": "The M-1 exemption names only the one-off SAFETY_RETURN correction VOLUME. A temporary mL/day RATE is neither that nor an ordinary maintenance rate."
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-003",
+      "title": "Gross liquid-volume guard binds numerically",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-LIQUID-VOLUME-GUARD-001",
+          "WG-ALK-067"
+        ],
+        "note": "The canon states the requirement without arithmetic. The guard binds only when P < deltaA / (20 x V_L)."
+      },
+      "rulesExercised": [
+        "ALK-LIQUID-VOLUME-GUARD-001",
+        "ALK-046"
+      ],
+      "input": {
+        "netVolumeL": 100,
+        "selectedPotencyDkhPerMl": 0.0002,
+        "desiredSafetyMovementDkh": 0.5
+      },
+      "expectedIntermediateEvidence": {
+        "systemVolumeMl": 100000,
+        "guardMlPer24h": 2000,
+        "requiredVolumeMl": 2500,
+        "guardBinds": true,
+        "railSatisfiedAt0_50": true,
+        "achievableMovementPer24hDkh": 0.4,
+        "bindingThresholdPotencyDkhPerMl": 0.00025
+      },
+      "expectedAction": {
+        "issueAsOne24hCommand": false,
+        "stagedOverDays": 2,
+        "reportsLongerDuration": true
+      },
+      "expectedReasonCodes": [
+        "SAFETY_LIQUID_GUARD_APPLIED"
+      ],
+      "forbidden": {
+        "note": "Satisfying the 0.50 dKH/day rail does not satisfy the liquid-volume guard. For a 77 L system with a 0.50 dKH movement the guard binds only below P = 0.000325 dKH/mL, about 213x weaker than the canon reference solution."
+      }
+    },
+    {
+      "fixtureId": "AD-RTN-001",
+      "title": "Return plan interrupted by an external dose change",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-INTERVENTION-EXTERNAL-CHANGE-001",
+          "Part II \u00a739",
+          "ALK-058"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-INTERVENTION-EXTERNAL-CHANGE-001",
+        "ALK-RETURN-EXPIRY-001",
+        "IX-004"
+      ],
+      "input": {
+        "activeReturnPlan": {
+          "temporaryDoseMlPerDay": 12.6,
+          "plannedSlopeDkhPerDay": 0.25,
+          "aimPointLevelDkh": 8.5
+        },
+        "externalDoseChange": {
+          "atDay": 1.5,
+          "to": 9.0,
+          "source": "EXTERNAL_USER_LOG",
+          "effectiveAtConfidence": "EXACT"
+        }
+      },
+      "expectedAction": {
+        "returnPlanPhase": "INTERRUPTED",
+        "eventRecordedInLedger": true,
+        "segmentationReevaluatedFromActualEvent": true,
+        "recommendationVersusImplementationTruthPreserved": true,
+        "planProceededUnchanged": false
+      },
+      "expectedReasonCodes": [
+        "INTERVENTION_EXTERNAL_CHANGE_KNOWN_TIME",
+        "SEGMENT_BOUNDARY_DOSE_CHANGE"
+      ],
+      "forbidden": {
+        "note": "The engine must not pretend the plan continued at 12.6 mL/day."
+      }
+    },
+    {
+      "fixtureId": "AD-RTN-002",
+      "title": "Return-plan pace arithmetic for all three canonical paces",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-054",
+          "ALK-055",
+          "WG-ALK-014"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-054",
+        "ALK-055",
+        "ALK-ROUNDING-001",
+        "ALK-046"
+      ],
+      "input": {
+        "maintenanceReferenceMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1
+      },
+      "expectedAction": {
+        "paces": [
+          {
+            "name": "GENTLE",
+            "plannedSlopeDkhPerDay": 0.125,
+            "railFraction": 0.25,
+            "temporaryDoseMlPerDay": 10.803751804,
+            "rounded": 10.8
+          },
+          {
+            "name": "STEADY",
+            "plannedSlopeDkhPerDay": 0.25,
+            "railFraction": 0.5,
+            "temporaryDoseMlPerDay": 12.607503608,
+            "rounded": 12.6
+          },
+          {
+            "name": "QUICK",
+            "plannedSlopeDkhPerDay": 0.5,
+            "railFraction": 1.0,
+            "temporaryDoseMlPerDay": 16.215007215,
+            "rounded": 16.2,
+            "effectCheckDkhPerDay": 0.49896,
+            "railSatisfied": true
+          }
+        ]
+      },
+      "expectedReasonCodes": [
+        "RETURN_PLAN_STARTED"
+      ],
+      "forbidden": {
+        "note": "The QUICK pace rounds DOWN to 16.2; 16.3 would give 0.50589 dKH/day and violate the rail."
+      }
+    },
+    {
+      "fixtureId": "AD-POT-001",
+      "title": "Potency-learning eligible window - determined variant of WG-ALK-024",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-017",
+          "WG-ALK-024"
+        ],
+        "note": "States the per-side evidence explicitly so the SNR classification is computable, which WG-ALK-024 does not."
+      },
+      "rulesExercised": [
+        "ALK-016",
+        "ALK-017",
+        "ALK-POTENCY-PLAUSIBILITY-001"
+      ],
+      "input": {
+        "preSide": {
+          "clusters": 5,
+          "timesDays": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ],
+          "slopeDkhPerDay": -0.18,
+          "sigmaDkhPerDay": 0.015811388301
+        },
+        "postSide": {
+          "clusters": 5,
+          "timesDays": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ],
+          "slopeDkhPerDay": -0.04,
+          "sigmaDkhPerDay": 0.015811388301
+        },
+        "dPreMlPerDay": 8.0,
+        "dPostMlPerDay": 10.0,
+        "contextsIdentical": true,
+        "interrupted": false,
+        "hardConfounders": []
+      },
+      "expectedIntermediateEvidence": {
+        "deltaDoseMlPerDay": 2.0,
+        "deltaSlopeDkhPerDay": 0.14,
+        "sigmaDeltaSlopeDkhPerDay": 0.02236067977,
+        "snrPotency": 6.260990337
+      },
+      "expectedAction": {
+        "signalClass": "CALIBRATION_ELIGIBLE",
+        "observedPotencyDkhPerMl": 0.07,
+        "plausibilityStatus": "IN_ENVELOPE",
+        "eligibility": "ELIGIBLE"
+      },
+      "expectedReasonCodes": [
+        "POTENCY_OBSERVATION_RECORDED",
+        "POTENCY_SIGNAL_CALIBRATION_ELIGIBLE"
+      ],
+      "openIssues": [
+        "OI-WG024-001"
+      ],
+      "forbidden": {
+        "note": "At the ALK-017 minimum of 3 clusters per side the same deltaS gives SNR 2.80 = DIAGNOSTIC_ONLY. Minimum evidence is not sufficient for calibration eligibility at deltaD = 2.0 mL/day."
+      }
+    },
+    {
+      "fixtureId": "AD-POT-002",
+      "title": "Potency-learning contaminated window",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-017",
+          "WG-ALK-022",
+          "WG-ALK-057",
+          "WG-ALK-064"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-017",
+        "SHARED-CONSUMPTION-CONTEXT-001"
+      ],
+      "input": {
+        "baseline": "AD-POT-001 inputs",
+        "contaminants": [
+          {
+            "kind": "MANUAL_CORRECTION",
+            "inWindow": true,
+            "amountKnown": true
+          },
+          {
+            "kind": "CONSUMPTION_CONTEXT_EVENT",
+            "reasonCode": "LIGHTING_REGIME_CHANGE",
+            "source": "USER_CONFIRMED",
+            "inWindow": true
+          }
+        ]
+      },
+      "expectedAction": {
+        "trendEligible": true,
+        "potencyObservationEligible": false,
+        "ineligibilityReasons": [
+          "CORRECTION_IN_WINDOW",
+          "CONSUMPTION_CONTEXT_CHANGE"
+        ]
+      },
+      "expectedReasonCodes": [
+        "POTENCY_INELIGIBLE_CORRECTION_IN_WINDOW",
+        "POTENCY_INELIGIBLE_CONSUMPTION_CONTEXT_CHANGE"
+      ],
+      "forbidden": {
+        "note": "Mathematical normalizability does not make a window calibration-grade."
+      }
+    },
+    {
+      "fixtureId": "AD-CAP-001",
+      "title": "Ca/Mg measurement-only capability gates",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-MIG-001",
+          "MIGRATION-INERT-CA-MG-MEASUREMENTS-001"
+        ]
+      },
+      "rulesExercised": [
+        "MIGRATION-ALK-ONLY-001",
+        "MIGRATION-INERT-CA-MG-MEASUREMENTS-001",
+        "MIGRATION-MG-GATE-ISOLATION-001"
+      ],
+      "input": {
+        "runtime": "ALK_V2_ONLY",
+        "loggedCaPpm": 455,
+        "loggedCaAt": "2026-08-19T20:00:00+10:00",
+        "loggedMgPpm": 1180,
+        "loggedMgAt": "2026-08-19T20:01:00+10:00"
+      },
+      "expectedAction": {
+        "persisted": {
+          "caMeasurement": "STORED",
+          "mgMeasurement": "STORED",
+          "timestamps": "STORED",
+          "historyChartEligibility": true
+        },
+        "inactive": {
+          "caTrend": "NOT_RUN",
+          "caEvidence": "NOT_RUN",
+          "caMaintenance": "NOT_RUN",
+          "caNotification": "NONE",
+          "mgTrend": "NOT_RUN",
+          "mgEvidence": "NOT_RUN",
+          "mgMaintenance": "NOT_RUN",
+          "mgNotification": "NONE",
+          "magnesiumGateState": "UNKNOWN"
+        }
+      },
+      "expectedReasonCodes": [
+        "MIGRATION_ALK_ONLY_RUNTIME",
+        "MIGRATION_CA_MG_INERT",
+        "MIGRATION_MG_GATE_ISOLATED"
+      ],
+      "forbidden": {
+        "cases": [
+          "deriving magnesiumGateState = ALERT_LOW from 1180 ppm",
+          "deriving a Ca/Mg trend from logged history",
+          "creating a Ca/Mg retest schedule",
+          "rendering a Ca/Mg advisory verdict"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-POS-001",
+      "title": "Range-edge and outer-bound comparison boundaries",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-004",
+          "ALK-003A"
+        ],
+        "note": "Boundary conventions read directly from the canon's own worked statements."
+      },
+      "rulesExercised": [
+        "ALK-010",
+        "ALK-003A",
+        "ALK-004"
+      ],
+      "input": {
+        "targetRange": [
+          8.2,
+          8.8
+        ],
+        "outerBounds": [
+          7.0,
+          11.0
+        ]
+      },
+      "expectedAction": {
+        "cases": [
+          {
+            "alkDkh": 8.19,
+            "position": "BELOW_RANGE",
+            "note": "canon: measured below range at stored precision"
+          },
+          {
+            "alkDkh": 8.2,
+            "position": "IN_RANGE"
+          },
+          {
+            "alkDkh": 8.8,
+            "position": "IN_RANGE"
+          },
+          {
+            "alkDkh": 8.81,
+            "position": "ABOVE_RANGE"
+          },
+          {
+            "alkDkh": 7.0,
+            "position": "BELOW_RANGE",
+            "outerBoundState": "WITHIN_BOUNDS",
+            "note": "canon: at exactly an outer bound the level is not BREACHED"
+          },
+          {
+            "alkDkh": 6.999,
+            "position": "ALERT_LOW",
+            "outerBoundState": "BREACHED_LOW"
+          },
+          {
+            "alkDkh": 11.0,
+            "position": "ABOVE_RANGE",
+            "outerBoundState": "WITHIN_BOUNDS"
+          },
+          {
+            "alkDkh": 11.001,
+            "position": "ALERT_HIGH",
+            "outerBoundState": "BREACHED_HIGH"
+          }
+        ]
+      },
+      "forbidden": {
+        "note": "Uncertainty must not widen the range. A reading does not become in-range because 0.10 dKH of uncertainty overlaps the edge."
+      }
+    },
+    {
+      "fixtureId": "AD-RAP-001",
+      "title": "Rapid basis discriminator - Theil-Sen slope versus latest independent pair",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RAPID-001"
+        ],
+        "note": "Constructed to expose OI-RAPIDBASIS-001."
+      },
+      "rulesExercised": [
+        "ALK-RAPID-001",
+        "Part II \u00a719.2"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          3
+        ],
+        "alkDkh": [
+          8.6,
+          8.5,
+          8.15
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "pairwiseSlopes": [
+          -0.05,
+          -0.15,
+          -0.35
+        ],
+        "theilSenSlopeDkhPerDay": -0.15,
+        "latestIndependentPairSlopeDkhPerDay": -0.35,
+        "rapidThresholdDkhPerDay": 0.3,
+        "underTheilSenBasis": "NOT rapid",
+        "underLatestPairBasis": "RAPID"
+      },
+      "expectedAction": {
+        "rapidBasis": "LATEST_INDEPENDENT_PAIR",
+        "rapidConfirmed": true,
+        "sizingSlopeBasis": "THEIL_SEN",
+        "note": "ALK-011A selects the multi-point formula whenever 3+ eligible clusters exist; rapid only unlocks early action, a shorter retest and the 50%-cap gateway."
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_RAPID_CONFIRMED"
+      ],
+      "openIssues": [
+        "OI-RAPIDBASIS-001"
+      ]
+    },
+    {
+      "fixtureId": "AD-RET-001",
+      "title": "Retest scheduler runs a reduced candidate set and reports what it could not compute",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "PII-51",
+          "PII-52",
+          "PII-53",
+          "PII-54",
+          "PII-66",
+          "ALK-050",
+          "ALK-052",
+          "ALK-POSTCHANGE-RETEST-001"
+        ],
+        "note": "Constructed to expose OI-RETEST-001: the shared scheduler's generic candidates need Alk policy constants that Part III never supplies."
+      },
+      "rulesExercised": [
+        "PII-51",
+        "PII-52",
+        "PII-53",
+        "PII-54",
+        "PII-66",
+        "ALK-050",
+        "ALK-POSTCHANGE-RETEST-001",
+        "ALK-FORECAST-SLOPE-001"
+      ],
+      "input": {
+        "state": "ordinary maintenance monitoring, no intervention, no anomaly, sufficient evidence, falling trend approaching the outer bound in 6 days"
+      },
+      "expectedRetest": {
+        "candidateTimes": [
+          {
+            "candidateClass": "ROUTINE_CADENCE",
+            "approxHours": 48,
+            "included": true
+          }
+        ],
+        "candidatesNotRun": [
+          "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
+          "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
+          "RETEST_BOUNDARY_MARGIN_UNAVAILABLE",
+          "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
+        ],
+        "minimumUsefulIntervalApplied": "NOT_RUN",
+        "selectedReasonCode": "RETEST_ROUTINE_CADENCE"
+      },
+      "expectedReasonCodes": [
+        "RETEST_ROUTINE_CADENCE",
+        "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
+        "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
+        "RETEST_BOUNDARY_MARGIN_UNAVAILABLE",
+        "RETEST_MINIMUM_INTERVAL_UNAVAILABLE"
+      ],
+      "openIssues": [
+        "OI-RETEST-001"
+      ],
+      "forbidden": {
+        "note": "No K_detect, RequiredMovement, boundarySafetyMargin or minimumUsefulInterval value may be supplied from another parameter, from V1, or from a plausible default. Boundary-crossing risk therefore does NOT shorten testing, and the card must say so."
+      }
+    }
+  ]
+}

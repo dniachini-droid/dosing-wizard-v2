@@ -1,0 +1,272 @@
+{
+  "corpusId": "alk-v2-canon-worked-goldens-round2",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonSection": "PART III - WORKED NUMERICAL GOLDEN SUITE - ROUND 2",
+  "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
+  "fixtures": [
+    {
+      "fixtureId": "WG-ALK-021",
+      "title": "Second maintenance change interrupts the first",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-021", "AUDIT-026", "ALK-G017"] },
+      "rulesExercised": ["ALK-RESPONSE-ATTRIBUTION-001", "ALK-PREDICTION-SNAPSHOT-001"],
+      "input": {
+        "preChangeSlopeDkhPerDay": -0.150,
+        "events": [
+          { "kind": "DOSE_CHANGE", "atDay": 0, "from": 9.0, "to": 10.0 },
+          { "kind": "DOSE_CHANGE", "atDay": 2, "from": 10.0, "to": 11.0, "note": "before the first is formally attributable" }
+        ]
+      },
+      "expectedAction": {
+        "firstIntervention": { "phase": "INTERRUPTED", "responseAttribution": "INTERRUPTED", "potencyLearningEligible": false },
+        "secondIntervention": { "startsFrom": "the actual 10.0 -> 11.0 transition", "storesItsOwnPredictionSnapshot": true }
+      },
+      "expectedReasonCodes": ["INTERVENTION_INTERRUPTED"],
+      "forbidden": {
+        "firstInterventionClassifications": ["EXPECTED", "PARTIAL", "NO_DETECTABLE_RESPONSE", "FAILED"],
+        "collapsedHistory": "9.0 -> 11.0",
+        "note": "The 10.0 mL/day exposure actually occurred and stays in the ledger."
+      }
+    },
+    {
+      "fixtureId": "WG-ALK-022",
+      "title": "Correction during a maintenance-response window",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-022", "AUDIT-018"] },
+      "rulesExercised": ["ALK-034", "ALK-017"],
+      "input": {
+        "events": [
+          { "kind": "DOSE_CHANGE", "atDay": 0, "from": 9.0, "to": 10.5 },
+          { "kind": "MANUAL_CORRECTION", "atDay": 1, "expectedContributionDkh": 0.20, "amountAndTimeKnown": true }
+        ]
+      },
+      "expectedAction": {
+        "trendNormalization": "correction contribution normalized from subsequent analytical points per actual delivery",
+        "maintenanceResponseEligible": "true_or_reduced_confidence",
+        "potencyLearningEligible": false
+      },
+      "expectedReasonCodes": ["SEGMENT_NORMALIZED_CORRECTION", "POTENCY_INELIGIBLE_CORRECTION_IN_WINDOW"],
+      "forbidden": { "potencyLearningEligible": true, "note": "A window can be good enough to estimate underlying trend yet still too contaminated to isolate potency." }
+    },
+    {
+      "fixtureId": "WG-ALK-023",
+      "title": "Unknown correction during response confounds attribution",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-023"] },
+      "rulesExercised": ["ALK-034", "ALK-RESPONSE-CLASSIFIER-001"],
+      "input": { "events": [ { "kind": "DOSE_CHANGE", "atDay": 0, "from": 9.0, "to": 10.5 }, { "kind": "MANUAL_CORRECTION", "reportedAtDay": 3, "occurredAtDay": 2, "actualVolumeMl": "UNKNOWN" } ] },
+      "expectedAction": { "responseAttribution": "CONFOUNDED", "potencyLearningEligible": false, "newCleanRegimeBeginsAfter": "the uncertain external input", "currentPosition": "latest valid measured Alk" },
+      "expectedReasonCodes": ["SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION", "RESPONSE_CONFOUNDED"],
+      "forbidden": { "note": "No invented correction amount may be subtracted." }
+    },
+    {
+      "fixtureId": "WG-ALK-024",
+      "title": "Clean potency observation (arithmetic verbatim; eligibility conditional)",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-024"], "note": "The canon states no sigma_pre / sigma_post, so its eligibility assertion is not independently checkable. See AD-POT-001 for the determined variant." },
+      "rulesExercised": ["ALK-016", "ALK-017", "ALK-POTENCY-PLAUSIBILITY-001"],
+      "input": { "sPreDkhPerDay": -0.180, "dPreMlPerDay": 8.0, "sPostDkhPerDay": -0.040, "dPostMlPerDay": 10.0 },
+      "expectedIntermediateEvidence": { "deltaDoseMlPerDay": 2.0, "deltaSlopeDkhPerDay": 0.140, "observedPotencyDkhPerMl": 0.0700, "ratioToTheoretical": 1.0101010101 },
+      "expectedAction": { "potencyObservationDkhPerMl": 0.0700, "plausibilityStatus": "IN_ENVELOPE", "eligibility": "CONDITIONAL_NOT_CHECKABLE", "conditionalOn": "all ALK-017 eligibility rules satisfied, including SNR >= 3.0" },
+      "expectedReasonCodes": ["POTENCY_OBSERVATION_RECORDED"],
+      "openIssues": ["OI-WG024-001"],
+      "tolerance": { "note": "Only the arithmetic (P_i = 0.0700) is asserted unconditionally." }
+    },
+    {
+      "fixtureId": "WG-ALK-025",
+      "title": "Potency candidate rejected because the dose delta is underpowered",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-025"] },
+      "rulesExercised": ["ALK-017"],
+      "input": { "deltaDoseMlPerDay": 0.20, "pExpectedDkhPerMl": 0.0693, "sigmaPreDkhPerDay": 0.035355339059327376, "sigmaPostDkhPerDay": 0.035355339059327376 },
+      "expectedIntermediateEvidence": { "expectedSlopeResponseDkhPerDay": 0.01386, "sigmaDeltaSlopeDkhPerDay": 0.05, "snrPotency": 0.2772 },
+      "expectedAction": { "potencyObservationEligible": false, "reason": "INSUFFICIENT_POTENCY_SIGNAL", "signalClass": "INELIGIBLE_SIGNAL", "mayBeRetainedDiagnostically": true },
+      "expectedReasonCodes": ["POTENCY_SIGNAL_INELIGIBLE"],
+      "forbidden": { "note": "The arithmetic quotient must not influence learned potency." }
+    },
+    {
+      "fixtureId": "WG-ALK-026",
+      "title": "Three valid potency observations promote calibration",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-026", "ALK-G036"] },
+      "rulesExercised": ["ALK-POTENCY-POOL-001", "ALK-POTENCY-CONFIDENCE-001"],
+      "input": {
+        "observations": [0.068, 0.071, 0.070],
+        "fromSeparateInterventions": 3, "spanDays": 7, "contextUnchanged": true
+      },
+      "expectedIntermediateEvidence": { "learnedPotencyDkhPerMl": 0.070, "madP": 0.001, "rDispP": 0.021180 },
+      "expectedAction": { "potencyConfidence": "CALIBRATED", "selectedPotencySource": "LEARNED", "selectedPotencyDkhPerMl": 0.070, "appliesTo": "current and future calculations only" },
+      "expectedReasonCodes": ["POTENCY_CONFIDENCE_PROMOTED", "POTENCY_SELECTED_LEARNED"],
+      "forbidden": { "note": "The switch does not rewrite historical intervention predictions." }
+    },
+    {
+      "fixtureId": "WG-ALK-027",
+      "title": "One extreme potency observation does not silently recalibrate",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-027", "ALK-G037"] },
+      "rulesExercised": ["ALK-POTENCY-PLAUSIBILITY-001", "ALK-POTENCY-CONFIDENCE-001"],
+      "input": { "currentSelectedPotencyDkhPerMl": 0.0693, "candidatePotencyDkhPerMl": 0.110 },
+      "expectedIntermediateEvidence": { "ratio": 1.5873015873, "upperEnvelope": 0.11088, "insideEnvelope": true },
+      "expectedAction": { "potencyConfidence": "EXPLORATORY", "selectedPotencyDkhPerMl": 0.0693, "mayRequest": ["pump verification", "solution recipe verification", "additional clean response evidence"] },
+      "expectedReasonCodes": ["POTENCY_SELECTED_THEORETICAL"],
+      "forbidden": { "selectedPotencyDkhPerMl": 0.110, "note": "One intervention does not declare the bottle concentration wrong." }
+    },
+    {
+      "fixtureId": "WG-ALK-028",
+      "title": "Target range changes while dose and trend remain unchanged",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-028", "AUDIT-030", "ALK-G039"] },
+      "rulesExercised": ["ALK-066", "SHARED-CONFIG-VERSION-001"],
+      "input": { "before": { "targetRange": [8.2, 8.8], "latestAlkDkh": 8.30, "observedSlopeDkhPerDay": 0, "supportedSlopeDkhPerDay": 0, "doseMlPerDay": 9.0, "position": "IN_RANGE" }, "edit": { "targetRange": [8.4, 9.0] } },
+      "expectedAction": { "position": "BELOW_RANGE", "unchanged": ["observedSlope", "supportedSlope", "consumption", "selectedPotency", "maintenanceDoseEstimate", "historicalRecommendations"], "automaticResult": "HOLD_CURRENT_DOSE", "returnPlanOffer": "AVAILABLE when evidence requirements are met" },
+      "expectedReasonCodes": ["CONFIG_TARGET_RANGE_CHANGED"],
+      "forbidden": { "note": "A target edit is not a biological demand event." },
+      "openIssues": ["OI-RETURNOFFER-001 gates the offer branch"]
+    },
+    {
+      "fixtureId": "WG-ALK-029",
+      "title": "Backdated valid measurement changes present analysis only",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-029", "AUDIT-029", "ALK-065"] },
+      "rulesExercised": ["ALK-065", "ALK-PREDICTION-SNAPSHOT-001"],
+      "input": { "existingReadingDays": [4, 6, 8, 10], "insertedReadingDay": 7, "insertedAtDay": 10 },
+      "expectedAction": { "currentAnalysisRecomputed": true, "newAssessmentId": true, "historicalAdviceRewritten": false, "historicalDay8RecommendationUnchanged": true },
+      "expectedReasonCodes": ["AUDIT_HISTORICAL_ASSESSMENT_PRESERVED"]
+    },
+    {
+      "fixtureId": "WG-ALK-030",
+      "title": "Backdated invalidation removes a formerly used outlier",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-030"] },
+      "rulesExercised": ["ALK-065", "Part II §4.3", "Part II §49"],
+      "input": { "historicalReadingLaterMarked": "INVALID" },
+      "expectedAction": { "currentAndReplayAnalysisExcludesIt": true, "eventRemainsInAuditHistoryWithInvalidationMetadata": true, "previousHistoricalRecommendationUnchanged": true },
+      "expectedReasonCodes": ["VALIDATION_READING_MARKED_INVALID", "AUDIT_HISTORICAL_ASSESSMENT_PRESERVED"],
+      "forbidden": { "note": "The raw measurement must not be physically deleted from the audit ledger." }
+    },
+    {
+      "fixtureId": "WG-ALK-031",
+      "title": "Return plan reaches the assessment-due point with no test",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-031"] },
+      "rulesExercised": ["ALK-RETURN-EXPIRY-001", "ALK-054"],
+      "input": { "startingLevelDkh": 7.80, "aimPointLevelDkh": 8.50, "plannedSlopeDkhPerDay": 0.25, "predictedDurationDays": 2.8, "newTestEntered": false },
+      "expectedAction": { "returnPlanPhase": "ASSESSMENT_DUE", "mustRequestAlkTest": true },
+      "expectedReasonCodes": ["RETURN_ASSESSMENT_DUE"],
+      "forbidden": { "note": "The app must not infer that the level reached the aim point." }
+    },
+    {
+      "fixtureId": "WG-ALK-032",
+      "title": "Return plan overrun / expiry",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-032"] },
+      "rulesExercised": ["ALK-RETURN-EXPIRY-001", "IX-004"],
+      "input": { "continuesFrom": "WG-ALK-031", "predictedDurationDays": 2.8 },
+      "expectedIntermediateEvidence": { "expiryHorizonDays": 7.6, "formula": "2 * T_plan + 2" },
+      "expectedAction": {
+        "returnPlanPhase": "EXPIRED_OVERRUN",
+        "recommendedTemporaryComponent": "STOP_PENDING_USER_ACTION",
+        "assessment": "TEST_NOW",
+        "actualDose": "UNKNOWN_OR_LAST_LOGGED"
+      },
+      "expectedReasonCodes": ["RETURN_EXPIRED_OVERRUN", "RETURN_STOP_PENDING_USER_ACTION"],
+      "forbidden": { "note": "The app must not pretend it stopped the keeper's pump." }
+    },
+    {
+      "fixtureId": "WG-ALK-033",
+      "title": "Upper-bound mirror: in range and rising",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-033", "ALK-G009", "ALK-027"] },
+      "rulesExercised": ["ALK-028", "ALK-SUPPORTED-SLOPE-001", "ALK-ROUNDING-001", "ALK-STEP-CAP-001"],
+      "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 9.0, "effectiveAt": "2026-08-20T09:00:00+10:00" },
+          { "kind": "READING", "measuredAt": "2026-09-01T09:00:00+10:00", "rawValueDkh": 8.30 },
+          { "kind": "READING", "measuredAt": "2026-09-03T09:00:00+10:00", "rawValueDkh": 8.60 },
+          { "kind": "READING", "measuredAt": "2026-09-05T09:00:00+10:00", "rawValueDkh": 8.90 }
+        ]
+      },
+      "expectedIntermediateEvidence": { "observedSlopeDkhPerDay": 0.150, "sigmaSDkhPerDay": 0.035355339059327376 },
+      "expectedSupportedResult": { "supportedSlopeDkhPerDay": 0.10474516599, "trajectory": "RISING" },
+      "expectedAction": {
+        "latestPosition": "ABOVE_RANGE",
+        "continuousActionCandidateMlPerDay": 7.48845599,
+        "capCheck": "25% of 9.0 = 2.25 permits a 1.5115 reduction",
+        "recommendedDoseMlPerDay": 7.5,
+        "deltaEffectDkhPerDay": -0.10395,
+        "predictedPostSlopeDkhPerDay": 0.04605
+      },
+      "expectedReasonCodes": ["TRAJECTORY_RISING", "MAINTENANCE_DECREASE_RECOMMENDED"],
+      "forbidden": { "note": "The reduction seeks zero slope, not a deliberate fall to the midpoint." }
+    },
+    {
+      "fixtureId": "WG-ALK-034",
+      "title": "Stable above range does not automatically cut maintenance",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-034", "ALK-024", "ALK-G007"] },
+      "rulesExercised": ["CORE-STABILISE-001", "ALK-024"],
+      "input": { "targetRange": [8.2, 8.8], "latestAlkDkh": 9.20, "observedSlopeDkhPerDay": 0, "supportedSlopeDkhPerDay": 0, "currentDoseMlPerDay": 9.0 },
+      "expectedAction": { "maintenanceRecommendation": "HOLD_CURRENT_DOSE", "position": "ABOVE_RANGE", "returnPlanOffer": "AVAILABLE" },
+      "expectedReasonCodes": ["MAINTENANCE_HOLD_OUT_OF_RANGE_STABLE", "TRAJECTORY_STABLE"],
+      "forbidden": { "note": "No automatic maintenance reduction simply because the level is high. Upper mirror of stable-below-range." }
+    },
+    {
+      "fixtureId": "WG-ALK-035",
+      "title": "Downward return plan is limited by the zero-dose floor",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-035", "AUDIT-022"] },
+      "rulesExercised": ["ALK-054", "ALK-055"],
+      "input": { "consumptionDkhPerDay": 0.30, "currentMaintenanceMatchesDemand": true, "requestedPlanSlopeDkhPerDay": -0.50 },
+      "expectedIntermediateEvidence": { "maintenanceDoseMlPerDay": 4.32900433, "idealTemporaryDoseMlPerDay": -2.88600289 },
+      "expectedAction": { "temporaryDoseMlPerDay": 0, "achievableDownwardRateDkhPerDay": -0.30, "reportsLongerAchievableDuration": true },
+      "expectedReasonCodes": ["RETURN_PACE_LIMITED_BY_ZERO_DOSE", "MAINTENANCE_NON_NEGATIVE_CLAMP"],
+      "forbidden": { "note": "Negative dosing must never be implied or recommended." }
+    },
+    {
+      "fixtureId": "WG-ALK-036",
+      "title": "Pump calibration changes the potency context",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-036", "ALK-068"] },
+      "rulesExercised": ["ALK-068", "M-3"],
+      "input": { "before": { "solutionBatch": "A", "pumpChannel": "Alk-1", "calibration": "old" }, "event": "pump recalibrated; delivered-volume relationship materially changed" },
+      "expectedAction": { "newPotencyContextId": true, "historicalObservationsRemainWithOldContext": true, "newSelectedPotencyFrom": "newly appropriate theoretical/delivery basis", "historicalInterventionPredictionsImmutable": true },
+      "expectedReasonCodes": ["POTENCY_CONTEXT_CLOSED", "SEGMENT_BOUNDARY_POTENCY_CONTEXT"],
+      "forbidden": { "note": "Old and new delivery contexts must not be pooled as identical." }
+    },
+    {
+      "fixtureId": "WG-ALK-037",
+      "title": "Solution concentration / batch change resets the empirical context",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-037", "ALK-067", "ALK-G035"] },
+      "rulesExercised": ["ALK-067", "ALK-014", "M-2"],
+      "input": { "old": { "chemical": "Na2CO3", "concentrationGPerL": 101, "batch": "A" }, "new": { "chemical": "Na2CO3", "concentrationGPerL": 80, "batch": "B" } },
+      "expectedIntermediateEvidence": { "newTheoreticalPotencyDkhPerMl": 0.05490909091, "formula": "0.05284 * 80 / 77" },
+      "expectedAction": { "newPotencyContextCreated": true, "historicalObservationsAvailableForAudit": true, "priorLearnedRatio": "contextual history only; not the new selected potency by default" },
+      "expectedReasonCodes": ["POTENCY_CONTEXT_CLOSED", "POTENCY_SELECTED_THEORETICAL"],
+      "forbidden": { "note": "The old learned dKH/mL must not carry over as though reservoir strength were unchanged." }
+    },
+    {
+      "fixtureId": "WG-ALK-038",
+      "title": "Solution strength corrected after a Setup-entry mistake",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-038"] },
+      "rulesExercised": ["ALK-PREDICTION-SNAPSHOT-001", "ALK-067"],
+      "input": { "predictedUsingConcentrationGPerL": 101, "actualConcentrationGPerL": 80, "setupCorrectedLater": true },
+      "expectedAction": {
+        "historicalPredictionRewritten": false,
+        "predictionInputWasWrong": true,
+        "currentPotencyContextUpdated": true,
+        "responseInterpretationWarning": "PREDICTION_INPUT_LATER_CORRECTED"
+      },
+      "expectedReasonCodes": ["INTERVENTION_PREDICTION_INPUT_LATER_CORRECTED"],
+      "forbidden": { "note": "The app must not rewrite the historical prediction and then claim the original prediction was accurate." }
+    },
+    {
+      "fixtureId": "WG-ALK-039",
+      "title": "Correction plus potency update cannot make one window calibration-clean",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-039"] },
+      "rulesExercised": ["ALK-017", "ALK-PREDICTION-SNAPSHOT-001"],
+      "input": { "maintenanceDoseChanged": true, "knownOneOffCorrectionInWindow": true, "potencyLaterUpdatedFromOtherEvidence": true },
+      "expectedAction": { "windowPromotedToCalibrationQuality": false, "historicalResponseUses": "stored prediction potency", "currentMaintenanceUses": "current selected potency" },
+      "expectedReasonCodes": ["POTENCY_INELIGIBLE_CORRECTION_IN_WINDOW"],
+      "forbidden": { "note": "'We can mathematically account for it' must not become 'therefore it is calibration-grade evidence'." }
+    },
+    {
+      "fixtureId": "WG-ALK-040",
+      "title": "Current maintenance can move on while an old response remains unresolved",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-040", "ALK-RESPONSE-CLASSIFIER-001"] },
+      "rulesExercised": ["ALK-RESPONSE-ATTRIBUTION-001", "ALK-RESPONSE-DETECTABILITY-001"],
+      "input": { "oldInterventionResponseAttribution": "AWAITING_DETECTABILITY", "newPostChangeSupportedSlopeDkhPerDay": -0.060 },
+      "expectedAction": {
+        "currentControllerMayCalculateIncreaseFrom": -0.060,
+        "ifImplemented": { "priorInterventionCloses": "unresolved / interrupted as appropriate", "newInterventionBegins": true },
+        "oldCausalAttributionDoesNotBlockCurrentControl": true
+      },
+      "expectedReasonCodes": ["RESPONSE_AWAITING_DETECTABILITY", "MAINTENANCE_INCREASE_RECOMMENDED"],
+      "forbidden": { "note": "The app must never remain stuck because a previous intervention cannot be causally isolated." }
+    }
+  ]
+}

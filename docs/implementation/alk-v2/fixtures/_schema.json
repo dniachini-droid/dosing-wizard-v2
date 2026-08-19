@@ -1,0 +1,57 @@
+{
+  "$comment": "Fixture schema for the Alk V2 golden corpus. Implementation-neutral. Not JSON Schema draft-strict; it is the documented shape every fixture file follows.",
+  "fixtureFileShape": {
+    "corpusId": "string",
+    "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+    "defaultConfigRef": "config-defaults.json#/configurations/<id>",
+    "fixtures": "Fixture[]"
+  },
+  "Fixture": {
+    "fixtureId": "stable identifier, e.g. WG-ALK-001",
+    "title": "one line",
+    "provenance": {
+      "class": "CANON_VERBATIM | CANON_DERIVED | CANON_QUALITATIVE",
+      "canonSource": ["rule or golden ids the fixture is taken from"],
+      "note": "for CANON_DERIVED: how the numbers were obtained from canonical formulas",
+      "$comment": "CANON_VERBATIM: every asserted number appears in the canon. CANON_DERIVED: numbers computed here by applying frozen canonical formulas to inputs the canon states or to inputs constructed for this fixture. CANON_QUALITATIVE: the canon states states/prohibitions but no arithmetic. NO fixture derives an expectation from V1 runtime behaviour (DEC-013)."
+    },
+    "rulesExercised": ["canonical rule ids"],
+    "openIssues": ["open issue ids this fixture depends on or documents"],
+    "config": "inline overrides of the referenced default configuration",
+    "input": {
+      "asOf": "ISO-8601 absolute instant",
+      "events": "chronological event ledger; each event has kind + fields per ALK-V2-DATA-CONTRACT.md"
+    },
+    "expectedIntermediateEvidence": "clusters, segment, trend, uncertainty - Layer 2",
+    "expectedSupportedResult": "supported slope, evidence state, trajectory - Layer 3",
+    "expectedAction": "recommendation, dose, constraints applied - Layer 4",
+    "expectedRetest": "retest decision",
+    "expectedReasonCodes": ["codes that MUST be present; the engine may emit additional INFO codes"],
+    "forbidden": "states, values or codes that MUST NOT appear",
+    "tolerance": "overrides the default tolerance if the fixture needs one"
+  },
+  "defaultTolerance": {
+    "dkh": 1e-9,
+    "dkhPerDay": 1e-9,
+    "mlPerDay": 1e-9,
+    "ml": 1e-9,
+    "dimensionless": 1e-12,
+    "enumsAndReasonCodes": "exact",
+    "actuatorCommands": "exact after rounding"
+  },
+  "acceptanceRule": {
+    "$comment": "From WORKED GOLDEN ROUND-1 and ROUND-2 ACCEPTANCE RULES.",
+    "aFixtureFailsIf": [
+      "a numerical result differs beyond the declared tolerance",
+      "the wrong rule path produces the same final number",
+      "a forbidden state, value or reason code is returned",
+      "a required reason code is absent",
+      "a presentation layer recomputes a different slope or dose from the domain result"
+    ]
+  },
+  "timeConvention": {
+    "epochDay0": "2026-09-01T09:00:00+10:00",
+    "zone": "Australia/Brisbane (UTC+10, no DST) - chosen so no fixture depends on a DST transition",
+    "dayN": "epochDay0 + N x 24 h exactly"
+  }
+}
