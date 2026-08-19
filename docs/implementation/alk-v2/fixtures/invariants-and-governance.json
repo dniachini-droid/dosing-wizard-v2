@@ -1,0 +1,115 @@
+{
+  "corpusId": "alk-v2-invariants-and-governance",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "note": "Invariant fixtures named by the CANON RULE COVERAGE MANIFEST, plus the canon's governance scenarios. Invariants are property tests, not single-input goldens: each states the property, how to generate inputs, and what must hold for every generated case.",
+  "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
+  "fixtures": [
+    { "fixtureId": "INV-CANON-001", "title": "Canon / reference integrity", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-001", "CORE-CANON-COVERAGE-001"] },
+      "kind": "STRUCTURAL",
+      "property": "Zero dangling stable rule references; every active normative stable rule body appears exactly once in the coverage manifest; every manifest rule has at least one existing fixture id; every listed fixture id exists.",
+      "appliedToThisPackage": "The checker runs over ALK-V2-RULE-TRACEABILITY.md and fixtures/index.json, not over the canon (which must not be modified).",
+      "negativeControl": "Rename one fixture id in index.json without updating the traceability table; the checker must fail." },
+
+    { "fixtureId": "INV-CORE-ADVISORY-001", "title": "Advisory truth and non-adherence", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-002", "CORE-ADVISORY-RESPONSIBILITY-001", "CORE-INFORM-PROCEED-001", "SURFACE-INFORM-PROCEED-001"] },
+      "kind": "PROPERTY",
+      "property": "For every generated history: (a) a recommendation never becomes an implementation without an implementation event; (b) confirmed non-adherence may be surfaced but never creates a punitive lockout; (c) UNKNOWN implementation stays UNKNOWN; (d) engine-originated uncertainty and capability gaps still refuse or degrade as canon requires.",
+      "generator": "Randomise over {recommendation issued, implementation CONFIRMED_IMPLEMENTED | CONFIRMED_NOT_IMPLEMENTED | UNKNOWN} x {0..5 subsequent readings}.",
+      "mustHold": ["implementationState is never rewritten by the engine", "a current assessment always RUNs when its own inputs are valid", "no output is withheld solely because prior advice was ignored"] },
+
+    { "fixtureId": "INV-NONADHERENCE-001", "title": "Non-adherence rescue complexity", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-003", "CORE-NONADHERENCE-COMPLEXITY-001", "SIM-NONADHERENCE-001", "X-GOV-004"] },
+      "kind": "SIMULATION",
+      "property": "Under a hostile simulated keeper who ignores every recommendation, the engine remains deterministic, dimensionally valid, rail-respecting and non-oscillatory, and continues producing the best supported current advice.",
+      "generator": "Long-run simulation: A_new = A_old + (P D - C) dt + known external inputs + measurement noise, with the keeper never implementing any recommendation.",
+      "mustHold": ["deterministic = true", "stateValid = true", "railsPreserved = true", "recommendationVsImplementationTruth preserved", "currentBestAdvice still produced where supported", "no runaway or oscillating dose recommendation"],
+      "classificationRule": "If a bad outcome is caused solely by repeated confirmed non-adherence, failureClass = NONADHERENCE_OUTCOME and no new rescue state is required. If the same run reveals a runaway recommendation, a unit or sign error, corrupted state, a rail violation or an unsupported confident recommendation, failureClass includes ENGINE_FAILURE and the defect must be fixed." },
+
+    { "fixtureId": "INV-CORE-OWNER-001", "title": "One analytical owner", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-004", "CORE-SOURCE-001"] },
+      "kind": "STRUCTURAL",
+      "property": "The domain engine owns chemistry; presentation renders structured output; no UI component independently calculates slope, dose, response class or retest time; one retest scheduler owns chemistry timing.",
+      "check": "Static dependency check: no module in the presentation layer may import or reference a function from TREND, UNCERTAINTY, SUPPORT, CONSUMPTION, MAINTENANCE, RESPONSE, SAFETY or RETEST. Presentation receives EngineResult only.",
+      "negativeControl": "Add a slope recomputation to a card module; the check must fail." },
+
+    { "fixtureId": "INV-SURFACE-WORDING-001", "title": "Surface wording contract", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-005", "SURFACE-WORDING-001", "IX-002", "IX-003", "IX-004A", "IX-005", "IX-006", "ALK-CARD-ATTRIBUTION-001"] },
+      "kind": "CONTRACT",
+      "property": "Snapshot tests verify: conclusion before basis; no first person; dose mentioned only when relevant; units always present with chemical values and rates; recent-intervention precedence; no causal 'working' claim before a formal favourable class; no unsupported causal speculation; non-adherence wording informs without shaming or lockout; insufficiency wording is actionable; outer-bound wording never uses 'safe' or 'unsafe'.",
+      "mandatoryCardStructures": [
+        { "when": "responseAttribution = NOT_ATTRIBUTABLE_SMALL_SIGNAL", "fullCardMustShow": ["current Alk value", "current observed post-change slope", "current supported post-change slope", "current maintenance conclusion", "secondary explanation that the previous dose change was too small to isolate independently", "next test timing"], "headlineMustNotLeadWith": "not attributable" }
+      ],
+      "forbiddenStrings": ["The dose change is working. (before a formal favourable class)", "still falling (where causal continuity was not established)", "safe", "unsafe", "The current dose looks appropriate so far"] },
+
+    { "fixtureId": "INV-CONFIG-001", "title": "Effective-dated configuration", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-006", "SHARED-CONFIG-VERSION-001"] },
+      "kind": "PROPERTY",
+      "property": "The same raw pre-V2 history plus two different current target ranges must not rewrite the historical target configuration. Historical config-dependent replay before the first proven configuration version remains NOT_RUN.",
+      "generator": "Fix a legacy ledger; vary the current target range across {[8.2,8.8], [8.4,9.0]}; replay assessments both before and after the first proven effectiveFrom.",
+      "mustHold": ["historical assessments byte-identical across both variants", "pre-effectiveFrom replay returns NOT_RUN / HISTORICAL_CONFIGURATION_UNAVAILABLE in both variants"] },
+
+    { "fixtureId": "INV-TIME-001", "title": "Legacy absolute-time provenance", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-007", "SHARED-LEGACY-TIME-001", "DATA-PROVENANCE.md §2"] },
+      "kind": "PROPERTY",
+      "property": "Legacy date-only and local-time-without-zone records never gain fabricated noon or current-zone instants. Exact elapsed-time calculations use only EXACT_ABSOLUTE or RECONSTRUCTED_WITH_PROVENANCE instants.",
+      "generator": "Randomise the host process timezone and the viewer's display timezone across at least {UTC, +10:00, -07:00, Europe/London during and outside DST}.",
+      "mustHold": ["every DATE_ONLY record's stored provenance is unchanged after any number of read/render cycles", "engine output is byte-identical across all host and display timezones", "no analysis consuming a DATE_ONLY or LOCAL_TIME_ZONE_UNKNOWN instant produces a rate"] },
+
+    { "fixtureId": "INV-ALK-STAGING-001", "title": "No V1 staging or confidence multiplier", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-008", "ALK-STAGING-001", "ALK-048"] },
+      "kind": "PROPERTY",
+      "property": "Given the same supported slope and the same final physical constraints, changing a presentation confidence label must not change the numerical maintenance dose. No 100/90/70/55% raw-mL staging band may run.",
+      "generator": "Fix an EngineResult's numeric inputs; vary recommendationConfidence across {LOW, MODERATE, HIGH, UNSPECIFIED}.",
+      "mustHold": ["recommendedDoseMlPerDay identical in all four cases", "no constant in {1.00, 0.90, 0.75, 0.70, 0.55} appears in the maintenance pipeline"] },
+
+    { "fixtureId": "INV-ALK-VARIABLES-001", "title": "Variable semantics are dimension-safe", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-009", "ALK-VARIABLE-SEMANTICS-001", "Part I §44"] },
+      "kind": "STRUCTURAL",
+      "property": "Level targets, maintenance dose rates, temporary movement components, correction volumes and potency remain separate domain concepts. A field named target must not carry both chemical level and mL/day semantics.",
+      "check": "Every numeric field in the data contract carries exactly one dimension suffix; no field appears with two dimensions across any state; the seven ALK-069A quantities exist as seven distinct named fields.",
+      "negativeControl": "Merge maintenanceEstimate and continuousActionCandidate into one field named maintenanceDose; the check must fail." },
+
+    { "fixtureId": "INV-ALK-CONFIDENCE-001", "title": "Confidence is output, not a dose multiplier", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-010", "ALK-CONFIDENCE-OUTPUT-001"] },
+      "kind": "PROPERTY",
+      "property": "For identical evidence and supported slope, changing only a descriptive confidence label cannot alter the dose calculation.",
+      "relationToStaging": "Narrower than INV-ALK-STAGING-001: that one forbids the staging mechanism, this one forbids any confidence-to-number path at all.",
+      "mustHold": ["recommendationConfidence has no read path into any arithmetic function"] },
+
+    { "fixtureId": "INV-REPLAY-001", "title": "Deterministic replay", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["Part II §64", "ALK-G040", "WG-ALK-040"] },
+      "kind": "PROPERTY",
+      "property": "Same event ledger + same configuration versions + same asOf + same engine/canon version produces a byte-identical EngineResult and AuditTrace.",
+      "generator": "Shuffle the input event array order (preserving instants), vary host locale and timezone, run twice in one process and once in a fresh process.",
+      "mustHold": ["all runs byte-identical", "no clock read outside the passed asOf", "no unseeded randomness", "sort key is (absoluteInstant, eventOrdinal, eventId)"] },
+
+    { "fixtureId": "X-MIG-001", "title": "Ca/Mg logging remains inert during the Alk-only runtime", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-MIG-001", "MIGRATION-ALK-ONLY-001", "MIGRATION-INERT-CA-MG-MEASUREMENTS-001", "MIGRATION-MG-GATE-ISOLATION-001"] },
+      "kind": "GOLDEN", "equivalentTo": "AD-CAP-001",
+      "input": { "runtime": "ALK_V2_ONLY", "loggedCaPpm": 455, "loggedCaAt": "2026-08-19T20:00", "loggedMgPpm": 1180, "loggedMgAt": "2026-08-19T20:01" },
+      "expectedAction": { "stored": ["Ca measurement", "Mg measurement", "timestamps"], "historyChartEligibility": true,
+        "notRun": ["Ca trend", "Ca evidence", "Ca maintenance", "Mg trend", "Mg evidence", "Mg maintenance"], "notifications": "NONE", "magnesiumGateState": "UNKNOWN" },
+      "forbidden": { "cases": ["derive magnesiumGateState = ALERT_LOW from 1180 ppm", "derive Ca/Mg trend from logged history", "create a Ca/Mg retest schedule", "render a Ca/Mg advisory verdict"] } },
+
+    { "fixtureId": "X-GOV-001", "title": "Confirmed ignored recommendation: reassess and continue", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-001"] },
+      "kind": "GOLDEN",
+      "input": { "day0": { "appRecommends": ["Alk retest in 48 h", "maintenance increase"], "keeperConfirms": "maintenance increase NOT IMPLEMENTED" }, "day4": { "newValidAlkReading": true } },
+      "expectedAction": { "priorImplementationState": "CONFIRMED_NOT_IMPLEMENTED", "currentAssessment": "RUN", "currentRecommendation": "best supported recommendation from current facts", "punitiveLockout": false, "cardMayNameThePriorChangeWasNotMade": true },
+      "expectedReasonCodes": ["PRESENTATION_INFORM_AND_PROCEED"],
+      "forbidden": { "note": "Refusing current advice solely because the Day-0 recommendation was ignored is forbidden." } },
+
+    { "fixtureId": "X-GOV-002", "title": "Unknown implementation retains evidence guards", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-002"] },
+      "kind": "GOLDEN",
+      "input": { "day0": { "appRecommends": "dose change", "implementationConfirmation": "absent" }, "day4": { "newAlkReading": true } },
+      "expectedAction": { "priorImplementationState": "UNKNOWN", "ifImplementationIsLoadBearingForAttribution": { "causalResponseAttribution": "WITHHELD_OR_CONFOUNDED", "potencyLearning": "NOT_RUN" }, "currentPosition": "reported from the valid Day-4 reading" },
+      "forbidden": { "cases": ["assume the dose was changed", "assume the dose was not changed"] } },
+
+    { "fixtureId": "X-GOV-003", "title": "Inform and proceed versus refuse", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-003", "CORE-INFORM-PROCEED-001"] },
+      "kind": "GOLDEN",
+      "input": {
+        "caseA": { "alk": "below outer operating range", "mg": "ALERT_LOW", "alkPotency": "valid" },
+        "caseB": { "requiredAlkMovementDkh": 0.30, "selectedAlkPotency": "UNKNOWN" }
+      },
+      "expectedAction": {
+        "caseA": { "alkSafetyReturn": "recommended", "mgWarning": "shown" },
+        "caseB": { "requiredDkhMovement": "may be shown", "recommendedMlDose": "WITHHELD", "reason": "POTENCY_REQUIRED" }
+      },
+      "expectedReasonCodes": ["SAFETY_MG_GATE_OVERRIDDEN", "POTENCY_REQUIRED"],
+      "forbidden": { "cases": ["withhold the valid Alk safety action solely because low Mg may make the result harder to hold", "guess an mL dose"] } },
+
+    { "fixtureId": "X-GOV-004", "title": "Repeated ignored guidance is a stress test, not a rescue-state requirement", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-004"] },
+      "kind": "SIMULATION", "equivalentTo": "INV-NONADHERENCE-001",
+      "input": { "simulation": "keeper repeatedly logs worsening Alk and confirms multiple prior recommendations were not implemented; chemistry eventually reaches an extreme value" },
+      "expectedAction": { "requiredEngineProperties": ["deterministic", "stateValid", "railsPreserved", "recommendationVsImplementationTruth preserved", "currentBestAdvice still produced where supported"] },
+      "classificationRule": "NONADHERENCE_OUTCOME alone requires no new rescue state. ENGINE_FAILURE indicators (runaway dose recommendation, unit/sign error, corrupted state, rail violation, unsupported confident recommendation) must be fixed regardless of keeper behaviour." }
+  ]
+}

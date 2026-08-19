@@ -1,0 +1,224 @@
+{
+  "corpusId": "alk-v2-canon-named-goldens",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonSection": "PART III - Required golden scenarios (ALK-G001 .. ALK-G040)",
+  "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
+  "note": "These are the canon's named scenario requirements. Where a scenario has an exact numeric counterpart in the worked suite the fixture cross-references it rather than restating different numbers.",
+  "fixtures": [
+    { "fixtureId": "ALK-G001", "title": "First reading", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G001"] },
+      "rulesExercised": ["CORE-POSITION-001", "ALK-010", "ALK-MOVEMENT-001"],
+      "input": { "readings": 1, "doseChanges": 0 },
+      "expectedAction": { "position": "known from the single valid reading", "trajectory": "UNCERTAIN", "movementEvidence": "INSUFFICIENT", "consumption": "NOT_RUN", "action": "TEST_AGAIN" },
+      "expectedReasonCodes": ["EVIDENCE_INSUFFICIENT_CLUSTERS", "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE"] },
+
+    { "fixtureId": "ALK-G002", "title": "Two ordinary readings", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G002", "ALK-MINIMUM-CADENCE-001"] },
+      "rulesExercised": ["ALK-008", "ALK-MOVEMENT-001", "ALK-RAPID-001"],
+      "input": { "readingSpacingHours": 48, "declineDkh": "small, below the 0.30 dKH/day rapid threshold" },
+      "expectedAction": { "movementEvidence": "PROVISIONAL", "signalOnly": true, "ordinaryDoseChange": "WITHHELD" },
+      "expectedReasonCodes": ["EVIDENCE_PROVISIONAL_TWO_POINT", "EVIDENCE_INSUFFICIENT_CLUSTERS"],
+      "forbidden": { "note": "A two-point ordinary slope must not be promoted into an automatic maintenance recommendation." } },
+
+    { "fixtureId": "ALK-G003", "title": "Three-reading supported decline", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G003"] }, "equivalentTo": "WG-ALK-001",
+      "rulesExercised": ["ALK-MOVEMENT-001", "ALK-SUPPORTED-SLOPE-001", "ALK-CONSUMPTION-ESTIMATE-001", "ALK-MAINTENANCE-SEMANTICS-001"],
+      "expectedAction": { "note": "Non-zero supported falling slope; best-estimate demand and supported maintenance action both calculated and separately named." } },
+
+    { "fixtureId": "ALK-G004", "title": "Slow fortnight drain", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G004", "AUDIT-005"] }, "equivalentTo": "WG-ALK-003",
+      "rulesExercised": ["ALK-SLOPE-UNCERTAINTY-001", "ALK-SUPPORTED-SLOPE-001"],
+      "expectedAction": { "trajectory": "FALLING" },
+      "forbidden": { "trajectory": "STABLE", "note": "A long clean window reduces sigma_S enough that the supported slope becomes non-zero." } },
+
+    { "fixtureId": "ALK-G004A", "title": "Uncertainty-limited lean", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G004A"] }, "equivalentTo": "WG-ALK-002",
+      "rulesExercised": ["ALK-SUPPORTED-SLOPE-001", "ALK-STABLE-001"],
+      "expectedAction": { "trajectoryRemains": "rising/falling", "action": "HOLD_CURRENT_DOSE", "reason": "UNCERTAINTY_LIMITED", "fullCardShows": ["observedSlope", "supportedSlope"] } },
+
+    { "fixtureId": "ALK-G005", "title": "Rapid one-day fall", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G005"] }, "equivalentTo": "WG-ALK-006",
+      "rulesExercised": ["ALK-RAPID-001"],
+      "input": { "confirmedSlopeDkhPerDay": ">= 0.30", "elapsedHours": ">= 24" },
+      "expectedAction": { "rapidOverrideAvailable": true } },
+
+    { "fixtureId": "ALK-G006", "title": "Stable below range", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G006"] }, "equivalentTo": "WG-ALK-014",
+      "rulesExercised": ["ALK-024", "CORE-STABILISE-001", "ALK-MAINTENANCE-SEMANTICS-001"],
+      "expectedAction": { "maintenance": "HOLD", "returnPlanOffer": "per return-plan rules" },
+      "openIssues": ["OI-RETURNOFFER-001"] },
+
+    { "fixtureId": "ALK-G007", "title": "Stable above range", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G007"] }, "equivalentTo": "WG-ALK-034",
+      "rulesExercised": ["ALK-024", "ALK-STABLE-001"],
+      "expectedAction": { "maintenance": "HOLD", "downwardReturnPlanOffer": "per return-plan rules" },
+      "forbidden": { "note": "No maintenance decrease derived solely from the level." } },
+
+    { "fixtureId": "ALK-G008", "title": "In range falling", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G008", "ALK-026"] },
+      "rulesExercised": ["ALK-026", "ALK-MAINTENANCE-SEMANTICS-001", "ALK-FORECAST-SLOPE-001"],
+      "expectedAction": { "action": "SET_MAINTENANCE_DOSE", "note": "Supported maintenance deficit despite the position being in range. Do not wait for the level to leave range." } },
+
+    { "fixtureId": "ALK-G009", "title": "In range rising", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G009", "ALK-028"] }, "equivalentTo": "WG-ALK-033",
+      "rulesExercised": ["ALK-028"],
+      "expectedAction": { "action": "SET_MAINTENANCE_DOSE", "direction": "decrease" },
+      "forbidden": { "note": "A rising level must not be called fine merely because it has not yet crossed the upper edge." } },
+
+    { "fixtureId": "ALK-G010", "title": "Dose change, Day-2 predicted-flat early check", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G010", "ALK-POSTCHANGE-001", "AUDIT-002"] },
+      "rulesExercised": ["ALK-POSTCHANGE-001", "ALK-PREDICTED-POST-SLOPE-001", "ALK-POSTCHANGE-RETEST-001"],
+      "input": { "preChangeTrajectory": "falling", "doseIncreasePredicts": "approximately zero post-change slope", "first48hInterval": "approximately flat" },
+      "expectedAction": { "responseAttribution": "AWAITING_FORMAL_POST_SLOPE", "action": "HOLD_CURRENT_DOSE", "nextTest": "approximately Day +4", "cardMayShow": ["predictedPostSlope", "firstPostChangeIntervalSlope"], "cardMaySay": "consistent with the intended direction" },
+      "expectedReasonCodes": ["RESPONSE_AWAITING_FORMAL_POST_SLOPE", "RETEST_POST_CHANGE_SECOND", "PRESENTATION_NO_CAUSAL_WORKING_CLAIM"],
+      "forbidden": { "classificationsFromOneGenuinePostMeasurement": ["EXPECTED", "PARTIAL", "NO_DETECTABLE_RESPONSE", "CONTRADICTORY", "OVER_RESPONSE"], "wording": "The dose change is working." } },
+
+    { "fixtureId": "ALK-G011", "title": "Dose change, Day 4 stable", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G011"] }, "seeAlso": ["WG-ALK-007", "WG-ALK-008", "AD-RSP-001"],
+      "rulesExercised": ["ALK-037", "ALK-RESPONSE-CLASSIFIER-001"],
+      "expectedAction": { "note": "Two post-change measurements establish a near-zero post slope. Whether the formal class is EXPECTED or INCONCLUSIVE depends on the band; see WG-ALK-007 vs AD-RSP-001." },
+      "openIssues": ["OI-DAY4-001 - the formal classifier may run at Day +4, but an ordinary maintenance adjustment requires the ALK-MOVEMENT-001 minimum, earliest Day +6"] },
+
+    { "fixtureId": "ALK-G012", "title": "Partial response", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G012", "ALK-041"] }, "equivalentTo": "WG-ALK-009 case PARTIAL",
+      "rulesExercised": ["ALK-041", "ALK-RESPONSE-CLASSIFIER-001"],
+      "expectedAction": { "ifEvidenceStillDeveloping": "HOLD; test again; do not immediately add another increase", "onceSufficient": "residual supported slope may justify a further maintenance recalculation" } },
+
+    { "fixtureId": "ALK-G013", "title": "No detectable response", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G013", "ALK-039"] }, "equivalentTo": "WG-ALK-009 case NO_DETECTABLE_RESPONSE",
+      "rulesExercised": ["ALK-039", "ALK-RESPONSE-CLASSIFIER-001", "ALK-RESPONSE-DETECTABILITY-001"],
+      "expectedAction": { "classifyWithoutGuessingCause": true },
+      "forbidden": { "assertedCauses": ["low potency", "pump failure", "increased consumption"], "note": "A Day +2 baseline-to-first-reading interval is never sufficient for this classification." } },
+
+    { "fixtureId": "ALK-G014", "title": "Contradictory response", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G014", "ALK-040"] }, "equivalentTo": "WG-ALK-009 case CONTRADICTORY",
+      "rulesExercised": ["ALK-040"],
+      "expectedAction": { "flagContradiction": true, "shortenRetest": true, "verifyDelivery": true, "claimCause": false } },
+
+    { "fixtureId": "ALK-G015", "title": "Over-response", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G015", "ALK-042"] }, "equivalentTo": "WG-ALK-009 case OVER_RESPONSE",
+      "rulesExercised": ["ALK-042"],
+      "expectedAction": { "useCurrentPostChangeState": true },
+      "forbidden": { "note": "Do not automatically reverse the entire prior dose change." } },
+
+    { "fixtureId": "ALK-G016", "title": "Overshoot", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G016", "ALK-043"] }, "seeAlso": ["AD-RSP-002"],
+      "rulesExercised": ["ALK-043"],
+      "input": { "targetRange": [8.2, 8.8], "latestActualReadingDkh": 8.95, "fittedValueDkh": 8.78, "interventionDirection": "upward" },
+      "expectedAction": { "positionEvent": "OVERSHOOT", "stopDeliberateUpwardMovement": true, "returnToMaintenanceLogic": true, "shortenRetest": true },
+      "expectedReasonCodes": ["RESPONSE_OVERSHOOT"],
+      "forbidden": { "note": "Overshoot is measured from the latest actual reading, not the regression. Do not simply undo the previous change." },
+      "openIssues": ["OI-OVERSHOOT-001"] },
+
+    { "fixtureId": "ALK-G017", "title": "Interrupted change", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G017"] }, "equivalentTo": "WG-ALK-021",
+      "rulesExercised": ["Part II §36"],
+      "input": { "sequence": ["9 -> 10 mL/day", "10 -> 11 mL/day before the first is assessable"] },
+      "expectedAction": { "first": "INTERRUPTED", "not": "FAILED" } },
+
+    { "fixtureId": "ALK-G018", "title": "Three rapid manual changes", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G018", "Part II §37"] },
+      "rulesExercised": ["Part II §37", "Part II §38"],
+      "expectedAction": { "allEventsPreserved": true, "eachUnevaluableInterventionBecomes": "INTERRUPTED", "immediateRecommendationConfidenceFalls": true, "preferHoldingLatestActualDose": "until a clean segment exists, unless safety overrides" },
+      "forbidden": { "note": "The engine must not pretend the dose history was a single jump from the first to the last value." } },
+
+    { "fixtureId": "ALK-G019", "title": "Immediate known correction", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G019", "ALK-034"] },
+      "rulesExercised": ["ALK-034", "Part II §9.2"],
+      "expectedAction": { "normalizeActualCorrectionContributionInUnderlyingTrend": true, "rawValuesUntouched": true } },
+
+    { "fixtureId": "ALK-G020", "title": "Staged correction", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G020", "ALK-034"] },
+      "rulesExercised": ["ALK-034", "Part II §9.3"],
+      "expectedAction": { "normalizeActualIndividualDeliverySchedule": true },
+      "forbidden": { "note": "The V1 three-day linear assumption is removed." } },
+
+    { "fixtureId": "ALK-G021", "title": "Routine known water change, negligible", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G021"] },
+      "rulesExercised": ["ALK-033"],
+      "input": { "predictedAlkStepDkh": "< 0.10" },
+      "expectedAction": { "materialityClass": "NEGLIGIBLE", "segmentMayRemain": true },
+      "expectedReasonCodes": ["SEGMENT_WC_NEGLIGIBLE"] },
+
+    { "fixtureId": "ALK-G022", "title": "Material known water change", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G022"] }, "equivalentTo": "WG-ALK-011",
+      "rulesExercised": ["ALK-033"],
+      "expectedAction": { "normalizeMeasuredCredibleAlkStep": true },
+      "openIssues": ["OI-WATERCHANGE-001"] },
+
+    { "fixtureId": "ALK-G023", "title": "Material unknown water change", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G023"] }, "equivalentTo": "WG-ALK-012 case 5%",
+      "rulesExercised": ["ALK-WATERCHANGE-UNKNOWN-001"],
+      "expectedAction": { "breakOrConfoundAlkConsumptionSegment": true } },
+
+    { "fixtureId": "ALK-G024", "title": "Suspicious latest result disproved", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G024", "Part II §48", "Part II §49"] },
+      "rulesExercised": ["ALK-051", "Part II §48"],
+      "input": { "suspicionSource": "EXPLICIT_USER_MARK_OR_ANOMALOUS_CLUSTER", "repeat": "returns to the expected series" },
+      "expectedAction": { "retainOriginalRawValue": true, "excludeWithDocumentedReason": true },
+      "expectedReasonCodes": ["VALIDATION_READING_MARKED_SUSPECT", "RETEST_REPEAT_NOW"],
+      "openIssues": ["OI-SUSPECT-001 - automatic suspicion detection is NOT_RUN, so this fixture is driven from an explicit mark or an anomalous repeat cluster"] },
+
+    { "fixtureId": "ALK-G025", "title": "Suspicious latest result confirmed", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G025", "Part II §15.3"] },
+      "rulesExercised": ["Part II §18", "Part II §48"],
+      "input": { "repeat": "confirms the new level" },
+      "expectedAction": { "treatAsRealShift": true },
+      "forbidden": { "note": "A confirmed regime shift must not be removed merely because it disagrees with history." },
+      "openIssues": ["OI-SUSPECT-001"] },
+
+    { "fixtureId": "ALK-G026", "title": "Negative consumption small / uncertain", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G026", "ALK-031"] },
+      "rulesExercised": ["ALK-031"],
+      "expectedAction": { "action": "HOLD_CURRENT_DOSE", "doseReductionDerived": false },
+      "expectedReasonCodes": ["CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED"],
+      "openIssues": ["OI-NEGCONS-001 - the slight/material boundary is undefined; both branches HOLD, so this fixture passes either way"] },
+
+    { "fixtureId": "ALK-G027", "title": "Negative consumption materially unexplained", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G027"] }, "equivalentTo": "WG-ALK-013",
+      "rulesExercised": ["ALK-NEGATIVE-CONSUMPTION-001"],
+      "expectedAction": { "holdOrdinaryConsumptionLogic": true, "flagModelMismatch": true } },
+
+    { "fixtureId": "ALK-G028", "title": "Negative consumption, above range and rising", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G028", "AUDIT-019"] },
+      "rulesExercised": ["ALK-NEGATIVE-CONSUMPTION-001"],
+      "expectedAction": { "holdEstablishedMaintenance": true, "increaseUrgencyAndRetest": true, "inventProtectiveMaintenanceReduction": false } },
+
+    { "fixtureId": "ALK-G029", "title": "Stable low, upward return plan", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G029"] }, "equivalentTo": "WG-ALK-014",
+      "rulesExercised": ["ALK-054"],
+      "expectedAction": { "temporaryDose": "maintenance reference + deliberate movement component, as separate named fields" },
+      "forbidden": { "note": "Maintenance and deliberate movement must never share one dose field." } },
+
+    { "fixtureId": "ALK-G030", "title": "Downward return limited by consumption", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G030"] }, "equivalentTo": "WG-ALK-035",
+      "rulesExercised": ["ALK-054", "AUDIT-022"],
+      "expectedAction": { "reportLongerDuration": true } },
+
+    { "fixtureId": "ALK-G031", "title": "First aim-point crossing", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G031"] }, "equivalentTo": "WG-ALK-015",
+      "rulesExercised": ["ALK-056"],
+      "expectedAction": { "stopTemporaryMovementOnFirstReachOrPass": true },
+      "forbidden": { "note": "Do not wait for a second confirmation while continuing the temporary dose." } },
+
+    { "fixtureId": "ALK-G032", "title": "Second arrival confirmation", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G032", "ALK-057"] },
+      "rulesExercised": ["ALK-057"],
+      "input": { "arrivalZoneDkh": [8.4, 8.6], "derivation": "max(bandWidth/3 = 0.2, 2*sigma = 0.2) centred on 8.5" },
+      "expectedAction": { "maintenanceHoldsInArrivalZone": true, "planConfirmedComplete": true } },
+
+    { "fixtureId": "ALK-G033", "title": "Potency observation clean", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G033"] }, "equivalentTo": "WG-ALK-024", "seeAlso": ["AD-POT-001"],
+      "rulesExercised": ["ALK-016", "ALK-017"],
+      "openIssues": ["OI-WG024-001"] },
+
+    { "fixtureId": "ALK-G034", "title": "Potency observation too small", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G034"] }, "equivalentTo": "WG-ALK-025",
+      "rulesExercised": ["ALK-017"],
+      "expectedAction": { "potencyLearning": "none" } },
+
+    { "fixtureId": "ALK-G035", "title": "Potency across a batch change", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G035", "AUDIT-024"] }, "equivalentTo": "WG-ALK-037",
+      "rulesExercised": ["ALK-067", "ALK-POTENCY-POOL-001"],
+      "expectedAction": { "pooling": "REJECTED", "observationPreservedDiagnostically": true } },
+
+    { "fixtureId": "ALK-G036", "title": "Three consistent potency observations", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G036"] }, "equivalentTo": "WG-ALK-026",
+      "rulesExercised": ["ALK-POTENCY-CONFIDENCE-001"],
+      "expectedAction": { "promoteIfAllCriteriaMet": "CALIBRATED" } },
+
+    { "fixtureId": "ALK-G037", "title": "Potency large discrepancy", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G037"] }, "equivalentTo": "WG-ALK-027", "seeAlso": ["WG-ALK-050"],
+      "rulesExercised": ["ALK-POTENCY-PLAUSIBILITY-001"],
+      "forbidden": { "note": "Do not silently switch on one extreme observation." } },
+
+    { "fixtureId": "ALK-G038", "title": "Old bracket conflicts with growing demand", "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["ALK-G038", "AUDIT-023"] },
+      "rulesExercised": ["ALK-BRACKET-COMPARABILITY-001", "ALK-032"],
+      "input": { "historical": ["9 mL/day once held Alk", "10 mL/day once caused a rise"], "currentSupportedRequirementMlPerDay": 11 },
+      "expectedAction": { "bracketStatus": "CONFLICT", "recommendedDoseUnchangedByBracket": true, "warnAndRequestVerification": true },
+      "expectedReasonCodes": ["BRACKET_CONFLICT"],
+      "forbidden": { "note": "The old bracket must not silently clamp the new result to <= 10." } },
+
+    { "fixtureId": "ALK-G039", "title": "Target range changed", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G039"] }, "equivalentTo": "WG-ALK-028",
+      "rulesExercised": ["ALK-066"],
+      "expectedAction": { "positionReclassifies": true, "consumptionAndPotencyUnchanged": true, "historyUnchanged": true } },
+
+    { "fixtureId": "ALK-G039A", "title": "Intervention too small to attribute, current dose holds", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G039A"] }, "equivalentTo": "WG-ALK-010 branch A",
+      "rulesExercised": ["ALK-RESPONSE-ATTRIBUTION-001", "ALK-CARD-ATTRIBUTION-001"],
+      "input": { "expectedInterventionResponse": "<= 1.28 * sigma_pre" },
+      "expectedAction": { "priorIntervention": "NOT_ATTRIBUTABLE_SMALL_SIGNAL", "newCleanPostChangeEvidence": { "observedLean": "non-zero", "supportedSlope": 0 }, "action": "HOLD_CURRENT_DOSE", "fullCardExplainsBoth": ["the small-signal attribution limit", "the current-dose conclusion"] } },
+
+    { "fixtureId": "ALK-G039B", "title": "Intervention too small to attribute, current dose still deficient", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G039B"] }, "equivalentTo": "WG-ALK-010 branch B",
+      "rulesExercised": ["ALK-RESPONSE-ATTRIBUTION-001"],
+      "expectedAction": { "priorIntervention": "NOT_ATTRIBUTABLE_SMALL_SIGNAL", "newSupportedFallingSlope": "non-zero", "recommendationCalculatedFrom": "the current supported slope" },
+      "forbidden": { "note": "Do not keep waiting for attribution of the prior intervention." } },
+
+    { "fixtureId": "ALK-G040", "title": "Deterministic replay", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["ALK-G040", "Part II §64"] },
+      "rulesExercised": ["Part II §64"],
+      "input": { "sameEventLedger": true, "sameConfig": true, "sameAsOf": true },
+      "expectedAction": { "sameResult": true, "byteIdentical": true },
+      "expectedReasonCodes": ["AUDIT_REPLAY_DETERMINISTIC"] }
+  ]
+}

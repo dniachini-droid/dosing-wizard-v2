@@ -1,0 +1,49 @@
+{
+  "corpusId": "alk-v2-config-defaults",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "configurations": {
+    "CANON_DEFAULT": {
+      "$comment": "The default example configuration of PART III - WORKED NUMERICAL GOLDEN SUITE. Reproduced verbatim.",
+      "selectedPotencyDkhPerMl": 0.0693,
+      "selectedPotencySource": "THEORETICAL_OR_CONFIGURED",
+      "sigmaAlkBaseDkh": 0.10,
+      "alkSlopeSupportK": 1.28,
+      "alkResponseK": 1.28,
+      "actuatorIncrementMlPerDay": 0.10,
+      "ordinaryStepCapFraction": 0.25,
+      "exceptionalStepCapFraction": 0.50,
+      "alkRateRailDkhPerDay": 0.50,
+      "routineCadenceHours": 48,
+      "targetRangeMinDkh": 8.2,
+      "targetRangeMaxDkh": 8.8,
+      "outerMinDkh": 7.0,
+      "outerMaxDkh": 11.0,
+      "bSafetyDkh": 0.20,
+      "safetyDestinationLowDkh": 7.20,
+      "safetyDestinationHighDkh": 10.80,
+      "netVolumeL": 77,
+      "magnesiumGateState": "UNKNOWN",
+      "potencyLearning": "CAPABILITY_GATED",
+      "configVersionId": "CFG-V1",
+      "effectiveFrom": "2026-08-19T21:00:00+10:00"
+    },
+    "DERIVED_CONSTANTS": {
+      "$comment": "Values derived once from CANON_DEFAULT by canonical formulas. Provided so fixtures need not repeat the arithmetic.",
+      "sigmaS_3pt_0_2_4": 0.035355339059327376,
+      "sigmaS_5pt_0_2_4_6_8": 0.015811388300841896,
+      "sigmaS_8pt_0_to_14": 0.007715167498104595,
+      "sigmaS_2pt_1day": 0.1414213562373095,
+      "sigmaS_2pt_2day": 0.07071067811865475,
+      "sxx_3pt_0_2_4": 8,
+      "sxx_5pt_0_2_4_6_8": 40,
+      "sxx_8pt_0_to_14": 168,
+      "railAsDoseDeltaMlPerDay": 7.215007215007215,
+      "liquidGuardMlPer24h": 1540,
+      "minAttributableDeltaDose_3ptPre": 0.6530283303,
+      "minAttributableDeltaDose_5ptPre": 0.2920429004,
+      "minAttributableDeltaDose_8ptPre": 0.1425024949,
+      "minCalibrationDeltaDose_3pt_3pt": 2.1645021645,
+      "unknownWcBreakFraction": 0.05
+    }
+  }
+}

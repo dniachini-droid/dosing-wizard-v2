@@ -36,6 +36,9 @@ Phase 0 — Preserve and found V2
   `docs/process/V1-AGENT-SALVAGE-AUDIT.md`.
 - A project agent roster and reusable review workflows exist under `.claude/`,
   documented in `docs/process/`.
+- An implementation-specification package for the Alk V2 domain exists under
+  `docs/implementation/alk-v2/`. It is specification only: no application runtime, no
+  framework, no database, no dependencies.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 
@@ -93,6 +96,16 @@ architecture for a paid offline-capable PWA before scaffolding application code.
 
 None for founding the repository.
 
+None for architecture research, which is the next major step and does not depend on the
+Alk implementation package.
+
+**Eight owner decisions are required before the Alk domain can be implemented in full.**
+They are recorded in `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md` with failure
+scenarios and interim refusal behaviour. Each is a chemistry or safety judgement that the
+frozen canon does not contain; none may be resolved in code. Implementation may begin
+without them — every affected output refuses explicitly rather than defaulting — but the
+domain is not complete until they are closed under the Freeze-4 reopening rule.
+
 If the frozen canon source files cannot be accessed from a cloud session, that must be
 recorded separately as an explicit blocker rather than worked around.
 
@@ -105,6 +118,14 @@ repository and have been copied into `docs/canon/` with verified SHA-256 equalit
 
 Recorded rather than silently resolved. Neither the canon nor the handoff has been
 edited; both are byte-for-byte copies.
+
+0. **The frozen canon contains 24 recorded defects.**
+   The Alk implementation package inventories all 261 normative canon rules and classifies
+   every ambiguity found. Twenty-four are genuine canon defects — eleven of them blocking
+   a dependent output. They are recorded in
+   `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md`, not repaired. Repair belongs to a
+   governed Alk Freeze 5 (or a shared freeze where the defect is shared), per the Freeze-4
+   reopening rule.
 
 1. **Handoff freeze identifiers are stale relative to canon.**
    `docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md` states current freezes

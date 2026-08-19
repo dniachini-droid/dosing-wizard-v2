@@ -1,0 +1,427 @@
+{
+  "corpusId": "alk-v2-canon-worked-goldens-round1",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonSection": "PART III - WORKED NUMERICAL GOLDEN SUITE - ROUND 1",
+  "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
+  "fixtures": [
+    {
+      "fixtureId": "WG-ALK-001",
+      "title": "Supported fall produces a deliberately residual predicted fall",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-001", "AUDIT-001"] },
+      "rulesExercised": ["ALK-SLOPE-UNCERTAINTY-001", "ALK-SUPPORTED-SLOPE-001", "ALK-SLOPE-SUPPORT-001", "ALK-ROUNDING-001", "ALK-PREDICTED-POST-SLOPE-001", "ALK-STEP-CAP-001"],
+      "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 9.0, "effectiveAt": "2026-08-20T09:00:00+10:00", "effectiveAtConfidence": "EXACT", "deliveryBasis": "CONFIRMED_PROGRAMMED_SCHEDULE" },
+          { "kind": "READING", "measuredAt": "2026-09-01T09:00:00+10:00", "rawValueDkh": 8.60, "timeProvenance": "EXACT_ABSOLUTE" },
+          { "kind": "READING", "measuredAt": "2026-09-03T09:00:00+10:00", "rawValueDkh": 8.30, "timeProvenance": "EXACT_ABSOLUTE" },
+          { "kind": "READING", "measuredAt": "2026-09-05T09:00:00+10:00", "rawValueDkh": 8.00, "timeProvenance": "EXACT_ABSOLUTE" }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "independentClusters": 3, "spanDays": 4.0, "timesDays": [0, 2, 4],
+        "estimator": "THEIL_SEN", "observedSlopeDkhPerDay": -0.1500,
+        "sigmaResidDkh": 0.0, "sigmaPointDkh": 0.10, "sxxDay2": 8, "sigmaSDkhPerDay": 0.035355339059327376
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.10474516599, "trajectory": "FALLING", "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "action": "SET_MAINTENANCE_DOSE",
+        "continuousActionCandidateMlPerDay": 10.51154401, "capApplied": "NONE",
+        "note": "25% of 9.0 = 2.25 mL/day permits the 1.5115 mL/day change",
+        "recommendedDoseMlPerDay": 10.5, "deltaDoseMlPerDay": 1.5,
+        "deltaEffectDkhPerDay": 0.10395, "predictedPostSlopeDkhPerDay": -0.04605
+      },
+      "expectedRetest": { "reasonCode": "RETEST_POST_CHANGE_FIRST", "approxHours": 48 },
+      "expectedReasonCodes": ["TRAJECTORY_FALLING", "UNCERTAINTY_FLOOR_APPLIED", "MAINTENANCE_INCREASE_RECOMMENDED"],
+      "forbidden": { "predictedPostSlopeDkhPerDay": 0, "note": "The app must not predict zero." }
+    },
+    {
+      "fixtureId": "WG-ALK-002",
+      "title": "Observed fall but uncertainty-limited HOLD",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-002", "AUDIT-004", "ALK-G004A"] },
+      "rulesExercised": ["ALK-SUPPORTED-SLOPE-001", "ALK-MOVEMENT-001", "ALK-STABLE-001"],
+      "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 9.0, "effectiveAt": "2026-08-20T09:00:00+10:00", "effectiveAtConfidence": "EXACT" },
+          { "kind": "READING", "measuredAt": "2026-09-01T09:00:00+10:00", "rawValueDkh": 8.50 },
+          { "kind": "READING", "measuredAt": "2026-09-03T09:00:00+10:00", "rawValueDkh": 8.42 },
+          { "kind": "READING", "measuredAt": "2026-09-05T09:00:00+10:00", "rawValueDkh": 8.34 }
+        ]
+      },
+      "expectedIntermediateEvidence": { "observedSlopeDkhPerDay": -0.0400, "sigmaSDkhPerDay": 0.035355339059327376, "supportSubtractionDkhPerDay": 0.04525483399 },
+      "expectedSupportedResult": { "supportedSlopeDkhPerDay": 0.0, "trajectory": "FALLING", "movementEvidence": "UNCERTAINTY_LIMITED" },
+      "expectedAction": { "action": "HOLD_CURRENT_DOSE", "recommendedDoseMlPerDay": 9.0 },
+      "expectedReasonCodes": ["TRAJECTORY_UNCERTAINTY_LIMITED", "MAINTENANCE_HOLD_UNCERTAINTY_LIMITED"],
+      "forbidden": { "trajectory": "STABLE", "note": "Forbidden result per canon. The full card must show observed AND supported slope." }
+    },
+    {
+      "fixtureId": "WG-ALK-003",
+      "title": "Slow persistent drift becomes actionable with time",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-003", "AUDIT-003", "AUDIT-005"] },
+      "rulesExercised": ["ALK-MINIMUM-ACTION-001", "ALK-SLOPE-UNCERTAINTY-001", "ALK-SUPPORTED-SLOPE-001"],
+      "input": {
+        "asOf": "2026-09-15T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 9.0, "effectiveAt": "2026-08-20T09:00:00+10:00" },
+          { "kind": "READING_SERIES", "startAt": "2026-09-01T09:00:00+10:00", "everyHours": 48, "count": 8,
+            "valuesDkh": [8.60, 8.56, 8.52, 8.48, 8.44, 8.40, 8.36, 8.32],
+            "note": "exact -0.0200 dKH/day over 14 days" }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "independentClusters": 8, "spanDays": 14.0, "timesDays": [0,2,4,6,8,10,12,14],
+        "observedSlopeDkhPerDay": -0.0200, "sigmaPointDkh": 0.10, "sxxDay2": 168, "sigmaSDkhPerDay": 0.0077151675
+      },
+      "expectedSupportedResult": { "supportedSlopeDkhPerDay": -0.01012458560, "trajectory": "FALLING", "movementEvidence": "SUFFICIENT" },
+      "expectedAction": {
+        "action": "SET_MAINTENANCE_DOSE",
+        "continuousActionCandidateMlPerDay": 9.14609, "recommendedDoseMlPerDay": 9.1, "deltaDoseMlPerDay": 0.1,
+        "expected48hEffectDkh": 0.01386,
+        "note": "The 48 h effect is far below the 0.10 dKH point floor. The change is STILL recommended."
+      },
+      "expectedReasonCodes": ["MAINTENANCE_INCREASE_RECOMMENDED"],
+      "forbidden": { "action": "HOLD_CURRENT_DOSE", "note": "No second must-be-visible-in-48h detectability gate may exist." },
+      "openIssues": ["OI-INDEPENDENCE-001 not triggered: all spacings are 48 h"]
+    },
+    {
+      "fixtureId": "WG-ALK-004",
+      "title": "Baseline establishment from zero dose",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-004", "AUDIT-010"] },
+      "rulesExercised": ["ALK-STEP-CAP-001", "ALK-ROUNDING-001", "ALK-046"],
+      "config": { "currentDoseMlPerDay": 0.0 },
+      "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 0.0, "effectiveAt": "2026-08-20T09:00:00+10:00" },
+          { "kind": "READING", "measuredAt": "2026-09-01T09:00:00+10:00", "rawValueDkh": 8.70 },
+          { "kind": "READING", "measuredAt": "2026-09-03T09:00:00+10:00", "rawValueDkh": 8.30 },
+          { "kind": "READING", "measuredAt": "2026-09-05T09:00:00+10:00", "rawValueDkh": 7.90 }
+        ]
+      },
+      "expectedIntermediateEvidence": { "observedSlopeDkhPerDay": -0.2000, "sigmaSDkhPerDay": 0.035355339059327376 },
+      "expectedSupportedResult": { "supportedSlopeDkhPerDay": -0.15474516599 },
+      "expectedAction": {
+        "doseStepRegime": "BASELINE_ESTABLISHMENT",
+        "note": "D_current 0 < 4 x 0.10 = 0.40, so the 25% cap is inactive",
+        "continuousActionCandidateMlPerDay": 2.23304473,
+        "recommendedDoseMlPerDay": 2.2,
+        "deltaEffectDkhPerDay": 0.15246,
+        "railCheck": "0.15246 <= 0.50 OK",
+        "predictedPostSlopeDkhPerDay": -0.04754
+      },
+      "expectedReasonCodes": ["MAINTENANCE_BASELINE_ESTABLISHMENT", "MAINTENANCE_INCREASE_RECOMMENDED"],
+      "forbidden": { "recommendedDoseMlPerDay": 0, "note": "Applying 25% to zero would trap the controller at zero forever." }
+    },
+    {
+      "fixtureId": "WG-ALK-005",
+      "title": "Exact rounding tie goes toward current dose - both directions",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-005", "AUDIT-011"] },
+      "rulesExercised": ["ALK-ROUNDING-001"],
+      "input": {
+        "cases": [
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 10.25, "actuatorIncrementMlPerDay": 0.10,
+            "adjacent": [10.2, 10.3], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.2, 1.3],
+            "expectedRecommendedDoseMlPerDay": 10.2 },
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 7.75, "actuatorIncrementMlPerDay": 0.10,
+            "adjacent": [7.7, 7.8], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.3, 1.2],
+            "expectedRecommendedDoseMlPerDay": 7.8 }
+        ]
+      },
+      "expectedAction": { "note": "Rounding has no systematic increase/decrease bias." },
+      "forbidden": { "note": "A tie must not resolve by always-up, always-down, or banker's rounding." }
+    },
+    {
+      "fixtureId": "WG-ALK-006",
+      "title": "Rapid outer-bound risk unlocks the 50% cap but not unlimited action",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-006", "AUDIT-009", "AUDIT-012"] },
+      "rulesExercised": ["ALK-RAPID-001", "ALK-STEP-CAP-001", "ALK-046", "ALK-PREDICTED-POST-SLOPE-001", "ALK-SLOPE-UNCERTAINTY-001"],
+      "input": {
+        "asOf": "2026-09-02T09:00:00+10:00",
+        "events": [
+          { "kind": "DOSE_STATE", "programmedDoseMlPerDay": 9.0, "effectiveAt": "2026-08-20T09:00:00+10:00" },
+          { "kind": "READING", "measuredAt": "2026-09-01T09:00:00+10:00", "rawValueDkh": 8.00 },
+          { "kind": "READING", "measuredAt": "2026-09-02T09:00:00+10:00", "rawValueDkh": 7.20 }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "estimator": "TWO_POINT", "observedSlopeDkhPerDay": -0.800,
+        "sigmaSDkhPerDay": 0.1414213562373095, "rapidConfirmed": true,
+        "tOuterLowDays": 0.25, "note": "(7.20 - 7.00) / 0.800"
+      },
+      "expectedSupportedResult": { "supportedSlopeDkhPerDay": -0.61898066, "movementEvidence": "PROVISIONAL" },
+      "expectedAction": {
+        "rawSupportedDeltaDoseMlPerDay": 8.93189991,
+        "ordinaryCapMlPerDay": 2.25, "exceptionalCapMlPerDay": 4.50, "railAsDoseDeltaMlPerDay": 7.21500722,
+        "bindingConstraint": "EXCEPTIONAL_STEP_CAP_50",
+        "capApplied": "EXCEPTIONAL_50",
+        "deltaDoseMlPerDay": 4.50, "recommendedDoseMlPerDay": 13.5,
+        "deltaEffectDkhPerDay": 0.31185, "predictedPostSlopeDkhPerDay": -0.48815
+      },
+      "expectedRetest": { "reasonCode": "RETEST_RAPID_MOVEMENT", "approxHours": 24 },
+      "expectedReasonCodes": ["TRAJECTORY_RAPID_CONFIRMED", "MAINTENANCE_STEP_CAP_EXCEPTIONAL"],
+      "forbidden": { "note": "The app does not pretend the capped intervention will fully stabilise the tank." }
+    },
+    {
+      "fixtureId": "WG-ALK-007",
+      "title": "Day +4 can be formally INCONCLUSIVE even when the central response looks correct",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-007", "AUDIT-013"] },
+      "rulesExercised": ["ALK-RESPONSE-CLASSIFIER-001", "ALK-RESPONSE-DETECTABILITY-001", "ALK-PREDICTION-SNAPSHOT-001"],
+      "input": {
+        "continuesFrom": "WG-ALK-001",
+        "interventionAt": "2026-09-05T09:30:00+10:00",
+        "doseChange": { "from": 9.0, "to": 10.5 },
+        "postReadings": [
+          { "measuredAt": "2026-09-07T09:00:00+10:00", "note": "Day +2" },
+          { "measuredAt": "2026-09-09T09:00:00+10:00", "note": "Day +4" }
+        ],
+        "postSlopeDkhPerDay": -0.050
+      },
+      "expectedIntermediateEvidence": {
+        "sPreDkhPerDay": -0.150, "sigmaPreDkhPerDay": 0.035355339059327376,
+        "sigmaPostDkhPerDay": 0.07071067811865475, "note": "two-point post slope across 2 days",
+        "expectedResponseDkhPerDay": 0.10395,
+        "directedObservedResponseDkhPerDay": 0.100,
+        "sigmaResponseDkhPerDay": 0.07905694150,
+        "responseBandDkhPerDay": 0.10119288513,
+        "sigmaPostRequiredDkhPerDay": 0.07311098665
+      },
+      "expectedAction": { "responseAttribution": "INCONCLUSIVE", "note": "R_obs 0.100 < B 0.10119, so not detectably separated from zero; also inside the expected band." },
+      "expectedReasonCodes": ["RESPONSE_INCONCLUSIVE"],
+      "forbidden": { "responseAttribution": "EXPECTED" }
+    },
+    {
+      "fixtureId": "WG-ALK-008",
+      "title": "The same central response becomes EXPECTED after more post-change evidence",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-008"] },
+      "rulesExercised": ["ALK-RESPONSE-CLASSIFIER-001"],
+      "input": {
+        "continuesFrom": "WG-ALK-007",
+        "additionalReading": { "measuredAt": "2026-09-11T09:00:00+10:00", "note": "Day +6" },
+        "postSlopeDkhPerDay": -0.050,
+        "note": "clean Day+2/+4/+6 Theil-Sen slope remains -0.050"
+      },
+      "expectedIntermediateEvidence": {
+        "sigmaPostDkhPerDay": 0.035355339059327376,
+        "sigmaResponseDkhPerDay": 0.05000, "responseBandDkhPerDay": 0.06400,
+        "directedObservedResponseDkhPerDay": 0.100, "expectedResponseDkhPerDay": 0.10395,
+        "check": "R_obs 0.100 > B 0.064 AND |0.100 - 0.10395| = 0.00395 <= 0.064"
+      },
+      "expectedAction": { "responseAttribution": "EXPECTED" },
+      "expectedReasonCodes": ["RESPONSE_EXPECTED"],
+      "forbidden": { "note": "No change in central biological response was required; the evidence simply became precise enough." }
+    },
+    {
+      "fixtureId": "WG-ALK-009",
+      "title": "Exact response classes share one deterministic band",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-009"] },
+      "rulesExercised": ["ALK-RESPONSE-CLASSIFIER-001"],
+      "input": {
+        "sPreDkhPerDay": -0.250, "deltaDoseMlPerDay": 3.0,
+        "sigmaPreDkhPerDay": 0.035355339059327376, "sigmaPostDkhPerDay": 0.035355339059327376
+      },
+      "expectedIntermediateEvidence": {
+        "expectedResponseDkhPerDay": 0.2079, "sigmaResponseDkhPerDay": 0.05000, "responseBandDkhPerDay": 0.06400,
+        "partialIntervalOpen": "0.064 < R_obs < 0.1439"
+      },
+      "expectedAction": {
+        "cases": [
+          { "sPostDkhPerDay": -0.040, "rObs": 0.210, "classification": "EXPECTED" },
+          { "sPostDkhPerDay": -0.150, "rObs": 0.100, "classification": "PARTIAL" },
+          { "sPostDkhPerDay": -0.250, "rObs": 0.000, "classification": "NO_DETECTABLE_RESPONSE" },
+          { "sPostDkhPerDay": -0.350, "rObs": -0.100, "classification": "CONTRADICTORY" },
+          { "sPostDkhPerDay": 0.050, "rObs": 0.300, "classification": "OVER_RESPONSE" }
+        ]
+      },
+      "expectedReasonCodes": ["RESPONSE_EXPECTED", "RESPONSE_PARTIAL", "RESPONSE_NO_DETECTABLE_RESPONSE", "RESPONSE_CONTRADICTORY", "RESPONSE_OVER_RESPONSE"],
+      "forbidden": { "note": "No two classes may both match one R_obs. No fixed response-ratio band may classify." }
+    },
+    {
+      "fixtureId": "WG-ALK-010",
+      "title": "Small intervention is known in advance to be non-attributable",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-010", "ALK-G039A", "ALK-G039B"] },
+      "rulesExercised": ["ALK-RESPONSE-ATTRIBUTION-001", "ALK-CARD-ATTRIBUTION-001"],
+      "input": { "sigmaPreDkhPerDay": 0.035355339059327376, "deltaDoseMlPerDay": 0.30 },
+      "expectedIntermediateEvidence": {
+        "minimumAttributionBandDkhPerDay": 0.04525483399,
+        "expectedResponseDkhPerDay": 0.02079,
+        "check": "0.02079 < 0.04525 so no future post evidence can isolate the effect"
+      },
+      "expectedAction": {
+        "responseAttribution": "NOT_ATTRIBUTABLE_SMALL_SIGNAL",
+        "terminal": true,
+        "currentDoseBranches": [
+          { "observedSlopeDkhPerDay": -0.02, "supportedSlopeDkhPerDay": 0.0, "action": "HOLD_CURRENT_DOSE", "headlineSemantics": "Hold the current dose" },
+          { "observedSlopeDkhPerDay": -0.08, "supportedSlopeDkhPerDay": -0.05, "action": "SET_MAINTENANCE_DOSE", "sizedFrom": "current supported slope", "headlineSemantics": "Alkalinity is falling on the current dose" }
+        ]
+      },
+      "expectedReasonCodes": ["RESPONSE_NOT_ATTRIBUTABLE_SMALL_SIGNAL", "PRESENTATION_SMALL_SIGNAL_CARD_REQUIRED"],
+      "forbidden": { "wording": "still falling", "note": "The word 'still' is forbidden because causal continuity was not established." }
+    },
+    {
+      "fixtureId": "WG-ALK-011",
+      "title": "Known material water change is normalized",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-011", "AUDIT-015"] },
+      "rulesExercised": ["ALK-033"],
+      "input": { "tankAlkBeforeDkh": 8.40, "replacementAlkalinityDkh": 9.40, "changedFraction": 0.10 },
+      "expectedIntermediateEvidence": { "expectedStepDkh": 0.10, "materialityFloorDkh": 0.10, "materialityClass": "MATERIAL_KNOWN" },
+      "expectedAction": { "normalizationDkh": -0.10, "appliedTo": "subsequent analytical points", "rawMeasurementsPreserved": true, "eventPreserved": true, "segmentBreak": false },
+      "expectedReasonCodes": ["SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED"],
+      "forbidden": { "note": "The +0.10 dKH external input must not be treated as biological change." },
+      "openIssues": ["OI-WATERCHANGE-001 - this fixture does not state the replacement confidence tier; it is executable only under MEASURED_SAME_BATCH"]
+    },
+    {
+      "fixtureId": "WG-ALK-012",
+      "title": "Unknown 4% versus 5% water change",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-012", "AUDIT-016"] },
+      "rulesExercised": ["ALK-WATERCHANGE-UNKNOWN-001"],
+      "input": { "assumedMismatchDkh": 2.0, "cases": [ { "changedFraction": 0.04 }, { "changedFraction": 0.05 } ] },
+      "expectedAction": {
+        "cases": [
+          { "changedFraction": 0.04, "potentialStepDkh": 0.08, "segmentBreak": false, "waterChangeEffect": "UNKNOWN_SUBFLOOR_ASSUMPTION", "inventedSubtraction": false },
+          { "changedFraction": 0.05, "potentialStepDkh": 0.10, "segmentBreak": true, "inventedSubtraction": false,
+            "ifInsideResponseWindow": { "responseAttribution": "CONFOUNDED", "potencyLearningEligible": false } }
+        ]
+      },
+      "expectedReasonCodes": ["SEGMENT_WC_UNKNOWN_SUBFLOOR", "SEGMENT_WC_UNKNOWN_BOUNDARY"],
+      "forbidden": { "note": "No value may be subtracted in either case." }
+    },
+    {
+      "fixtureId": "WG-ALK-013",
+      "title": "Negative consumption does not create a dose reduction",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-013", "AUDIT-019", "ALK-G028"] },
+      "rulesExercised": ["ALK-NEGATIVE-CONSUMPTION-001", "ALK-CONSUMPTION-ESTIMATE-001"],
+      "input": { "potencyTimesDoseDkhPerDay": 0.60, "observedSlopeDkhPerDay": 0.80 },
+      "expectedIntermediateEvidence": { "consumptionDkhPerDay": -0.20 },
+      "expectedAction": {
+        "consumptionClassification": "NON_PHYSICAL_OR_UNEXPLAINED_GAIN",
+        "maintenanceRecommendation": "HOLD_CURRENT_DOSE",
+        "ifHighAndRising": ["shorten retest", "verify events and delivery"],
+        "temporaryReturnComponent": "may stop under its own plan rules"
+      },
+      "expectedReasonCodes": ["CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN", "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE"],
+      "forbidden": { "note": "No protective dose reduction may be calculated from -0.20. The value must not be clamped to zero and then treated as a real maintenance target." },
+      "openIssues": ["OI-NEGCONS-001 - this magnitude is material under every defensible reading, so the fixture does not discriminate the boundary"]
+    },
+    {
+      "fixtureId": "WG-ALK-014",
+      "title": "Stable below range offers a return plan without changing maintenance",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-014"] },
+      "rulesExercised": ["CORE-STABILISE-001", "ALK-024", "ALK-054", "ALK-055"],
+      "input": { "targetRange": [8.2, 8.8], "latestAlkDkh": 7.80, "observedSlopeDkhPerDay": "approximately 0", "supportedSlopeDkhPerDay": 0, "currentDoseMlPerDay": 9.0 },
+      "expectedAction": {
+        "automaticMaintenance": "HOLD_CURRENT_DOSE",
+        "note": "No automatic increase merely because 7.80 is below range.",
+        "optionalReturnPlan": {
+          "aimPointLevelDkh": 8.50,
+          "pace": "STEADY", "plannedSlopeDkhPerDay": 0.25,
+          "temporaryDoseMlPerDay": 12.6075042, "roundedTemporaryDoseMlPerDay": 12.6,
+          "levelDistanceDkh": 0.70, "idealizedDurationDays": 2.8,
+          "optIn": true
+        }
+      },
+      "expectedReasonCodes": ["MAINTENANCE_HOLD_OUT_OF_RANGE_STABLE"],
+      "openIssues": ["OI-RETURNOFFER-001 - 'approximately 0' observed with zero supported slope is UNCERTAINTY_LIMITED under ALK-STABLE-001, so the offer branch is currently NOT_RUN pending an owner decision"]
+    },
+    {
+      "fixtureId": "WG-ALK-015",
+      "title": "First aim-point crossing stops temporary movement",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-015", "AUDIT-021"] },
+      "rulesExercised": ["ALK-056"],
+      "input": { "continuesFrom": "WG-ALK-014", "latestValidMeasurementDkh": 8.52, "aimPointLevelDkh": 8.50 },
+      "expectedAction": {
+        "temporaryMovementComponent": "STOP",
+        "maintenanceDose": "RESTORE_CURRENT_MAINTENANCE_ESTIMATE",
+        "returnPlanPhase": "CONFIRMATION_PENDING"
+      },
+      "expectedReasonCodes": ["RETURN_AIM_POINT_REACHED", "RETURN_CONFIRMATION_PENDING"],
+      "forbidden": { "note": "The 12.6 mL/day temporary dose must not keep running while awaiting a second arrival-zone reading." }
+    },
+    {
+      "fixtureId": "WG-ALK-016",
+      "title": "Dose changed outside the app, logged later with a known time",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-016", "ALK-INTERVENTION-EXTERNAL-CHANGE-001"] },
+      "rulesExercised": ["ALK-INTERVENTION-EXTERNAL-CHANGE-001", "ALK-065"],
+      "input": {
+        "storedHistory": "Day 0/2/4 all recorded as dose 9.0 mL/day",
+        "lateEntryAtDay5": { "effectiveAt": "Day 1 12:00", "from": 9.0, "to": 10.0, "effectiveAtConfidence": "EXACT" }
+      },
+      "expectedAction": {
+        "eventLedgerAmended": true,
+        "segmentBoundaryAt": "Day 1 12:00",
+        "oldCurrentAnalysisInvalidated": true,
+        "historicalRecommendationShownAtTimePreserved": true,
+        "potencyLearningAcrossDay0To4": false
+      },
+      "expectedReasonCodes": ["INTERVENTION_EXTERNAL_CHANGE_KNOWN_TIME", "SEGMENT_BOUNDARY_DOSE_CHANGE", "AUDIT_HISTORICAL_ASSESSMENT_PRESERVED"],
+      "forbidden": { "note": "The Day 0 to Day 4 series must not remain a single constant-dose maintenance segment." }
+    },
+    {
+      "fixtureId": "WG-ALK-017",
+      "title": "Dose changed outside the app, change time uncertain",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-017"] },
+      "rulesExercised": ["ALK-INTERVENTION-EXTERNAL-CHANGE-001", "M-5"],
+      "input": {
+        "readings": ["Day 0", "Day 2", "Day 4"],
+        "lateEntryAtDay5": { "from": 9.0, "to": 10.0, "effectiveAtConfidence": "UNCERTAIN", "effectiveAtEarliest": "Day 1", "effectiveAtLatest": "Day 3" }
+      },
+      "expectedAction": {
+        "doseHistoryConfidence": "UNCERTAIN",
+        "affectedWindow": "CONFOUNDED",
+        "responseAttribution": "NOT_ASSESSABLE_UNKNOWN_CHANGE_TIME",
+        "potencyLearningEligible": false,
+        "newCleanEvidenceBeginsAfter": "effectiveAtLatest"
+      },
+      "expectedReasonCodes": ["INTERVENTION_EXTERNAL_CHANGE_UNCERTAIN_TIME", "SEGMENT_BOUNDARY_UNCERTAIN_DOSE_TIME", "RESPONSE_NOT_ASSESSABLE_UNKNOWN_CHANGE_TIME"],
+      "forbidden": { "note": "Day 2 must not be assigned to the old or new dose regime by guess." }
+    },
+    {
+      "fixtureId": "WG-ALK-018",
+      "title": "Unexpected response does not invent an external dose change",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-018"] },
+      "rulesExercised": ["ALK-INTERVENTION-EXTERNAL-CHANGE-001"],
+      "input": { "recordedDoseMlPerDay": 9.0, "observation": "unexpectedly strong Alk response", "userCorrection": null, "pumpHistory": null, "loggedExternalEvent": null },
+      "expectedAction": { "permittedClassifications": ["OVER_RESPONSE", "CONTRADICTORY", "NON_PHYSICAL_OR_UNEXPLAINED_GAIN", "POTENCY_CONTEXT_DISCREPANCY"] },
+      "forbidden": { "inferredDoseChange": true, "note": "The engine must never invent a dose event to make the mathematics fit." }
+    },
+    {
+      "fixtureId": "WG-ALK-019",
+      "title": "Potency changes mid-response; the historical prediction does not move",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-019"] },
+      "rulesExercised": ["ALK-PREDICTION-SNAPSHOT-001"],
+      "input": {
+        "atInterventionCreation": { "oldDose": 9.0, "newDose": 10.5, "selectedPotencyDkhPerMl": 0.0693, "preChangeSlopeDkhPerDay": -0.150 },
+        "laterRecalibration": { "selectedPotencyDkhPerMl": 0.0800 }
+      },
+      "expectedIntermediateEvidence": {
+        "expectedSlopeChangeAtPrediction": 0.10395,
+        "predictedPostSlopeAtPrediction": -0.04605,
+        "wouldHaveBeenIfRetroactivelyRecalculated": { "expectedSlopeChange": 0.1200, "predictedPostSlope": -0.0300 }
+      },
+      "expectedAction": {
+        "classifierUsesExpectedSlopeChange": 0.10395,
+        "classifierUsesPredictedPostSlope": -0.04605,
+        "historicalPredictionPotency": 0.0693,
+        "currentSelectedPotency": 0.0800,
+        "responseInterpretationWarning": "POTENCY_REVISED_SINCE_PREDICTION",
+        "historicalPredictionRewritten": false
+      },
+      "expectedReasonCodes": ["POTENCY_REVISED_SINCE_PREDICTION"],
+      "forbidden": { "note": "Moving the benchmark after observing the response destroys auditability." }
+    },
+    {
+      "fixtureId": "WG-ALK-020",
+      "title": "Intervention contributes to potency learning without circular rewrite",
+      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-020"] },
+      "rulesExercised": ["ALK-PREDICTION-SNAPSHOT-001", "ALK-POTENCY-POOL-001"],
+      "input": { "predictionPotencyDkhPerMl": 0.0693, "laterLearnedPotencyDkhPerMl": 0.0740 },
+      "expectedAction": {
+        "interventionHistoricalExpectedResponseBasedOn": 0.0693,
+        "newLearnedValueAppliesTo": ["current-state recalculation", "subsequent recommendations", "subsequent interventions"]
+      },
+      "forbidden": { "note": "Recalculating the old expected response with 0.0740 and then citing the improved fit as proof that 0.0740 was correct is circular calibration." }
+    }
+  ]
+}
