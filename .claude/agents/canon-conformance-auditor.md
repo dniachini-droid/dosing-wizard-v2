@@ -74,7 +74,7 @@ Note honestly which parts you could check statically and which you could not.
    authoritatively owns it → the test or fixture that covers it. Any hop you
    cannot complete is a finding, and you say which hop broke.
 3. **Duplicate authoritative bodies — in canon.** Per `CORE-CANON-COVERAGE-001`
-   item 8, a stable rule ID must resolve to exactly one active normative rule
+   item 1, a stable rule ID must resolve to exactly one active normative rule
    body. Two canon bodies claiming the same rule is a `CANON_DEFECT`.
    Duplication *between implementing artefacts* is `integrator`'s finding, not
    yours — hand it over rather than reporting it twice at two severities.

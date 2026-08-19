@@ -15,44 +15,7 @@
       "mcp__github__push_files",
       "mcp__github__delete_file",
 
-      "Edit(./docs/canon/**)",
-      "Edit(./.github/**)",
-      "Edit(./CLAUDE.md)",
-      "Edit(./.claude/settings.json)",
-      "Edit(./.claude/agents/**)",
-      "Edit(./.claude/skills/**)",
-      "Edit(./docs/process/AGENT-ROSTER.md)",
-      "Edit(./docs/process/OVERNIGHT-AUTONOMY.md)",
-      "Edit(./PRODUCT-VISION.md)",
-      "Edit(./ROADMAP.md)",
-
-      "Bash(git push *main*)",
-      "Bash(git push *master*)",
-      "Bash(git push *+*)",
-      "Bash(git push *--force*)",
-      "Bash(git push *-f *)",
-      "Bash(git push *--mirror*)",
-      "Bash(git push *--delete*)",
-      "Bash(git push *:refs/heads/*)",
-
-      "Bash(gh pr merge *)",
-      "Bash(gh pr review *)",
-      "Bash(gh pr edit *)",
-      "Bash(gh workflow run *)",
-      "Bash(gh api --method PUT*)",
-      "Bash(gh api --method POST*)",
-      "Bash(gh api --method PATCH*)",
-      "Bash(gh api --method DELETE*)",
-      "Bash(gh api -X *)"
-    ],
-    "ask": [
-      "mcp__github__update_pull_request",
-      "Edit(./DECISIONS.md)",
-      "Edit(./PROJECT-STATE.md)",
-      "Bash(git push *)",
-      "Bash(git rebase *)",
-      "Bash(git reset --hard*)",
-      "Bash(git commit --amend*)"
+      "Edit(./docs/canon/**)"
     ]
   }
 }

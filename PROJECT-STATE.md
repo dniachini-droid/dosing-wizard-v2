@@ -132,7 +132,8 @@ edited; both are byte-for-byte copies.
 
 Repository operating rules are in `CLAUDE.md`. The project agent roster, its authority
 boundaries and its permissions are documented in `docs/process/AGENT-ROSTER.md`. Rules
-for unattended work are in `docs/process/OVERNIGHT-AUTONOMY.md`.
+for unattended work and the control model are in
+`docs/process/AUTONOMY-AND-CONTROLS.md`.
 
 Claude may open pull requests. Claude never merges.
 

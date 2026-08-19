@@ -24,12 +24,13 @@ shows what was believed at the time.
 
 ## Required contents
 
-Per `OVERNIGHT-AUTONOMY.md`:
+Per `docs/process/AUTONOMY-AND-CONTROLS.md`:
 
-- task, and the Stage 0 admissibility decision;
+- the **run base commit**, and the `docs/canon/` state it is measured against;
+- task, and the admissibility decision;
 - plan, including declared out-of-scope;
 - what was implemented, and any departure from plan with its reason;
-- reviewers run; conditional reviewers not run, with reasons;
+- reviewers run; reviewers considered and not run, with reasons;
 - every material finding: severity, what it was, how it was resolved — including
   findings deliberately not fixed;
 - outstanding findings carried into the PR;

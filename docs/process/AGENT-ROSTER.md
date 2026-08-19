@@ -1,84 +1,32 @@
-# V2 Agent Roster
+# V2 agent roster
 
-The project agents in `.claude/agents/`. Nine, deliberately.
+Nine agents. Each has one job that no other agent has. This document is the
+authority on what each may and may not do; the definitions in `.claude/agents/`
+are the operative copies and must match it.
 
-This document is the authority on what each agent may and may not do. Agent
-definitions carry the working instructions; this document carries the boundaries
-and the reasoning behind them. When either changes, both are updated, and the
-roster is checked against the directory — V1's roster drifted out of step with
-its own agent directory and nobody noticed.
+## Shape of the workforce
 
-Reusable workflows live in `.claude/skills/` and are documented at the end.
+**Every agent is read-only.** None holds `Edit`, `Write` or `NotebookEdit`. The
+session running the workflow is the only writer. That removes concurrent-write
+corruption as a failure mode rather than managing it.
 
----
+**No agent invokes another.** None holds a subagent tool. Wherever any
+definition says "route to `advisor`" or hands a finding to another role, that is
+an instruction to the **invoking session**, which must actually do it. A route
+nobody executes is a decision framed by whoever wanted it resolved.
 
-## The design rules
+**No agent produces chemistry.** Not a threshold, not a band edge, not a rail,
+not a "reasonable default". Chemistry comes from frozen canon and nothing else.
 
-**One authoritative owner per question.** Every agent answers a question no
-other agent answers. Where two agents could plausibly claim a finding, this
-document says which one owns it.
-
-**Reviewers are read-only. The main session is the only writer.**
-
-This is stricter than V1, which allowed several agents to write and relied on a
-rule that writers never run in parallel. V2 removes the possibility instead of
-managing it: no subagent edits the repository. It makes every review
-reproducible, removes concurrent-write corruption as a failure mode entirely,
-and means a review can be re-run at any time without side effects.
-
-**No agent produces chemistry.** Not provisionally, not to unblock, not "just
-for the test". Agents verify, refuse and escalate. `DEC-009` keeps a language
-model out of the chemistry engine; the same reasoning keeps it out of the agents.
-
-**No agent decides for the owner.** Agents may verify, refuse and escalate
-unattended. They may not decide unattended.
+**No agent decides for the owner.** Agents verify, refuse and escalate. They do
+not decide.
 
 **No agent modifies frozen canon.** Not to fix a typo, not to update a stale
-freeze identifier, not to reconcile a contradiction. This is stated in every
-relevant agent definition, and `.claude/settings.json` denies edits under
-`docs/canon/`.
+freeze identifier, not to reconcile a contradiction.
 
-**What the deny rules are, and are not.**
+**No agent may claim it can merge.** Nothing in this workforce merges anything.
 
-Two different things are in that file and they have different strengths.
-
-**Tool-name denies are real.** A rule naming an MCP tool removes that tool. The
-merge, approval, review-state and repository-write tools are denied by name, and
-a denied tool is not available to be called. This is the strongest control the
-repository has.
-
-**Path denies bind file-editing tools only.** An `Edit(path)` rule covers `Edit`,
-`Write` and `NotebookEdit` for that path. It does **not** cover `Bash`. Any actor
-with a shell can write to a denied path by redirection, so path denies protect
-against subagents — none of which holds a file-editing tool, and only two of
-which hold `Bash` — and do **not** protect against the main session, which has
-both.
-
-**Command-string denies are a backstop and nothing stronger.** They match how a
-command is *spelled*. There are more ways to spell "push to `main`" than a
-pattern list can enumerate, and this list has been found incomplete twice: once
-for rules that were inert because only `Edit(path)` covers file-writing tools,
-and once when this workforce's own `breaker` reproduced three working bypasses in
-its first run. Each of those specific spellings is now denied and each was
-re-probed. **That does not mean the surface is closed, and this document does not
-claim it is.** A pattern list cannot be shown complete; it can only be shown
-incomplete, and it has been, twice.
-
-**No control here is unconditional.** `main` is **not** branch-protected on
-GitHub. Branch protection is the only mechanism in reach that does not depend on
-Claude behaving correctly, and it is an owner action nobody has taken. It is
-filed as `OD-001` and remains **open**. Until it exists, "Claude never merges"
-rests on denied tool names, an incomplete pattern list, and instruction — and
-the honest summary is that a determined or careless shell command could still
-reach `main`.
-
-What genuinely constrains the risk today: the merge and approval **tools** are
-gone by name; the branch a run pushes is not `main`; and Stage 8 reviews the
-whole run against its base commit before anything is pushed.
-
----
-
-## Tool grants at a glance
+## Tool grants
 
 | Agent | Read | Grep | Glob | Bash | Web | Edit/Write |
 |---|---|---|---|---|---|---|
@@ -92,40 +40,47 @@ whole run against its base commit before anything is pushed.
 | `migration-auditor` | ✓ | ✓ | ✓ | — | — | — |
 | `adjudicator` | ✓ | ✓ | ✓ | — | — | — |
 
-**No agent has `Edit`, `Write` or `NotebookEdit`.**
+`Bash` goes to exactly two agents, because their work requires executing
+something: `breaker` must reproduce a failure to be allowed to report it, and
+`test-engineer` must observe a suite actually running. `WebFetch`/`WebSearch` go
+to exactly two, both required to source claims from current primary material.
 
-`Bash` is granted to exactly two agents, and only because their work requires
-executing something: `breaker` must reproduce a failure to be allowed to report
-it, and `test-engineer` must observe a suite actually running. Both are
-instructed not to write into the repository.
+**Stated plainly: `Bash` is not a read-only grant.** It can write to disk by
+redirection, and it carries `curl` and therefore the whole GitHub API. The
+read-only property of `breaker` and `test-engineer` rests on their definitions
+and on review of the resulting diff — not on the tool grant, and not on any
+permission rule. If a harder guarantee is wanted, the fix is to narrow `Bash` to
+an allowlist or withdraw it until a test suite needs it. It is not to trust the
+prompt harder.
 
-`WebFetch`/`WebSearch` are granted to exactly two agents, both of which are
-required to source claims from current primary material: `domain-verifier` for
-science and manufacturer documentation, `architecture-reviewer` for current
-vendor and platform documentation. Stale platform claims are a real defect
-source, and neither role can do its job from memory.
+## Controls
 
-**Known residual risk, stated precisely.** `Bash` can write to disk via
-redirection, so the read-only property of `breaker` and `test-engineer` rests on
-instruction, not on the tool grant.
+The hard control protecting `main` is **GitHub branch protection**, which is not
+configured (`OD-001`, open). Tool-name denies in `.claude/settings.json` do
+genuinely remove the merge, approval, review-thread, Actions-trigger and
+repository-file-write MCP tools from the surface, and that is the strongest
+mechanism in the repository — but it covers the MCP surface only. Path denies
+bind file-editing tools and not `Bash`. Everything else is process discipline.
 
-Be exact about what the deny rules do and do not cover.
-`Edit(./docs/canon/**)` covers every *file-editing tool* — `Edit`, `Write` and
-`NotebookEdit` alike — which is why it is written as a single `Edit` rule and
-not three. It does **not** cover `Bash`. A shell redirection or an in-place
-stream edit from `breaker` or `test-engineer` is not blocked by it.
+`docs/process/AUTONOMY-AND-CONTROLS.md` owns this subject. Read it there.
 
-So canon immutability against those two agents currently rests on three things,
-none of which is a permission check: both are told explicitly not to write into
-the repository; both are defined as reporting roles with no mandate to change
-source; and `overnight-cycle` Stage 8 reads the complete diff before commit, so
-an unexpected write surfaces. Canon integrity can also be checked directly, and
-was during this workforce's own verification, by comparing SHA-256 digests of
-`docs/canon/` before and after a run.
+## Which workflow
 
-If a harder guarantee is wanted, the fix is to narrow `Bash` to an allowlist of
-specific commands in `.claude/settings.json`, or to withdraw the `Bash` grant
-until there is a test suite that needs it. It is not to trust the prompt harder.
+| Work | Workflow | Reviewers |
+|---|---|---|
+| Ordinary implementation | `/implement` | one by default; specialists where materially relevant |
+| Chemistry, controller, dosing, safety rails | `/implement-chemistry` | fixtures, then `canon-conformance-auditor` + `breaker` |
+| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default |
+| One unresolved blocking question | `/research-sprint` | `domain-verifier` if scientific |
+| Unattended overnight work | **withdrawn** — see `/overnight-cycle` | — |
+
+**One fix pass.** `/implement` and `/implement-chemistry` each allow a single
+fix-and-recheck pass. If material findings survive it, the run stops and reports
+rather than looping. `adjudicator` is invoked when reviewers disagree or a
+finding is contested — not as a routine stage.
+
+**Deterministic tests are preferred to prose review.** A rule that can be pinned
+by a failing test should be, and review is what is left over.
 
 ---
 
@@ -167,7 +122,7 @@ vocabulary. Neither routes a question back to the agent that routed it.
 **Routing is an instruction to the invoking session, not to an agent.** No agent
 can invoke another — none holds a subagent tool. Wherever a definition says
 "route to `advisor`", the session running the workflow must actually invoke
-`advisor`, and both `overnight-cycle` and `pr-gate` say so at the point it
+`advisor`, and `/implement`, `/implement-chemistry` and `/pr-gate` all say so at the point it
 applies. An unexecuted route is a decision framed by whoever wanted it resolved.
 
 ---
@@ -222,7 +177,7 @@ a passing test as proof of conformance; the test may encode the drift.
 **Tools:** `Read`, `Grep`, `Glob`.
 
 **Invoke when:** any substantive change. It is one of the four always-on
-reviewers in `overnight-cycle` and `pr-gate`.
+reviewers in `/implement`, `/implement-chemistry` and `/pr-gate`.
 
 **Overlap prevention.** It owns rule → owner → fixture *tracing*.
 `integrator` owns what happens *between* modules and whether presentation
@@ -504,7 +459,7 @@ appears in both because it is the same finding reached two ways.
 | Absent role | Why |
 |---|---|
 | Implementer / fixer | The main session is the only writer. A separate writing agent reintroduces the concurrent-write failure mode for no benefit. |
-| Planner | Planning is `overnight-cycle` Stages 0–1, in the session that will do the work. Splitting plan from implementation across contexts loses the reason for every scope boundary. |
+| Planner | Planning is `/implement` steps 1–2, in the session that will do the work. Splitting plan from implementation across contexts loses the reason for every scope boundary. |
 | Triage analyst | Absorbed into `adjudicator`. Retaining it creates circular responsibility with `adjudicator` and `integrator` and no rule for who wins. Reasoning in `V1-AGENT-SALVAGE-AUDIT.md`. |
 | Per-surface auditors | V2 forbids surfaces from recomputing chemistry (`DEC-003`), so per-surface parity auditing has nothing to audit. `integrator` enforces the ownership rule that makes them unnecessary. |
 | Accessibility, performance, security, PWA auditors | Premature. No stack is chosen and no application code exists. `architecture-reviewer` covers the architectural form of these questions now; dedicated auditors are added when there is something to audit. |
@@ -518,16 +473,18 @@ appears in both because it is the same finding reached two ways.
 
 Reusable project workflows in `.claude/skills/`. Each is user-invoked
 (`disable-model-invocation: true`) rather than auto-selected, because each
-commits real effort and, in one case, opens a pull request.
+commits real effort and, in most cases, opens a pull request.
 
 | Workflow | Purpose | Ends at |
 |---|---|---|
-| `/overnight-cycle` | One bounded implementation job, unattended: contract validation → plan → implement → independent review → adjudicate → fix → re-review → checks → final diff review → run record → commit → push → PR | A pull request. **Never a merge.** |
-| `/research-sprint` | A hard scientific or architecture question: decomposition → parallel independent research → source-quality review → contradiction analysis → synthesis → adversarial challenge → report | A report that preserves unresolved uncertainty. Decides nothing. |
-| `/pr-gate` | Fresh-context review of an existing PR or diff, ending in one adjudicated classification | `PASS`, `PASS_WITH_EXPECTED_DEBT`, `CHANGES_REQUIRED`, `BLOCKED_BY_OWNER_DECISION` or `CANON_DEFECT`. **Never a merge.** |
+| `/implement` | The default. Build → deterministic tests → one independent reviewer (specialists only where materially relevant) → one fix pass → PR | A pull request. **Never a merge.** |
+| `/implement-chemistry` | High-consequence chemistry, controller, dosing and safety-rail work. Build → fixtures and invariants → `canon-conformance-auditor` + `breaker` → one fix pass → PR | A pull request. **Never a merge.** |
+| `/pr-gate` | Risk-based review of an existing PR or diff, in a session that did not write it | `PASS`, `PASS_WITH_EXPECTED_DEBT`, `CHANGES_REQUIRED`, `BLOCKED_BY_OWNER_DECISION` or `CANON_DEFECT`. **Never a merge.** |
+| `/research-sprint` | One genuinely unresolved question that is blocking work | Non-authoritative evidence under `docs/research/`. Decides nothing. |
+| `/overnight-cycle` | **Withdrawn. NOT AUTHORISED FOR UNATTENDED USE** until GitHub branch protection is configured and verified (`OD-001`) | Not to be run. |
 
-`overnight-cycle` is bounded at **two fix/re-review cycles** unless the
-initiating task explicitly authorises more.
+**One fix pass** in `/implement` and `/implement-chemistry`. If material findings
+survive it, the run stops and reports rather than looping.
 
 `pr-gate` does not fix what it finds. Reviewing and repairing in one pass
 destroys the independence the gate exists to provide.

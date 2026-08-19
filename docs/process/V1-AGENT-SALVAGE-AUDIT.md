@@ -205,7 +205,7 @@ Audited but not counted among the 28 agents and 19 routines.
 
 | Artefact | What it is | Disposition |
 |---|---|---|
-| `AGENTS.md` | V1's house rules: 13 non-negotiables, definition of done, evidence rule, escalation rule, checkpoint contract, backlog format, PR template | `REBUILD_THE_IDEA` → `CLAUDE.md` + `docs/process/OVERNIGHT-AUTONOMY.md` |
+| `AGENTS.md` | V1's house rules: 13 non-negotiables, definition of done, evidence rule, escalation rule, checkpoint contract, backlog format, PR template | `REBUILD_THE_IDEA` → `CLAUDE.md` + `docs/process/AUTONOMY-AND-CONTROLS.md` |
 | `AGENT-ROSTER.md` | One-line catalogue of the agents, plus the parallelism safety rule | `REBUILD_THE_IDEA` → `docs/process/AGENT-ROSTER.md` |
 | `START-HERE.md` | Owner onboarding map and routine schedule | `REFERENCE_ONLY` |
 | `DO-THIS-STEP-BY-STEP.md` | Click-by-click install guide; includes branch protection as its most important step | `REFERENCE_ONLY` |
@@ -438,12 +438,12 @@ each now lives.
 | Report only what you verified; mark the rest `UNVERIFIED` | `AGENTS.md` evidence rule | Every V2 reviewer's "not examined" section |
 | State what you did **not** examine | `pwa-auditor`, `manual-dose-auditor` | Mandatory in every V2 reviewer's output block and in `adjudicator`'s verdict |
 | One file per unit of work; never a shared state file | `.agent/runs/README.md`, `.agent/items/README.md` | `docs/process/runs/` |
-| Bounded scope: caps on items, lines and cycles | `.agent/budgets.json`, `01-build-cycle` | `overnight-cycle` Stage 6 two-cycle limit; `OVERNIGHT-AUTONOMY.md` |
+| Bounded scope: caps on items, lines and cycles | `.agent/budgets.json`, `01-build-cycle` | `/implement` one-fix-pass limit; `AUTONOMY-AND-CONTROLS.md` |
 | Parallel only for read-only agents; writers run alone | `AGENT-ROSTER.md` | V2 goes further: **only the main session writes at all** |
 | Branch → PR → owner merges; never autonomous merge | `AGENTS.md`, `integrator`, branch protection | `CLAUDE.md`, all three workflows, and `.claude/settings.json` deny rules |
-| Stopping is a successful outcome; guessing is not | `AGENTS.md` escalation rule | `overnight-cycle` Stage 0; `advisor`; `adjudicator` |
-| Never fudge a test to make it pass; revert rather than leave a half-fix | `AGENTS.md`, `fixer` | `overnight-cycle` Stages 2 and 5; `test-engineer` |
-| A run that wrote nothing down did nothing | `.agent/log/` convention | `overnight-cycle` Stage 9 |
+| Stopping is a successful outcome; guessing is not | `AGENTS.md` escalation rule | `/implement` step 1; `advisor`; `adjudicator` |
+| Never fudge a test to make it pass; revert rather than leave a half-fix | `AGENTS.md`, `fixer` | `/implement` steps 3–6; `test-engineer` |
+| A run that wrote nothing down did nothing | `.agent/log/` convention | `/implement` step 8 |
 | Record an open question rather than forcing it closed (`DEC-014`) | `12-five-decisions`, `.agent/needs-dan.md` | `docs/process/OPEN-OWNER-DECISIONS.md`; the `REFERENCE_ONLY` disposition itself |
 | Distinguish known fact, supported inference, plausible context and unsupported speculation (`DEC-015`) | `domain-verifier`, `advisor` | `domain-verifier` evidence classes; `breaker`'s `UNREPRODUCED` marker; `adjudicator`'s `UNCONFIRMED` |
 
@@ -534,7 +534,7 @@ agent each derives from.
 
 | V2 responsibility | Suitable unattended? | V2 owner | Derived from |
 |---|---|---|---|
-| Planning | Yes, when the task contract validates | main session (`overnight-cycle` Stages 0–1) | `planner`, `01-build-cycle` |
+| Planning | Yes, when the task contract validates | main session (`/implement` steps 1–2) | `planner`, `01-build-cycle` |
 | Implementation | Yes, for frozen/decided requirements only | main session (Stage 2) | `implementer`, `fixer` |
 | Canon verification | Yes — read-only, high value | `canon-conformance-auditor` | `band-classifier-auditor`, `dataflow-tracer`, `terminology-auditor`, `06` |
 | Scientific verification | Partly — may verify and refuse; may never conclude new chemistry | `domain-verifier` | `domain-verifier` |

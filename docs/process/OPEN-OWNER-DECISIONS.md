@@ -76,7 +76,7 @@ more than a tidy file.
 ## OD-001 — Should `main` be branch-protected on GitHub?
 
 - **Raised:** 2026-08-19 · **By:** workforce founding, adversarial review · **Status:** OPEN
-- **Blocks:** nothing today; it is the only hard guarantee behind "Claude never merges"
+- **Blocks:** **all unattended autonomous work.** It is the only hard guarantee behind "Claude never merges"
 
 **The question, in plain language**
 
@@ -87,17 +87,19 @@ instructions?
 **Why it is undecided**
 
 `CLAUDE.md` says "Claude **never merges** — merging requires explicit owner
-approval. This holds however green the checks are." `.claude/settings.json`
-backs that with deny rules.
+action. This holds however green the checks are." Nothing enforces it.
 
-An adversarial review of those deny rules found three working bypasses —
+This repository previously tried to enforce it with a list of denied command
+spellings. Two rounds of adversarial review found working bypasses each time —
 a fully-qualified refspec (`HEAD:refs/heads/main`), a force refspec (`+HEAD:…`),
-and `gh api --method PUT …/merge`. Each of those three spellings is now denied
-and each was re-probed. **That is not the same as the surface being closed**, and
-nothing in this repository should be read as claiming it is: a pattern list can
-be shown incomplete but never shown complete, and this one has been shown
-incomplete twice. The reason is structural — these rules match **command
-strings**, and there are more ways to spell "push to main" than can be
+`gh api --method PUT …/merge`, and then `gh api graphql` and plain `curl`, which
+no `--method` pattern matches at all. The list also denied legitimate branches
+whose names merely contained the substring "main", such as
+`claude/domain-verifier-fix`. **That approach has been abandoned.** A pattern
+list can be shown incomplete but never shown complete, and any session holding
+`Bash` also holds `curl` and therefore the entire GitHub API. The reason is
+structural — these rules match **command strings**, and there are more ways to
+spell "push to main" than can be
 enumerated.
 
 The GitHub merge, approval and repository-write **tools** are separately denied
@@ -133,14 +135,19 @@ wrong costs the owner a few seconds of inconvenience on their own commits.
 
 **What already covers this**
 
-Nothing, in this repository. The deny rules reduce the risk; they do not
-guarantee it, and this entry exists because they cannot.
+Nothing, in this repository, and it no longer pretends otherwise. Tool-name
+denies remove the GitHub MCP merge and approval tools from the session surface,
+which is real but covers only that surface. Everything else is process
+discipline. Pending this decision, **unattended autonomous merge-capable work is
+prohibited** and `/overnight-cycle` is withdrawn; attended sessions branch, push
+and open PRs, and stop before merge.
 
 **What must change alongside**
 
-If `main` is protected, `docs/process/AGENT-ROSTER.md` and
-`docs/process/OVERNIGHT-AUTONOMY.md` should say so, and should stop describing
-the deny rules as the primary control.
+If `main` is protected **and that protection is verified** — the owner confirms
+Claude's credential cannot merge a PR or dismiss a review — then
+`docs/process/AUTONOMY-AND-CONTROLS.md` records it, the prohibition on unattended
+work lifts, and `/overnight-cycle` may be reconsidered. All three steps, or none.
 
 **Recommendation, and what would make it wrong**
 
