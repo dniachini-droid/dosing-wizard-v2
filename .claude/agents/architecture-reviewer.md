@@ -90,4 +90,8 @@ recommendation:
 what would make it wrong:
 owner decisions raised:
 findings: (id / severity / what / consequence)
+not examined, and why:
 ```
+
+The `not examined` field is required. `adjudicator` may not declare a review
+clean without it, and an unstated gap reads as coverage.

@@ -52,10 +52,16 @@ enforced. Closing that gap is your job.
   never silently converted into an action.
 - **Golden.** Pinned input→output cases **derived from the canon**, never copied
   from a V1 run. Each golden states the canon rule it pins.
-- **Replay / determinism.** The same inputs, replayed, produce the same output,
-  including the same reason codes and the same refusals. Replay must be
-  reproducible across engine versions in a way that records which version
-  produced it.
+- **Replay / determinism.** Canon §64 conditions determinism on three things:
+  the same event ledger, the same configuration versions, **and the same
+  engine/canon version**. Test it as canon states it — same inputs and same
+  version replay to the same output, including the same reason codes and the
+  same refusals — and record which engine/canon version produced each replay.
+  Do **not** write a test asserting that outputs are stable *across* engine
+  versions. Canon is deliberately reissued under new freeze identifiers, and
+  such a test would fail legitimately at the next governed reissue, putting
+  pressure on the reissue instead of on the test. That is `MASTER RULE 5`'s
+  third clause — a pinned test outranking canon — in embryo.
 - **Long-run.** Extended synthetic histories that expose slow failure — drift,
   accumulation, a plan that never terminates, a state that is entered and never
   left.
@@ -69,9 +75,26 @@ about where engines of this kind break.
 V1's *outputs are not V2 expectations*:
 - never copy a V1 golden as a V2 expectation;
 - never treat a V1/V2 difference as evidence of a V2 defect;
-- where a comparison is run at all, classify each divergence as
-  `INTENDED_V2_CHANGE`, `V1_BUG_FIXED`, `V2_REGRESSION`, `IMPLEMENTATION_BUG`,
-  `MISSING_CAPABILITY` or `NOT_COMPARABLE` — never auto-resolve toward V1.
+- where a comparison is run at all, classify each divergence rather than
+  auto-resolving toward V1. **`DEC-013` owns that classification set** — read it
+  there rather than from any copy, including this one, and if a copy and
+  `DEC-013` disagree, `DEC-013` governs.
+
+Three further methods, salvaged from V1 and owned here:
+
+- **Report measurements, not pass/fail, when comparing engine versions.** How
+  far apart, in what direction, on how many cases — not "differs". A margin is
+  actionable; a boolean is not.
+- **Bound uncertainty with two runs rather than guessing.** Where a replay
+  depends on a historical configuration that is not recorded, run it at both
+  plausible bounds and report the range. Do not pick one and present it as the
+  configuration.
+- **Use what happened next as the referee.** Where real history exists, the
+  strongest evidence about whether advice was good is what the tank actually did
+  afterwards — not the engine's own confidence. This is bounded by `DEC-010`:
+  older readings lacking dose and intervention context are ineligible for
+  analyses that require it, and a replay must refuse rather than infer the
+  missing context.
 
 Any simulation result is reported "under the simulator's assumptions", never as
 fact. A simulator has its own model, and if that model is wrong the result is
@@ -100,4 +123,8 @@ missing tests, by kind: (boundary / straddling / adversarial / invariant /
   concrete specification of the case
 determinism: (replay verified? / not verifiable and why)
 risk-ranked remaining gaps:
+not examined, and why:
 ```
+
+The `not examined` field is required. `adjudicator` may not declare a review
+clean without it, and an unstated gap reads as coverage.

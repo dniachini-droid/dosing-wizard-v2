@@ -103,7 +103,7 @@ Expanded, this is `/overnight-cycle`:
 | 2 · Primary implementation | Inside scope. Test first where possible. Authority cited at the point of implementation. No test weakened. |
 | 3 · Independent review, fresh context | The four always-on reviewers ran; each conditional reviewer either ran or has a stated reason it did not. |
 | 4 · Adjudicator synthesis | One classified finding list exists, with what nobody examined stated. |
-| 5 · Fix genuine failures | `BLOCKER` and `CORRECTNESS_GAP` addressed; `OPTIONAL` and `UNCONFIRMED` left alone; `EXPECTED_DEBT` recorded with its citation. |
+| 5 · Fix genuine failures | `BLOCKER` addressed; `CANON_DEFECT` addressed only by ceasing to rely on the defective rule, never by editing canon, and escalated; `CORRECTNESS_GAP` addressed; `OPTIONAL` and `UNCONFIRMED` left alone; `EXPECTED_DEBT` recorded with its citation. |
 | 6 · Independent re-review | Re-reviewed in fresh context. **At most two fix/re-review cycles.** |
 | 7 · Test and check suite | Real output pasted, or an explicit statement that nothing executable exists yet. |
 | 8 · Final diff review | The whole diff read adversarially against the scope and the prohibitions. |
@@ -114,10 +114,17 @@ Expanded, this is `/overnight-cycle`:
 
 ## Bounds
 
-**Two fix/re-review cycles maximum**, unless the initiating task explicitly
-authorises more. After the second cycle, outstanding findings are recorded with
-their severities and carried into the PR as known state. Continuing to churn
-produces a diff nobody can review and an audit trail nobody can follow.
+**Two fix/re-review cycles maximum.** A task may raise this to at most four by
+saying so explicitly. Nothing removes the ceiling. A run may not start another
+run, nor restart itself to reset the count.
+
+When the limit is reached, outstanding findings are recorded with their
+severities and carried into the PR as known state — **except a `BLOCKER`, which
+is never carried into a pull request.** `BLOCKER` means work must not proceed.
+A run still holding one stops with its run record and opens nothing.
+
+Continuing to churn produces a diff nobody can review and an audit trail nobody
+can follow.
 
 **One bounded job per run.** Adjacent improvements, opportunistic refactors and
 "while I was in there" changes are out of scope by default. If something clearly
@@ -144,9 +151,21 @@ redone once the decision lands. Work that merely looks separable is not.
 - Filling a gap in canon, a decision or the evidence with an invented value.
 - Treating V1 behaviour, V1 tests, V1 goldens or V1 approvals as authority.
 
-The first three are also denied at the tool level in `.claude/settings.json`.
+**What is actually enforced, and what is not.** `.claude/settings.json` denies
+merging (`gh pr merge` and both GitHub merge tools), pushes to `main`,
+force-pushes, and edits under `docs/canon/`. An `Edit(path)` deny covers every
+file-editing tool, so `Write` and `NotebookEdit` are covered by the same rule.
+
+It does **not** cover: writes to any path via `Bash` redirection or in-place
+stream editing; `git rebase`, `git commit --amend` or `git reset --hard`; or a
+plain `git push` issued while `main` is checked out, which is set to ask rather
+than deny. Those prohibitions rest on instruction and on the Stage 8 diff
+review, not on a permission check.
+
 The deny rules are a backstop, not the reason — a rule that is only obeyed
 because it is enforced will be evaded by the first path the enforcement misses.
+Nobody currently owns re-checking this list against the prohibitions above; that
+is `integrator`'s job whenever either changes.
 
 ---
 
@@ -178,6 +197,32 @@ Open owner decisions are additionally filed in
 A decision becomes authority only when the owner records it in `DECISIONS.md`.
 
 ---
+
+## When work is blocked by the canon
+
+`CANON_DEFECT` is the one finding no amount of care inside a run can clear, and
+the system must not pretend otherwise. Unattended, the run stops. But "stop" is
+not the end of the route, and leaving the route undefined turns an honest
+refusal into a dead end.
+
+The exit is a **governed canon reissue**, and it is an owner act, not an agent
+act. It looks like this:
+
+1. The run records the defect: the exact rule ID, both conflicting passages
+   quoted, and what could not be implemented as a result.
+2. It files an entry in `docs/process/OPEN-OWNER-DECISIONS.md` — qualitative,
+   no candidate chemistry values.
+3. Where the defect is scientific rather than internal, a `/research-sprint`
+   may be commissioned to assemble evidence. It produces a report, not a rule.
+4. The owner decides whether to reopen the canon. If they do, the canon is
+   reissued under a **new freeze identifier**, superseding rather than editing
+   the old one, and every place naming the current freeze is updated together
+   (`docs/process/AGENT-ROSTER.md` lists them).
+5. Only then does the blocked work become admissible again.
+
+No agent and no unattended run performs step 4. Nothing in this repository
+authorises an agent to edit `docs/canon/`, and a `CANON_DEFECT` is not a licence
+to start.
 
 ## What "done" means
 

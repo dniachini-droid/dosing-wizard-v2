@@ -3,17 +3,39 @@
   "permissions": {
     "deny": [
       "Edit(./docs/canon/**)",
-      "Bash(git push origin main)",
-      "Bash(git push origin main:*)",
-      "Bash(git push origin HEAD:main)",
-      "Bash(git push -f *)",
-      "Bash(git push --force*)",
+
+      "Bash(git push *main*)",
+      "Bash(git push *master*)",
+      "Bash(git push *+*)",
+      "Bash(git push *--force*)",
+      "Bash(git push *-f *)",
+      "Bash(git push *--mirror*)",
+      "Bash(git push *--delete*)",
+      "Bash(git push *:refs/heads/*)",
+
       "Bash(gh pr merge *)",
+      "Bash(gh api --method PUT*)",
+      "Bash(gh api --method POST*)",
+      "Bash(gh api --method PATCH*)",
+      "Bash(gh api --method DELETE*)",
+      "Bash(gh api -X *)",
+
       "mcp__github__merge_pull_request",
-      "mcp__github__enable_pr_auto_merge"
+      "mcp__github__enable_pr_auto_merge",
+      "mcp__github__create_or_update_file",
+      "mcp__github__push_files",
+      "mcp__github__delete_file"
     ],
     "ask": [
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git rebase *)",
+      "Bash(git reset --hard*)",
+      "Bash(git commit --amend*)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/agents/**)",
+      "Edit(./.claude/skills/**)",
+      "Edit(./CLAUDE.md)",
+      "Edit(./docs/process/**)"
     ]
   }
 }

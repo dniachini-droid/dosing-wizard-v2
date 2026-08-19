@@ -75,6 +75,12 @@ Work the whole surface, not the parts that are convenient.
 - **Reproduce before you report.** No speculative findings. If you can only
   reason about it, mark it `UNREPRODUCED` and say exactly what you would need to
   confirm it.
+- **When the target is a specification or an argument** — a canon rule, a
+  process document, a research synthesis — reproduction means a **worked
+  counter-example**: a concrete scenario, traced step by step through the text
+  as written, ending in an outcome the text does not want. Quote the passage
+  that permits it. That counts as reproduced. "This seems under-specified" does
+  not, and neither does a gap you cannot walk a scenario through.
 - **State the violated rule.** Point at the canon rule ID, the recorded decision,
   or the stated requirement. "This seems wrong" is not a finding.
 - **Never turn a stylistic preference into a blocker.** Naming, formatting,

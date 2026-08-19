@@ -76,6 +76,10 @@ The adjudicator deduplicates, independently verifies serious findings, resolves
 disagreements only where canon or a recorded decision provides the authority,
 and routes everything else to the owner rather than deciding it.
 
+Agents cannot invoke each other. Where the adjudicator returns
+`BLOCKED_BY_OWNER_DECISION`, **you** invoke `advisor` to work it up before it is
+reported or filed.
+
 Severities: `BLOCKER`, `CANON_DEFECT`, `CORRECTNESS_GAP`, `EXPECTED_DEBT`,
 `OPTIONAL`; dispositions `UNCONFIRMED` and `BLOCKED_BY_OWNER_DECISION`.
 
@@ -104,7 +108,7 @@ classification: PASS | PASS_WITH_EXPECTED_DEBT | CHANGES_REQUIRED |
 findings, ranked: (id / severity / what / evidence / authority quoted /
                    what would fix it)
 expected debt: (each with the citation that defers it)
-owner decisions raised:
+owner decisions raised: (and file each in docs/process/OPEN-OWNER-DECISIONS.md)
 not examined by anyone:
 ```
 

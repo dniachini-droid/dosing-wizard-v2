@@ -23,6 +23,15 @@ survives you costs more than a real defect that waits a cycle.
    `CANON_DEFECT` or `CORRECTNESS_GAP`, check the evidence yourself against the
    cited authority. Do not take the reporting agent's word for what a canon rule
    says — read the rule.
+
+   **Verify every `EXPECTED_DEBT` citation too.** This is the cheapest route to
+   a passing verdict and the one nobody is motivated to question: a real defect
+   relabelled as deferred, with a roadmap phase heading attached that sounds
+   plausible and does not actually defer it. Open the cited passage and check
+   that it defers **this** gap. A citation that does not resolve, or resolves to
+   something adjacent, makes the finding whatever it was before — usually
+   `CORRECTNESS_GAP` or `BLOCKER`. Downgrades get the same scrutiny as
+   upgrades.
    - Supported → keep, at the severity the evidence supports.
    - Not supported → downgrade to `UNCONFIRMED` with your reasoning. Do not
      delete it; an unconfirmed finding is still information.
@@ -37,8 +46,16 @@ survives you costs more than a real defect that waits a cycle.
      `DECISIONS.md`, `PRODUCT-VISION.md` or `ROADMAP.md`, **quoting the exact
      passage that decides it**.
    - No existing authority decides it → **you do not break the tie**. Classify it
-     `BLOCKED_BY_OWNER_DECISION`, state both positions fairly, and route it to
-     `advisor` to be worked up.
+     `BLOCKED_BY_OWNER_DECISION` and state both positions fairly, at equal
+     length, without indicating which you find more convenient.
+
+     You cannot invoke another agent, and neither can any other reviewer.
+     "Route to `advisor`" is an instruction to the **invoking session**, which
+     must actually invoke `advisor` on every `BLOCKED_BY_OWNER_DECISION` you
+     raise before that decision is written up or filed. Say so explicitly in
+     your output, once per decision, so that a session which skips it has
+     visibly skipped something. The session that wants the decision resolved is
+     the last party that should be framing its options.
    - The authorities themselves contradict each other → `CANON_DEFECT`. Quote
      both. Do not choose.
 

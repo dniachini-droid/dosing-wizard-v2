@@ -38,15 +38,32 @@ tests/simulations and implementation all agree.
 - A behaviour in code with no canon is **implementation drift**.
 - A golden test preserving obsolete V1 behaviour **does not outrank V2 canon**.
 
-Canon `CORE-CANON-COVERAGE-001` defines the structural gate: every referenced
-stable rule ID resolves to exactly one active normative rule body; every body is
-substantive; every body appears in the rule-coverage manifest; every manifest
-entry names at least one coverage fixture; every named fixture exists. Zero
-dangling IDs, zero duplicate authoritative bodies, zero insubstantial bodies,
-zero uncovered bodies, zero missing fixtures.
+Canon `CORE-CANON-COVERAGE-001` defines a structural gate. **Read it in the
+canon rather than from this summary** — it has nine enumerated items and a
+closing caveat, and the parts most easily lost are the ones that make it
+enforceable. In outline: every referenced stable rule ID resolves to exactly one
+active normative rule body; a rule-ID marker alone is not a body, and
+substantiveness is judged against an explicit conservative threshold **recorded
+by the checker**; every body appears in the rule-coverage manifest; every
+manifest entry names at least one coverage fixture; every named fixture exists;
+numerical and controller behaviour should be covered by a golden scenario, while
+**structural, ownership, migration, wording and governance rules may legitimately
+be covered by an invariant fixture** where an arithmetic golden would be
+artificial; the checker returns five zeros — dangling IDs, duplicate
+authoritative bodies, insubstantial bodies, uncovered bodies, missing fixture
+IDs; and **no checker revision is trusted as a freeze gate until a deliberate
+negative-control mutation has been shown to fail it.**
 
-Report against that gate explicitly. Note honestly which parts of it you could
-check statically and which you could not.
+Canon scopes this gate to "before any future shared or parameter freeze is
+declared". Do not report a change as violating it when the change declares no
+freeze; report instead what the gate would and would not currently be able to
+verify.
+
+Canon's own caveat applies to you: the gate "does not prove that the rule is
+scientifically correct or that a named fixture semantically exercises the right
+rule". Those remain review responsibilities — yours and `test-engineer`'s.
+
+Note honestly which parts you could check statically and which you could not.
 
 ## Procedure
 
@@ -56,9 +73,11 @@ check statically and which you could not.
 2. **Trace each rule.** For each: canon rule → the single artefact that
    authoritatively owns it → the test or fixture that covers it. Any hop you
    cannot complete is a finding, and you say which hop broke.
-3. **Duplicate ownership.** Two artefacts implementing or restating the same
-   rule is a defect even when they currently agree — coincidental agreement is
-   tomorrow's contradiction. Report it as `CORRECTNESS_GAP` at minimum.
+3. **Duplicate authoritative bodies — in canon.** Per `CORE-CANON-COVERAGE-001`
+   item 8, a stable rule ID must resolve to exactly one active normative rule
+   body. Two canon bodies claiming the same rule is a `CANON_DEFECT`.
+   Duplication *between implementing artefacts* is `integrator`'s finding, not
+   yours — hand it over rather than reporting it twice at two severities.
 4. **Silent reinterpretation.** The characteristic failure. A rule implemented
    in a way that is defensible, readable, and not what the canon says. Compare
    against the words, not against what the rule "obviously means". Where the
@@ -72,9 +91,21 @@ check statically and which you could not.
    `ALK_V2_FREEZE_3`, superseded canon sections, or V1 behaviour as the reason
    for a behaviour is a finding, regardless of whether the resulting behaviour
    happens to be correct.
-8. **Separation of concerns.** Canon and `DEC-003` require raw observation,
-   evidence, supported trajectory, action and presentation to stay distinct.
-   Report any place a change collapses them.
+8. **Canon vocabulary.** Canon `MASTER RULE 1` requires one owner for each
+   inference, and canon names the concepts it owns. Report any place the change
+   uses a different word for a concept canon has already named, or uses a
+   canon term to mean something else. Silent renaming is silent
+   reinterpretation, and it is how two vocabularies for one rule begin.
+
+9. **Separation of concerns — canon's part only.** Canon `X-INV-004`, §79 and
+   §80 own the analytical-ownership claims: the domain engine owns chemistry,
+   presentation renders structured output, no UI component independently
+   calculates slope, dose, response class or retest time, one retest scheduler
+   owns chemistry timing, and nothing is decided by UI branch order or by a
+   second calculator. Report violations of those. The five-concern separation
+   itself is owned by `DEC-003` and its enforcement is `integrator`'s — do not
+   report it twice, and do **not** attribute an ordered pipeline to canon,
+   because canon does not state one.
 
 ## Hard limits
 

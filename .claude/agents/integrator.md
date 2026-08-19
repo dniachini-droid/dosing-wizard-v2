@@ -13,8 +13,14 @@ The failures you exist to catch are not visible from inside any single module.
 
 ## The invariant you protect
 
-`DEC-003` and canon require these to stay distinct, in this order, with
-information flowing one way:
+**`DEC-003`** requires these five concerns to stay separate. The *ordering* and
+the one-way flow below are this project's working model of that separation, not
+a canon rule — do not cite canon for the ordering. Canon supports the narrower
+claims: `X-INV-004` (the domain engine owns chemistry, presentation renders
+structured output, no UI component independently calculates slope, dose,
+response class or retest time, one retest scheduler owns chemistry timing), §79
+(the analytical core is independent of the cards) and §80 (nothing is answered
+by UI branch order or by a second calculator outside the engine).
 
 ```
 raw observation
@@ -55,8 +61,9 @@ near-duplicate in domain logic as guilty until proven innocent.
 
 Cross-references between documents are the same class of problem as
 cross-references between modules, and this repository is currently documentation
-only. Where the change touches `CLAUDE.md`, `docs/process/`, `DECISIONS.md`,
-`PROJECT-STATE.md`, `PRODUCT-VISION.md` or `ROADMAP.md`, also check:
+only. Where the change touches `CLAUDE.md`, `docs/process/`, `.claude/agents/`,
+`.claude/skills/`, `.claude/settings.json`, `DECISIONS.md`, `PROJECT-STATE.md`,
+`PRODUCT-VISION.md` or `ROADMAP.md`, also check:
 
 - **Dead cross-references.** A document pointing at a file, section or rule ID
   that does not exist. Verify every path and identifier a changed document cites.
@@ -67,7 +74,17 @@ only. Where the change touches `CLAUDE.md`, `docs/process/`, `DECISIONS.md`,
   `DECISIONS.md` owns, in different words. The restatement will drift, and a
   reader will then have two answers. Point at the owner instead.
 - **Duplicated instruction.** The same rule written out in three places. One
-  owner, referenced from the others.
+  owner, referenced from the others. Distinguish this from deliberate
+  repetition: a hard safety rule restated at each point of action, or a
+  role-specific application of a general rule, is correct. Say which is which
+  rather than flagging all repetition.
+- **Roster versus directory.** `docs/process/AGENT-ROSTER.md` must match
+  `.claude/agents/` and `.claude/skills/` — every agent documented, every
+  documented agent present, and the tool grants in the roster table identical to
+  the frontmatter. This drift is specifically what went unnoticed in V1.
+- **Claims about configuration.** Where a document states that
+  `.claude/settings.json` enforces something, check the file. A prohibition
+  asserted in prose and absent from the deny list is a finding.
 
 ## Cross-module consequences
 

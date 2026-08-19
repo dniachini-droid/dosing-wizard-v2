@@ -37,31 +37,43 @@ outputs, approvals and statuses are not V2 expectations.
 
 ## Chemistry
 
-No chemistry may be invented for implementation convenience — no threshold, no
-default, no provisional value, no "reasonable interpretation" of a rule the
-canon does not state. If a rule is missing, the work stops and the gap is
-reported.
+Chemistry comes from the canon. Any threshold, band edge, rate limit,
+tolerance, noise floor, cadence, evidence minimum or safety rail the canon does
+not state must not enter the repository — whether it was invented for
+convenience, supplied in a task instruction, carried from V1, or offered as a
+"provisional" or "reasonable interpretation" of a rule the canon does not make.
+The test is whether the canon states it, not who proposed it. If a rule is
+missing, the work stops and the gap is reported.
 
 Future parameter domains (Ca, Mg, PO4, NO3 and others) require independent
 scientific revalidation. They are not cloned from alkalinity.
 
 ## Separation of concerns
 
-Raw facts, evidence, supported interpretation, recommendation and presentation
-remain separate, and information flows in that order. No presentation surface
-recomputes chemistry.
+Each rule below is owned elsewhere. This section is a pointer, not a second
+copy: where the wording here and the owner's wording differ, the owner governs.
 
-Every rule has exactly **one** authoritative owner. Two implementations that
-agree today are a defect, not a coincidence.
-
-Calculator arithmetic is separate from advisory logic. A calculator result never
-silently becomes a recommendation.
-
-Deterministic chemistry must remain auditable and reproducible: the same inputs
-replay to the same outputs, including the same refusals and reason codes.
-
-AI, if it is ever built, sits above the deterministic system and is
-non-authoritative. It may explain a state; it may never replace or override one.
+- **`DEC-003`** — raw observations, evidence, supported trajectory, action and
+  UI remain separate concerns; no UI component may recompute chemistry; every
+  recommendation must be reproducible by replaying its inputs.
+- **Canon `X-INV-004` (One analytical owner)** — the domain engine owns
+  chemistry; presentation renders structured output; no UI component
+  independently calculates slope, dose, response class or retest time; one
+  retest scheduler owns chemistry timing.
+- **Canon `MASTER RULE 1`** — one owner for each inference. Two implementations
+  that agree today are a defect, not a coincidence.
+- **`DEC-006`** — calculator arithmetic is separate from advisory logic; a
+  calculator result never silently becomes a recommendation.
+- **Canon §64** — deterministic replay holds given the same event ledger, the
+  same configuration versions **and the same engine/canon version**. Replays are
+  stamped with the version that produced them; determinism is not a promise that
+  a governed canon reissue leaves outputs unchanged.
+- **`DEC-009`** — AI, if ever built, sits above the deterministic system and is
+  non-authoritative. It may explain a state; it may never replace or override
+  one.
+- **`DEC-015`** — known fact, supported inference, plausible context and
+  unsupported speculation are distinguished and labelled. Unsupported causal
+  speculation is prohibited.
 
 ## How work is done
 

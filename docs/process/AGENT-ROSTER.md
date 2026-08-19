@@ -35,7 +35,23 @@ unattended. They may not decide unattended.
 
 **No agent modifies frozen canon.** Not to fix a typo, not to update a stale
 freeze identifier, not to reconcile a contradiction. This is stated in every
-relevant agent definition and enforced by deny rules in `.claude/settings.json`.
+relevant agent definition, and `.claude/settings.json` denies edits under
+`docs/canon/`.
+
+**What the deny rules are, and are not.** They match command and path patterns.
+For file editing that is a real control: an `Edit(path)` rule covers every
+file-editing tool. For shell commands it is a backstop and nothing stronger —
+there are more ways to spell "push to main" than a pattern list can enumerate,
+and this list has been found incomplete twice, most recently by this workforce's
+own `breaker` in its first run, which reproduced three working bypasses. Those
+are now denied and the fix was verified by re-running each probe.
+
+The only control here that does not depend on Claude behaving correctly is
+**GitHub branch protection on `main`**, which is an owner action and is not
+configured. It is filed as `OD-001` in
+`docs/process/OPEN-OWNER-DECISIONS.md`. Until it exists, "Claude never merges"
+rests on instruction plus a pattern list, and this document should not be read
+as claiming otherwise.
 
 ---
 
@@ -66,15 +82,27 @@ science and manufacturer documentation, `architecture-reviewer` for current
 vendor and platform documentation. Stale platform claims are a real defect
 source, and neither role can do its job from memory.
 
-**Known residual risk, stated rather than hidden.** `Bash` can write to disk via
+**Known residual risk, stated precisely.** `Bash` can write to disk via
 redirection, so the read-only property of `breaker` and `test-engineer` rests on
-instruction plus the project deny rules, not on the tool grant alone. The
-mitigations are: canon paths are denied at the settings level regardless of
-tool; both agents are told explicitly not to write into the repository; and the
-`overnight-cycle` final diff review reads the complete diff, so an unexpected
-write would surface before commit. If a future change needs a harder guarantee,
-the right fix is narrowing `Bash` to specific allowed commands in
-`.claude/settings.json`, not trusting the prompt harder.
+instruction, not on the tool grant.
+
+Be exact about what the deny rules do and do not cover.
+`Edit(./docs/canon/**)` covers every *file-editing tool* — `Edit`, `Write` and
+`NotebookEdit` alike — which is why it is written as a single `Edit` rule and
+not three. It does **not** cover `Bash`. A shell redirection or an in-place
+stream edit from `breaker` or `test-engineer` is not blocked by it.
+
+So canon immutability against those two agents currently rests on three things,
+none of which is a permission check: both are told explicitly not to write into
+the repository; both are defined as reporting roles with no mandate to change
+source; and `overnight-cycle` Stage 8 reads the complete diff before commit, so
+an unexpected write surfaces. Canon integrity can also be checked directly, and
+was during this workforce's own verification, by comparing SHA-256 digests of
+`docs/canon/` before and after a run.
+
+If a harder guarantee is wanted, the fix is to narrow `Bash` to an allowlist of
+specific commands in `.claude/settings.json`, or to withdraw the `Bash` grant
+until there is a test suite that needs it. It is not to trust the prompt harder.
 
 ---
 
@@ -351,6 +379,27 @@ across a separate triage role; see `V1-AGENT-SALVAGE-AUDIT.md` for why that
 split was not retained.
 
 ---
+
+## Where the current freeze identifiers are written down
+
+The current freeze pair is repeated in several non-canon files, because an agent
+prompt cannot resolve it at runtime without being told it. That repetition is a
+known cost, and it has a known failure mode: at the next governed reissue every
+copy becomes wrong at once, including the copy inside the agent whose job is to
+catch stale-authority citations.
+
+**Canon is the only authority for which freeze is current.** When a new freeze is
+declared, these must be updated in the same change:
+
+- `CLAUDE.md` — Authority section
+- `PROJECT-STATE.md` — Frozen authority, and the known-discrepancy note
+- `.claude/agents/canon-conformance-auditor.md` — Authority section
+- `docs/process/AGENT-ROSTER.md` — this list, and the `canon-conformance-auditor`
+  entry
+
+`docs/process/V1-AGENT-SALVAGE-AUDIT.md` is deliberately excluded: it is a dated
+record of what was true when the audit ran, and freezing its statements is
+correct.
 
 ## Severity vocabulary
 
