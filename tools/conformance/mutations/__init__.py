@@ -256,6 +256,55 @@ def _m20_silent_withhold(result, body, request):
     return out
 
 
+def _m22_report_only_the_winner(payload, block, field, body, request):
+    """The retest scheduler publishes its winner and forgets the rest.
+
+    `ALK-RETEST-SCHEDULER-001` evaluates several candidates and selects one;
+    the candidates that lost still belong in the audit list. `AD-RET-001` says
+    so in its own `forbidden` note -- *"The forecast-boundary candidate must
+    appear in the audit list rather than being dropped on an unstated
+    horizon."* A scheduler that reports only the winner is indistinguishable
+    from one that never evaluated the others, and no replay can show why the
+    winner won.
+
+    The sabotage keeps the first candidate and drops the rest. It transcribes
+    nothing: the list, its length and its contents all come from the fixture
+    the oracle is echoing.
+    """
+    if block != "expectedRetest":
+        return payload
+    candidates = payload.get("candidateTimes")
+    if not isinstance(candidates, list) or len(candidates) < 2:
+        return payload
+    out = dict(payload)
+    out["candidateTimes"] = candidates[:1]
+    return out
+
+
+def _m23_floor_the_forecast_candidate(payload, block, field, body, request):
+    """Apply the signal candidate's floor to the outer-bound forecast candidate.
+
+    `ALK_V2_FREEZE_5` F5-15 confines the minimum-useful-interval floor to the
+    ordinary signal candidate and explicitly preserves earliest-practicable
+    semantics for outer-bound risk. `AD-RET-004` is the boundary case: the
+    projected crossing is already behind us (`tBoundaryDays = -0.333333333`),
+    so the answer is test-now. Flooring it schedules the test *after* the
+    crossing the candidate exists to protect against.
+
+    The sabotage flips `observationFloorApplied` and replaces the immediate
+    action. Both values are read from the fixture; no interval is written here.
+    """
+    if block != "expectedRetest":
+        return payload
+    if payload.get("observationFloorApplied") is not False:
+        return payload
+    out = dict(payload)
+    out["observationFloorApplied"] = True
+    if out.get("selectedAction") == "REPEAT_NOW":
+        out["selectedAction"] = "SCHEDULE"
+    return out
+
+
 # ---------------------------------------------------------------------------
 # the registry
 # ---------------------------------------------------------------------------
@@ -410,8 +459,11 @@ MUTATIONS: List[Mutation] = [
             "existing one and require independentClusters unchanged); OR at least one "
             "fixture carrying repeats inside the 30-minute window becomes executable. "
             "Today neither holds: WG-ALK-049 is the repeat-clustering fixture and it "
-            "is in the ABSTRACT_INPUT class, and none of the six executable fixtures "
-            "contains two readings less than 30 minutes apart. The echo oracle cannot "
+            "is in the ABSTRACT_INPUT class, and no executable fixture contains two "
+            "readings less than 30 minutes apart. (That sentence carried a "
+            "transcribed count of the executable fixtures until converting "
+            "AD-RET-001..005 made it wrong, which is the drift this harness "
+            "otherwise refuses to allow itself.) The echo oracle cannot "
             "supply the missing behaviour, because clustering to a 30-minute window "
             "is a canon rule (ALK-005 / REPEAT_CLUSTER_WINDOW) and implementing it "
             "here would be writing engine code."
@@ -654,6 +706,73 @@ MUTATIONS.append(
         expect_red=["check:CHK-ENGINE-VERSION"],
         expect_mechanism="the corpus is written against",
         hooks={"result": _m21_stale_canon_version, "describe": _m21_stale_describe},
+    )
+)
+
+
+# ---------------------------------------------------------------------------
+# Negative controls for the retest scheduler.
+#
+# `AD-RET-001`..`AD-RET-005` became executable when they were converted to the
+# event-ledger format. Every one of them already went red under the generic
+# controls -- M-17 (tolerance drift), M-18 (non-finite), M-11 (forbidden
+# value), M-12 (dropped required code), M-20 (silent withhold). That is not
+# enough. A fixture is proven when a mutation of **the rule it exercises**
+# turns it red, and a numeric offset applied to every float in the corpus
+# proves only that the comparator subtracts. These two attack
+# `ALK-RETEST-SCHEDULER-001` itself.
+# ---------------------------------------------------------------------------
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-22",
+        title="The retest scheduler reports only its winner",
+        defect_class="retest scheduling / audit completeness",
+        status=EXECUTABLE,
+        sabotage=(
+            "every retest candidate but the first is dropped from "
+            "`candidateTimes`, so the evaluated-and-lost candidates vanish"
+        ),
+        guards=(
+            "ALK-RETEST-SCHEDULER-001's requirement that one scheduler evaluates "
+            "every candidate and that the losers stay in the audit list. "
+            "AD-RET-001 states the defect in its own forbidden note: the "
+            "forecast-boundary candidate must appear rather than being dropped "
+            "on an unstated horizon. A scheduler that publishes only its winner "
+            "cannot be replayed to show why the winner won."
+        ),
+        expect_red=[
+            "fixture:AD-RET-001",
+            "fixture:AD-RET-002",
+            "fixture:AD-RET-003",
+            "fixture:AD-RET-005",
+        ],
+        expect_mechanism="candidateTimes",
+        hooks={"block": _m22_report_only_the_winner},
+    )
+)
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-23",
+        title="Apply the signal candidate's floor to the outer-bound forecast candidate",
+        defect_class="retest scheduling / floor scope",
+        status=EXECUTABLE,
+        sabotage=(
+            "`observationFloorApplied` is flipped to true and an immediate "
+            "REPEAT_NOW becomes a scheduled test"
+        ),
+        guards=(
+            "ALK_V2_FREEZE_5 F5-15, which confines the minimum-useful-interval "
+            "floor to the ordinary signal candidate and preserves "
+            "earliest-practicable semantics for outer-bound risk. AD-RET-004 is "
+            "the boundary case: the projected crossing is already behind us, so "
+            "flooring the answer schedules the test after the crossing the "
+            "candidate exists to protect against."
+        ),
+        expect_red=["fixture:AD-RET-004"],
+        expect_mechanism="observationFloorApplied",
+        hooks={"block": _m23_floor_the_forecast_candidate},
     )
 )
 

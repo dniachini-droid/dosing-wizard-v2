@@ -83,6 +83,9 @@ class RunReport:
     package_assertions: int = 0
     notes: List[str] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)
+    #: Conversion coverage per engine path (`coverage.CoverageReport`). Held as
+    #: `Any` so `results` stays free of harness imports and importable alone.
+    coverage: Any = None
 
     @property
     def failures(self) -> int:

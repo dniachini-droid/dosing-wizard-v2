@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from . import checks as checks_mod
 from . import compare as compare_mod
 from . import corpus as corpus_mod
+from . import coverage as coverage_mod
 from . import data_contract as dc_mod
 from . import engine_adapter as ea
 from . import engine_checks as ec_mod
@@ -349,6 +350,13 @@ def run(
     )
     report.invariants.extend(inv_outcomes)
     report.corpus_problems.extend(inv_problems)
+
+    # Conversion coverage per engine path. Built from the traceability table's
+    # own owner column, so the harness still transcribes no mapping of its own.
+    trace_doc, trace_load_problems = checks_mod.load_traceability()
+    report.corpus_problems.extend(trace_load_problems)
+    report.coverage = coverage_mod.build(c, trace_doc)
+    report.corpus_problems.extend(report.coverage.problems)
 
     report.meta = {
         "fixtureCount": len(c.fixtures),

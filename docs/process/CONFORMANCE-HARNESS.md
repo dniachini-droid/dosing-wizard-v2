@@ -66,28 +66,41 @@ loudly instead of reporting a small, clean pass.
 
 ## What it cannot cover — the important section
 
-**Of 204 fixtures, 6 can be executed against an engine.**
+**Of 204 fixtures, 11 can be executed against an engine.**
 
 (Counts here are as of `ALK_V2_FREEZE_5`. Every one of them is computed by the
 harness at run time; none is transcribed. `ALK_V2_FREEZE_5` added 44 fixtures
-and **none of them is executable**, so the executable count did not move.)
+and **none of them was executable**. The count moved from 6 to 11 when
+`AD-RET-001`..`AD-RET-005` were converted to the event-ledger form defined in
+`fixtures/EXECUTABLE-FIXTURE-FORMAT.md`.)
 
 The documented interface is one pure function of
 `(eventLedger, configurationHistory, asOf)` (`ALK-V2-IMPLEMENTATION-CONTRACT.md`
 §4). A fixture is executable only when the harness can build that input from it
-without inventing anything. The other 198 are listed individually in every run,
+without inventing anything. The other 193 are listed individually in every run,
 under the reason they cannot be run:
 
 | Class | Count | Why |
 |---|---|---|
-| `EXECUTABLE` | 6 | carries an event ledger and an `asOf` |
+| `EXECUTABLE` | 11 | carries an event ledger and an `asOf` |
 | `NO_ASOF` | 6 | carries an event ledger but states no `asOf`; choosing one would be inventing an input |
-| `ABSTRACT_INPUT` | 146 | `input` is a scenario description in an ad-hoc vocabulary (`sPreDkhPerDay`, `readings: 4`, `day0: {...}`), not an event ledger |
+| `ABSTRACT_INPUT` | 141 | `input` is a scenario description in an ad-hoc vocabulary (`sPreDkhPerDay`, `readings: 4`, `day0: {...}`), not an event ledger |
 | `CROSS_REFERENCE` | 22 | no `input`; defers to another fixture via `equivalentTo` |
 | `NO_INPUT` | 6 | no `input` and no cross-reference; nothing to submit |
 | `PROPERTY_FIXTURE` | 18 | a property plus a generator, not a single input/output pair |
 
-Separately, **59 fixtures carry at least one expected value that is prose**
+**The binding constraint is `asOf`, not the ad-hoc vocabulary.** The fixture
+schema already states a complete time convention (`epochDay0`, `dayN =
+epochDay0 + N × 24 h`), so `timesDays: [0, 2, 4]` resolves to absolute instants
+mechanically. But of the 193 unexecutable fixtures, **one** now states an
+assessment instant (`WG-ALK-049`, which states reading *days* with no reading
+*values* and so is blocked twice over). Nothing else in the corpus states one.
+That is `OD-008`, and it is the largest single blocker on the corpus becoming
+machine-checkable. The full analysis, including the eleven distinct shapes the
+corpus actually takes, is in
+`docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`.
+
+Separately, **57 fixtures carry at least one expected value that is prose**
 rather than a value an engine field can equal — `"known from the single valid
 reading"`, `"0.064 < R_obs < 0.1439"`. Those entries are named individually and
 excluded from comparison. Comparing them would require the harness to interpret
@@ -107,9 +120,66 @@ prevent.
 This is not a defect in the fixtures. They were written to pin canon behaviour
 for a human reader, before any engine or interface existed. It is a precise
 statement of how much of the corpus is machine-checkable **today**, and the
-number is 6 of 204. Turning an `ABSTRACT_INPUT` fixture into an executable one
+number is 11 of 204. Turning an `ABSTRACT_INPUT` fixture into an executable one
 means writing its event ledger, which is fixture work governed by the canon —
 not something the harness may do on the fixture's behalf.
+
+**When that work happens is now decided.** `DEC-019`: an engine path is not
+complete until its fixtures execute and its mutations turn them red. Conversion
+rides along with implementation, one path at a time, which is why the report
+below breaks coverage down per engine path rather than publishing one corpus
+total. The unconverted fixtures are then exactly the ones whose engine paths do
+not exist yet, and the backlog stops being a pile and becomes a map.
+
+## Coverage per engine path
+
+`11 of 204` is a true number that tells the owner nothing useful. It does not
+say *which* behaviour is checkable, so it cannot show that a path which has been
+built is covered, and it makes the remainder look like one undifferentiated
+backlog.
+
+So the run also reports, for each distinct area of engine behaviour, how many of
+its fixtures execute and how many do not:
+
+```
+ENGINE PATH       EXEC / WORKED  COVERAGE              PROP
+------------------------------------------------------------------------------
+POTENCY              0 /     20  ....................     -
+SEGMENTATION         1 /     35  #...................     -
+MAINTENANCE          6 /     51  ##..................     -
+RETEST               5 /     12  ########............     -
+UNATTRIBUTED         0 /      7  ....................    18
+```
+
+**The paths are not invented here.** `traceability/alk-v2-traceability.json`
+already assigns every rule exactly one `owner`, from a closed set of sixteen,
+and `ALK-V2-MODULE-DESIGN.md` uses the same names. A fixture declares
+`rulesExercised`; joining the two gives its paths. A hand-written
+fixture-to-path table in the harness would be a second owner of a mapping the
+traceability table already owns, which `MASTER RULE 1` calls a defect rather
+than a coincidence.
+
+Three things are deliberately not hidden:
+
+- **Every unconverted fixture is still named individually** in `NOT COVERED`,
+  which is rendered *before* this section so a reader meets the backlog before
+  the summary of it. This view adds meaning; it removes nothing.
+- **A fixture whose rules resolve to no owner is reported under
+  `UNATTRIBUTED`**, with the reason, and no owner is guessed for it.
+- **A property body is counted apart from worked examples** (the `PROP`
+  column). `INV-REPLAY-001` is a different kind of check, not an unconverted
+  worked example, and rolling it into a conversion backlog would overstate the
+  work outstanding.
+
+A fixture exercises several rules and so appears on every path those rules are
+owned by, which means the columns sum to more than 204. That is deliberate:
+this is coverage per path, not a partition of the corpus. The partition is
+`NOT COVERED`.
+
+The view is a **report, not a gate** — it does not fail the run. The one thing
+it does assert is that no fixture is invisible to it, which is true by
+construction today and is checked anyway, against the edit that later
+introduces a filter.
 
 **Of 76 invariants, 9 have an executable form** — three run against an engine,
 three are carried in part by document-level checks, and three (`INV-I8`,
@@ -201,6 +271,17 @@ asserted one. Every presence check still passes under it. Only an absence
 scanner sees it, and four owner decisions were once reverted exactly this way
 while a 192-check gate stayed green.
 
+`M-22` and `M-23` attack the retest scheduler specifically, and exist because
+of `DEC-019` clause 3. When `AD-RET-001`..`AD-RET-005` were converted they
+already went red under the generic controls — `M-17` (tolerance drift), `M-18`
+(non-finite), `M-11` (forbidden value), `M-12` (dropped required code), `M-20`
+(silent withhold). That is not enough to call a fixture proven. A numeric offset
+applied to every float in the corpus demonstrates only that the comparator
+subtracts; it says nothing about the rule the fixture exists to pin. `M-22`
+drops the losing candidates from the scheduler's audit list and `M-23` applies
+the signal candidate's floor to the outer-bound forecast candidate, which is
+what `ALK_V2_FREEZE_5` F5-15 forbids.
+
 **Two are blocked.** `M-8` (repeat-window clustering) cannot run: no executable
 fixture contains two readings inside the 30-minute window, and supplying the
 clustering behaviour in the oracle would mean implementing a canon rule.
@@ -267,6 +348,17 @@ them on every run, which is the most durable form of recording available.
    `WG-ALK-050`, `WG-ALK-058` and `ALK-G029` do the same for `maintenanceDose`,
    `selectedPotency`, `maintenanceEstimate` and `temporaryDose`. `INV-B7` requires
    one meaning per field name, and the harness's by-name resolution rests on it.
+
+5. **Twenty-five rule ids are named by a fixture but are absent from the
+   rule-traceability table.** Surfaced by the per-path coverage view, which
+   cannot attribute an engine path to a rule the table does not carry. Most are
+   canon section references rather than rule rows (`Part II §48`, named by five
+   fixtures; `Part II §5.4`, by three), but some look like ordinary rule ids
+   that are simply missing: **`ALK-062` is named by four fixtures**, including
+   three of the five converted here, and `ALK-003A` by four. This is the mirror
+   image of defect 3 above — that one is coverage claimed for fixtures that do
+   not exist, this one is fixtures claiming rules that do not. Both are
+   reported on every run. New at this work; recorded, not fixed.
 
 None of these is fixed here. Fixing them means editing the alk-v2 package
 documents, which this work was scoped out of.

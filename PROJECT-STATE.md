@@ -79,6 +79,15 @@ Phase 0 — Preserve and found V2
   The harness is **RED today, correctly**: no engine exists, so six executable fixtures
   fail `ENGINE_ABSENT`, and five mechanical checks report pre-existing document defects
   that predate this work and are listed in `docs/process/CONFORMANCE-HARNESS.md`.
+- An **executable fixture format** is defined in
+  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **11 of 204
+  fixtures execute**, up from 6: `AD-RET-001` … `AD-RET-005` were converted and each is
+  demonstrated red under a mutation of the retest-scheduler rule it exercises.
+  The harness now reports conversion coverage **per engine path**.
+  `DEC-019` makes this a standing rule: an engine path is not complete until its
+  fixtures execute and its mutations turn them red.
+  The remaining 193 are blocked, and mostly on one thing — **`OD-008`, what the
+  assessment instant of a worked golden is.** Only one unconverted fixture states one.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 
@@ -145,6 +154,14 @@ scenarios and interim refusal behaviour. Each is a chemistry or safety judgement
 frozen canon does not contain; none may be resolved in code. Implementation may begin
 without them — every affected output refuses explicitly rather than defaulting — but the
 domain is not complete until they are closed under the Freeze-4 reopening rule.
+
+**`OD-008` blocks most of the fixture corpus becoming machine-checkable.** The engine
+interface is a function of `(eventLedger, configurationHistory, asOf)`; almost no fixture
+states an `asOf`, and choosing one decides what the fixture meant. It blocks roughly forty
+reading-series fixtures directly and every case-set expansion behind them. It does not
+block implementation starting — `DEC-019` attaches conversion to each path as it is
+built — but each path will meet it. `OD-009`, `OD-010` and `OD-011` are the smaller
+fixture-format questions behind it.
 
 **Eleven V1 owner questions arrive unowned**, recorded in
 `docs/migration/V1-OPEN-OWNER-QUESTIONS.md`. None blocks the Alk domain. One — *what is a

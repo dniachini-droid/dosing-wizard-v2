@@ -7,6 +7,7 @@ import json
 from typing import Any, Dict, List
 
 from . import corpus as corpus_mod
+from . import coverage as coverage_mod
 from .results import (
     FAIL,
     NOT_COVERED,
@@ -21,6 +22,95 @@ THIN = "-" * 78
 
 def _pct(n: int, d: int) -> str:
     return f"{(100.0 * n / d):.0f}%" if d else "n/a"
+
+
+def _bar(done: int, total: int, width: int = 20) -> str:
+    if not total:
+        return " " * width
+    filled = int(round(width * done / total))
+    return "#" * filled + "." * (width - filled)
+
+
+def _render_coverage(r: RunReport, w, verbose: bool) -> None:
+    """Conversion coverage per engine path.
+
+    This section adds meaning to the totals above; it does not replace them.
+    Every unconverted fixture is still named individually in NOT COVERED, and
+    this view is deliberately rendered *after* that list so a reader meets the
+    backlog before the summary of it.
+    """
+    cov = r.coverage
+    if cov is None:
+        return
+
+    w(RULE)
+    w("CONVERSION COVERAGE BY ENGINE PATH")
+    w(RULE)
+    w("Which areas of engine behaviour have executable fixtures, and which do")
+    w("not. A path is COMPLETE only when every one of its worked-example")
+    w("fixtures executes -- the standing rule is that an engine path is not")
+    w("complete until its fixtures execute and its mutations turn them red.")
+    w("")
+    w("Paths come from the `owner` column of")
+    w("traceability/alk-v2-traceability.json, joined to each fixture's")
+    w("`rulesExercised`. The harness holds no mapping of its own.")
+    w("")
+    w(f"{'ENGINE PATH':<16} {'EXEC':>5} {'/':^1} {'WORKED':>6}  {'COVERAGE':<20}  PROP")
+    w(THIN)
+    for p in cov.paths:
+        if p.total == 0:
+            continue
+        mark = "  COMPLETE" if p.complete else ""
+        prop = f"{len(p.properties):>4}" if p.properties else "   -"
+        w(
+            f"{p.path:<16} {len(p.executable):>5} {'/':^1} {p.convertible_total:>6}  "
+            f"{_bar(len(p.executable), p.convertible_total):<20}  {prop}{mark}"
+        )
+    w("")
+    w("EXEC   = worked-example fixtures on this path that execute today")
+    w("WORKED = worked-example fixtures on this path in total")
+    w("PROP   = property/simulation/structural bodies on this path. These are a")
+    w("         different kind of check, not unconverted worked examples, and")
+    w("         are counted apart so the backlog is not overstated.")
+    w("")
+    w("A fixture exercises several rules and so appears on every path those")
+    w("rules are owned by. The columns therefore sum to more than the corpus")
+    w("size, deliberately: this is coverage per path, not a partition of the")
+    w("corpus. The partition is the NOT COVERED section above.")
+    w("")
+
+    unattributed = cov.by_path(coverage_mod.UNATTRIBUTED)
+    if unattributed and unattributed.total:
+        w(f"{coverage_mod.UNATTRIBUTED}  ({unattributed.total} fixtures)")
+        w(f"  why: {coverage_mod.UNATTRIBUTED_REASON}")
+        ids = sorted(
+            unattributed.executable
+            + unattributed.not_executable
+            + unattributed.properties
+        )
+        line = "  "
+        for fid in ids:
+            if len(line) + len(fid) + 2 > 76:
+                w(line)
+                line = "  "
+            line += fid + "  "
+        if line.strip():
+            w(line)
+        w("")
+
+    if cov.unresolved_rules:
+        items = sorted(cov.unresolved_rules.items(), key=lambda kv: (-kv[1], kv[0]))
+        w(
+            f"RULE IDS NAMED BY A FIXTURE BUT ABSENT FROM THE TRACEABILITY TABLE "
+            f"({len(items)})"
+        )
+        w("  These contribute no engine path. Reported, never guessed at.")
+        shown = items if verbose else items[:10]
+        for rid, n in shown:
+            w(f"  {rid:<28} named by {n} fixture(s)")
+        if not verbose and len(items) > len(shown):
+            w(f"  ... {len(items) - len(shown)} further; run with --verbose")
+        w("")
 
 
 def render_text(r: RunReport, verbose: bool = False) -> str:
@@ -150,6 +240,8 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
     w(f"TOTAL EXECUTED    : {len(executed)} of {len(r.fixtures)} fixtures "
       f"({_pct(len(executed), len(r.fixtures))})")
     w("")
+
+    _render_coverage(r, w, verbose)
 
     # ---- Invariants --------------------------------------------------------
     w(RULE)
@@ -301,6 +393,24 @@ def render_json(r: RunReport) -> str:
                 for i in r.invariants
             ],
             "corpusProblems": r.corpus_problems,
+            "coverageByEnginePath": (
+                {
+                    "paths": [
+                        {
+                            "path": p.path,
+                            "executable": p.executable,
+                            "notExecutable": p.not_executable,
+                            "properties": p.properties,
+                            "workedExampleTotal": p.convertible_total,
+                            "complete": p.complete,
+                        }
+                        for p in r.coverage.paths
+                    ],
+                    "rulesAbsentFromTraceability": r.coverage.unresolved_rules,
+                }
+                if r.coverage is not None
+                else None
+            ),
         },
         indent=2,
     )

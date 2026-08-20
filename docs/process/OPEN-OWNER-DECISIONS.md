@@ -73,6 +73,218 @@ more than a tidy file.
 
 ## Open
 
+## OD-008 — What is the assessment instant of a worked golden?
+
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Blocks:** roughly forty reading-series fixtures, all six `NO_ASOF` fixtures, and
+  every case-set expansion. It is the single largest blocker on making the corpus
+  machine-checkable.
+
+**The question, in plain language**
+
+The engine is one pure function of `(eventLedger, configurationHistory, asOf)`. A
+fixture must therefore state three things. Almost all of them state two.
+
+Of the 198 fixtures the harness cannot execute, **six state an assessment instant** —
+`AD-RET-001`..`AD-RET-005` and `WG-ALK-049`. The rest describe a scenario and stop.
+Canon Part III writes its inputs as "Day 0 / Day 2 / Day 4" and says nothing about when
+the assessment happens.
+
+Is there a rule for this — and if so, what is it?
+
+**Why it is undecided** — what the existing authorities do and do not say
+
+`ALK-V2-IMPLEMENTATION-CONTRACT.md` §4 requires an explicit `asOf` and §346 says "Every
+domain function takes an explicit `asOf` instant. No function reads a clock." Neither
+says how a *fixture author* chooses one. `ALK-V2-DATA-CONTRACT.md` mentions `asOf` only
+as the instant configuration resolves at. Canon §518 says a derived assessment resolves
+the configuration version effective at its `assessmentAsOf` — again, given one.
+
+So the requirement is stated and the convention is not.
+
+This matters because `asOf` is not a free parameter. Evidence windows, staleness, every
+retest candidate and the resolved configuration version all move with it. The harness
+already refuses to choose one, and classes six fixtures `NO_ASOF` for exactly this
+reason: "choosing it is inventing an input."
+
+**Evidence the owner may want**
+
+All six currently-executable fixtures set `asOf` to their **last reading instant** — six
+out of six, including `WG-ALK-006` (readings Day 0 and Day 1, `asOf` Day 1) and
+`WG-ALK-003` (an eight-point series, `asOf` at the last point). That is a consistent
+observed habit. It is **not** authority, and this run declined to adopt it: a convention
+inferred from six examples and then applied to forty is exactly the silent
+reinterpretation the canon forbids.
+
+**Options**
+
+1. **State the convention in canon** — a worked golden is assessed at the instant of its
+   latest reading unless it says otherwise. Commits to the reading being the trigger for
+   assessment. Cheap; unblocks the bulk of the corpus mechanically; reversible by a
+   governed reissue. Forecloses nothing, because a fixture may still state its own.
+2. **Require every fixture to state its own `asOf`.** Commits to nothing about
+   semantics and is maximally explicit, but means editing roughly forty fixtures by
+   hand, each edit being a small judgement about what that fixture meant.
+3. **Leave it open and convert nothing further.** Costs nothing now; the corpus stays at
+   its current executable count and per-path coverage stays near zero for every path but
+   `RETEST`.
+
+**Which direction being wrong hurts more**
+
+Getting it wrong in the direction of option 1 means a set of fixtures assert behaviour at
+an instant the canon did not intend — a wrong test that looks right, which is worse than
+no test. Getting it wrong in the direction of option 3 means the engine gets built
+against a corpus almost none of which can check it.
+
+**What already covers this** — nothing. `DEC-016` makes the harness a required check but
+says nothing about fixture inputs.
+
+**What must change alongside**
+
+`fixtures/EXECUTABLE-FIXTURE-FORMAT.md` §2 and §5, which currently forbid a conversion
+from supplying an `asOf`, and `CONFORMANCE-HARNESS.md`'s `NO_ASOF` class.
+
+**Recommendation, and what would make it wrong**
+
+Option 1, as a canon reissue rather than a note. It matches what the corpus already
+does everywhere it does anything, it is the cheapest thing that unblocks real work, and
+a fixture that needs a different instant can still state one. It would be wrong if the
+canon intends an assessment to be triggered by something other than a reading — a
+scheduled evaluation, or a dose change — in which case the six-for-six pattern is an
+artefact of which fixtures happened to be written first.
+
+## OD-009 — Should the engine expose unit-level entry points for fixtures that state intermediate values?
+
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Blocks:** 32 fixtures whose input is a Layer-2 or Layer-3 output rather than raw facts
+
+**The question, in plain language**
+
+Thirty-two fixtures state their input as quantities the engine would normally *compute*:
+a pre-change slope, a post-change slope, a slope uncertainty, a consumption estimate.
+`WG-ALK-009` supplies a pre-slope, a dose delta and two sigmas, and asserts which
+response class results. `AD-POT-001` supplies both sides of a potency window with their
+slopes and sigmas already computed.
+
+The current interface is one whole-pipeline function, so the only way to submit these is
+to construct a reading series whose fitted slope and residual scatter come out at exactly
+the stated values. Should the engine instead expose the individual modules?
+
+**Why it is undecided**
+
+`ALK-V2-MODULE-DESIGN.md` already describes the modules and is emphatic that some of
+them are deliberately narrow — of `iv.classify`: *"takes only three numbers. It cannot
+see the position, the potency or the recommendation, which is what makes `INV-E6`
+structural."* A fixture that feeds `iv.classify` three numbers is testing exactly the
+right thing at the right level.
+
+But `ALK-V2-IMPLEMENTATION-CONTRACT.md` §4 defines *one* assessment as *one* pure
+function, and the conformance harness speaks only that protocol. Whether the module
+boundary is also a *testing* boundary is not stated anywhere.
+
+**Options**
+
+1. **Extend the conformance protocol with a unit-level op** — submit named module inputs,
+   get that module's output. Commits to the module boundary being public and stable.
+   Makes 32 fixtures executable roughly as written, and keeps them testing one formula
+   in isolation, which is their virtue.
+2. **Reconstruct ledgers for them.** No interface change. But the fixture's expectation
+   was computed *from the abstract sigma*, not from readings, so a reconstructed fixture
+   asserts something the original did not — and the format's `assertionsUnchanged` claim
+   would be false.
+3. **Leave them unconverted, permanently, and say so.** They remain human-checkable
+   worked reasoning that pins canon for a reader. Honest, and cheap, but 32 fixtures
+   never become gates.
+
+**Which direction being wrong hurts more**
+
+Option 1 wrongly taken makes an internal boundary public and harder to change later.
+Option 2 wrongly taken silently changes what 32 fixtures assert, which is worse: the
+tests would pass while checking something else.
+
+**Recommendation, and what would make it wrong**
+
+Option 1, deferred until an engine exists — there is nothing to expose yet, and the
+decision is cheap to take later and expensive to take blind. Explicitly **not** option 2.
+It would be wrong if the module boundary turns out to be unstable in implementation, in
+which case option 3 is the honest fallback.
+
+## OD-010 — Should a fixture be able to assert the difference between two assessments?
+
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Blocks:** 11 retro-edit / transition fixtures
+
+**The question, in plain language**
+
+Eleven fixtures are about what an *edit* does. `WG-ALK-028` is
+`{before: {...}, edit: {targetRange: ...}}` and asserts that the position changes while
+the trend does not. `WG-ALK-029` inserts a backdated reading and asserts the present
+analysis moves but history does not. `WG-ALK-065` asserts a legacy config is not
+backfilled.
+
+Each is two assessments and a claim about the difference. Should the fixture format have
+a two-call type with a `delta` expectation block?
+
+**Why it is undecided**
+
+The engine interface already supports this natively — same ledger, two configuration
+versions, or two `asOf` values — so nothing in the architecture forbids it. But the
+fixture format and the harness both assume one fixture is one call, and no authority
+says otherwise.
+
+**Options**
+
+1. **Define a two-call fixture type** with `before`, `after` and `delta` blocks.
+2. **Express each as two ordinary fixtures plus a prose note** tying them together. Loses
+   the mechanical check on the difference, which is the whole assertion.
+3. **Leave unconverted.**
+
+**Recommendation, and what would make it wrong**
+
+Option 1, but not yet: it was not defined in this run because no fixture in the corpus
+could be converted to prove it (all eleven are also blocked on `OD-008`). Defining an
+unproven format type invites it being wrong in a way nobody notices. It would be wrong
+if `OD-008` is answered in a way that makes these fixtures convertible as ordinary pairs.
+
+## OD-011 — Is a fixture's provenance note an input?
+
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Blocks:** `AD-RET-001` fully; sets a precedent for the rest of the corpus
+
+**The question, in plain language**
+
+`AD-RET-001` states no `currentDoseMlPerDay`. Its provenance note says *"Same state as
+AD-MNT-006"*, and `AD-MNT-006` states 9.0 mL/day.
+
+Is that note an input the conversion may read, or documentation it may not?
+
+**Why it is undecided**
+
+The fixture schema calls `provenance.note` "for `CANON_DERIVED`: how the numbers were
+obtained" — documentation about derivation, not a field the engine is given. The
+comparator already treats `note` as documentation everywhere else and never compares it.
+But the note plainly asserts a state identity, and a human reader would use it.
+
+This run took the strict reading: the fixture was converted with **no `DOSE_STATE`
+event**, and the gap is declared in its `conversion.questionsRaised`. If the `RETEST`
+path turns out to need a programmed dose to reach these expectations, that is a real
+finding about the fixture.
+
+**Options**
+
+1. **A note is never an input.** Fixtures that need a value must state it. `AD-RET-001`
+   gets an explicit dose added by whoever owns it.
+2. **A note may be read when it names another fixture by id and asserts state identity.**
+   Narrow, but it is a rule about how to read prose, which is the class of rule that
+   drifts.
+
+**Recommendation, and what would make it wrong**
+
+Option 1. It is the reading the rest of the corpus's machinery already takes, and the fix
+is one field on one fixture. It would be wrong only if many fixtures turn out to depend
+on this style of cross-reference, in which case the cost of option 1 is no longer one
+field.
+
 ## OD-001 — Should `main` be branch-protected on GitHub?
 
 - **Raised:** 2026-08-19 · **By:** workforce founding, adversarial review · **Status:** OPEN

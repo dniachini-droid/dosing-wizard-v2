@@ -243,9 +243,22 @@ class EchoOracle:
                     request=request,
                 )
 
-        # Flat convenience fields the contract declares in their own right and
-        # the fixtures assert by name.
-        for name in ("trajectory", "movementEvidence", "position"):
+        # Flat fields the contract declares in their own right and which a
+        # fixture block also asserts by name. Every one of them must be lifted,
+        # or the same name sits at two places with two values -- `NOT_RUN` at
+        # the top level and the real value inside the echoed block -- which is
+        # exactly what `INV-B7` forbids and what `compare_by_name` reports.
+        #
+        # This was a hand-written list of three names (`trajectory`,
+        # `movementEvidence`, `position`) and so was correct only for the
+        # fixtures that existed when it was written. `AD-RET-004` and
+        # `AD-RET-005` assert `outerBoundState`, a fourth declared field, and
+        # went red on the collision the moment they became executable. A list
+        # that has to be extended every time a fixture is converted is a second
+        # owner of the contract's field set; deriving it is the fix, not adding
+        # a fourth entry.
+        declared = set(contract.engine_result_fields)
+        for name in sorted(asserted_names & declared):
             for block in BLOCK_TO_FIELD:
                 src = body.get(block)
                 if isinstance(src, dict) and name in src:

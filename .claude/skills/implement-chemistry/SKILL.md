@@ -75,6 +75,40 @@ Write, and run:
 
 Paste real output into the run record.
 
+### 3a — The path is not complete until its fixtures execute (`DEC-019`)
+
+**An engine path is not complete until its fixtures execute and its mutations
+turn them red.** Conversion rides along with implementation, one path at a
+time. It is part of building the path, not tidying to be scheduled afterwards.
+
+Identify the path you are building — the owning module in the `owner` column of
+`traceability/alk-v2-traceability.json`, the same name the harness's
+**CONVERSION COVERAGE BY ENGINE PATH** section uses. Then, before the path
+counts as done:
+
+1. **Every worked-example fixture on that path executes.** Convert the ones that
+   do not, following `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`
+   — which is a form, not a licence to decide what a fixture meant. Its §5
+   "What a conversion may never supply" is binding: no `asOf`, no reading value,
+   no dose, potency or volume the fixture does not state, and no threshold, band
+   edge, rail, cadence, evidence minimum or equation that is not the canon's.
+   Preserve the original prose in `sourceScenario`; the prose is the reasoning
+   and the executable form is only the check.
+2. **They pass** against your engine.
+3. **A mutation of a rule this path owns turns them red**, and the failure text
+   names the mechanism. Add it to `tools/conformance/mutations/` and show
+   `run-mutations.py` catching it. A generic control does not count: a numeric
+   offset applied to every float turns almost any fixture red and demonstrates
+   only that the comparator subtracts.
+
+A fixture that cannot be converted without inventing something is **blocked, not
+exempt**. Record the question — in `conversion.questionsRaised` on the fixture
+and in `docs/process/OPEN-OWNER-DECISIONS.md` — and do not proceed on a guess.
+Stopping there is a successful outcome.
+
+Check the coverage section for your path before and after. If the path is not
+`COMPLETE`, say in the run record which fixtures remain and why.
+
 ## 4 — `canon-conformance-auditor`, in fresh context
 
 Does this match the canon as written? Does every rule it touches trace to one
@@ -123,5 +157,9 @@ a reason to iterate.
 As `/implement` step 7: base-relative diff, nothing outside scope, no change
 under `docs/canon/`, no chemistry value the canon does not state, no V1 value
 carried in, no test weakened.
+
+Also confirm, explicitly, that the path you built is `COMPLETE` in the
+harness's per-path coverage section, or state which of its fixtures remain
+unconverted and which open decision blocks each (`DEC-019`).
 
 Write the run record. Open the PR. **Stop.** Merging is the owner's.
