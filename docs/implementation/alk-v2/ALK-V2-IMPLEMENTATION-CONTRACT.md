@@ -27,7 +27,7 @@ LAYER 2  OBSERVED TRAJECTORY
 
 LAYER 3  SUPPORTED TRAJECTORY
          The part of the observed movement that is separated from uncertainty
-         far enough to size an actuator change.
+         far enough to size a recommended change.
          S_supported. Deliberately biased toward zero.
          NEVER used for physical demand, risk forecast, or position.
 
@@ -88,7 +88,7 @@ and not derived from it by a canonical equation is a defect.
 | `ALK_RATE_RAIL` | 0.50 | dKH/day | `ALK-046`, `ALK-COMPOSITE-RAIL-001` |
 | `ORDINARY_STEP_CAP` | 0.25 | fraction | `ALK-STEP-CAP-001` |
 | `EXCEPTIONAL_STEP_CAP` | 0.50 | fraction | `ALK-STEP-CAP-001` |
-| `STEP_CAP_MEANINGFUL_MULTIPLE` | 4 | × increment | `ALK-STEP-CAP-001` (`D_current ≥ 4 R_pump`) |
+| `STEP_CAP_MEANINGFUL_MULTIPLE` | 4 | × increment | `ALK-STEP-CAP-001` (`D_current ≥ 4 R_precision`) |
 | `LIQUID_GUARD_FRACTION` | 0.02 | of net volume / 24 h | `ALK-LIQUID-VOLUME-GUARD-001` |
 | `UNKNOWN_WC_ASSUMED_MISMATCH` | 2.0 | dKH | `ALK-WATERCHANGE-UNKNOWN-001` |
 | `WC_UNKNOWN_BREAK_FRACTION` | 0.05 | fraction | `ALK-WATERCHANGE-UNKNOWN-001` (derived: 0.10 / 2.0) |
@@ -293,7 +293,7 @@ P4  continuous action candidate
 P5  physical rate rail (ALK-046)
       |P_selected · dD| <= 0.50 dKH/day  -> clamp; SAFETY_RATE_RAIL_APPLIED
 P6  dose-step cap (ALK-STEP-CAP-001)
-      if D_current >= 4·R_pump: |dD| <= cap · D_current, cap = 0.25 or 0.50
+      if D_current >= 4·R_precision: |dD| <= cap · D_current, cap = 0.25 or 0.50
       else: BASELINE_ESTABLISHMENT, percentage cap inactive
 P7  empirical bracket (ALK-032)  advisory only; never changes the number
 P8  non-negative clamp          D >= 0
@@ -301,11 +301,13 @@ P9  gross liquid-volume guard (ALK-LIQUID-VOLUME-GUARD-001)
       continuous candidate > 0.02 * 1000 * V_L mL/day
                              -> rechecked again at P11 after discretisation
 P10 [unplaced] composite rail allocation (ALK-COMPOSITE-RAIL-001)       -> OI-PIPELINE-001
-P11 actuator rounding (ALK-ROUNDING-001)
-      requires R_pump; missing -> REFUSE ACTUATOR_INCREMENT_REQUIRED (M-1)
+P11 recommendation rounding (ALK-ROUNDING-001)
+      R_precision is a DISPLAY convention (owner decision 23); where none is
+      configured the full-precision recommendation is stated. Nothing is withheld
+      for want of it, and no device increment exists to be missing.
       nearest -> tie toward D_current -> tie lower -> recheck hard constraints
       (rate rail AND liquid guard) -> step toward D_current until feasible ->
-      if back at D_current: HOLD MAINTENANCE_ACTUATOR_RESOLUTION
+      if back at D_current: HOLD MAINTENANCE_ROUNDS_TO_CURRENT_DOSE
       if no feasible command and D_current itself violates the guard:
                              -> WITHHOLD  MAINTENANCE_LIQUID_GUARD_EXCEEDED
 P12 recompute predicted post slope from the FINAL command (ALK-PREDICTED-POST-SLOPE-001)
@@ -346,7 +348,7 @@ Canon Part II §64, `ALK-G040`, `WG-ALK-040`.
 3. No iteration-order dependence: sort by `(instant, eventOrdinal, eventId)` before any
    ordered computation.
 4. No locale, timezone-of-the-viewer, or display-rounding dependence.
-5. Full stored precision throughout; rounding happens only at the actuator step and at
+5. Full stored precision throughout; rounding happens only at the recommendation step and at
    presentation (Part II §2.3, `ALK-002`).
 5a. **Canonical threshold predicates compare exact decimals** (`ALK-DECIMAL-THRESHOLD-001`,
    owner decision 18). Where both operands are exact decimals — a stored or normalized
@@ -364,7 +366,7 @@ Canon Part II §64, `ALK-G040`, `WG-ALK-040`.
 
 Floating-point tolerance for fixture comparison: absolute `1e-9` on dKH and mL
 quantities, `1e-12` on dimensionless ratios, exact equality on enums, reason codes and
-counts. Actuator commands compare exactly after rounding. These tolerances govern **fixture
+counts. Recommendations compare exactly after rounding. These tolerances govern **fixture
 comparison** only; the canonical threshold predicates of item 5a are exact-decimal
 comparisons at runtime and carry no tolerance at all.
 

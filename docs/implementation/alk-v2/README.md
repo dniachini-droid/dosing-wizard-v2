@@ -30,8 +30,17 @@ would have required a second decision the owner had not made — `OI-HIGHBREACHB
 amendments **F5-13, F5-14 and F5-15**. All sixteen are closed, and nothing in this package
 withholds an output for want of a decision.
 
-Owner decisions **16–19** then superseded parts of that first encoding, and owner decisions
-**20–22** superseded parts of theirs. Decision 20 splits `D_established` into `D_current`
+Owner decisions **16–19** then superseded parts of that first encoding; **20–22** superseded
+parts of theirs; and **23–26** superseded parts of those. **Owner decision 23 is the one to
+read first**: the application is **recommend-only**. It never controls, drives, commands or
+actuates a dosing pump, has no connection to any doser, and produces a recommended rate for
+a human being who decides whether to act on it. There is no execution path from the engine
+to the tank. That retires the advisory-versus-executable split, actuator capability as a
+concept, two rules and four reason codes, and it corrects every rule that reasoned about
+delivery continuing when an output is withheld. Decision 24 turns the advisory boundary from
+a refusal into a **warning** attached to an ordinary recommendation; decision 25 makes the
+unknown-`D_current` refusal a precondition evaluated before branch selection; decision 26
+gives the retest one answer. Decision 20 splits `D_established` into `D_current`
 and `D_history`; decision 21 adds an advisory ceiling and floor beyond which the engine
 escalates instead of advising; decision 22 adds the missing high-breach branch for a
 consumption estimate that cannot be computed at all. **Two items are deliberately left
@@ -66,29 +75,28 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 164 check sites emitting 292 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| `validate-freeze-5.py` | Mechanical gate: 192 check sites emitting 339 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
 | `recompute-goldens.py` | **Recorder, not a gate.** Independently recomputes every fixture-stated derived value from its declared inputs and writes a machine-readable record, so "no arithmetic moved" is a checkable claim rather than an assertion. `--diff <record>` reports every golden that moved against a stored baseline. |
 | `baselines/*.json` | Golden baseline records. `golden-baseline-65c6030.json` is the state before owner decisions 20-22; `golden-post-decisions-20-22.json` is the state after. |
-| `fixtures/*.json` | Machine-readable golden corpus — 193 fixtures plus schema, config defaults and index. |
-| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 282-rule traceability inventory. |
+| `fixtures/*.json` | Machine-readable golden corpus — 196 fixtures plus schema, config defaults and index. |
+| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 283-rule traceability inventory. |
 
 ## At a glance
 
 ```text
-282  normative canon rules inventoried, each with exactly one implementation owner
-193  fixtures  (102 canon-verbatim, 63 canon-derived, 28 canon-qualitative)
-251  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 by owner decisions
-                  16-19, 1 by owner decision 20)
- 72  machine-testable invariants
- 52  open issues  (16 resolved by Freeze 5 and its amendments, 7 by owner decisions 16-22,
-                  11 canon defects carried forward, 13 pinned, 3 no-problem,
-                  2 DELIBERATELY LEFT OPEN by decisions 20-22,
-                  5 OPENED by review of the 20-22 encoding and REPORTED, not decided)
-  2  outputs withheld pending an owner decision (OI-BRANCHAREFUSAL-001,
-                  OI-ADVISORYMEMBERS-001) - both withhold conservatively and surface why
+283  normative canon rules inventoried, each with exactly one implementation owner
+196  fixtures  (102 canon-verbatim, 65 canon-derived, 29 canon-qualitative)
+248  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 by owner decisions
+                  16-19, 1 by owner decision 20, 4 by owner decisions 23-24)
+ 74  machine-testable invariants
+ 52  open issues  (16 resolved by Freeze 5 and its amendments, 12 by owner decisions 16-26,
+                  1 reclassified INAPPLICABLE by decision 23, 11 canon defects carried
+                  forward, 13 pinned, 3 no-problem,
+                  2 DELIBERATELY LEFT OPEN: OI-SIZINGFLAT-001, OI-CZERODISCONT-001)
+  0  outputs withheld pending an owner decision
   0  rules without a fixture
   0  rules with more than one owner
-348 -> 420  derived values recomputed from declared inputs; 0 moved across decisions 20-22
+348 -> 430  derived values recomputed from declared inputs; 0 moved across decisions 20-26
 ```
 
 ---

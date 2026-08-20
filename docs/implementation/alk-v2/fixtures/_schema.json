@@ -37,7 +37,7 @@
     "ml": 1e-9,
     "dimensionless": 1e-12,
     "enumsAndReasonCodes": "exact",
-    "actuatorCommands": "exact after rounding"
+    "recommendations": "exact after rounding"
   },
   "acceptanceRule": {
     "$comment": "From WORKED GOLDEN ROUND-1 and ROUND-2 ACCEPTANCE RULES.",

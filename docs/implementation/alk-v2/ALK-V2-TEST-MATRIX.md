@@ -2,7 +2,7 @@
 
 Index and coverage analysis for the fixture corpus in `fixtures/`.
 
-**193 fixtures across 6 files, plus 72 invariants in `ALK-V2-INVARIANTS.md`.**
+**196 fixtures across 6 files, plus 74 invariants in `ALK-V2-INVARIANTS.md`.**
 
 `ALK_V2_FREEZE_5` added 17 fixtures and 4 invariants, and rewrote the expectations of the
 15 fixtures that previously asserted a refusal for an issue the freeze decided. Three of
@@ -10,7 +10,9 @@ those fixtures and two of those invariants were added by the freeze's own indepe
 review, which found defects the first gate could not see.
 
 Owner decisions 16–19 added 7 more fixtures (178 → 185) and 3 invariants (66 → 69). Owner
-decisions 20–22 added 7 more (185 → 193) and 3 more (69 → 72).
+decisions 20–22 added 7 more (185 → 193) and 3 more (69 → 72). Owner decisions 23–26 added
+3 more (193 → 196) and 2 more (72 → 74), and **rewrote** five existing fixtures whose
+expectations those decisions superseded.
 
 > The counts in this document were stale: they still read 178 and 66 after decisions 16–19
 > added to both. They are regenerated from `fixtures/index.json` and
@@ -28,7 +30,7 @@ decisions 20–22 added 7 more (185 → 193) and 3 more (69 → 72).
 | `canon-worked-goldens-round2.json` | 20 | `WG-ALK-021` … `WG-ALK-040` — interruption, corrections, potency, edits, expiry, mirrors |
 | `canon-worked-goldens-external.json` | 27 | `WG-ALK-041` … `WG-ALK-067` — external-review corrections, safety path, capability contract |
 | `canon-named-goldens.json` | 43 | `ALK-G001` … `ALK-G040` including `G004A`, `G039A`, `G039B` |
-| `adversarial.json` | 66 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
+| `adversarial.json` | 69 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
 | `invariants-and-governance.json` | 17 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
 | `index.json` | — | Generated index; ids, counts, provenance split, open-issue coverage |
 | `config-defaults.json` | — | The canon's default worked-suite configuration plus once-derived constants |
@@ -42,8 +44,8 @@ behaviour** (`DEC-013`, canon §52).
 | Class | Count | Meaning |
 |---|---|---|
 | `CANON_VERBATIM` | 102 | Every asserted number or state appears in the canon |
-| `CANON_DERIVED` | 63 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
-| `CANON_QUALITATIVE` | 28 | The canon states states and prohibitions but no arithmetic |
+| `CANON_DERIVED` | 65 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
+| `CANON_QUALITATIVE` | 29 | The canon states states and prohibitions but no arithmetic |
 
 The derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
 `ALK-SUPPORTED-SLOPE-001`, `ALK-STEP-CAP-001`, `ALK-046`, `ALK-ROUNDING-001` and
@@ -153,7 +155,7 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | F5-03 negative-consumption materiality | `WG-ALK-013`, `ALK-G026`, `WG-ALK-051` | `AD-CON-002` straddle: each variant forbids the other's classification **and** the other's high-breach action |
 | F5-04 return-plan eligibility | `WG-ALK-014`, `WG-ALK-028`, `ALK-G006` | `AD-RTN-003`; `AD-MNT-008` |
 | F5-05 toward-range hold | `AD-MNT-006`, `AD-MNT-007` | `AD-MNT-008`; the strict-stabilise-first doses 7.5 / 10.5 asserted forbidden |
-| F5-06 liquid-volume guard | `AD-SAF-003`, `AD-SAF-004`, `WG-ALK-067` | `AD-SAF-004` (guard off the actuator grid, so a pre-rounding-only check genuinely fails it), `AD-SAF-006` (continuous candidate already over ⇒ withheld) |
+| F5-06 liquid-volume guard | `AD-SAF-003`, `AD-SAF-004`, `WG-ALK-067` | `AD-SAF-004` (guard off the recommendation-precision grid, so a pre-rounding-only check genuinely fails it), `AD-SAF-006` (continuous candidate already over ⇒ withheld) |
 | F5-07 rapid basis | `AD-RAP-001` | same fixture: both wrong readings forbidden |
 | F5-08 return plan under safety | `AD-RTN-004` | `AD-RTN-005`; `SUSPENDED_PENDING_SAFETY` asserted forbidden |
 | F5-09 retest scheduler | `AD-RET-001`, `AD-RET-003` | `AD-RET-002`, `AD-RET-004`, `AD-RET-005` (breached ⇒ the forecast candidate stands down) |
@@ -170,6 +172,10 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | **20** `D_current` / `D_history` split | `AD-DHS-001` (mixed-dose interval, both directions), `AD-DHS-003` (`D_history` unavailable, sizing still runs) | `AD-DHS-002` (`D_current` unknown ⇒ refusal; `0` and the `D_history` substitution both forbidden); `AD-DHS-001` `forbidden.cases` state exactly what a reverted engine produces, and the error reverses sign between the two cases |
 | **21** advisory ceiling and floor | `AD-ESC-001` (ceiling: below / at / above, at two configured bound pairs), `AD-ESC-002` (floor, mirrored) | `AD-ESC-001` and `AD-ESC-002` forbid both the reverted sized rate and a `0` in place of the withheld one; `AD-ESC-003` forbids a contested episode bypassing the check, and carries a straddling case so all-beyond cannot be read as any-beyond |
 | **22** uncomputable consumption, branch B′ | `AD-SAF-009` (first-ever test, `D_current` known), `AD-DHS-003` | `AD-SAF-009` forbids falling through with no branch, forbids routing to branch A (which would deliver `0`), and forbids refusing as though `D_current` were unknown; `INV-G12` asserts exactly one branch |
+| **23** recommend-only; there is no actuator | `AD-REC-001` (one output where the canon emitted two), `AD-SAF-002`, `WG-ALK-045` (a formerly withheld state now recommends), `WG-ALK-061` | `AD-REC-002` (withholding has no physical effect — every "the pump keeps running" phrase forbidden); `AD-SAF-005` (the split must not reappear; no 0.1 default invented; the potency refusal survives because it is not a device capability) |
+| **24** the boundary warns, it does not refuse | `AD-ESC-001` (ceiling: below / at / above, three bound pairs, a decimal straddle), `AD-ESC-002` (floor, mirrored) | both forbid the reverted withholding, a zero, and a changed rate at the boundary; `AD-ESC-003` forbids reinstating the member-wise predicate and carries the `SUSPECT`-member case that `OI-ADVISORYMEMBERS-001` raised |
+| **25** branch A refuses on an unknown `D_current` | `AD-SAF-010` `BRANCH_A_D_CURRENT_KNOWN` (the ordinary branch-A recommendation, 1.443001443 → 1.4) | `AD-SAF-010` `BRANCH_A_D_CURRENT_UNKNOWN` forbids exactly that 1.4, forbids `0`, and forbids selecting branch A at all; `INV-G15` forbids a state producing both a number and a refusal |
+| **26** one retest answer | `AD-ESC-001`, `AD-ESC-002`, `AD-ESC-003`, each asserting `warningRetestIntervalHours == schedulerRetestIntervalHours` | the same fixtures forbid the warning stating an interval the scheduler did not produce |
 
 ## 5A. Still-open-issue coverage
 
@@ -192,15 +198,16 @@ silently picks a default.
 | `OI-HIGHBREACHBAND-001` | `AD-CON-002` |
 | `OI-CLUSTERTIE-001` | `AD-SEG-007` |
 | `OI-RETESTFLOOR-001` | `AD-RET-001` |
-| `OI-SIZINGFLAT-001` **(OPEN)** | `AD-ESC-001`, `AD-ESC-002`, `AD-ESC-003` |
+| `OI-SIZINGFLAT-001` **(OPEN, and NO LONGER NARROWED)** | `AD-ESC-001` |
 | `OI-CZERODISCONT-001` **(OPEN)** | — no fixture; the exposure is a discontinuity between two branch formulas, both of which are pinned on their own sides by `AD-SAF-007` and the `ALK-003A` interpretable-branch goldens |
 
 All three of the Freeze-5-review items were closed by amendments F5-13, F5-14 and F5-15; the rows are kept so the fixture that pins each decision is findable from its issue id.
 
-The last two rows are the items owner decisions 20–22 **deliberately left open**.
-`OI-SIZINGFLAT-001`'s fixtures assert the *bound* decision 21 places on the exposure, not
-its removal: they pin where the engine stops advising, and each records in `openIssues`
-that the flat response inside the band is narrowed and **not** closed.
+The last two rows are the items still **deliberately left open**. `OI-SIZINGFLAT-001`'s
+fixture no longer asserts a bound on the exposure, because owner decision 24 removed the
+bound: `AD-ESC-001` shows the recommended rate identical at 11.9, 12.0 and 12.1 dKH, which
+is decision 24's point **and** is the flat response the item is about. Its `openIssues` entry
+says so — open, and no longer narrowed.
 
 The remaining open issues (`OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
 `OI-POTENCYSNAP-001`, `OI-PLANTARGETEDIT-001`, and the pinned conventions) are covered by
@@ -220,7 +227,7 @@ therefore carries a **pair** that straddles it.
 | evidence precision over time | `WG-ALK-007` (2 post points) | `WG-ALK-008` (3 post points, same central response → `EXPECTED`) |
 | unknown water-change materiality | `WG-ALK-012` 4% (0.08 dKH, retain) | `WG-ALK-012` 5% (0.10 dKH, hard boundary) |
 | outer-bound forecast horizon | `WG-ALK-042` (2.571 d > 2.0 → locked) | `WG-ALK-043` (1.8 d ≤ 2.0 → unlocked) |
-| actuator rounding at half an increment | `AD-MNT-001` (0.0451 mL/day → HOLD) | `AD-MNT-003` (0.0685 mL/day → act) |
+| recommendation rounding at half an increment | `AD-MNT-001` (0.0451 mL/day → HOLD) | `AD-MNT-003` (0.0685 mL/day → act) |
 | rounding tie direction | `WG-ALK-005` increase (10.25 → 10.2) | `WG-ALK-005` decrease (7.75 → 7.8) |
 | rail after rounding | `WG-ALK-063` (16.4 → 0.5032, rejected) | `WG-ALK-063` (16.3 → 0.4964, accepted) |
 | `sigma_point` floor vs residual scatter | `AD-TRD-002` (`sigma_resid` 0.068 → floor governs) | `AD-TRD-005` (`sigma_resid` 0.208 → residual governs) |
@@ -236,12 +243,12 @@ therefore carries a **pair** that straddles it.
 | `T_signal` under vs over the routine cadence | `AD-RET-001` (22.913 h, selected unclamped) | `AD-RET-003` (80.685 h, loses to the 40 h boundary candidate) |
 | `T_signal` against the observation ceiling | `AD-RET-002` (162.765 h → clamped to 96 h) | `AD-RET-001` (22.913 h, no floor applied) |
 | forecast candidate, inside vs outside the bound | `AD-RET-003` (7.20 dKH, projected crossing ⇒ 40 h) | `AD-RET-005` (6.85 dKH, breached ⇒ candidate not submitted) |
-| liquid guard on vs off the actuator grid | `AD-SAF-006` (guard 2000 = 40×50; caught pre-rounding) | `AD-SAF-004` (guard 1980; only the post-rounding recheck catches it) |
+| liquid guard on vs off the recommendation-precision grid | `AD-SAF-006` (guard 2000 = 40×50; caught pre-rounding) | `AD-SAF-004` (guard 1980; only the post-rounding recheck catches it) |
 | negative consumption, high-breach action | `AD-CON-002` `D = 1.5` (material ⇒ 0 mL/day pause) | `AD-CON-002` `D = 1.6` (non-material ⇒ pause `NOT_RUN`) |
 | forecast boundary safety lead | `AD-RET-003` (`T_boundary` +1.667 d → 40 h) | `AD-RET-004` (`T_boundary` −0.333 d → test now) |
 | supported vs uncertainty-limited toward range | `AD-MNT-008` (`S_supported = 0` → not this rule) | `AD-MNT-006` (`S_supported = 0.104745` → toward-range hold) |
 | water-change confidence tier | `AD-SEG-006` (`MANUFACTURER_NOMINAL` → boundary) | `WG-ALK-011` (`MEASURED_SAME_BATCH` → normalize) |
-| liquid guard across actuator rounding | `AD-SAF-004` (1978 compliant → rounds to 2000 → recheck → 1950 issued) | `AD-SAF-006` (2040 already over → withheld at step 8) |
+| liquid guard across recommendation rounding | `AD-SAF-004` (1978 compliant → rounds to 2000 → recheck → 1950 issued) | `AD-SAF-006` (2040 already over → withheld at step 8) |
 
 ## 7. Acceptance rule
 
@@ -269,7 +276,7 @@ explicit safety exception; or carries learned potency across a material context 
 dKH, dKH/day, mL, mL/day    absolute 1e-9
 dimensionless ratios        absolute 1e-12
 enums and reason codes      exact
-actuator commands           exact after rounding
+recommendations           exact after rounding
 ```
 
 Intermediate quantities in the corpus are given to ten significant figures where the

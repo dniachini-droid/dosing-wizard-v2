@@ -122,10 +122,10 @@
       "rulesExercised": ["ALK-ROUNDING-001"],
       "input": {
         "cases": [
-          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 10.25, "actuatorIncrementMlPerDay": 0.10,
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 10.25, "recommendationPrecisionMlPerDay": 0.10,
             "adjacent": [10.2, 10.3], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.2, 1.3],
             "expectedRecommendedDoseMlPerDay": 10.2 },
-          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 7.75, "actuatorIncrementMlPerDay": 0.10,
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 7.75, "recommendationPrecisionMlPerDay": 0.10,
             "adjacent": [7.7, 7.8], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.3, 1.2],
             "expectedRecommendedDoseMlPerDay": 7.8 }
         ]

@@ -58,7 +58,7 @@ and a documented meaning is forbidden.
 
 All stored numerics are full precision. Display rounding never enters calculation
 (Part II §2.3, `ALK-002`). Any rounded quantity is a separate `DERIVED` field whose name
-says so (`recommendedDoseMlPerDay` is the rounded actuator command;
+says so (`recommendedDoseMlPerDay` is the rounded recommendation;
 `continuousActionCandidateMlPerDay` is its unrounded input).
 
 ---
@@ -246,7 +246,7 @@ new record; history is never overwritten (Part I §9.2).
 | `solutionContextId` | — | `REQ` `UNK-OK` | `M-2`. |
 | `deliveryContextId` | — | `REQ` `UNK-OK` | `M-3`. |
 | `deliverySchedule` | — | `OPT` | e.g. hourly, N doses/day. Needed for exposure and mixed-interval integration (`ALK-035`). |
-| `actuatorIncrementMlPerDay` | mL/day | `REQ` `UNK-OK` | `M-1`. Absent ⇒ `REFUSE` final maintenance rate; **no hidden 0.1 default**. |
+| `recommendationPrecisionMlPerDay` | mL/day | `REQ` `UNK-OK` | `M-1`. Absent ⇒ `REFUSE` final maintenance rate; **no hidden 0.1 default**. |
 
 ### `EffectiveDoseInterval` `DERIVED`
 
@@ -347,7 +347,7 @@ demand was constant.
 | `netVolumeL` | L | `REQ` `UNK-OK` | |
 | `targetRangeMinDkh` / `MaxDkh` | dKH | `REQ` | Validation: `min < max`; both within `[outerMin, outerMax]` (`ALK-003`). |
 | `outerMinDkh` / `outerMaxDkh` | dKH | `REQ` | Defaults 7.0 / 11.0 (`ALK-OUTER-BOUNDS-001`). |
-| `actuatorIncrementMlPerDay` | mL/day | `REQ` `UNK-OK` | |
+| `recommendationPrecisionMlPerDay` | mL/day | `REQ` `UNK-OK` | |
 | `enabledParameters[]` | — | `REQ` | Alk-only runtime: Alk controller active; Ca/Mg measurement-only. |
 
 There is **no** stored ideal-alkalinity point. `aimPointLevelDkh` is always
@@ -471,7 +471,7 @@ trend segment yet still disqualify potency learning (`AUDIT-018`, `WG-ALK-022`).
 | `supportSubtractionDkhPerDay` | dKH/day | `1.28 · σ_S`. |
 | `limitedByUncertainty` | — | `true` when `S_supported = 0` and `S_observed ≠ 0`. |
 
-**Hard rule.** `supportedSlopeDkhPerDay` is consumed by the maintenance actuator sizing
+**Hard rule.** `supportedSlopeDkhPerDay` is consumed by the maintenance recommendation sizing
 and by nothing else. It may not appear in a consumption estimate
 (`ALK-CONSUMPTION-ESTIMATE-001`), in a boundary forecast (`ALK-FORECAST-SLOPE-001`), in
 a position statement, or in a response-classification benchmark.
@@ -539,7 +539,7 @@ Seven distinct quantities that `ALK-VARIABLE-SEMANTICS-001` forbids collapsing:
 |---|---|---|
 | `currentDoseMlPerDay` | mL/day | What is running now. |
 | `maintenanceEstimateMlPerDay` | mL/day | `C/P` — the dose that would give zero slope if the observed estimate were exact. Audit/explanation. |
-| `continuousActionCandidateMlPerDay` | mL/day | `D_current − S_supported/P`, before physical and actuator limits. |
+| `continuousActionCandidateMlPerDay` | mL/day | `D_current − S_supported/P`, before physical limits and rounding. |
 | `recommendedDoseMlPerDay` | mL/day | The final feasible, rounded, implementable command. `WITHHELD` where no feasible command exists — a first-class value, never `null` and never omitted. Also `WITHHELD`, never `NOT_RUN` and never `0`, where `ALK-ADVISORY-RANGE-BOUNDARY-001` escalates (owner decision 21) and where `D_current` is unknown (owner decision 20): one token for one state. |
 | `deltaDoseMlPerDay` | mL/day | `recommended − current`. |
 | `deltaEffectDkhPerDay` | dKH/day | `P · deltaDose` — the physical effect of the final command. |
@@ -554,7 +554,7 @@ Plus:
 | `doseStepRegime` | `ORDINARY` \| `BASELINE_ESTABLISHMENT`. |
 | `capApplied` | `NONE` \| `ORDINARY_25` \| `EXCEPTIONAL_50`. |
 | `bracketStatus` | `NOT_RUN` \| `CONSISTENT` \| `CONFLICT` — advisory only (`OI-BRACKETEFFECT-001`). |
-| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds an executable command rather than affirming the current dose. |
+| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds an recommendation rather than affirming the current dose. |
 | `reasonCodes[]` | |
 
 `RecommendationAction` closed vocabulary: `NO_CHANGE` \| `HOLD_CURRENT_DOSE` \|
@@ -712,13 +712,13 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `bSafetyDkh` | dKH | `0.20`, fixed. **Never** recomputed from the current kit, residual scatter or `sigma_point` (`ALK-SAFETY-BUFFER-001` Freeze-2 interpretation). |
 | `desiredMovementDkh` | dKH | `min(A_safe,low − A_now, 0.50)` low; `min(A_now − A_safe,high, 0.50)` high. |
 | `safetyCorrectionVolumeMl` | mL | `ΔA_safety / P_selected`. Low breach only. **A volume.** |
-| `temporarySafetyRateAdvisoryMlPerDay` | mL/day | High breach below `AdvisoryCeiling`: from consumption where `C_estimate >= 0` (branch A), and from `D_current` where `C_estimate` is negative (branch B) or not computable at all (branch B′, `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`). **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the actuator increment is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). `NOT_RUN` where `D_current` is unknown (owner decision 20) or where `ALK-ADVISORY-RANGE-BOUNDARY-001` escalates (owner decision 21) — in both cases **not** `0`. |
-| `temporarySafetyPumpCommandMlPerDay` | mL/day | The executable rounded pump command for the same rate. `NOT_RUN` while `actuatorIncrementMlPerDay` is unavailable, **and** in the two states owner decisions 20 and 21 add: `D_current` unknown, and at or beyond an advisory boundary. In all three it is `NOT_RUN` and **never `0`**. **Never merged with the field above** — that merge is what `M-1` and F5-11 exist to prevent. |
-| `safetyDoseRecommendationMlPerDay` | mL/day | **Superseded by owner decision 16.** The high-breach delivered figure is now `temporarySafetyRateAdvisoryMlPerDay`, sized as `max(0, D_current − R_down / P_selected)` on branches B and B′ (`ALK-HIGH-BREACH-SAFETY-SIZING-001`; the sizing input was renamed from `D_established` by owner decision 20). Zero appears only when that expression floors. |
-| `currentDoseMlPerDay` (safety context) | mL/day | `D_current` — the delivery rate **the doser is configured to be delivering at the time of the recommendation**, and the quantity the high-breach sizing reduces. **Renamed from `establishedDoseMlPerDay` by owner decision 20**; the old name was also used for the interval-mean rate. Unknown ⇒ the safety rate and the pump command are both `NOT_RUN` and **neither is `0`** (`ALK-DELIVERY-RATE-BASIS-001`). |
+| `temporarySafetyRateContinuousMlPerDay` | mL/day | High breach below `AdvisoryCeiling`: from consumption where `C_estimate >= 0` (branch A), and from `D_current` where `C_estimate` is negative (branch B) or not computable at all (branch B′, `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`). **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the recommendation precision is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). `NOT_RUN` where `D_current` is unknown (owner decision 20) or where `ALK-ADVISORY-RANGE-BOUNDARY-001` escalates (owner decision 21) — in both cases **not** `0`. |
+| `temporarySafetyRateRecommendationMlPerDay` | mL/day | The recommended rate for the same rate. `NOT_RUN` while `recommendationPrecisionMlPerDay` is unavailable, **and** in the two states owner decisions 20 and 21 add: `D_current` unknown, and at or beyond an advisory boundary. In all three it is `NOT_RUN` and **never `0`**. **Never merged with the field above** — that merge is what `M-1` and F5-11 exist to prevent. |
+| `safetyDoseRecommendationMlPerDay` | mL/day | **Superseded by owner decision 16.** The high-breach delivered figure is now `temporarySafetyRateContinuousMlPerDay`, sized as `max(0, D_current − R_down / P_selected)` on branches B and B′ (`ALK-HIGH-BREACH-SAFETY-SIZING-001`; the sizing input was renamed from `D_established` by owner decision 20). Zero appears only when that expression floors. |
+| `currentDoseMlPerDay` (safety context) | mL/day | `D_current` — the delivery rate **the doser is configured to be delivering at the time of the recommendation**, and the quantity the high-breach sizing reduces. **Renamed from `establishedDoseMlPerDay` by owner decision 20**; the old name was also used for the interval-mean rate. Unknown ⇒ the safety rate and the recommendation are both `NOT_RUN` and **neither is `0`** (`ALK-DELIVERY-RATE-BASIS-001`). |
 | `advisoryCeilingDkh` | dKH | `outerMax + 1.0`. A boundary derived as an **offset** from the configured bound, not a pinned level (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 21). |
 | `advisoryFloorDkh` | dKH | `outerMin − 1.0`. Same construction, low side. |
-| `advisoryRangeEscalation` | — | `NONE` \| `ESCALATED`. `ESCALATED` where the resolved episode value is at or beyond either boundary: no dose recommendation, no temporary safety rate, no executable command, and **not** zero. Does **not** change `outerBoundState`. |
+| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED` \| `NOT_RUN`. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). `NOT_RUN` where no episode value resolves. Does **not** change `outerBoundState`. |
 | `rDownDkh` | dKH | `min(A_now − A_safe,high, 0.50)`. The requested downward effect, rail-bounded. |
 | `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |
@@ -774,7 +774,7 @@ disposition):
 
 | Capability | Missing behaviour |
 |---|---|
-| `M-1` actuator increment | `REFUSE` final maintenance mL/day. **Exempt:** one-off `SAFETY_RETURN` volume. |
+| `M-1` recommendation precision | `REFUSE` final maintenance mL/day. **Exempt:** one-off `SAFETY_RETURN` volume. |
 | `M-2` solution context | Core continues on theoretical potency; potency learner `NOT_RUN`. |
 | `M-3` delivery context | Core continues on confirmed programmed dose; potency learner `NOT_RUN`. |
 | `M-4` replacement-water Alk | `DEGRADE` to the deterministic unknown-WC branch. |

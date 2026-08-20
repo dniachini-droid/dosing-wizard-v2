@@ -291,7 +291,7 @@ def main():
     if f:
         P = f['input']['selectedPotencyDkhPerMl']
         ASH = f['input']['safetyDestinationHighDkh']
-        INC = f['input']['actuatorIncrementMlPerDay']
+        INC = f['input']['recommendationPrecisionMlPerDay']
         cev = {c['case']: c for c in f['expectedIntermediateEvidence']['cases']}
         cac = {c['case']: c for c in f['expectedAction']['cases']}
         for name, c in ((c['case'], c) for c in f['input']['cases']):
@@ -303,22 +303,22 @@ def main():
             rate = max(0.0, dose - rdd)
             rec.note('AD-SAF-007', name, 'rDownDkh', cev[name].get('rDownDkh'), rd)
             rec.note('AD-SAF-007', name, 'rDownAsDoseMlPerDay', cev[name].get('rDownAsDoseMlPerDay'), rdd)
-            rec.note('AD-SAF-007', name, 'temporarySafetyRateAdvisoryMlPerDay',
-                     cac[name].get('temporarySafetyRateAdvisoryMlPerDay'), rate)
+            rec.note('AD-SAF-007', name, 'temporarySafetyRateContinuousMlPerDay',
+                     cac[name].get('temporarySafetyRateContinuousMlPerDay'), rate)
             cmd = round_to(rate, INC)
-            rec.note('AD-SAF-007', name, 'temporarySafetyPumpCommandMlPerDay',
-                     cac[name].get('temporarySafetyPumpCommandMlPerDay'), cmd)
+            rec.note('AD-SAF-007', name, 'temporarySafetyRateRecommendationMlPerDay',
+                     cac[name].get('temporarySafetyRateRecommendationMlPerDay'), cmd)
 
     f = fixtures.get('AD-SAF-008', (None, None))[1]
     if f:
         P = f['input']['selectedPotencyDkhPerMl']
         e = f['expectedIntermediateEvidence']
         rec.note('AD-SAF-008', '', 'rDownAsDoseMlPerDay', e.get('rDownAsDoseMlPerDay'), e['rDownDkh'] / P)
-        rates = f['expectedAction']['temporarySafetyRateAdvisoryMlPerDay']
+        rates = f['expectedAction']['temporarySafetyRateContinuousMlPerDay']
         sweep = f['input'].get('currentDoseSweepMlPerDay') or f['input'].get('establishedDoseSweepMlPerDay')
         for d in sweep:
             key = repr(d) if repr(d) in rates else str(d)
-            rec.note('AD-SAF-008', key, 'temporarySafetyRateAdvisoryMlPerDay',
+            rec.note('AD-SAF-008', key, 'temporarySafetyRateContinuousMlPerDay',
                      rates.get(key), max(0.0, d - e['rDownDkh'] / P))
 
     # ---- 3. owner decision 17/19 episode arithmetic ------------------------------
@@ -499,7 +499,7 @@ def main():
             e = cev.get(name, ev if not name else {})
             a = cac.get(name, act if not name else {})
             P = ctx.get('selectedPotencyDkhPerMl')
-            INC = ctx.get('actuatorIncrementMlPerDay')
+            INC = ctx.get('recommendationPrecisionMlPerDay')
 
             # boundaries, in EXACT DECIMAL - ALK-DECIMAL-THRESHOLD-001 governs the predicate,
             # and computing it in binary64 here would make the recorder agree with a wrong engine
@@ -519,13 +519,21 @@ def main():
                 rec.note(fid, name, 'rDownDkh', e.get('rDownDkh'), rd)
                 rec.note(fid, name, 'rDownAsDoseMlPerDay', e.get('rDownAsDoseMlPerDay'), rd / P)
                 dc = ctx.get('currentDoseMlPerDay')
-                stated_rate = a.get('temporarySafetyRateAdvisoryMlPerDay')
-                if isinstance(dc, (int, float)) and isinstance(stated_rate, (int, float)):
+                # The CONTINUOUS value is an auditable intermediate and the ROUNDED value is
+                # the single output (ALK-RECOMMEND-ONLY-001, owner decision 23). A fixture may
+                # state either or both; record whichever it states, and never require the
+                # intermediate as the price of recording the output.
+                if isinstance(dc, (int, float)):
                     rate = max(0.0, dc - rd / P)
-                    rec.note(fid, name, 'temporarySafetyRateAdvisoryMlPerDay', stated_rate, rate)
-                    if isinstance(INC, (int, float)):
-                        rec.note(fid, name, 'temporarySafetyPumpCommandMlPerDay',
-                                 a.get('temporarySafetyPumpCommandMlPerDay'), round_to(rate, INC))
+                    for src in (e, a):
+                        if isinstance(src.get('temporarySafetyRateContinuousMlPerDay'), (int, float)):
+                            rec.note(fid, name, 'temporarySafetyRateContinuousMlPerDay',
+                                     src['temporarySafetyRateContinuousMlPerDay'], rate)
+                            break
+                    if isinstance(INC, (int, float)) and \
+                            isinstance(a.get('temporarySafetyRateRecommendationMlPerDay'), (int, float)):
+                        rec.note(fid, name, 'temporarySafetyRateRecommendationMlPerDay',
+                                 a['temporarySafetyRateRecommendationMlPerDay'], round_to(rate, INC))
 
             # the low-breach one-off correction volume, which decision 21's exception continues
             ASL = ctx.get('safetyDestinationLowDkh')

@@ -323,7 +323,7 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** `ALK-046`; `WG-ALK-006`; `WG-ALK-063`.
 - **Generator:** sweep `P_selected` and `D_current` so the 50% cap exceeds the rail.
 - **Assert:** `|P_selected · (D_recommended − D_current)| ≤ 0.50` on every path, including
-  after actuator rounding.
+  after recommendation rounding.
 - **Negative control:** omit the post-rounding recheck; `WG-ALK-063` must fail.
 
 ### INV-G3 — The composite rail is never exceeded by treating components independently
@@ -352,7 +352,7 @@ Fixture bodies for the canon-named invariants are in
 - **Generator:** remove each of `M-1 … M-13` in turn, and every subset of size 2.
 - **Assert:** the affected output is `REFUSE`, `DEGRADE` or `NOT_RUN` with its named reason
   code; **no default value is substituted**; every unaffected output still runs.
-- **Negative control:** default `actuatorIncrementMlPerDay` to 0.1; `WG-ALK-045` must fail.
+- **Negative control:** default `recommendationPrecisionMlPerDay` to 0.1; `WG-ALK-045` must fail.
 
 ### INV-G7 — The magnesium gate never blocks the Alk safety return
 - **Canon:** `ALK-SAFETY-MG-OVERRIDE-001`; `WG-ALK-055`; `X-GOV-003`.
@@ -495,7 +495,7 @@ Fixture bodies for the canon-named invariants are in
 - **Generator:** any ledger containing two or more clusters that share a representative
   timestamp; permute their event order, ids and insertion order across runs.
 - **Assert:** identical `acceptedClusterIds[]`, identical `sigma_S` and an identical
-  actuator command across every permutation; the coalesced value is the median of the
+  recommendation across every permutation; the coalesced value is the median of the
   pooled raw readings; a pooled spread above 0.20 dKH is still `ANOMALOUS`.
 - **Negative control:** select the first-inserted of the tied clusters; `AD-SEG-007` must
   fail, and `AD-SEG-008` must fail if coalescing suppresses `ALK-005`.
@@ -541,7 +541,7 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** `D_safety,temp == max(0, D_current − R_down / P_selected)` exactly;
   zero occurs **iff** `D_current <= R_down / P_selected`. **Above that floor** the rate
   strictly decreases as `A_now` rises until `R_down` saturates at 0.50 and is constant
-  after, and changes by exactly one actuator increment per increment of `D_current`,
+  after, and changes by exactly one recommendation precision per increment of `D_current`,
   including across the materiality boundary. At or below the floor the rate is 0 and varies
   with nothing, which is the floor and not a violation. `maintenanceEstimateStatus` stays
   `UNRESOLVED` on both branches. On a mixed-dose interval the rate is computed from
@@ -559,7 +559,7 @@ Fixture bodies for the canon-named invariants are in
   Permute event order, ids and insertion order; jitter the timestamps within the existing
   30-minute window; run with same-method and with incompatible-method members.
 - **Assert:** identical `episodeStatus`, episode value, `position`, `outerBoundState`,
-  `acceptedClusterIds[]`, `sigma_S`, `rapidConfirmed` and actuator command across every
+  `acceptedClusterIds[]`, `sigma_S`, `rapidConfirmed` and recommendation across every
   permutation and every jitter; a same-method episode pools to the median of the pooled raw
   readings; an incompatible-method episode is `CONTESTED_METHODS`, emits no value, and
   drives `position = NOT_RUN`, `outerBoundState = NOT_RUN`, `rapidConfirmed = NOT_RUN` and
@@ -568,7 +568,7 @@ Fixture bodies for the canon-named invariants are in
   the two; `AD-EPI-002`, `AD-EPI-003` and `AD-EPI-004` must fail. Move the two members three
   minutes apart and the outputs must not change.
 - **Why it exists:** exact-timestamp coalescing left position, rapid and a three-minute
-  offset able to change an actuator command and an outer-bound classification by storage
+  offset able to change an recommendation and an outer-bound classification by storage
   order.
 
 ### INV-C14 — Canonical decimal thresholds compare exactly
@@ -615,41 +615,39 @@ Fixture bodies for the canon-named invariants are in
   estimate matched neither `C_estimate >= 0` nor `C_estimate < 0`, and produced no delivery
   response at all above the outer bound.
 
-### INV-G13 — Beyond the advisory boundary the engine escalates and withholds
-- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 21);
-  `ALK-EPISODE-RESOLUTION-001`; `ALK-DECIMAL-THRESHOLD-001`.
-- **Generator:** sweep the resolved episode value through
-  `AdvisoryCeiling − 1 increment`, exactly `AdvisoryCeiling`, `AdvisoryCeiling + 1
-  increment`, and the three mirrored cases at `AdvisoryFloor`, at several configured
-  `(outerMin, outerMax)` pairs so the boundary is exercised as an **offset** and not as a
-  pinned level. Include a contested episode all of whose members are beyond the boundary,
-  and one whose members straddle it.
-- **Assert:** immediately inside the boundary, ordinary high-breach sizing (or the ordinary
-  low-breach path) runs and emits a rate. At the boundary and beyond,
-  `recommendedDoseMlPerDay` is `WITHHELD` and `temporarySafetyRateAdvisoryMlPerDay` and
-  `temporarySafetyPumpCommandMlPerDay` are `NOT_RUN` — and **none of them is `0`**;
-  `SAFETY_ADVISORY_RANGE_EXCEEDED` is emitted; `outerBoundState` is unchanged from what the
-  breach rules give; the shortened/reprioritised retest is **still emitted** and is never
-  `NOT_RUN`; **all five** required message elements are present;
-  `maintenanceEstimateStatus` is `UNRESOLVED`. A contested episode whose members are **all**
-  beyond the boundary escalates rather than being withheld as contested. A straddling
-  contested episode resolves nothing and takes `REPEAT_NOW`.
-- **Assert (exact decimal, no epsilon):** the boundary is computed and compared in **exact
-  decimal**. Generate configurations where binary64 disagrees — `OuterMin = 8.2` with
-  `A_now = 7.2` (exact floor `7.2`, binary64 floor `7.199999999999999`), `OuterMin = 8.7`
-  with `A_now = 7.7`, and the high-side two-decimal analogues — and assert the exact-decimal
-  answer. A binary64 implementation silently drops the escalation, which is a safety action
-  decided by representation error.
-- **Negative control:** remove the boundary so ordinary sizing applies above the ceiling;
-  `AD-ESC-001` and `AD-ESC-002` must fail. Emit `0` instead of withholding; `AD-ESC-001`
-  must fail. Let a contested episode bypass the check; `AD-ESC-003` must fail. Suppress the
-  shortened retest on escalation; `AD-ESC-001` and `AD-ESC-002` must fail. Drop one of the
-  five message elements; `AD-ESC-001` must fail. Change the quantifier from *every* member
-  to *any* member; `AD-ESC-003`'s straddling case must fail. Compare the boundary in
-  binary64; the `OuterMin = 8.2` / `A_now = 7.2` case must fail.
+### INV-G13 — Beyond the advisory boundary the engine warns, and the answer does not change
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 24, superseding decision 21);
+  `ALK-DECIMAL-THRESHOLD-001`; `ALK-RETEST-SCHEDULER-001` (owner decision 26).
+- **Superseded by owner decision 24.** This invariant previously asserted that at and beyond
+  the boundary `recommendedDoseMlPerDay` was `WITHHELD` and both rate fields `NOT_RUN`. That
+  is the behaviour decision 24 abolished; the superseded assertion is recorded here rather
+  than deleted.
+- **Generator:** sweep the resolved episode value through `boundary − 1 precision step`,
+  exactly `boundary`, `boundary + 1 precision step`, and the three mirrored cases at the
+  floor, at several configured `(outerMin, outerMax)` pairs so the boundary is exercised as
+  an **offset** and not as a pinned level. Include configurations where binary64 and exact
+  decimal disagree.
+- **Assert (the point of decision 24):** the recommendation immediately below the boundary
+  and the recommendation at and above it are **produced by the same rules and are the same
+  number**. The only difference is `advisoryConfidenceWarning`, `NONE` below and `ATTACHED`
+  at and beyond. Nothing is withheld, nothing is zero, no escalation replaces an answer.
+- **Assert (the warning does not leak):** attaching the warning changes **none** of the
+  recommended rate, the trajectory, the consumption estimate, the retest schedule, the
+  outer-bound classification, the evidence state, or any rail or guard. Holding every input
+  fixed and toggling only the warning must leave every other field byte-identical.
+- **Assert (one retest answer, decision 26):** the interval the warning renders equals the
+  interval `ALK-RETEST-SCHEDULER-001` produced, in every generated case. The warning submits
+  no candidate and computes no next-test time.
+- **Assert (exact decimal, no epsilon):** the boundary is computed and compared in exact
+  decimal. `OuterMin = 8.2` with `A_now = 7.2` (exact floor `7.2`, binary64
+  `7.199999999999999`) must warn.
+- **Negative control:** revert the boundary to withholding; `AD-ESC-001` and `AD-ESC-002`
+  must fail. Change the recommended rate at the boundary; `AD-ESC-001` must fail. Let the
+  warning state its own interval; `AD-ESC-001` must fail. Compare in binary64;
+  `AD-ESC-002`'s straddling case must fail.
 - **Scope, asserted:** this invariant does **not** assert that the sized rate responds to
-  `A_now` between `outerMax` and `AdvisoryCeiling`. It does not, and that exposure stays
-  open.
+  `A_now`. It does not, at any level, and decision 24 **widened** that exposure by removing
+  the ceiling that used to bound it. `OI-SIZINGFLAT-001` stays open.
 
 ### INV-G14 — `D_current` and `D_history` are never interchanged
 - **Canon:** `ALK-DELIVERY-RATE-BASIS-001` (owner decision 20);
@@ -661,10 +659,10 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** high-breach safety sizing uses `D_current` and consumption uses `D_history`,
   on every generated interval and in **both** directions of dose change — so an
   interchange is caught by a sign error, not only by a magnitude error. `D_current`
-  unknown ⇒ no safety rate on branches B and B′, no pump command, `recommendedDoseMlPerDay`
+  unknown ⇒ no safety rate on branches B and B′, no recommendation, `recommendedDoseMlPerDay`
   `WITHHELD`, and **not** `0`, while consumption still runs if `D_history` is available.
-  (Branch A is `OI-BRANCHAREFUSAL-001`, OPEN; this invariant asserts only the branches whose
-  formula takes `D_current`.) `D_history` unavailable ⇒ consumption `UNRESOLVED`, while
+  (Branch A too, since **owner decision 25** makes the refusal a precondition evaluated
+  before branch selection — see `INV-G15`.) `D_history` unavailable ⇒ consumption `UNRESOLVED`, while
   safety sizing still runs if `D_current` is known. A `D_history` that integrates to
   **exactly zero** — the doser off for the whole interval — is a value, not an absence, and
   must not fall back to `D_current`. `D_established` appears nowhere as a live name.
@@ -675,6 +673,52 @@ Fixture bodies for the canon-named invariants are in
 - **Why it exists:** one name carried two quantities. On a constant-dose segment they are
   numerically equal, so every existing fixture passed either way and the defect was
   invisible to the whole corpus.
+
+### INV-G15 — A high-breach state gives one answer, not two
+- **Canon:** `ALK-DELIVERY-RATE-BASIS-001` (owner decision 25);
+  `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`.
+- **Generator:** every high-breach state, crossed with `D_current ∈ {known, unknown}` and
+  `C_estimate ∈ {positive-interpretable, zero, positive-uninterpretable, negative-material,
+  negative-not-material, NOT COMPUTABLE}`, at several `P_selected` including invalid.
+- **Assert:** no state produces **both** a numeric temporary safety recommendation **and** a
+  refusal. Where `D_current` is unknown the precondition refuses **before branch selection**,
+  so no branch is selected and no branch's formula runs — including branch A, whose formula
+  does not reference `D_current` at all. Where `D_current` is known the precondition passes
+  and exactly one branch produces exactly one recommendation.
+- **Assert (no reading-dependence):** the same state cannot produce different outputs under
+  different readings of the rules. Evaluate the state twice — once resolving the refusal
+  before branch selection and once attempting to resolve it inside each branch's formula —
+  and require the same answer. Under decision 25 the second evaluation is not a valid
+  reading; the assertion exists because before it, it was.
+- **Negative control:** remove the precondition and let branch A size from `C_estimate`;
+  `AD-SAF-010`'s `BRANCH_A_D_CURRENT_UNKNOWN` case must fail with a numeric
+  `1.443001443001443 → 1.4`. Emit both a number and a refusal; `AD-SAF-010` must fail.
+- **Why it exists:** decision 20 attached the refusal to a formula. Branch A's formula
+  `max(0, (C_estimate + S_safety) / P_selected)` contains no `D_current`, so one reading
+  refused and another recommended 1.4 mL/day, on the same tank state.
+
+### INV-G16 — There is no actuator, and no output is withheld for want of one
+- **Canon:** `ALK-RECOMMEND-ONLY-001` (owner decision 23); `ALK-ROUNDING-001`.
+- **Generator:** every state that previously depended on `actuatorIncrementMlPerDay`, crossed
+  with `recommendationPrecisionMlPerDay ∈ {configured, not configured, invalid}`.
+- **Assert:** the engine emits **exactly one** recommended rate wherever a rate is
+  calculable — never a pair, under any names. No output is withheld, refused, gated or
+  `NOT_RUN` because a device increment is unknown; where no precision is configured the
+  full-precision recommendation is stated, and where one is configured the recommendation is
+  rounded to it. No refusal, invariant or recorded exposure asserts that withholding an
+  output causes delivery to continue, rise, run on or persist.
+- **Assert (what still withholds, and why):** an invalid or unavailable `P_selected` still
+  withholds the mL/day figure and states the dKH movement and direction; an unknown
+  `D_current` still refuses under `INV-G15`; the liquid-volume guard still withholds a
+  physically implausible volume. None of these is a device capability.
+- **Negative control:** reinstate the advisory/executable split; `AD-REC-001`, `AD-SAF-002`
+  and `AD-SAF-005` must fail. Withhold a recommendation because no precision is configured;
+  `WG-ALK-045` and `AD-SAF-005` must fail. Assert that withholding keeps a pump running;
+  `AD-REC-002` must fail.
+- **Why it exists:** the package was written as though the engine drove a doser. It never
+  did, and a whole layer of refusals, statuses and paired outputs existed to manage a
+  connection that does not exist.
+
 
 ---
 
@@ -688,24 +732,24 @@ Fixture bodies for the canon-named invariants are in
 | D — Consumption and maintenance | 6 |
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
-| G — Safety | 14 |
+| G — Safety | 16 |
 | H — History and provenance | 5 |
 | I — Ownership and output contract | 10 |
-| **Total** | **72** |
+| **Total** | **74** |
 
 Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
 checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
 pinned in both directions. `INV-I9` and `INV-I10` exist because the first Freeze-5 gate
 could not have caught the defects review found: it never read the canon, and it never
 recomputed a fixture. `INV-G10` and `INV-C12` pin the two amendments whose failure mode is
-a wrong actuator or safety action — pausing delivery on an uncertainty-limited estimate,
+a wrong recommendation or safety action — recommending a pause on an uncertainty-limited estimate,
 and letting storage order decide which cluster counts.
 
 Three more were added by owner decisions 16–19. `INV-G11` pins the high-breach safety rate
 to its formula so no classification can choose it. `INV-C13` pins one episode output for
 every consumer, under permuted order and jittered timestamps alike. `INV-C14` pins exact
 decimal comparison for the canonical thresholds. All three exist because the finding they
-close could change an actuator command, a safety action or an outer-bound classification.
+close could change an recommendation, a safety action or an outer-bound classification.
 
 Three more were added by owner decisions 20–22, all in group G because all three decide a
 safety action. `INV-G12` asserts that the three high-breach predicates are jointly
@@ -716,6 +760,14 @@ apart, and does it on mixed-dose intervals in both directions — on a constant-
 the two are numerically equal, which is exactly why one name carrying both quantities went
 unnoticed by every fixture in the corpus. `INV-G10` and `INV-G11` were amended for the
 rename.
+
+Three more were added by owner decisions 23–26, again all in group G. `INV-G15` asserts that
+a high-breach state gives one answer and not two, which is what decision 25 fixed.
+`INV-G16` asserts that there is no actuator: one recommendation, never a pair, and nothing
+withheld for want of a device increment. `INV-G13` was rewritten rather than added —
+decision 24 turned the advisory boundary from a refusal into a warning, so the invariant now
+asserts that the answer **does not change** across the boundary, which is the opposite of
+what it asserted before.
 
 All twelve invariants named in the preparation brief are covered:
 

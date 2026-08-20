@@ -115,7 +115,7 @@ controller's uncertainty by nothing. Both contributing rules are individually co
 frozen; the canon's own defence is the suspicious-reading layer, which alkalinity never
 parameterised. `OI-MADFLOOR-001` + `OI-SUSPECT-001`; fixture `AD-TRD-004`.
 
-**B-6 — Independent-cluster selection changes the actuator command.** Clusters at
+**B-6 — Independent-cluster selection changes the recommendation.** Clusters at
 0.0 / 0.5 / 2.0 / 4.0 days give `sigma_S` of 0.035355, 0.040269 or 0.032129 depending on
 which defensible traversal is used. Not a rounding difference — a different dose.
 `OI-INDEPENDENCE-001`; fixture `AD-SEG-001`.
@@ -191,7 +191,7 @@ explicitly as *not authority*.
 
 | Remaining judgement | Why it is the owner's | Interim behaviour |
 |---|---|---|
-| `OI-INDEPENDENCE-001` — which cluster is dropped under 24 h spacing | Changes `sigma_S` and therefore the actuator command | `INSUFFICIENT` + refusal |
+| `OI-INDEPENDENCE-001` — which cluster is dropped under 24 h spacing | Changes `sigma_S` and therefore the recommendation | `INSUFFICIENT` + refusal |
 | `OI-NEGCONS-001` — the slight/material negative-consumption boundary | Decides whether the engine recommends **pausing alkalinity dosing** | HOLD (identical on both branches); the zero-dose fail-safe is gated |
 | `OI-RETURNOFFER-001` — what "stable" means for a return-plan offer | Under one reading a below-range tank is never offered a plan at all | Offer `NOT_RUN`; maintenance unaffected |
 | `OI-BELOWRISING-001` — the two withheld matrix cells | Decides whether maintenance opposes a trajectory carrying the level toward the target | HOLD |
@@ -211,7 +211,7 @@ hold that cannot move a real tank in a direction the owner has not chosen.
   (`DECISIONS.md` records no selection; `ROADMAP.md` Phase 1 is unstarted).
 - **A test runner and a property-test library.** The invariants specify generators and
   assertions but no harness.
-- **Setup UI for the required capture fields** — `actuatorIncrementMlPerDay`, precise
+- **Setup UI for the required capture fields** — `recommendationPrecisionMlPerDay`, precise
   `measuredAt`, dose-event `effectiveAt` and its confidence, solution and delivery context
   ids. `ALK-V2-DATA-CONTRACT.md` gives the shapes; the capture flow is product design.
 - **A canonical serialization** for the `ledgerDigest` used by `OI-DETERMINISM-001`.

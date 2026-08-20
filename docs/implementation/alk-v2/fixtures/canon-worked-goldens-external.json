@@ -7,115 +7,391 @@
     {
       "fixtureId": "WG-ALK-041",
       "title": "Stable below the outer bound triggers a buffered safety return",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-041"] },
-      "rulesExercised": ["ALK-OUTER-BOUND-ACTION-001", "ALK-SAFETY-BUFFER-001", "ALK-OUTER-BOUNDS-001"],
-      "input": { "outerMinDkh": 7.0, "sigmaAlkBaseDkh": 0.10, "latestAlkDkh": 6.80, "ordinaryTrend": "STABLE", "maintenance": "established and interpretable", "selectedPotencyDkhPerMl": 0.0693 },
-      "expectedIntermediateEvidence": { "safetyDestinationDkh": 7.20, "bSafetyDkh": 0.20, "desiredMovementDkh": 0.40 },
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-041"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-SAFETY-BUFFER-001",
+        "ALK-OUTER-BOUNDS-001"
+      ],
+      "input": {
+        "outerMinDkh": 7.0,
+        "sigmaAlkBaseDkh": 0.1,
+        "latestAlkDkh": 6.8,
+        "ordinaryTrend": "STABLE",
+        "maintenance": "established and interpretable",
+        "selectedPotencyDkhPerMl": 0.0693
+      },
+      "expectedIntermediateEvidence": {
+        "safetyDestinationDkh": 7.2,
+        "bSafetyDkh": 0.2,
+        "desiredMovementDkh": 0.4
+      },
       "expectedAction": {
-        "position": "ALERT_LOW", "outerBoundState": "BREACHED_LOW",
-        "interventionType": "SAFETY_RETURN", "priority": "URGENT",
+        "position": "ALERT_LOW",
+        "outerBoundState": "BREACHED_LOW",
+        "interventionType": "SAFETY_RETURN",
+        "priority": "URGENT",
         "safetyCorrectionVolumeMl": 5.7720058,
         "acceptedPermanentMaintenance": "HOLD established maintenance"
       },
-      "expectedReasonCodes": ["SAFETY_OUTER_BOUND_BREACHED_LOW", "SAFETY_RETURN_ACTIVE"],
-      "forbidden": { "cases": ["ordinary optional return-plan offer only", "safety destination exactly 7.0 dKH"] }
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_LOW",
+        "SAFETY_RETURN_ACTIVE"
+      ],
+      "forbidden": {
+        "cases": [
+          "ordinary optional return-plan offer only",
+          "safety destination exactly 7.0 dKH"
+        ]
+      }
     },
     {
       "fixtureId": "WG-ALK-042",
       "title": "Preferred-range forecast is not an outer-bound forecast",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-042", "AUDIT-008"] },
-      "rulesExercised": ["ALK-FORECAST-SLOPE-001", "ALK-STEP-CAP-001"],
-      "input": { "rangeMinDkh": 8.2, "outerMinDkh": 7.0, "aNowDkh": 7.9, "observedSlopeDkhPerDay": -0.35, "nextOrdinaryTestDays": 2.0, "rapidEvidenceOtherwiseValid": true },
-      "expectedIntermediateEvidence": { "tRangeLowDays": 0, "tOuterLowDays": 2.5714285714 },
-      "expectedAction": { "outerBoundForecastRiskBeforeNextTest": false, "fiftyPercentCapUnlockedByForecast": false },
-      "expectedReasonCodes": ["MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED"],
-      "openIssues": ["OI-FORECASTHORIZON-001 - the 2.0-day comparison horizon is the ordinary cadence, not the scheduler's selected next test"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-042",
+          "AUDIT-008"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-FORECAST-SLOPE-001",
+        "ALK-STEP-CAP-001"
+      ],
+      "input": {
+        "rangeMinDkh": 8.2,
+        "outerMinDkh": 7.0,
+        "aNowDkh": 7.9,
+        "observedSlopeDkhPerDay": -0.35,
+        "nextOrdinaryTestDays": 2.0,
+        "rapidEvidenceOtherwiseValid": true
+      },
+      "expectedIntermediateEvidence": {
+        "tRangeLowDays": 0,
+        "tOuterLowDays": 2.5714285714
+      },
+      "expectedAction": {
+        "outerBoundForecastRiskBeforeNextTest": false,
+        "fiftyPercentCapUnlockedByForecast": false
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED"
+      ],
+      "openIssues": [
+        "OI-FORECASTHORIZON-001 - the 2.0-day comparison horizon is the ordinary cadence, not the scheduler's selected next test"
+      ]
     },
     {
       "fixtureId": "WG-ALK-043",
       "title": "Outer-bound forecast does unlock the 50% cap when crossing precedes the next test",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-043"] },
-      "rulesExercised": ["ALK-FORECAST-SLOPE-001", "ALK-STEP-CAP-001", "ALK-RAPID-001"],
-      "input": { "aNowDkh": 7.9, "outerMinDkh": 7.0, "observedSlopeDkhPerDay": -0.50, "nextOrdinaryTestDays": 2.0 },
-      "expectedIntermediateEvidence": { "tOuterLowDays": 1.8 },
-      "expectedAction": { "fiftyPercentCapUnlockedByForecast": true, "railRemainsIndependentlyBinding": true },
-      "expectedReasonCodes": ["MAINTENANCE_STEP_CAP_EXCEPTIONAL"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-043"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-FORECAST-SLOPE-001",
+        "ALK-STEP-CAP-001",
+        "ALK-RAPID-001"
+      ],
+      "input": {
+        "aNowDkh": 7.9,
+        "outerMinDkh": 7.0,
+        "observedSlopeDkhPerDay": -0.5,
+        "nextOrdinaryTestDays": 2.0
+      },
+      "expectedIntermediateEvidence": {
+        "tOuterLowDays": 1.8
+      },
+      "expectedAction": {
+        "fiftyPercentCapUnlockedByForecast": true,
+        "railRemainsIndependentlyBinding": true
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_STEP_CAP_EXCEPTIONAL"
+      ]
     },
     {
       "fixtureId": "WG-ALK-044",
       "title": "Non-rapid two-point pre-history cannot support causal attribution",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-044"] },
-      "rulesExercised": ["ALK-RESPONSE-PRE-EVIDENCE-001"],
-      "input": { "events": [ { "kind": "READING", "atDay": -2, "rawValueDkh": 8.50 }, { "kind": "READING", "atDay": 0, "rawValueDkh": 8.35 }, { "kind": "DOSE_CHANGE", "atDay": 0, "source": "MANUAL" } ] },
-      "expectedIntermediateEvidence": { "pairSlopeDkhPerDay": -0.075, "rapidThresholdDkhPerDay": 0.30, "rapidConfirmed": false, "ordinarySufficiency": false },
-      "expectedAction": { "responseAttribution": "PRECHANGE_EVIDENCE_INSUFFICIENT", "formalResponseClassifierRuns": false, "futureCurrentMaintenanceTrend": "may be established independently" },
-      "expectedReasonCodes": ["RESPONSE_PRECHANGE_EVIDENCE_INSUFFICIENT"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-044"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-RESPONSE-PRE-EVIDENCE-001"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "READING",
+            "atDay": -2,
+            "rawValueDkh": 8.5
+          },
+          {
+            "kind": "READING",
+            "atDay": 0,
+            "rawValueDkh": 8.35
+          },
+          {
+            "kind": "DOSE_CHANGE",
+            "atDay": 0,
+            "source": "MANUAL"
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "pairSlopeDkhPerDay": -0.075,
+        "rapidThresholdDkhPerDay": 0.3,
+        "rapidConfirmed": false,
+        "ordinarySufficiency": false
+      },
+      "expectedAction": {
+        "responseAttribution": "PRECHANGE_EVIDENCE_INSUFFICIENT",
+        "formalResponseClassifierRuns": false,
+        "futureCurrentMaintenanceTrend": "may be established independently"
+      },
+      "expectedReasonCodes": [
+        "RESPONSE_PRECHANGE_EVIDENCE_INSUFFICIENT"
+      ]
     },
     {
       "fixtureId": "WG-ALK-045",
-      "title": "Missing actuator increment refuses the final actionable mL/day",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-045", "M-1"] },
-      "rulesExercised": ["ALK-CAPABILITY-CONTRACT-001", "ALK-ROUNDING-001"],
-      "input": { "supportedFallingTrend": "sufficient", "configuredPotency": "valid", "currentDose": "known", "actuatorIncrementMlPerDay": "MISSING" },
-      "expectedAction": { "observedSlope": "calculated", "supportedSlope": "calculated", "continuousActionCandidate": "calculated", "recommendedDose": "WITHHELD", "reason": "ACTUATOR_INCREMENT_REQUIRED", "appMustAsk": "the implementable dosing increment" },
-      "expectedReasonCodes": ["CAPABILITY_ACTUATOR_INCREMENT_REQUIRED"],
-      "forbidden": { "assumedIncrementMlPerDay": 0.1, "note": "No 0.1 mL/day assumption is allowed." }
+      "title": "No configured recommendation precision still produces a recommendation",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-045",
+          "M-1"
+        ],
+        "note": "REWRITTEN by owner decision 23. This fixture previously asserted that a missing actuator increment WITHHELD the final mL/day. There is no actuator, so nothing is withheld: the recommendation is stated at full precision. This is the decision-23 positive control for a formerly actuator-withheld state."
+      },
+      "rulesExercised": [
+        "ALK-RECOMMEND-ONLY-001",
+        "ALK-CAPABILITY-CONTRACT-001",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "supportedFallingTrend": "sufficient",
+        "configuredPotency": "valid",
+        "currentDose": "known",
+        "recommendationPrecisionMlPerDay": "NOT_CONFIGURED"
+      },
+      "expectedAction": {
+        "observedSlope": "calculated",
+        "supportedSlope": "calculated",
+        "continuousActionCandidate": "calculated",
+        "recommendedDoseMlPerDay": "the full-precision continuous candidate, stated as-is",
+        "roundingApplied": false,
+        "outputWithheld": false,
+        "appMustAsk": "NOT_RUN - there is nothing to ask for; precision is a display convention, not a capability",
+        "supersededExpectation": {
+          "recommendedDose": "WITHHELD",
+          "reason": "ACTUATOR_INCREMENT_REQUIRED",
+          "appMustAsk": "the implementable dosing increment",
+          "note": "superseded by owner decision 23"
+        }
+      },
+      "expectedReasonCodes": [],
+      "forbidden": {
+        "recommendedDoseMlPerDay": "WITHHELD",
+        "reasonCodes": [
+          "CAPABILITY_ACTUATOR_INCREMENT_REQUIRED"
+        ],
+        "assumedPrecisionMlPerDay": 0.1,
+        "note": "REVERSION MUTATION TARGET. Withholding the recommendation because no precision is configured is the behaviour decision 23 abolishes. Inventing a 0.1 default is the other forbidden repair - if no precision is configured the number is stated at full precision, not rounded to a guess."
+      },
+      "openIssues": [
+        "OI-SAFETYRATE-001 - reclassified INAPPLICABLE by owner decision 23"
+      ]
     },
     {
       "fixtureId": "WG-ALK-046",
       "title": "Potency learner capability-gated while the core controller remains active",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-046", "ALK-POTENCY-CAPABILITY-GATE-001"] },
-      "rulesExercised": ["ALK-POTENCY-CAPABILITY-GATE-001", "M-2", "M-3"],
-      "input": { "configuredPotency": "valid", "measurements": "sufficient", "programmedDose": "known", "solutionContextId": "MISSING", "deliveryContextId": "MISSING" },
-      "expectedAction": { "coreAlkController": "ACTIVE", "selectedPotencySource": "THEORETICAL_OR_CONFIGURED", "potencyLearning": "NOT_RUN" },
-      "expectedReasonCodes": ["POTENCY_SOLUTION_CONTEXT_UNAVAILABLE", "POTENCY_DELIVERY_CONTEXT_UNAVAILABLE", "CAPABILITY_POTENCY_LEARNER_GATED"],
-      "forbidden": { "note": "The app must not assume the contexts are unchanged merely to generate an empirical potency value." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-046",
+          "ALK-POTENCY-CAPABILITY-GATE-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-POTENCY-CAPABILITY-GATE-001",
+        "M-2",
+        "M-3"
+      ],
+      "input": {
+        "configuredPotency": "valid",
+        "measurements": "sufficient",
+        "programmedDose": "known",
+        "solutionContextId": "MISSING",
+        "deliveryContextId": "MISSING"
+      },
+      "expectedAction": {
+        "coreAlkController": "ACTIVE",
+        "selectedPotencySource": "THEORETICAL_OR_CONFIGURED",
+        "potencyLearning": "NOT_RUN"
+      },
+      "expectedReasonCodes": [
+        "POTENCY_SOLUTION_CONTEXT_UNAVAILABLE",
+        "POTENCY_DELIVERY_CONTEXT_UNAVAILABLE",
+        "CAPABILITY_POTENCY_LEARNER_GATED"
+      ],
+      "forbidden": {
+        "note": "The app must not assume the contexts are unchanged merely to generate an empirical potency value."
+      }
     },
     {
       "fixtureId": "WG-ALK-047",
       "title": "No telemetry: constant-dose core still works, mixed exact integration does not",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-047", "SHARED-DELIVERY-BASIS-001", "M-6"] },
-      "rulesExercised": ["SHARED-DELIVERY-BASIS-001", "ALK-CONSUMPTION-ESTIMATE-001"],
-      "input": { "confirmedProgrammedDoseMlPerDay": 9.0, "deliveryTelemetry": "unavailable", "knownMissedDosesOrOutage": false, "cleanConstantDoseSegment": true },
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-047",
+          "SHARED-DELIVERY-BASIS-001",
+          "M-6"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-DELIVERY-BASIS-001",
+        "ALK-CONSUMPTION-ESTIMATE-001"
+      ],
+      "input": {
+        "confirmedProgrammedDoseMlPerDay": 9.0,
+        "deliveryTelemetry": "unavailable",
+        "knownMissedDosesOrOutage": false,
+        "cleanConstantDoseSegment": true
+      },
       "expectedAction": {
         "deliveryBasis": "CONFIRMED_PROGRAMMED_SCHEDULE",
         "ordinaryMaintenanceAnalysis": "ELIGIBLE",
-        "thenAddAnInternalDoseChangeWithUnreconstructablePartialDayVolume": { "mixedIntervalIntegration": "NOT_RUN", "segmentAtDoseBoundary": true }
+        "thenAddAnInternalDoseChangeWithUnreconstructablePartialDayVolume": {
+          "mixedIntervalIntegration": "NOT_RUN",
+          "segmentAtDoseBoundary": true
+        }
       },
-      "expectedReasonCodes": ["DELIVERY_BASIS_PROGRAMMED_SCHEDULE", "DELIVERY_MIXED_INTEGRATION_NOT_RUN"],
-      "forbidden": { "note": "Telemetry absence must not disable the entire Alk controller." }
+      "expectedReasonCodes": [
+        "DELIVERY_BASIS_PROGRAMMED_SCHEDULE",
+        "DELIVERY_MIXED_INTEGRATION_NOT_RUN"
+      ],
+      "forbidden": {
+        "note": "Telemetry absence must not disable the entire Alk controller."
+      }
     },
     {
       "fixtureId": "WG-ALK-048",
       "title": "Missing replacement-water Alk degrades rather than refuses",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-048", "M-4"] },
-      "rulesExercised": ["ALK-WATERCHANGE-UNKNOWN-001"],
-      "input": { "changedFraction": 0.10, "replacementAlkalinityDkh": "MISSING" },
-      "expectedAction": { "waterChangeEffect": "UNKNOWN", "segmentBreak": true, "ordinaryAlkEngine": "continues from a new clean segment" },
-      "expectedReasonCodes": ["SEGMENT_WC_UNKNOWN_BOUNDARY", "CAPABILITY_REPLACEMENT_WATER_ALK_MISSING"],
-      "forbidden": { "note": "No invented replacement-water value." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-048",
+          "M-4"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-WATERCHANGE-UNKNOWN-001"
+      ],
+      "input": {
+        "changedFraction": 0.1,
+        "replacementAlkalinityDkh": "MISSING"
+      },
+      "expectedAction": {
+        "waterChangeEffect": "UNKNOWN",
+        "segmentBreak": true,
+        "ordinaryAlkEngine": "continues from a new clean segment"
+      },
+      "expectedReasonCodes": [
+        "SEGMENT_WC_UNKNOWN_BOUNDARY",
+        "CAPABILITY_REPLACEMENT_WATER_ALK_MISSING"
+      ],
+      "forbidden": {
+        "note": "No invented replacement-water value."
+      }
     },
     {
       "fixtureId": "WG-ALK-049",
       "title": "Ten-day testing cadence remains insufficient by design",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-049", "ALK-MINIMUM-CADENCE-001", "IX-005"] },
-      "rulesExercised": ["ALK-MINIMUM-CADENCE-001", "ALK-007"],
-      "input": { "readingDays": [0, 10, 20], "asOfDay": 20 },
-      "expectedIntermediateEvidence": { "clustersInside14DayWindow": 2, "windowContains": ["Day 10", "Day 20"] },
-      "expectedAction": { "movementEvidence": "INSUFFICIENT", "automaticMaintenanceAdjustment": "WITHHELD", "cardMeaning": "Not enough recent alkalinity tests for a maintenance adjustment. Add a third valid test within the current 14-day window." },
-      "expectedReasonCodes": ["EVIDENCE_INSUFFICIENT_CLUSTERS", "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE", "SEGMENT_LOOKBACK_NOT_EXTENDED"],
-      "forbidden": { "note": "The engine must not extend the control window to make the trend computable." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-049",
+          "ALK-MINIMUM-CADENCE-001",
+          "IX-005"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-MINIMUM-CADENCE-001",
+        "ALK-007"
+      ],
+      "input": {
+        "readingDays": [
+          0,
+          10,
+          20
+        ],
+        "asOfDay": 20
+      },
+      "expectedIntermediateEvidence": {
+        "clustersInside14DayWindow": 2,
+        "windowContains": [
+          "Day 10",
+          "Day 20"
+        ]
+      },
+      "expectedAction": {
+        "movementEvidence": "INSUFFICIENT",
+        "automaticMaintenanceAdjustment": "WITHHELD",
+        "cardMeaning": "Not enough recent alkalinity tests for a maintenance adjustment. Add a third valid test within the current 14-day window."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE",
+        "SEGMENT_LOOKBACK_NOT_EXTENDED"
+      ],
+      "forbidden": {
+        "note": "The engine must not extend the control window to make the trend computable."
+      }
     },
     {
       "fixtureId": "WG-ALK-050",
       "title": "Extreme potency discrepancy triggers verification, not learning",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-050"] },
-      "rulesExercised": ["ALK-POTENCY-PLAUSIBILITY-001"],
-      "input": { "pExpectedDkhPerMl": 0.0693, "candidatePotencyDkhPerMl": 0.140 },
-      "expectedIntermediateEvidence": { "upperPlausibilityBoundDkhPerMl": 0.11088, "outsideEnvelope": true },
-      "expectedAction": { "potencyObservationStatus": "PLAUSIBILITY_HOLD", "selectedPotency": "remains configured/current", "onRepeatedSameDirection": "potencyContextState = POTENCY_CONTEXT_DISCREPANCY" },
-      "expectedReasonCodes": ["POTENCY_PLAUSIBILITY_HOLD"],
-      "forbidden": { "selectedPotencyDkhPerMl": 0.140 }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-050"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-POTENCY-PLAUSIBILITY-001"
+      ],
+      "input": {
+        "pExpectedDkhPerMl": 0.0693,
+        "candidatePotencyDkhPerMl": 0.14
+      },
+      "expectedIntermediateEvidence": {
+        "upperPlausibilityBoundDkhPerMl": 0.11088,
+        "outsideEnvelope": true
+      },
+      "expectedAction": {
+        "potencyObservationStatus": "PLAUSIBILITY_HOLD",
+        "selectedPotency": "remains configured/current",
+        "onRepeatedSameDirection": "potencyContextState = POTENCY_CONTEXT_DISCREPANCY"
+      },
+      "expectedReasonCodes": [
+        "POTENCY_PLAUSIBILITY_HOLD"
+      ],
+      "forbidden": {
+        "selectedPotencyDkhPerMl": 0.14
+      }
     },
     {
       "fixtureId": "WG-ALK-051",
@@ -141,15 +417,15 @@
         "latestAlkDkh": 11.4,
         "currentAlkDoseMlPerDay": 10.0,
         "selectedPotencyDkhPerMl": 0.0693,
-        "actuatorIncrementMlPerDay": 0.1,
+        "recommendationPrecisionMlPerDay": 0.1,
         "consumptionEstimate": "MATERIALLY NEGATIVE under ALK-NEGATIVE-MATERIALITY-001, and therefore NOT USABLE for safety-dose sizing",
         "temporaryUpwardCorrectionActive": false
       },
       "expectedAction": {
         "outerBoundState": "BREACHED_HIGH",
         "interventionType": "SAFETY_RETURN",
-        "temporarySafetyRateAdvisoryMlPerDay": 2.784992784992785,
-        "temporarySafetyPumpCommandMlPerDay": 2.8,
+        "temporarySafetyRateContinuousMlPerDay": 2.784992784992785,
+        "temporarySafetyRateRecommendationMlPerDay": 2.8,
         "maintenanceEstimateStatus": "UNRESOLVED",
         "actualDoseState": "unchanged until user/pump confirms implementation",
         "failSafeGated": false,
@@ -165,7 +441,7 @@
       ],
       "forbidden": {
         "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden, and so is pausing to 0 mL/day because the estimate is materially negative - 10.0 exceeds R_down/P_selected, so the floor is not reached here.",
-        "temporarySafetyRateAdvisoryMlPerDay": [
+        "temporarySafetyRateContinuousMlPerDay": [
           0,
           10.0
         ],
@@ -187,176 +463,635 @@
     {
       "fixtureId": "WG-ALK-052",
       "title": "Safety correction and maintenance change share one rail",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-052", "ALK-COMPOSITE-RAIL-001"] },
-      "rulesExercised": ["ALK-COMPOSITE-RAIL-001", "ALK-SAFETY-RETURN-INTEGRATION-001"],
-      "input": { "latestAlkDkh": 6.40, "outerMinDkh": 7.0, "safetyDestinationDkh": 7.20, "desiredSafetyMovement24hDkh": 0.50, "supportedMaintenanceEffectDkhPerDay": 0.104 },
-      "expectedIntermediateEvidence": { "naiveIndependentTotalDkhPerDay": 0.604, "railDkhPerDay": 0.50 },
-      "expectedAction": { "safetyMovementDkhPer24h": 0.50, "newMaintenanceAdjustment": "DEFERRED_BY_SAFETY_RAIL", "combinedIntentionalMovementDkhPer24h": 0.50 },
-      "expectedReasonCodes": ["MAINTENANCE_DEFERRED_BY_SAFETY_RAIL", "MAINTENANCE_DEFERRED_BY_SAFETY_RETURN"],
-      "forbidden": { "combinedRecommendationDkhPerDay": 0.604 },
-      "openIssues": ["OI-DEFERREASON-001 - both deferral codes are emitted because both statements are true and the action is identical"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-052",
+          "ALK-COMPOSITE-RAIL-001"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-COMPOSITE-RAIL-001",
+        "ALK-SAFETY-RETURN-INTEGRATION-001"
+      ],
+      "input": {
+        "latestAlkDkh": 6.4,
+        "outerMinDkh": 7.0,
+        "safetyDestinationDkh": 7.2,
+        "desiredSafetyMovement24hDkh": 0.5,
+        "supportedMaintenanceEffectDkhPerDay": 0.104
+      },
+      "expectedIntermediateEvidence": {
+        "naiveIndependentTotalDkhPerDay": 0.604,
+        "railDkhPerDay": 0.5
+      },
+      "expectedAction": {
+        "safetyMovementDkhPer24h": 0.5,
+        "newMaintenanceAdjustment": "DEFERRED_BY_SAFETY_RAIL",
+        "combinedIntentionalMovementDkhPer24h": 0.5
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_DEFERRED_BY_SAFETY_RAIL",
+        "MAINTENANCE_DEFERRED_BY_SAFETY_RETURN"
+      ],
+      "forbidden": {
+        "combinedRecommendationDkhPerDay": 0.604
+      },
+      "openIssues": [
+        "OI-DEFERREASON-001 - both deferral codes are emitted because both statements are true and the action is identical"
+      ]
     },
     {
       "fixtureId": "WG-ALK-053",
       "title": "Crossing the outer edge does not complete the safety return",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-053"] },
-      "rulesExercised": ["ALK-SAFETY-BUFFER-001", "ALK-OUTER-BOUND-ACTION-001"],
-      "input": { "outerMinDkh": 7.0, "safetyDestinationLowDkh": 7.20, "sequence": [ { "alkDkh": 6.80 }, { "alkDkh": 7.05 }, { "alkDkh": 7.21 } ] },
-      "expectedAction": {
-        "at7_05": { "outerBoundState": "RECOVERING_INSIDE_BOUND", "safetyReturnActive": true, "completion": false },
-        "at7_21": { "safetyReturnCompletes": true, "ordinarySequencingResumes": true }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-053"
+        ]
       },
-      "expectedReasonCodes": ["SAFETY_RECOVERING_INSIDE_BOUND", "SAFETY_RETURN_COMPLETE"]
+      "rulesExercised": [
+        "ALK-SAFETY-BUFFER-001",
+        "ALK-OUTER-BOUND-ACTION-001"
+      ],
+      "input": {
+        "outerMinDkh": 7.0,
+        "safetyDestinationLowDkh": 7.2,
+        "sequence": [
+          {
+            "alkDkh": 6.8
+          },
+          {
+            "alkDkh": 7.05
+          },
+          {
+            "alkDkh": 7.21
+          }
+        ]
+      },
+      "expectedAction": {
+        "at7_05": {
+          "outerBoundState": "RECOVERING_INSIDE_BOUND",
+          "safetyReturnActive": true,
+          "completion": false
+        },
+        "at7_21": {
+          "safetyReturnCompletes": true,
+          "ordinarySequencingResumes": true
+        }
+      },
+      "expectedReasonCodes": [
+        "SAFETY_RECOVERING_INSIDE_BOUND",
+        "SAFETY_RETURN_COMPLETE"
+      ]
     },
     {
       "fixtureId": "WG-ALK-054",
       "title": "Missing historical bracket evidence disables the bracket only",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-054", "M-10"] },
-      "rulesExercised": ["ALK-BRACKET-COMPARABILITY-001", "ALK-CAPABILITY-CONTRACT-001"],
-      "input": { "currentEvidence": "sufficient", "currentSupportedRecommendation": "calculable", "historicalAssessmentStore": "unavailable" },
-      "expectedAction": { "empiricalBracketStatus": "UNAVAILABLE", "historicalBracketCheck": "NOT_RUN", "coreMaintenanceRecommendation": "continues" },
-      "expectedReasonCodes": ["BRACKET_NOT_RUN", "CAPABILITY_HISTORICAL_BRACKET_UNAVAILABLE"],
-      "forbidden": { "note": "No historical bracket may be reconstructed from incomplete snapshots." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-054",
+          "M-10"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-BRACKET-COMPARABILITY-001",
+        "ALK-CAPABILITY-CONTRACT-001"
+      ],
+      "input": {
+        "currentEvidence": "sufficient",
+        "currentSupportedRecommendation": "calculable",
+        "historicalAssessmentStore": "unavailable"
+      },
+      "expectedAction": {
+        "empiricalBracketStatus": "UNAVAILABLE",
+        "historicalBracketCheck": "NOT_RUN",
+        "coreMaintenanceRecommendation": "continues"
+      },
+      "expectedReasonCodes": [
+        "BRACKET_NOT_RUN",
+        "CAPABILITY_HISTORICAL_BRACKET_UNAVAILABLE"
+      ],
+      "forbidden": {
+        "note": "No historical bracket may be reconstructed from incomplete snapshots."
+      }
     },
     {
       "fixtureId": "WG-ALK-055",
       "title": "Low Alk outer-bound breach overrides the Mg alert-low hold",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-055", "ALK-SAFETY-MG-OVERRIDE-001", "X-GOV-003"] },
-      "rulesExercised": ["ALK-SAFETY-MG-OVERRIDE-001", "CORE-INFORM-PROCEED-001"],
-      "input": { "alkDkh": 6.80, "outerMinDkh": 7.00, "safetyDestinationDkh": 7.20, "magnesiumGateState": "ALERT_LOW", "alkPotency": "valid" },
-      "expectedAction": { "interventionType": "SAFETY_RETURN", "alkSafetyAction": "ALLOWED", "ordinaryMgGateBlocksSafetyReturn": false, "cardMustSurfaceMgCondition": true },
-      "expectedReasonCodes": ["SAFETY_MG_GATE_OVERRIDDEN", "PRESENTATION_INFORM_AND_PROCEED"],
-      "forbidden": { "note": "Withholding the Alk safety return solely because Mg is alert-low is forbidden. Ordinary non-safety Alk/Ca correction logic may still be blocked by the Mg gate." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-055",
+          "ALK-SAFETY-MG-OVERRIDE-001",
+          "X-GOV-003"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-MG-OVERRIDE-001",
+        "CORE-INFORM-PROCEED-001"
+      ],
+      "input": {
+        "alkDkh": 6.8,
+        "outerMinDkh": 7.0,
+        "safetyDestinationDkh": 7.2,
+        "magnesiumGateState": "ALERT_LOW",
+        "alkPotency": "valid"
+      },
+      "expectedAction": {
+        "interventionType": "SAFETY_RETURN",
+        "alkSafetyAction": "ALLOWED",
+        "ordinaryMgGateBlocksSafetyReturn": false,
+        "cardMustSurfaceMgCondition": true
+      },
+      "expectedReasonCodes": [
+        "SAFETY_MG_GATE_OVERRIDDEN",
+        "PRESENTATION_INFORM_AND_PROCEED"
+      ],
+      "forbidden": {
+        "note": "Withholding the Alk safety return solely because Mg is alert-low is forbidden. Ordinary non-safety Alk/Ca correction logic may still be blocked by the Mg gate."
+      }
     },
     {
       "fixtureId": "WG-ALK-056",
       "title": "Safety return interrupts an open maintenance-response attribution window",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-056"] },
-      "rulesExercised": ["ALK-SAFETY-RETURN-INTEGRATION-001"],
-      "input": { "events": [ { "atDay": 0, "kind": "DOSE_CHANGE" }, { "atDay": 2, "kind": "READING", "note": "first post-change" }, { "atDay": 3, "kind": "OUTER_BOUND_BREACH", "note": "SAFETY_RETURN begins" } ] },
-      "expectedAction": { "priorResponseAttribution": "INTERRUPTED_BY_SAFETY_RETURN", "priorPredictionSnapshot": "preserved", "formalSixWayResponseAcrossSafetyWindow": false, "afterSafetyReturnEnds": "current maintenance analysis builds a new clean regime" },
-      "expectedReasonCodes": ["INTERVENTION_INTERRUPTED_BY_SAFETY_RETURN"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-056"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-RETURN-INTEGRATION-001"
+      ],
+      "input": {
+        "events": [
+          {
+            "atDay": 0,
+            "kind": "DOSE_CHANGE"
+          },
+          {
+            "atDay": 2,
+            "kind": "READING",
+            "note": "first post-change"
+          },
+          {
+            "atDay": 3,
+            "kind": "OUTER_BOUND_BREACH",
+            "note": "SAFETY_RETURN begins"
+          }
+        ]
+      },
+      "expectedAction": {
+        "priorResponseAttribution": "INTERRUPTED_BY_SAFETY_RETURN",
+        "priorPredictionSnapshot": "preserved",
+        "formalSixWayResponseAcrossSafetyWindow": false,
+        "afterSafetyReturnEnds": "current maintenance analysis builds a new clean regime"
+      },
+      "expectedReasonCodes": [
+        "INTERVENTION_INTERRUPTED_BY_SAFETY_RETURN"
+      ]
     },
     {
       "fixtureId": "WG-ALK-057",
       "title": "Safety return is a potency-learning confounder",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-057"] },
-      "rulesExercised": ["ALK-SAFETY-RETURN-INTEGRATION-001", "ALK-017"],
-      "input": { "maintenanceInterventionOtherwiseQualifies": true, "responseWindowOverlapsDeliveredSafetyReturn": true },
-      "expectedAction": { "potencyLearningEligible": false, "reason": "SAFETY_RETURN_CONFOUND", "safetyReturnItselfEntersPool": false },
-      "expectedReasonCodes": ["POTENCY_INELIGIBLE_SAFETY_RETURN_CONFOUND"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-057"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-RETURN-INTEGRATION-001",
+        "ALK-017"
+      ],
+      "input": {
+        "maintenanceInterventionOtherwiseQualifies": true,
+        "responseWindowOverlapsDeliveredSafetyReturn": true
+      },
+      "expectedAction": {
+        "potencyLearningEligible": false,
+        "reason": "SAFETY_RETURN_CONFOUND",
+        "safetyReturnItselfEntersPool": false
+      },
+      "expectedReasonCodes": [
+        "POTENCY_INELIGIBLE_SAFETY_RETURN_CONFOUND"
+      ]
     },
     {
       "fixtureId": "WG-ALK-058",
       "title": "Safety return owns the Alk intervention lock",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-058"] },
-      "rulesExercised": ["ALK-SAFETY-RETURN-INTEGRATION-001"],
-      "input": { "safetyReturn": "active", "currentMaintenanceEstimate": "calculable", "newMaintenanceDoseWouldOrdinarilyBeRecommended": true },
-      "expectedAction": { "maintenanceEstimate": "may be shown", "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN", "newMaintenanceDoseImplementation": false, "newOrdinaryReturnPlan": false },
-      "expectedReasonCodes": ["MAINTENANCE_DEFERRED_BY_SAFETY_RETURN", "SAFETY_INTERVENTION_LOCK_HELD"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-058"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-RETURN-INTEGRATION-001"
+      ],
+      "input": {
+        "safetyReturn": "active",
+        "currentMaintenanceEstimate": "calculable",
+        "newMaintenanceDoseWouldOrdinarilyBeRecommended": true
+      },
+      "expectedAction": {
+        "maintenanceEstimate": "may be shown",
+        "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN",
+        "newMaintenanceDoseImplementation": false,
+        "newOrdinaryReturnPlan": false
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_DEFERRED_BY_SAFETY_RETURN",
+        "SAFETY_INTERVENTION_LOCK_HELD"
+      ]
     },
     {
       "fixtureId": "WG-ALK-059",
       "title": "Known safety correction participates in segmentation",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-059"] },
-      "rulesExercised": ["ALK-SAFETY-RETURN-INTEGRATION-001", "ALK-034"],
-      "input": { "cases": [ { "safetyCorrectionDelivered": true, "amountAndTimeKnown": true }, { "safetyCorrectionDelivered": true, "amountAndTimeKnown": false } ] },
-      "expectedAction": {
-        "known": { "eventType": "SAFETY_RETURN_CORRECTION", "correctionEffect": "known", "analyticalNormalization": "allowed under correction rules", "potencyLearningAcrossWindow": false },
-        "unknown": { "interval": "CONFOUNDED", "inventedCorrectionEffect": "forbidden" }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-059"
+        ]
       },
-      "expectedReasonCodes": ["SEGMENT_NORMALIZED_CORRECTION", "SEGMENT_CONFOUNDED_SAFETY_RETURN"]
+      "rulesExercised": [
+        "ALK-SAFETY-RETURN-INTEGRATION-001",
+        "ALK-034"
+      ],
+      "input": {
+        "cases": [
+          {
+            "safetyCorrectionDelivered": true,
+            "amountAndTimeKnown": true
+          },
+          {
+            "safetyCorrectionDelivered": true,
+            "amountAndTimeKnown": false
+          }
+        ]
+      },
+      "expectedAction": {
+        "known": {
+          "eventType": "SAFETY_RETURN_CORRECTION",
+          "correctionEffect": "known",
+          "analyticalNormalization": "allowed under correction rules",
+          "potencyLearningAcrossWindow": false
+        },
+        "unknown": {
+          "interval": "CONFOUNDED",
+          "inventedCorrectionEffect": "forbidden"
+        }
+      },
+      "expectedReasonCodes": [
+        "SEGMENT_NORMALIZED_CORRECTION",
+        "SEGMENT_CONFOUNDED_SAFETY_RETURN"
+      ]
     },
     {
       "fixtureId": "WG-ALK-060",
       "title": "Safety return uses the one retest scheduler",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-060", "X-INV-004"] },
-      "rulesExercised": ["ALK-SAFETY-RETURN-INTEGRATION-001", "ALK-050", "ALK-053"],
-      "input": { "safetyReturn": "active", "actionImplementedAt": "Day 0 14:00", "ordinaryPostDoseCandidateHours": 48, "safetyCandidateHours": 24, "moreUrgentCandidate": false },
-      "expectedRetest": { "selectedRetestReason": "SAFETY_RETURN_ACTIVE", "nextTestApprox": "Day 1 14:00" },
-      "expectedReasonCodes": ["RETEST_SAFETY_RETURN_ACTIVE"],
-      "forbidden": { "note": "A card must not independently hardcode a conflicting safety retest time. If a rapid or suspicious-reading rule requires 12-18 h the canonical scheduler selects that earlier candidate." }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-060",
+          "X-INV-004"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-RETURN-INTEGRATION-001",
+        "ALK-050",
+        "ALK-053"
+      ],
+      "input": {
+        "safetyReturn": "active",
+        "actionImplementedAt": "Day 0 14:00",
+        "ordinaryPostDoseCandidateHours": 48,
+        "safetyCandidateHours": 24,
+        "moreUrgentCandidate": false
+      },
+      "expectedRetest": {
+        "selectedRetestReason": "SAFETY_RETURN_ACTIVE",
+        "nextTestApprox": "Day 1 14:00"
+      },
+      "expectedReasonCodes": [
+        "RETEST_SAFETY_RETURN_ACTIVE"
+      ],
+      "forbidden": {
+        "note": "A card must not independently hardcode a conflicting safety retest time. If a rapid or suspicious-reading rule requires 12-18 h the canonical scheduler selects that earlier candidate."
+      }
     },
     {
       "fixtureId": "WG-ALK-061",
-      "title": "Missing maintenance actuator increment does not block a safety correction",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-061", "ALK-SAFETY-CORRECTION-RESOLUTION-001"] },
-      "rulesExercised": ["ALK-SAFETY-CORRECTION-RESOLUTION-001", "M-1"],
-      "input": { "alkDkh": 6.80, "safetyDestinationLowDkh": 7.20, "selectedPotencyDkhPerMl": 0.0693, "actuatorIncrementMlPerDay": "MISSING" },
-      "expectedIntermediateEvidence": { "requiredMovementDkh": 0.40, "safetyVolumeMl": 5.7720058 },
-      "expectedAction": { "safetyCorrectionStatus": "ACTIONABLE", "safetyCorrectionVolumeMl": 5.7720058, "maintenanceRateRoundingCapability": "MISSING", "actuatorIncrementReasonBlocksSafetyReturn": false, "ifPotencyInvalid": "withhold the mL value; state only the required dKH movement" },
-      "expectedReasonCodes": ["SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT", "CAPABILITY_ACTUATOR_INCREMENT_REQUIRED"],
-      "forbidden": { "note": "Withholding the urgent safety correction solely because actuatorIncrementMlPerDay is missing is forbidden." }
+      "title": "A low-breach safety correction is unaffected by recommendation precision",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-061",
+          "ALK-OUTER-BOUND-ACTION-001",
+          "ALK-RECOMMEND-ONLY-001"
+        ],
+        "note": "REWRITTEN by owner decision 23. ALK-SAFETY-CORRECTION-RESOLUTION-001 is retired: it exempted this correction from an M-1 refusal that no longer exists. The volume is unchanged; only the reason it is emitted is."
+      },
+      "rulesExercised": [
+        "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-RECOMMEND-ONLY-001"
+      ],
+      "input": {
+        "alkDkh": 6.8,
+        "safetyDestinationLowDkh": 7.2,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "recommendationPrecisionMlPerDay": "NOT_CONFIGURED"
+      },
+      "expectedIntermediateEvidence": {
+        "requiredMovementDkh": 0.4,
+        "safetyVolumeMl": 5.7720058
+      },
+      "expectedAction": {
+        "safetyCorrectionStatus": "ACTIONABLE",
+        "safetyCorrectionVolumeMl": 5.7720058,
+        "outputWithheld": false,
+        "ifPotencyInvalid": "withhold the mL value; state only the required dKH movement",
+        "supersededExpectation": {
+          "maintenanceRateRoundingPrecision": "MISSING",
+          "note": "the M-1 exemption is superseded by owner decision 23 - there is no M-1 actuator refusal to be exempt from"
+        }
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_LOW"
+      ],
+      "forbidden": {
+        "note": "REVERSION MUTATION TARGET. Withholding the safety correction for want of a precision value is forbidden, and so is reinstating an exemption for a refusal that does not exist.",
+        "reasonCodes": [
+          "SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT",
+          "CAPABILITY_ACTUATOR_INCREMENT_REQUIRED"
+        ],
+        "safetyCorrectionVolumeMl": "NOT_RUN"
+      }
     },
     {
       "fixtureId": "WG-ALK-062",
       "title": "Five-reading uncertainty exposes the Sxx rule",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-062"], "note": "MANDATORY. This golden exists specifically so three-point arithmetic cannot hide a divergence between the shared and Alk uncertainty formulae." },
-      "rulesExercised": ["ALK-SLOPE-UNCERTAINTY-001", "SHARED-SLOPE-UNCERTAINTY-001", "ALK-SUPPORTED-SLOPE-001", "ALK-ROUNDING-001"],
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-062"
+        ],
+        "note": "MANDATORY. This golden exists specifically so three-point arithmetic cannot hide a divergence between the shared and Alk uncertainty formulae."
+      },
+      "rulesExercised": [
+        "ALK-SLOPE-UNCERTAINTY-001",
+        "SHARED-SLOPE-UNCERTAINTY-001",
+        "ALK-SUPPORTED-SLOPE-001",
+        "ALK-ROUNDING-001"
+      ],
       "input": {
-        "timesDays": [0, 2, 4, 6, 8],
-        "alkDkh": [8.80, 8.50, 8.20, 7.90, 7.60],
-        "sigmaAlkBaseDkh": 0.10, "selectedPotencyDkhPerMl": 0.0693,
-        "currentDoseMlPerDay": 9.0, "actuatorIncrementMlPerDay": 0.1
+        "timesDays": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "alkDkh": [
+          8.8,
+          8.5,
+          8.2,
+          7.9,
+          7.6
+        ],
+        "sigmaAlkBaseDkh": 0.1,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "currentDoseMlPerDay": 9.0,
+        "recommendationPrecisionMlPerDay": 0.1
       },
       "expectedIntermediateEvidence": {
-        "observedSlopeDkhPerDay": -0.15, "sigmaResidDkh": 0, "sigmaPointDkh": 0.10,
-        "tBarDays": 4, "sxxDay2": 40, "sigmaSDkhPerDay": 0.0158113883
+        "observedSlopeDkhPerDay": -0.15,
+        "sigmaResidDkh": 0,
+        "sigmaPointDkh": 0.1,
+        "tBarDays": 4,
+        "sxxDay2": 40,
+        "sigmaSDkhPerDay": 0.0158113883
       },
-      "expectedSupportedResult": { "supportedSlopeDkhPerDay": -0.1297614258 },
-      "expectedAction": { "continuousDeltaDoseMlPerDay": 1.87246, "continuousDoseMlPerDay": 10.87246, "recommendedDoseMlPerDay": 10.9 },
-      "expectedReasonCodes": ["UNCERTAINTY_FLOOR_APPLIED", "MAINTENANCE_INCREASE_RECOMMENDED"],
-      "forbidden": { "sigmaSDkhPerDay": 0.0176776695, "note": "The endpoint-only form sqrt(0.10^2 + 0.10^2)/8 is forbidden." }
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.1297614258
+      },
+      "expectedAction": {
+        "continuousDeltaDoseMlPerDay": 1.87246,
+        "continuousDoseMlPerDay": 10.87246,
+        "recommendedDoseMlPerDay": 10.9
+      },
+      "expectedReasonCodes": [
+        "UNCERTAINTY_FLOOR_APPLIED",
+        "MAINTENANCE_INCREASE_RECOMMENDED"
+      ],
+      "forbidden": {
+        "sigmaSDkhPerDay": 0.0176776695,
+        "note": "The endpoint-only form sqrt(0.10^2 + 0.10^2)/8 is forbidden."
+      }
     },
     {
       "fixtureId": "WG-ALK-063",
       "title": "Rounding cannot break a hard physical rail",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-063"] },
-      "rulesExercised": ["ALK-ROUNDING-001", "ALK-046"],
-      "input": { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 16.352941, "actuatorIncrementMlPerDay": 0.10, "selectedPotencyDkhPerMl": 0.0680, "physicalEffectRailDkhPerDay": 0.50 },
-      "expectedIntermediateEvidence": { "nearestOrdinaryRounding": 16.4, "effectAt16_4DkhPerDay": 0.5032, "railViolated": true, "effectAt16_3DkhPerDay": 0.4964 },
-      "expectedAction": { "recommendedDoseMlPerDay": 16.3, "railViolationAfterRounding": false, "arbitraryRefusalWhileAFeasibleCommandExists": false },
-      "expectedReasonCodes": ["SAFETY_RATE_RAIL_APPLIED"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-063"
+        ]
+      },
+      "rulesExercised": [
+        "ALK-ROUNDING-001",
+        "ALK-046"
+      ],
+      "input": {
+        "currentDoseMlPerDay": 9.0,
+        "continuousFeasibleDoseMlPerDay": 16.352941,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "selectedPotencyDkhPerMl": 0.068,
+        "physicalEffectRailDkhPerDay": 0.5
+      },
+      "expectedIntermediateEvidence": {
+        "nearestOrdinaryRounding": 16.4,
+        "effectAt16_4DkhPerDay": 0.5032,
+        "railViolated": true,
+        "effectAt16_3DkhPerDay": 0.4964
+      },
+      "expectedAction": {
+        "recommendedDoseMlPerDay": 16.3,
+        "railViolationAfterRounding": false,
+        "arbitraryRefusalWhileAFeasibleCommandExists": false
+      },
+      "expectedReasonCodes": [
+        "SAFETY_RATE_RAIL_APPLIED"
+      ]
     },
     {
       "fixtureId": "WG-ALK-064",
       "title": "Confirmed consumption-context change blocks one potency comparison",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-064", "SHARED-CONSUMPTION-CONTEXT-001"] },
-      "rulesExercised": ["SHARED-CONSUMPTION-CONTEXT-001", "ALK-017"],
-      "input": { "prePostSlopesOtherwiseQualify": true, "event": { "classification": "CONSUMPTION_CONTEXT_CHANGE", "affectedParameters": ["ALK"], "materiality": "MATERIAL", "source": "USER_CONFIRMED", "reasonCode": "LIGHTING_REGIME_CHANGE", "fallsBetween": "pre-window start and post-window end" } },
-      "expectedAction": { "potencyObservationEligible": false, "reason": "CONSUMPTION_CONTEXT_CHANGE", "laterCompleteComparisonInsideNewStableContext": "may become eligible normally" },
-      "expectedReasonCodes": ["POTENCY_INELIGIBLE_CONSUMPTION_CONTEXT_CHANGE"],
-      "forbidden": { "cases": ["inferring a potency value across the event", "inferring the context-change classification from an unexpected slope without a retained event"] }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-064",
+          "SHARED-CONSUMPTION-CONTEXT-001"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-CONSUMPTION-CONTEXT-001",
+        "ALK-017"
+      ],
+      "input": {
+        "prePostSlopesOtherwiseQualify": true,
+        "event": {
+          "classification": "CONSUMPTION_CONTEXT_CHANGE",
+          "affectedParameters": [
+            "ALK"
+          ],
+          "materiality": "MATERIAL",
+          "source": "USER_CONFIRMED",
+          "reasonCode": "LIGHTING_REGIME_CHANGE",
+          "fallsBetween": "pre-window start and post-window end"
+        }
+      },
+      "expectedAction": {
+        "potencyObservationEligible": false,
+        "reason": "CONSUMPTION_CONTEXT_CHANGE",
+        "laterCompleteComparisonInsideNewStableContext": "may become eligible normally"
+      },
+      "expectedReasonCodes": [
+        "POTENCY_INELIGIBLE_CONSUMPTION_CONTEXT_CHANGE"
+      ],
+      "forbidden": {
+        "cases": [
+          "inferring a potency value across the event",
+          "inferring the context-change classification from an unexpected slope without a retained event"
+        ]
+      }
     },
     {
       "fixtureId": "WG-ALK-065",
       "title": "Legacy target range is not backfilled into historical replay",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-065", "SHARED-CONFIG-VERSION-001", "M-12"] },
-      "rulesExercised": ["SHARED-CONFIG-VERSION-001"],
-      "input": { "legacyMeasurementMonth": "July", "firstV2Config": { "targetRangeDkh": [8.2, 8.8], "effectiveFrom": "2026-08-19T21:00:00+10:00" }, "earlierConfigVersionProven": false },
-      "expectedAction": { "historicalConfigDependentReplay": "NOT_RUN", "reason": "HISTORICAL_CONFIGURATION_UNAVAILABLE", "julyRawMeasurementsRemainVisible": true, "augustConfigTreatedAsJulyConfig": false, "newAssessmentsFromEffectiveDate": "use the V2 config normally" },
-      "expectedReasonCodes": ["CONFIG_HISTORICAL_UNAVAILABLE", "CAPABILITY_HISTORICAL_CONFIGURATION_UNAVAILABLE"]
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-065",
+          "SHARED-CONFIG-VERSION-001",
+          "M-12"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-CONFIG-VERSION-001"
+      ],
+      "input": {
+        "legacyMeasurementMonth": "July",
+        "firstV2Config": {
+          "targetRangeDkh": [
+            8.2,
+            8.8
+          ],
+          "effectiveFrom": "2026-08-19T21:00:00+10:00"
+        },
+        "earlierConfigVersionProven": false
+      },
+      "expectedAction": {
+        "historicalConfigDependentReplay": "NOT_RUN",
+        "reason": "HISTORICAL_CONFIGURATION_UNAVAILABLE",
+        "julyRawMeasurementsRemainVisible": true,
+        "augustConfigTreatedAsJulyConfig": false,
+        "newAssessmentsFromEffectiveDate": "use the V2 config normally"
+      },
+      "expectedReasonCodes": [
+        "CONFIG_HISTORICAL_UNAVAILABLE",
+        "CAPABILITY_HISTORICAL_CONFIGURATION_UNAVAILABLE"
+      ]
     },
     {
       "fixtureId": "WG-ALK-066",
       "title": "Legacy local time without a timezone does not become an absolute instant",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-066", "SHARED-LEGACY-TIME-001", "M-13"] },
-      "rulesExercised": ["SHARED-LEGACY-TIME-001"],
-      "input": { "date": "2026-04-05", "localTime": "02:30", "timezoneOrOffset": "UNKNOWN" },
-      "expectedAction": { "timeProvenance": "LOCAL_TIME_ZONE_UNKNOWN", "exactElapsedTimeAnalysis": "NOT_RUN", "remainsVisibleInHistory": true, "maySupportCurrentPositionIfOtherwiseValid": true },
-      "expectedReasonCodes": ["TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN", "TIME_EXACT_ELAPSED_UNAVAILABLE"],
-      "forbidden": { "cases": ["assigning the keeper's current timezone", "assigning noon", "using it as an exact elapsed-time trend point across a possible DST/offset ambiguity"] }
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-066",
+          "SHARED-LEGACY-TIME-001",
+          "M-13"
+        ]
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001"
+      ],
+      "input": {
+        "date": "2026-04-05",
+        "localTime": "02:30",
+        "timezoneOrOffset": "UNKNOWN"
+      },
+      "expectedAction": {
+        "timeProvenance": "LOCAL_TIME_ZONE_UNKNOWN",
+        "exactElapsedTimeAnalysis": "NOT_RUN",
+        "remainsVisibleInHistory": true,
+        "maySupportCurrentPositionIfOtherwiseValid": true
+      },
+      "expectedReasonCodes": [
+        "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+        "TIME_EXACT_ELAPSED_UNAVAILABLE"
+      ],
+      "forbidden": {
+        "cases": [
+          "assigning the keeper's current timezone",
+          "assigning noon",
+          "using it as an exact elapsed-time trend point across a possible DST/offset ambiguity"
+        ]
+      }
     },
     {
       "fixtureId": "WG-ALK-067",
       "title": "Gross liquid-volume guard covers all engine-generated Alk delivery",
-      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-067", "ALK-LIQUID-VOLUME-GUARD-001"], "note": "Canon states the requirement without arithmetic. AD-SAF-003 and AD-SAF-004 supply determined numeric instances. Freeze 5 F5-06 reconciles this fixture's 'maintenance/correction' wording with the rule body." },
-      "rulesExercised": ["ALK-LIQUID-VOLUME-GUARD-001", "ALK-046", "ALK-ROUNDING-001"],
-      "input": { "solution": "very dilute", "deliveryKind": "maintenance or correction - the guard does not distinguish them", "candidateSatisfiesRail": true, "candidateExceedsGuard": true },
-      "expectedAction": { "issueThatLiquidVolumeAsOne24hCommand": false, "scope": ["MAINTENANCE", "RETURN_PLAN", "ONE_OFF_CORRECTION", "SAFETY_RETURN", "COMBINED_24H_TOTAL"], "stageOrLengthenUntilBothSatisfied": true, "executableDosingCommandWhenNoStagingAvailable": "WITHHELD", "cappedToGuardAndPresentedAsRecommendation": false, "recheckedAfterActuatorRounding": true, "railSatisfactionImpliesGuardSatisfaction": false },
-      "expectedReasonCodes": ["SAFETY_LIQUID_GUARD_APPLIED"],
-      "forbidden": { "reasonCodes": ["SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED", "MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED"], "note": "Exempting ordinary maintenance from the guard, capping a command to the guard value and presenting it as the recommendation, or checking the guard only before actuator rounding are all forbidden." },
-      "openIssues": ["OI-LIQUIDGUARD-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-06); the rule body now covers maintenance, so this fixture's wording and the rule agree"]
+      "provenance": {
+        "class": "CANON_QUALITATIVE",
+        "canonSource": [
+          "WG-ALK-067",
+          "ALK-LIQUID-VOLUME-GUARD-001"
+        ],
+        "note": "Canon states the requirement without arithmetic. AD-SAF-003 and AD-SAF-004 supply determined numeric instances. Freeze 5 F5-06 reconciles this fixture's 'maintenance/correction' wording with the rule body."
+      },
+      "rulesExercised": [
+        "ALK-LIQUID-VOLUME-GUARD-001",
+        "ALK-046",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "solution": "very dilute",
+        "deliveryKind": "maintenance or correction - the guard does not distinguish them",
+        "candidateSatisfiesRail": true,
+        "candidateExceedsGuard": true
+      },
+      "expectedAction": {
+        "issueThatLiquidVolumeAsOne24hCommand": false,
+        "scope": [
+          "MAINTENANCE",
+          "RETURN_PLAN",
+          "ONE_OFF_CORRECTION",
+          "SAFETY_RETURN",
+          "COMBINED_24H_TOTAL"
+        ],
+        "stageOrLengthenUntilBothSatisfied": true,
+        "executableDosingCommandWhenNoStagingAvailable": "WITHHELD",
+        "cappedToGuardAndPresentedAsRecommendation": false,
+        "recheckedAfterActuatorRounding": true,
+        "railSatisfactionImpliesGuardSatisfaction": false
+      },
+      "expectedReasonCodes": [
+        "SAFETY_LIQUID_GUARD_APPLIED"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED",
+          "MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED"
+        ],
+        "note": "Exempting ordinary maintenance from the guard, capping a command to the guard value and presenting it as the recommendation, or checking the guard only before recommendation rounding are all forbidden."
+      },
+      "openIssues": [
+        "OI-LIQUIDGUARD-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-06); the rule body now covers maintenance, so this fixture's wording and the rule agree"
+      ]
     }
   ]
 }

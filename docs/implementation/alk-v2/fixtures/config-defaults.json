@@ -9,7 +9,7 @@
       "sigmaAlkBaseDkh": 0.10,
       "alkSlopeSupportK": 1.28,
       "alkResponseK": 1.28,
-      "actuatorIncrementMlPerDay": 0.10,
+      "recommendationPrecisionMlPerDay": 0.10,
       "ordinaryStepCapFraction": 0.25,
       "exceptionalStepCapFraction": 0.50,
       "alkRateRailDkhPerDay": 0.50,

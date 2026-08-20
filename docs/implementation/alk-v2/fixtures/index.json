@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 66,
+      "count": 69,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -211,7 +211,10 @@
         "AD-SAF-009",
         "AD-ESC-001",
         "AD-ESC-002",
-        "AD-ESC-003"
+        "AD-ESC-003",
+        "AD-REC-001",
+        "AD-REC-002",
+        "AD-SAF-010"
       ]
     },
     {
@@ -240,12 +243,12 @@
     }
   ],
   "totals": {
-    "fixtures": 193,
+    "fixtures": 196,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 63,
-    "CANON_QUALITATIVE": 28,
+    "CANON_DERIVED": 65,
+    "CANON_QUALITATIVE": 29,
     "CANON_VERBATIM": 102
   },
   "fixtureIds": [
@@ -425,6 +428,9 @@
     "AD-ESC-001",
     "AD-ESC-002",
     "AD-ESC-003",
+    "AD-REC-001",
+    "AD-REC-002",
+    "AD-SAF-010",
     "INV-CANON-001",
     "INV-CORE-ADVISORY-001",
     "INV-NONADHERENCE-001",
@@ -444,6 +450,21 @@
     "INV-G12"
   ],
   "openIssueCoverage": {
+    "OI-ADVISORYEXCEPTION-001": [
+      "AD-ESC-001",
+      "AD-ESC-002",
+      "AD-ESC-003"
+    ],
+    "OI-ADVISORYMEMBERS-001": [
+      "AD-ESC-003"
+    ],
+    "OI-ADVISORYRETEST-001": [
+      "AD-ESC-001",
+      "AD-ESC-002"
+    ],
+    "OI-ADVISORYRETURN-001": [
+      "AD-REC-002"
+    ],
     "OI-ANCHOR-001": [
       "AD-SEG-003"
     ],
@@ -455,6 +476,9 @@
       "AD-MNT-006",
       "AD-MNT-007",
       "AD-MNT-008"
+    ],
+    "OI-BRANCHAREFUSAL-001": [
+      "AD-SAF-010"
     ],
     "OI-CLUSTERTIE-001": [
       "AD-SEG-007",
@@ -557,7 +581,8 @@
     ],
     "OI-SAFETYRATE-001": [
       "AD-SAF-002",
-      "AD-SAF-005"
+      "AD-SAF-005",
+      "WG-ALK-045"
     ],
     "OI-SIZINGFLAT-001": [
       "AD-ESC-001",

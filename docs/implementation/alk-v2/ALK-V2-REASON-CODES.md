@@ -41,7 +41,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED` | `INFO` | Canonised `NOT_RUN`: no cross-method concordance threshold and no method-compatibility classification exists (owner decision 18). `ALK-005`'s 0.20 dKH is a same-method repeat threshold and is not applied across methods. | `methods[]`, `ruleId: ALK-REPEAT-SPREAD-DOMAIN-001` |
 | `VALIDATION_OUTER_BOUNDS_INVERTED` | `REFUSAL` | `outerMin ≥ outerMax`. | `outerBounds` |
 | `VALIDATION_NET_VOLUME_INVALID` | `REFUSAL` | Net volume ≤ 0. | `netVolumeL` |
-| `VALIDATION_ACTUATOR_INCREMENT_INVALID` | `REFUSAL` | Increment ≤ 0. | `actuatorIncrementMlPerDay` |
+| `VALIDATION_RECOMMENDATION_PRECISION_INVALID` | `REFUSAL` | A **configured** recommendation precision ≤ 0. **Renamed from `VALIDATION_ACTUATOR_INCREMENT_INVALID` by owner decision 23.** Absence of a configured precision is **not** this code and withholds nothing — the full-precision recommendation is stated. | `recommendationPrecisionMlPerDay` |
 | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` | `INFO` | Automatic statistical suspicion detection is canonically `NOT_RUN`; alkalinity defines no threshold and Freeze 5 declined to invent one. Explicit marks, recorded faults and repeat-spread anomalies still run. | `ruleId: ALK-SUSPECT-DETECTION-001`, `operativeSources[]` |
 | `VALIDATION_DEVICE_FAULT_RECORDED` | `GATING` | A recorded test/device fault marks the affected readings `SUSPECT`. | `readingIds[]`, `faultEventId` |
 | `VALIDATION_READING_MARKED_INVALID` | `INFO` | User or a recorded fault marked the reading invalid. | `readingId`, `invalidReason` |
@@ -264,18 +264,18 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `MAINTENANCE_HOLD_STABLE` | `INFO` | Stable with adequate evidence; supply matches demand. | `S_observed: 0`, `S_supported: 0` |
 | `MAINTENANCE_HOLD_UNCERTAINTY_LIMITED` | `GATING` | Non-zero lean, zero supported slope. | `S_observed`, `sigmaS`, `supportSubtraction` |
 | `MAINTENANCE_HOLD_OUT_OF_RANGE_STABLE` | `INFO` | Out of range but stable; the level alone never changes maintenance. | `position`, `A_now`, `targetRange` |
-| `MAINTENANCE_ACTUATOR_RESOLUTION` | `GATING` | Rounding returns the recommendation to the current dose. | `continuousCandidate`, `currentDose`, `increment` |
+| `MAINTENANCE_ROUNDS_TO_CURRENT_DOSE` | `GATING` | Rounding for legibility returns the recommendation to the dose already being delivered, so there is no change to recommend. **Renamed from `MAINTENANCE_ACTUATOR_RESOLUTION` by owner decision 23**: the substance is that the rounded number equals the current dose, which has nothing to do with hardware. | `continuousCandidate`, `currentDose`, `recommendationPrecisionMlPerDay` |
 | `MAINTENANCE_STEP_CAP_ORDINARY` | `INFO` | 25% cap bound the change. | `uncappedDelta`, `cappedDelta`, `currentDose` |
 | `MAINTENANCE_STEP_CAP_EXCEPTIONAL` | `SAFETY` | 50% cap unlocked by confirmed rapid movement plus outer-bound risk. | `uncappedDelta`, `cappedDelta`, `rapidBasis`, `outerBoundRisk`, `T_outerDays` |
 | `MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED` | `INFO` | Exceptional cap evaluated and refused. | `failedConditions[]` |
-| `MAINTENANCE_BASELINE_ESTABLISHMENT` | `INFO` | `D_current < 4·R_pump`; the percentage cap is inactive. Not a rescue mode. | `currentDose`, `increment`, `threshold` |
+| `MAINTENANCE_BASELINE_ESTABLISHMENT` | `INFO` | `D_current < 4·R_precision`; the percentage cap is smaller than one recommendation-precision step and is inactive. Not a rescue mode. | `currentDose`, `recommendationPrecisionMlPerDay`, `threshold` |
 | `MAINTENANCE_NON_NEGATIVE_CLAMP` | `INFO` | Candidate clamped to zero. | `uncappedCandidate` |
 | `MAINTENANCE_INTERVENTION_LOCK` | `GATING` | An ordinary intervention is not yet assessable and the post-change regime is not independently sufficient. | `interventionId`, `phase`, `postClusters` |
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RETURN` | `SAFETY` | A safety return owns the intervention lock; the estimate is shown but not implemented. | `maintenanceEstimate`, `safetyInterventionId` |
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RAIL` | `SAFETY` | Combined intentional movement would exceed 0.50 dKH/day. Emitted alongside the above. | `safetyMovementDkh`, `maintenanceEffectDkh`, `railDkh: 0.50` |
 | `MAINTENANCE_HOLD_TOWARD_RANGE` | `INFO` | Below range with a supported rise, or above range with a supported fall. Automatic maintenance does not oppose a supported trajectory already moving the level toward the preferred range. | `position`, `trajectory`, `S_observed`, `S_supported`, `maintenanceEstimate`, `forecastRangeEntryDays`, `ruleId: ALK-TOWARD-RANGE-HOLD-001` |
 | `MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE` | `SAFETY` | Negative or uninterpretable consumption cannot size a change; the accepted estimate is held. | `consumptionDkhPerDay`, `acceptedMaintenanceEstimate` |
-| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The executable command is withheld and is **never** capped to the guard value, nor emitted equal to it. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAt: CONTINUOUS \| POST_ROUNDING`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
+| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The recommendation is withheld and is **never** capped to the guard value, nor emitted equal to it. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAt: CONTINUOUS \| POST_ROUNDING`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
 
 ## BRACKET_ — owner: `MAINTENANCE`
 
@@ -298,7 +298,7 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `RETURN_CONFIRMATION_PENDING` | `INFO` | Settlement confirmation outstanding; the temporary dose is not still running. | `arrivalZone` |
 | `RETURN_ASSESSMENT_DUE` | `INFO` | Assessment point reached with no new test. Arrival must not be inferred. | `returnPlanId`, `dueAt` |
 | `RETURN_EXPIRED_OVERRUN` | `GATING` | No valid assessment by `2·T_plan + 2` days. | `returnPlanId`, `expiryAt`, `T_plan` |
-| `RETURN_STOP_PENDING_USER_ACTION` | `INFO` | Stopping is recommended; the app cannot assert the pump stopped. | `actualDoseState` |
+| `RETURN_STOP_PENDING_USER_ACTION` | `INFO` | Stopping the temporary component is **recommended**. The app never asserts that it stopped, because the app never controls the dosing equipment (`ALK-RECOMMEND-ONLY-001`). | `actualDoseState` |
 | `RETURN_TERMINATED_BY_SAFETY_RETURN` | `SAFETY` | An in-flight plan met an outer-bound breach and is terminated, not suspended. Opposing intentional components are never layered. | `returnPlanId`, `safetyInterventionId`, `terminatedAt`, `ruleId: ALK-RETURN-TERMINATED-BY-SAFETY-001` |
 | `RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY` | `INFO` | A terminated plan cannot resume automatically. A new plan needs fresh eligibility and a fresh opt-in. | `terminatedReturnPlanId`, `safetyInterventionId` |
 | `RETURN_INTENTIONAL_MOVEMENT_NOT_MAINTENANCE_MISMATCH` | `INFO` | The plan's intentional trajectory is not evidence that maintenance is wrong. | `returnPlanId`, `S_plan` |
@@ -312,22 +312,20 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `SAFETY_RECOVERING_INSIDE_BOUND` | `SAFETY` | Back inside the raw bound but not yet at the buffered destination. | `A_now`, `safetyDestinationDkh` |
 | `SAFETY_RETURN_ACTIVE` | `SAFETY` | Urgent temporary safety return in progress. | `interventionId`, `desiredMovementDkh`, `correctionVolumeMl?` |
 | `SAFETY_RETURN_COMPLETE` | `INFO` | Buffered destination reached; ordinary sequencing resumes. | `A_now`, `safetyDestinationDkh` |
-| `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | `INFO` | One-off safety volume emitted although the maintenance increment is missing. | `correctionVolumeMl`, `P` |
-| `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling`, with a `C_estimate` that is either negative on either side of the materiality boundary or not computable at all. The temporary safety rate is `max(0, D_current − R_down / P_selected)`. Not a maintenance estimate. **Renamed by owner decision 20** from `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE`, whose name and payload used the split quantity. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `currentDoseMlPerDay`, `P_selected`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
-| `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN` | `REFUSAL` | Above `outerMax` and below `AdvisoryCeiling` with `D_current` unknown or not configured. **No** temporary safety rate and **no** executable command are emitted, and `0 mL/day` is not emitted in their place. Doser configuration is requested through the existing anomaly/confirmation machinery. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `temporarySafetyRateAdvisoryMlPerDay: NOT_RUN`, `temporarySafetyPumpCommandMlPerDay: NOT_RUN`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-DELIVERY-RATE-BASIS-001` |
-| `SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling` with `C_estimate` not computable at all — insufficient history, a first-ever test, an unknown dose history. Branch B′: the rate is still sized from `D_current`, and the maintenance estimate is `UNRESOLVED`. The reason it could not be computed is surfaced by **co-emitting the existing code that already names it** — `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`, `DELIVERY_MIXED_INTEGRATION_NOT_RUN` or `EVIDENCE_INSUFFICIENT_CLUSTERS` — codes are additive (rule 6). **No new `notComputableReason` vocabulary is introduced**; inventing one would be a classification the owner did not decide. | `A_now`, `outerMax`, `currentDoseMlPerDay`, `rDownDkh`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` |
-| `SAFETY_ADVISORY_RANGE_EXCEEDED` | `SAFETY` | The resolved episode value is at or beyond `AdvisoryCeiling = OuterMax + 1.0 dKH`, or at or beyond `AdvisoryFloor = OuterMin − 1.0 dKH`. The engine emits **no** dose recommendation, **no** temporary safety rate, **no** executable command — and **not** zero. Delivery guidance is withheld, not set, unless an already-authoritative safety rule explicitly governs the state. The outer-bound classification and the shortened retest cadence are unchanged. | `A_now`, `boundary: ADVISORY_CEILING \| ADVISORY_FLOOR`, `boundaryValueDkh`, `outerMin`, `outerMax`, `advisoryOffsetDkh: 1.0`, `recommendedDoseMlPerDay: WITHHELD`, `temporarySafetyRateAdvisoryMlPerDay: NOT_RUN`, `temporarySafetyPumpCommandMlPerDay: NOT_RUN`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-ADVISORY-RANGE-BOUNDARY-001` |
+| `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling`, with a `C_estimate` that is either negative on either side of the materiality boundary or not computable at all. The temporary safety rate is `max(0, D_current − R_down / P_selected)`. Not a maintenance estimate. **Renamed by owner decision 20** from `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE`, whose name and payload used the split quantity. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `currentDoseMlPerDay`, `P_selected`, `temporarySafetyRateContinuousMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
+| `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN` | `REFUSAL` | Above `outerMax` with `D_current` unknown or not configured. **Evaluated as a precondition BEFORE branch selection, and applying identically to branches A, B and B'** (owner decision 25): no temporary safety recommendation is produced on any branch, and `0 mL/day` is not emitted in its place. Doser configuration is requested through the existing confirmation machinery. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `temporarySafetyRateContinuousMlPerDay: NOT_RUN`, `temporarySafetyRateRecommendationMlPerDay: NOT_RUN`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-DELIVERY-RATE-BASIS-001` |
+| `SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling` with `C_estimate` not computable at all — insufficient history, a first-ever test, an unknown dose history. Branch B′: the rate is still sized from `D_current`, and the maintenance estimate is `UNRESOLVED`. The reason it could not be computed is surfaced by **co-emitting the existing code that already names it** — `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`, `DELIVERY_MIXED_INTEGRATION_NOT_RUN` or `EVIDENCE_INSUFFICIENT_CLUSTERS` — codes are additive (rule 6). **No new `notComputableReason` vocabulary is introduced**; inventing one would be a classification the owner did not decide. | `A_now`, `outerMax`, `currentDoseMlPerDay`, `rDownDkh`, `temporarySafetyRateContinuousMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` |
+| `SAFETY_ADVISORY_CONFIDENCE_WARNING` | `SAFETY` | The resolved episode value is at or beyond `AdvisoryCeiling = OuterMax + 1.0 dKH`, or at or beyond `AdvisoryFloor = OuterMin − 1.0 dKH`. **The ordinary recommendation is still produced, by the ordinary rules.** This code carries an additional structured warning beside it: the measured value, that the reading is beyond the range the engine is confident in, that it should be confirmed with a second test, that the dosing setup should be checked for fault or overdose, and that correction at this level warrants experienced judgement about the specific system. It must **not** alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it **renders the scheduler's interval rather than stating one of its own** (owner decision 26). | `A_now`, `boundary: ADVISORY_CEILING \| ADVISORY_FLOOR`, `boundaryValueDkh`, `outerMin`, `outerMax`, `advisoryOffsetDkh: 1.0`, `retestIntervalFromScheduler`, `ruleId: ALK-ADVISORY-RANGE-BOUNDARY-001` |
 | `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` | `SAFETY` | The sized temporary safety rate reached the zero floor because the configured contribution could not absorb `R_down`. Zero is a floor, never a classification's choice, and never a stand-in for an unknown `D_current`. | `rDownDkh`, `rDownAsDoseMlPerDay`, `currentDoseMlPerDay`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
 | `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` **and below `AdvisoryCeiling`** with `C_estimate >= 0` **and physically interpretable** (branch A); the temporary safety **rate** is sized from consumption rather than from the configured-delivery contribution. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
 | `SAFETY_HIGH_BREACH_SLOWER_DECLINE` | `INFO` | Zero dosing cannot achieve the desired decline; the achievable rate is reported. | `desiredRate`, `achievableRate`, `C_estimate` |
 | `SAFETY_RATE_RAIL_APPLIED` | `SAFETY` | 0.50 dKH/day physical-effect rail bound the change. | `uncappedEffect`, `railDkhPerDay: 0.50`, `cappedDeltaDose` |
 | `SAFETY_COMPOSITE_RAIL_APPLIED` | `SAFETY` | Combined intentional movement clamped to the rail. | `components[]`, `combinedDkh` |
 | `SAFETY_LIQUID_GUARD_APPLIED` | `SAFETY` | The 2%/24 h liquid guard lengthened or staged the execution. | `requestedMl`, `guardMl`, `stagedDays` |
-| `SAFETY_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | An engine-generated 24 h delivery exceeds the guard and no staging is available; the executable command is withheld, never capped to the guard. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAfterRounding: true` |
+| `SAFETY_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | An engine-generated 24 h delivery exceeds the guard and no staging is available; the recommendation is withheld, never capped to the guard. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAfterRounding: true` |
 | `SAFETY_MG_GATE_OVERRIDDEN` | `SAFETY` | Mg is alert-low; the Alk safety return proceeds and the Mg condition is surfaced. | `magnesiumGateState` |
 | `SAFETY_MG_GATE_UNKNOWN` | `INFO` | `magnesiumGateState = UNKNOWN`; safety return proceeds, no low-Mg condition invented. | `magnesiumGateState: UNKNOWN` |
-| `SAFETY_INTERVENTION_LOCK_HELD` | `SAFETY` | The safety return owns the lock on new Alk actuator changes. | `lockOwner` |
-| `SAFETY_TEMP_RATE_ADVISORY_EMITTED` | `SAFETY` | The exact temporary high-breach safety rate is emitted as an **advisory** rate while the actuator increment is unavailable. The executable rounded pump command is separately `NOT_RUN`. | `temporarySafetyRateAdvisoryMlPerDay`, `S_safety`, `safetyDestinationDkh`, `pumpCommandState: NOT_RUN`, `ruleId: ALK-SAFETY-TEMP-RATE-RESOLUTION-001` |
+| `SAFETY_INTERVENTION_LOCK_HELD` | `SAFETY` | The safety return owns the lock on new Alk dose-change **recommendations**. The engine declines to recommend a second simultaneous change; it does not stop anything, because it drives nothing. | `lockOwner` |
 
 ## RETEST_ — owner: `RETEST`
 
@@ -355,7 +353,6 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
-| `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` | `REFUSAL` | `M-1`: no final maintenance mL/day without the increment. Slopes and the continuous candidate are still emitted. No 0.1 default. | `continuousActionCandidate` |
 | `CAPABILITY_SOLUTION_CONTEXT_MISSING` | `GATING` | `M-2`. | — |
 | `CAPABILITY_DELIVERY_CONTEXT_MISSING` | `GATING` | `M-3`. | — |
 | `CAPABILITY_REPLACEMENT_WATER_ALK_MISSING` | `INFO` | `M-4`: degrade to the deterministic unknown-WC branch. | `waterChangeId` |
@@ -496,6 +493,22 @@ of `establishedDoseMlPerDay` in the payload.
 > retired table. No fixture emitted one of those codes — all four occurrences sit in
 > `forbidden.reasonCodes`, which is the correct place for them — but the gate could not have
 > told anyone that.
+
+### Retired by owner decisions 23–26
+
+| Retired code | Replaced by | Decision |
+|---|---|---|
+| `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` | **nothing** — the state it refused for cannot arise. The application never commands a pump, so there is no actuator increment to be missing (`ALK-RECOMMEND-ONLY-001`). Where a *configured display precision* is invalid, `VALIDATION_RECOMMENDATION_PRECISION_INVALID` applies; where none is configured, the full-precision recommendation is stated and nothing is withheld | 23 |
+| `SAFETY_TEMP_RATE_ADVISORY_EMITTED` | **nothing** — it announced that the exact rate was emitted while the executable command was `NOT_RUN`. There is one recommended rate, always emitted when it is calculable | 23 |
+| `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | **nothing** — it announced that a one-off correction volume survived a missing maintenance increment. There is no increment | 23 |
+| `SAFETY_ADVISORY_RANGE_EXCEEDED` | `SAFETY_ADVISORY_CONFIDENCE_WARNING` — owner decision 24 turns the boundary from a refusal into a warning attached to an ordinary recommendation, so the old code's meaning (nothing is emitted) is gone | 24 |
+
+**Renamed, not retired** — the substance is independent of any actuator:
+
+| Old name | New name | Why the substance survives |
+|---|---|---|
+| `VALIDATION_ACTUATOR_INCREMENT_INVALID` | `VALIDATION_RECOMMENDATION_PRECISION_INVALID` | a configured precision ≤ 0 is still invalid |
+| `MAINTENANCE_ACTUATOR_RESOLUTION` | `MAINTENANCE_ROUNDS_TO_CURRENT_DOSE` | the rounded recommendation equalling the current dose is a fact about the number, not the hardware |
 
 `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` remains retired. Its Freeze-5 replacement
 was `CLUSTER_SAME_TIMESTAMP_COALESCED`; that replacement is now

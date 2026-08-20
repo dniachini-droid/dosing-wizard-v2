@@ -219,7 +219,7 @@ Examples:
 - mistyped or dimensionally invalid concentration;
 - incompatible units;
 - impossible/non-physical mass balance;
-- missing actuator resolution required for a final dose;
+- missing rounding to the current dose required for a final dose;
 - corrupted or ambiguous dose-change time;
 - missing provenance needed for empirical calibration;
 - contradictory evidence that makes the recommendation unsupported.
@@ -533,7 +533,7 @@ reason = HISTORICAL_CONFIGURATION_UNAVAILABLE
 
 - config-independent historical facts/analyses may still be shown or computed when their own requirements are satisfied.
 
-Do not manufacture historical target ranges, net volume, potency, actuator resolution or other configuration merely to make replay complete.
+Do not manufacture historical target ranges, net volume, potency, rounding to the current dose or other configuration merely to make replay complete.
 
 ## 2.3 Derived estimates
 
@@ -4928,6 +4928,68 @@ It does **not** automatically target the midpoint of the user's range.
 
 This is `CORE-STABILISE-001`.
 
+### The application recommends. It does not act.
+
+`ALK-RECOMMEND-ONLY-001`
+
+**Owner decision 23. Foundational, and it supersedes any canon wording that assumes
+otherwise.**
+
+The application **never controls, drives, commands or actuates a dosing pump**. It has no
+connection to any doser. It produces a **recommended dosing rate for a human being**, who
+decides whether to act on it and, if so, changes their own equipment themselves. **There is
+no execution path from the engine to the tank.**
+
+Everything below follows from that one fact.
+
+**1. One output, not two.** The distinction between an "exact advisory rate" and an
+"recommended rate" is **retired**. Where this canon previously emitted two
+figures it emits **one recommended rate**, rounded for human legibility, with the
+full-precision value retained as an auditable intermediate exactly as ordinary maintenance
+already does (`continuousActionCandidateMlPerDay` beside `recommendedDoseMlPerDay`).
+
+**2. Actuator capability is not a concept in this system.** Every rule, predicate, reason
+code, status and fixture whose only purpose was to withhold or round an output because
+recommendation precision was unknown or unavailable is **retired**. There is no
+`recommendationPrecisionMlPerDay`, no `R_{pump}`, no increment to be missing.
+
+**3. No actuator-capability status.** `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` is retired.
+The remaining `CAPABILITY_` states — missing potency, missing solution or delivery context,
+imprecise measurement time, unavailable historical configuration and the rest — have
+substance independent of any actuator and are unaffected.
+
+**4. Withholding a recommendation has no physical effect.** Any rule, invariant or recorded
+exposure that reasoned about *delivery continuing*, *delivery rising*, *a pump running on*
+or *an in-flight rate persisting* when an output is withheld was reasoning about a mechanism
+that does not exist. Withholding a recommendation means the keeper is told the engine cannot
+advise, and the keeper's dosing continues to be whatever the keeper set it to — which the
+engine neither changes nor fails to change. Such reasoning is corrected throughout to be
+about **advice only**.
+
+**5. Rounding survives, for legibility only.** `ALK-ROUNDING-001` continues to round a
+recommended number, because a human reads it. It does **not** exist to match a hardware
+increment. Its increment is renamed `recommendationPrecisionMlPerDay`: a **display
+convention**, not a device capability. It is never "unavailable" in the sense that withholds
+an output — where no precision is configured the engine states the full-precision
+recommendation.
+
+**6. Vocabulary.** The phrases "actuator command", "executable command" and "pump command"
+are **not live vocabulary** in this canon. The output is a **recommendation** or a **recommended
+rate**.
+
+**What this rule does not change.** Every chemistry conclusion, threshold, rail, guard,
+uncertainty treatment, evidence rule and retest rule is untouched. Decision 23 changes what
+the engine is understood to be *doing with* its numbers, not what the numbers are.
+
+**Retired by this decision** — each preserved as marked history in place rather than
+deleted:
+
+| Retired | Why |
+|---|---|
+| `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | its entire premise was the split between an exact advisory rate and an executable rounded command under an unavailable device increment |
+| `ALK-SAFETY-CORRECTION-RESOLUTION-001` | an `M-1` exemption for a one-off volume when the maintenance increment is missing; there is no increment to be missing |
+| `M-1`'s recommendation-precision limb | the remainder of `ALK-CAPABILITY-CONTRACT-001` is unaffected |
+
 ---
 
 ## ALK-002 — Units
@@ -5178,31 +5240,15 @@ Permanent maintenance remains a separate inference.
 
 ### One-off safety-correction resolution
 
-`ALK-SAFETY-CORRECTION-RESOLUTION-001`
+`ALK-SAFETY-CORRECTION-RESOLUTION-001` — **RETIRED by owner decision 23**
 
-The M-1 field:
+**This rule no longer governs anything.** It was an `M-1` exemption: it let a one-off
+`SAFETY_RETURN` correction volume be emitted even though the maintenance **device
+increment** was missing. `ALK-RECOMMEND-ONLY-001` retires recommendation precision as a concept,
+so there is no increment to be missing and nothing to exempt the correction from.
 
-```text
-actuatorIncrementMlPerDay
-```
-
-and its:
-
-```text
-REFUSE / ACTUATOR_INCREMENT_REQUIRED
-```
-
-behaviour apply to **final actionable maintenance-rate recommendations in mL/day**.
-
-They do **not** block a one-off `SAFETY_RETURN` correction volume.
-
-Therefore, if:
-- the Alk level is in a valid low outer-bound safety breach;
-- the required dKH safety movement is calculable;
-- `P_selected` is valid;
-- but `actuatorIncrementMlPerDay` is missing;
-
-the engine still calculates:
+**What survives, and where it now lives.** The one-off low-breach correction volume itself
+is calculated by `ALK-OUTER-BOUND-ACTION-001`, which is unchanged:
 
 \[
 V_{safety}
@@ -5210,70 +5256,67 @@ V_{safety}
 \frac{\Delta A_{safety}}{P_{selected}}
 \]
 
-and emits the one-off safety-correction volume.
+The **potency requirement remains load-bearing** and is not retired: if `P_selected` is
+unavailable or invalid, the engine may state the required dKH movement but must withhold the
+mL correction under `CORE-INFORM-PROCEED-001`.
 
-Required:
-
-```text
-safetyCorrectionStatus = ACTIONABLE
-maintenanceRateRoundingCapability = MAY_REMAIN_MISSING
-```
-
-The app must not withhold the urgent safety correction merely to collect a maintenance-rate increment field.
-
-If a separate one-off delivery/pour increment is known, it may be shown as implementation context. If it is unknown:
-- do not invent one;
-- do not apply M-1's maintenance-rate refusal;
-- retain the full-precision calculated `V_safety` internally;
-- preserve recommendation-versus-implementation truth.
-
-The **potency requirement remains load-bearing**. If `P_selected` is unavailable or invalid, the engine may state the required dKH movement but must withhold the mL correction under `CORE-INFORM-PROCEED-001`.
-
-This exemption is narrow:
-- it applies to one-off Alk `SAFETY_RETURN` correction volume;
-- it applies to the temporary high-breach safety **rate** under
-  `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` below;
-- it does not exempt ordinary maintenance mL/day recommendations from M-1.
+> **Superseded wording, preserved rather than deleted.** This rule previously read: the M-1
+> field `actuatorIncrementMlPerDay` and its `REFUSE / ACTUATOR_INCREMENT_REQUIRED`
+> behaviour apply to final actionable maintenance-rate recommendations in mL/day and do
+> **not** block a one-off `SAFETY_RETURN` correction volume; where the increment was
+> missing the engine still emitted the volume with
+> `safetyCorrectionStatus = ACTIONABLE` and
+> `maintenanceRateRoundingPrecision = MAY_REMAIN_MISSING`, and "the app must not withhold
+> the urgent safety correction merely to collect a maintenance-rate increment field". The
+> exemption was declared narrow: the one-off correction volume, and the temporary
+> high-breach safety rate under `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`, but not ordinary
+> maintenance mL/day recommendations.
 
 #### Temporary high-breach safety rate
 
-`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`
+`ALK-SAFETY-TEMP-RATE-RESOLUTION-001` — **RETIRED by owner decision 23**
 
-The high-breach paths below produce \(D_{safety,temp}\), a temporary safety **rate** in
-mL/day — from consumption where \(C_{estimate}\) is usable, and from the configured-delivery
-contribution where it is not (`ALK-HIGH-BREACH-SAFETY-SIZING-001`, owner decision 16).
-Both forms are the same output and take this rule's advisory/executable separation
-unchanged. It is neither a one-off correction volume nor an ordinary maintenance-rate
-recommendation, so neither the exemption above nor `M-1`'s prohibition previously named
-it.
+**This rule no longer governs anything.** Its entire premise was the separation of an exact
+advisory rate from an recommended rate while an recommendation precision was
+unavailable. `ALK-RECOMMEND-ONLY-001` establishes that the application never commands a
+pump, so there is no recommendation to separate and no increment to be missing.
 
-The exemption is extended to cover it. When `actuatorIncrementMlPerDay` is unavailable, the
-**exact calculated temporary safety rate may be emitted as an advisory rate**.
-
-Two outputs are kept **distinct and separately labelled**, and must never be merged:
+**What survives, and where it now lives.** The high-breach paths produce
+\(D_{safety,temp}\), a temporary safety **rate** in mL/day — from consumption where
+\(C_{estimate}\) is usable (`ALK-003A` branch A), and from \(D_{current}\) where it is
+not (`ALK-HIGH-BREACH-SAFETY-SIZING-001` branch B, owner decision 16;
+`ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` branch B′, owner decision 22). That rate is
+now a **single recommended figure**:
 
 ```text
-temporarySafetyRateAdvisoryMlPerDay = D_safety,temp        # exact, full precision
-temporarySafetyPumpCommandMlPerDay  = NOT_RUN              # while the increment is absent
-reason                              = CAPABILITY_ACTUATOR_INCREMENT_REQUIRED
+temporarySafetyRateContinuousMlPerDay      = D_safety,temp     # auditable intermediate
+temporarySafetyRateRecommendationMlPerDay  = ALK-ROUNDING-001 of the above   # THE output
 ```
 
-- the **advisory rate** is the calculated safety target. It is stated at full precision,
-  described as a target rather than a pump setting, and carries `S_safety` and the safety
-  destination so the keeper can act on it;
-- the **executable rounded pump command** is `NOT_RUN` while the actuator increment is
-  unavailable. No increment is invented, and no default of 0.1 mL/day exists (`M-1`).
+Two requirements this rule carried are **not** retired and are restated here because they
+have nothing to do with device capability:
 
-Once the increment becomes available, the executable command is produced by
-`ALK-ROUNDING-001` from the same advisory rate.
+- the **potency requirement remains load-bearing**: if `P_selected` is unavailable or
+  invalid, \(D_{safety,temp}\) is not calculable and the engine states the required dKH
+  movement and direction only, under `CORE-INFORM-PROCEED-001`;
+- all hard rails and guards remain applicable — the 0.50 dKH/day rail (`ALK-046`),
+  `ALK-COMPOSITE-RAIL-001`, `ALK-LIQUID-VOLUME-GUARD-001` and the non-negative clamp
+  already inside \(D_{safety,temp}\).
 
-The **potency requirement remains load-bearing**: if `P_selected` is unavailable or
-invalid, \(D_{safety,temp}\) is not calculable and the engine states the required dKH
-movement and direction only, under `CORE-INFORM-PROCEED-001`.
-
-All other hard rails and guards remain applicable to both outputs — the 0.50 dKH/day rail
-(`ALK-046`), `ALK-COMPOSITE-RAIL-001`, `ALK-LIQUID-VOLUME-GUARD-001` and the non-negative
-clamp already inside \(D_{safety,temp}\).
+> **Superseded wording, preserved rather than deleted.** This rule previously read:
+>
+> > The exemption is extended to cover it. When `recommendationPrecisionMlPerDay` is unavailable,
+> > the **exact calculated temporary safety rate may be emitted as an advisory rate**. Two
+> > outputs are kept **distinct and separately labelled**, and must never be merged:
+> > `temporarySafetyRateContinuousMlPerDay = D_safety,temp` (exact, full precision);
+> > `temporarySafetyRateRecommendationMlPerDay = NOT_RUN` (while the increment is absent);
+> > `reason = CAPABILITY_ACTUATOR_INCREMENT_REQUIRED`. Once the increment becomes
+> > available, the recommendation is produced by `ALK-ROUNDING-001` from the same
+> > advisory rate.
+>
+> `OI-SAFETYRATE-001`, which Freeze 5 closed as F5-11 by writing this rule, is
+> **reclassified INAPPLICABLE** by decision 23: the question it asked — whether a safety
+> rate may be emitted when the recommendation precision is unknown — cannot arise.
 
 
 #### High breach — interpretable consumption
@@ -5380,10 +5423,12 @@ and does not mark it as actually implemented until implementation is confirmed.
 
 `ALK-ADVISORY-RANGE-BOUNDARY-001`
 
-**Owner decision 21.** Beyond a bounded distance outside the configured operating envelope,
-the engine stops advising and escalates. The boundary is defined as an **offset from the
-already-configured bounds**, so no free-standing numeric level is introduced — only the
-offset itself:
+**Owner decision 24. This rule is now a WARNING, not a refusal.** It supersedes owner
+decision 21's withholding behaviour entirely; that wording is preserved as marked history at
+the end of this rule.
+
+The boundary itself is unchanged, and is still an **offset from the already-configured
+bounds**, so no free-standing numeric level is introduced — only the offset:
 
 \[
 \boxed{
@@ -5397,149 +5442,102 @@ For the owner's configured bounds (`OuterMin` 7.0, `OuterMax` 11.0) this places 
 at **12.0 dKH** and the floor at **6.0 dKH**. The boundary moves with the configuration; it
 is not a second set of pinned levels.
 
-**Trigger.** Escalation applies when the resolved episode value is
+**Trigger.** The warning attaches when the resolved episode value is
 
 - at or beyond \(AdvisoryCeiling\) — that is, \(A_{now}\ge AdvisoryCeiling\); or
 - at or beyond \(AdvisoryFloor\) on the low side — that is, \(A_{now}\le AdvisoryFloor\).
 
-Both comparisons are **inclusive at the boundary**: exactly 12.0 dKH escalates, and exactly
-6.0 dKH escalates. `ALK-DECIMAL-THRESHOLD-001`'s exact decimal comparison governs the test,
-so no epsilon exists or may be introduced.
+Both comparisons are **inclusive at the boundary**: exactly 12.0 dKH warns, and exactly
+6.0 dKH warns. `ALK-DECIMAL-THRESHOLD-001`'s exact decimal comparison governs the test, so
+no epsilon exists or may be introduced.
 
-**Where it is evaluated.** On the **resolved episode value**, after episode resolution
-(`ALK-EPISODE-RESOLUTION-001`) and **before** high-breach safety sizing
-(`ALK-HIGH-BREACH-SAFETY-SIZING-001`) and **before** the low-breach action of
-`ALK-OUTER-BOUND-ACTION-001`.
-
-**Contested episodes.** A contested episode does not bypass the check. Where no value
-resolves, this rule evaluates a **universal predicate over the episode's members** — if
-**every** member is at or beyond the boundary, escalation applies. The disagreement is about
-which extreme value is right, not about whether the state is beyond what the engine will
-advise on. Where the members **straddle** the boundary, the episode is contested, no value is
-resolved, escalation is `NOT_RUN`, and `ALK-EPISODE-RESOLUTION-001`'s `REPEAT_NOW` behaviour
-governs unchanged.
-
-This is a **named exception** to `ALK-EPISODE-SINGLE-OUTPUT-001`, which otherwise forbids a
-dosing or safety consumer reading raw episode members. It is admissible only because the
-predicate is **universal over all members and selects no value**: it never chooses among
-measurements, never produces a level, and never promotes a member to `position`. Nothing
-else about that rule is relaxed — `position`, `outerBoundState` and `rapidConfirmed` stay
-`NOT_RUN` on a contested episode, escalated or not. `ALK-EPISODE-SINGLE-OUTPUT-001` records
-this exception in its own consumer table.
-
-> **RECORDED EXPOSURE — `OI-ADVISORYMEMBERS-001`, OPEN. Not decided here.** "Every member"
-> is not defined against member **validity state**. `ALK-EPISODE-RESOLUTION-001` excludes
-> `INVALID` measurements and is silent on `SUSPECT`. An episode of 12.3 (`KIT_A`), 12.6
-> (`KIT_B`) and a `SUSPECT` 11.4 (`KIT_C`) therefore either escalates (SUSPECT excluded like
-> INVALID) or does not (SUSPECT counted as a member), and the two give different safety
-> outputs at 12.3–12.6 dKH. Owner decision 21 does not say. Until it is decided, an
-> implementer must **not** choose: emit the contested behaviour and `REPEAT_NOW`, and
-> surface that the boundary test could not be evaluated.
-
-**What is emitted.** When the trigger holds:
+**What happens at and beyond the boundary.**
 
 ```text
-recommendedDoseMlPerDay             = WITHHELD
-temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
-temporarySafetyPumpCommandMlPerDay  = NOT_RUN
-maintenanceEstimateStatus           = UNRESOLVED
-reason = SAFETY_ADVISORY_RANGE_EXCEEDED
+the ordinary recommendation is produced by the ORDINARY RULES, unchanged
+    + advisoryConfidenceWarning = ATTACHED
+    + reason = SAFETY_ADVISORY_CONFIDENCE_WARNING
 ```
 
-`recommendedDoseMlPerDay` takes `WITHHELD`, not `NOT_RUN`: the data contract already defines
-`WITHHELD` as that field's first-class value where no feasible command exists, and this rule
-does not get to introduce a second token for the same state.
+The engine **continues to advise**. It does **not** withhold, does **not** emit zero, and
+does **not** escalate in place of advising. Whatever the ordinary rules would have
+recommended one increment below the boundary, they recommend at it and above it, by the same
+arithmetic.
 
-**No dose recommendation, no temporary safety rate, no executable command — and not zero.**
-Delivery guidance is **withheld**, not set. Zero is a delivery instruction; withholding is
-the absence of one, and the two must not be conflated.
-
-The single exception is an **already-authoritative safety rule that explicitly governs the
-state**. Where such a rule applies on its own terms — the low-breach one-off safety
-correction volume \(V_{safety}=\Delta A_{safety}/P_{selected}\) of
-`ALK-OUTER-BOUND-ACTION-001`, resolved for the actuator by
-`ALK-SAFETY-CORRECTION-RESOLUTION-001`; the composite rail; the liquid-volume guard; the
-magnesium surfacing of `ALK-SAFETY-MG-OVERRIDE-001` — it continues to govern and this rule
-does not withhold its output. This rule withholds the **engine's own sized delivery
-guidance in mL/day**, nothing else.
-
-> **RECORDED EXPOSURE — `OI-ADVISORYEXCEPTION-001`, OPEN. Not decided here.**
->
-> Two questions this rule does **not** answer, both of which can change an actuator command,
-> and neither of which owner decision 21 settles:
->
-> 1. **Is the list above closed or illustrative?** It is written as an enumeration, and the
->    stated principle — "the engine's own sized delivery guidance" — does not by itself
->    separate the listed rules from the withheld one. The low-breach correction volume is
->    also sized by the engine, from the same rail-bounded desired movement and the same
->    \(P_{selected}\).
-> 2. **Does the high-side `SAFETY_RETURN`'s temporary rate continue at or beyond
->    `AdvisoryCeiling`?** `ALK-SAFETY-RETURN-INTEGRATION-001` is an already-authoritative
->    safety rule and `ALK-003A` triggers a safety return on **either** bound; on the high
->    side that return's only delivery instrument is \(D_{safety,temp}\), which this rule
->    withholds. Read one way the return's output continues (1.78 mL/day on `AD-ESC-001`'s
->    inputs); read the other it does not (`NOT_RUN`).
->
-> Until the owner decides, this rule is encoded as written: the enumeration above is
-> operative as written, and `AD-ESC-001` / `AD-ESC-002` pin exactly that. **An implementer
-> must not widen the enumeration**, and must not infer from it that any other safety rule
-> continues.
->
-> **Consequence the owner should see, stated as a number rather than a word.** On
-> `AD-ESC-001`'s configured inputs (`P = 0.0693`, `A_safe,high = 10.80`,
-> \(D_{current}\) = 9.0 mL/day, increment 0.1): at 11.9 dKH the engine commands
-> **1.8 mL/day**; at 12.0 dKH it commands nothing, so the pump continues at its configured
-> **9.0 mL/day**. `outerBoundState` remains `BREACHED_HIGH` at both. Withholding is not
-> neutral at an actuator — the previously configured rate keeps running — and neither the
-> composite rail nor the liquid-volume guard constrains it, because the engine generates no
-> delivery for them to bind on. This is the decided behaviour of "withhold rather than
-> set"; it is recorded here so it is visible rather than discovered.
-
-**The escalation output states, in Part IX wording — all five, none optional:**
+**The warning is an additional structured output beside the recommendation.** It states
+**all five of the following, none optional**:
 
 - the measured value;
-- that it is outside the range the engine will advise on;
-- that the reading should be **confirmed by a second test**;
-- that the **doser should be checked** for fault or overdose;
-- that correction at this level requires **experienced judgement about the specific
-  system**, which the engine does not have.
+- that the reading is **beyond the range the engine is confident in**;
+- that the reading should be **confirmed with a second test**;
+- that the **dosing setup should be checked** for fault or overdose;
+- that correction at this level **warrants experienced judgement about the specific
+  system**.
 
-> **RECORDED EXPOSURE — `OI-ADVISORYRETEST-001`, OPEN. Not decided here.** "Confirmed by a
-> second test" is **wording**, not a schedule. `ALK-RETEST-SCHEDULER-001` is the single
-> authority on Alk retest timing and enumerates the rules that may submit a candidate to it;
-> this rule is **not** among them and adds no candidate. So on an escalated resolved episode
-> the card says "confirm this reading" while the scheduler's own answer is the ~24 h
-> high-breach cadence it already owned. Whether escalation should instead submit a
-> `REPEAT_NOW` candidate — as `ALK-EPISODE-RESOLUTION-001` does for a contested episode — is
-> an owner decision that changes a retest output, and owner decision 21 says only "preserve
-> shortened/reprioritised retesting". Until it is decided, **no new candidate is created**:
-> the scheduler's existing answer stands and this rule may not compute a next-test time
-> (`X-INV-004`, Part II §50).
+**The warning must not alter anything it accompanies.** It may not change:
 
-**Preserved unchanged, and required:** the outer-bound classification
-(`outerBoundState = BREACHED_HIGH` / `BREACHED_LOW`) — escalation does not reclassify it;
-shortened and reprioritised retesting (`ALK-RETEST-SCHEDULER-001`, the ~24 h high-breach
-cadence, `REPEAT_NOW` where a repeat rule already requires one) — escalation does **not**
-suppress it; every raw measurement and audit record.
+```text
+the recommended rate            the trajectory
+the consumption estimate        the retest schedule
+```
 
-**In-flight interventions.** Escalation does not change what an in-flight intervention does.
-`ALK-RETURN-TERMINATED-BY-SAFETY-001` still terminates an active return plan on an
-outer-bound breach, and `ALK-SAFETY-RETURN-INTEGRATION-001`'s lock still applies.
+nor the outer-bound classification, the evidence state, or any rail or guard. It is
+information attached to an answer, not a modifier of it.
 
-> **RECORDED EXPOSURE — `OI-ADVISORYRETURN-001`, OPEN. Not decided here.** Terminating an
-> in-flight **downward** return plan stops a temporary *reduction*, which returns delivery to
-> the configured rate — an **increase**. Below `AdvisoryCeiling` that is safe because
-> \(D_{safety,temp}\) replaces the terminated component. At or beyond the ceiling this rule
-> withholds that replacement, so the only delivery-affecting instruction the engine issues is
-> *stop reducing*. Owner decision 21 does not address an intervention in flight across the
-> boundary, and `ALK-RETURN-TERMINATED-BY-SAFETY-001` is not amended by it. An implementer
-> must not invent a hold-the-reduction rule to compensate; the state is named, not filled.
+**No discontinuity at the boundary.** The recommendation immediately below the boundary and
+the recommendation at or immediately above it are produced by the **same rules** and differ
+only by the presence of the warning. This is the property that decision 24 exists to
+establish, and it is asserted as an invariant rather than left to inspection.
 
-**Scope, stated so it is not over-read.** This rule **narrows but does not resolve** the
-open finding that safety sizing is flat above the rail: between \(OuterMax\) and
-\(AdvisoryCeiling\), \(R_{down}\) still saturates at 0.50 dKH/day and the sized rate stops
-responding to \(A_{now}\). That region remains open and is **not** closed here. No branch
-boundary elsewhere is moved to reduce it.
+**Retest — one answer, not two.** `ALK-RETEST-SCHEDULER-001` is the single authority on Alk
+retest timing (`X-INV-004`, Part II §50). Under **owner decision 26** the warning **renders
+whatever interval the scheduler produced** and **must not state an interval of its own**.
+"Confirm with a second test" is a statement about confidence in the reading, not a schedule.
+The warning adds no candidate to the scheduler and computes no next-test time; where the
+scheduler's answer is the ~24 h high-breach cadence, the warning says ~24 h, and where a
+repeat rule already produced `REPEAT_NOW`, the warning says now.
+
+**Contested episodes.** The warning attaches to the resolved episode value like any other
+consumer of it. Where the episode is **contested** and no value resolves, there is no value
+to warn about and no recommendation to attach a warning to; `ALK-EPISODE-RESOLUTION-001`'s
+contested handling governs unchanged — `position`, `outerBoundState` and `rapidConfirmed`
+`NOT_RUN`, and `REPEAT_NOW`. **The member-wise predicate of decision 21 is retired with the
+withholding it served**: because advice is no longer withheld at the boundary, a contested
+episode's member statuses no longer determine whether advice is withheld, and
+`ALK-EPISODE-SINGLE-OUTPUT-001` needs no exception.
+
+**Scope, stated so it is not over-read.** Decision 21 narrowed the open finding that safety
+sizing is flat above the rail by bounding the region the sizing rule governed. **Decision 24
+removes that bound**: the ordinary rules now run at every level, so `R_{down}` saturates at
+the 0.50 dKH/day rail and the sized rate stops responding to \(A_{now}\) from
+\(A_{safe,high}+0.50\) **upward without limit**, exactly as it did before decision 21.
+`OI-SIZINGFLAT-001` is therefore **not narrowed any more, and is emphatically not closed**.
+Its reach is wider under decision 24 than under decision 21, and this rule **narrows but does
+not resolve** nothing at all — it removes the narrowing that decision 21 provided. Nothing here compensates for
+it, and no branch boundary is moved.
+
+> **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision
+> 21 this rule read, in place of everything above from "What happens at and beyond the
+> boundary" onward:
+>
+> > When the trigger holds: `recommendedDoseMlPerDay = WITHHELD`,
+> > `temporarySafetyRateContinuousMlPerDay = NOT_RUN`,
+> > `temporarySafetyRateRecommendationMlPerDay = NOT_RUN`,
+> > `maintenanceEstimateStatus = UNRESOLVED`, `reason = SAFETY_ADVISORY_CONFIDENCE_WARNING`.
+> > **No dose recommendation, no temporary safety rate, no recommendation — and not
+> > zero.** Delivery guidance is **withheld**, not set. The single exception is an
+> > **already-authoritative safety rule that explicitly governs the state**. An escalation
+> > output states the measured value, that it is outside the range the engine will advise
+> > on, and the three further elements above. A contested episode did not bypass the check:
+> > if **every** member was at or beyond the boundary, escalation applied.
+>
+> Three recorded exposures existed only because advice was withheld, and are resolved by
+> decision 24 rather than answered: `OI-ADVISORYEXCEPTION-001` (there is no exception list,
+> because there is no withholding to except anything from), `OI-ADVISORYRETURN-001` (an
+> in-flight return plan terminated at the boundary is now replaced by the ordinary sized
+> recommendation, as it is anywhere else), and `OI-ADVISORYMEMBERS-001` (a contested
+> episode's member statuses no longer determine whether advice is withheld).
+> `OI-ADVISORYRETEST-001` is resolved by owner decision 26 above.
 
 #### High breach — safety-dose sizing when consumption is unusable
 
@@ -5605,15 +5603,16 @@ is being **delivered now**, not what was delivered on average across a past inte
 \(D_{current}\). Where the doser has been on one constant rate for the whole interval the
 two are numerically equal; that coincidence is not a licence to interchange them.
 
-**\(D_{current}\) unknown — refuse, never assume zero.** This clause is the consequence, for
-**this rule's formula**, of `ALK-DELIVERY-RATE-BASIS-001`'s unknown handling, which is the
-single normative statement of it. If \(D_{current}\) is unknown or not configured, this rule
-cannot evaluate \(\max(0, D_{current} - R_{down}/P_{selected})\), and **no temporary safety
-rate is emitted at all**:
+**\(D_{current}\) unknown — refuse, never assume zero.** **Amended by owner decision 25:**
+this is no longer a clause of this rule at all. It is a **precondition evaluated before
+branch selection**, in `ALK-DELIVERY-RATE-BASIS-001`, and it applies identically to branches
+A, B and B'. It is restated here for the reader of this rule and is not a second owner of the
+inference. If \(D_{current}\) is unknown or not configured, **no temporary safety
+recommendation is produced on any branch**:
 
 ```text
-temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
-temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+temporarySafetyRateContinuousMlPerDay = NOT_RUN
+temporarySafetyRateRecommendationMlPerDay  = NOT_RUN
 maintenanceEstimateStatus           = UNRESOLVED
 reason = SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
 ```
@@ -5655,8 +5654,8 @@ rate is 0 and varies with nothing, which is the floor's purpose and not a violat
 
 - the safety response **varies with \(A_{now}\)** through \(R_{down}\), monotonically,
   until the 0.50 dKH/day rail binds and \(R_{down}\) saturates;
-- the safety response varies **continuously with \(D_{current}\)**: one actuator
-  increment more configured dose gives exactly one increment more safety rate. The
+- the safety response varies **continuously with \(D_{current}\)**: one recommendation
+  precision step more configured dose gives exactly one step more safety rate. The
   1.5 mL/day → pause versus 1.6 mL/day → hold discontinuity that
   `ALK-HIGH-BREACH-NO-PAUSE-001` previously produced is removed and must not reappear;
 - the materiality classification may change the recorded classification, the wording and
@@ -5677,11 +5676,12 @@ zero. `AD-CON-002` is such a case and is not a counter-example to the bullets ab
 - potency validity — if \(P_{selected}\) is unavailable or invalid, \(D_{safety,temp}\) is
   not calculable, and the engine states the required dKH movement and direction only under
   `CORE-INFORM-PROCEED-001`;
-- actuator-increment handling and the advisory-versus-executable separation of
-  `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`;
+- recommendation rounding for legibility (`ALK-ROUNDING-001`). The
+  advisory-versus-executable separation that `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` used to
+  impose here is **retired by owner decision 23**: there is one recommended rate;
 - the composite 0.50 dKH/day rail (`ALK-046`, `ALK-COMPOSITE-RAIL-001`);
 - the liquid-volume guard (`ALK-LIQUID-VOLUME-GUARD-001`);
-- actuator rounding (`ALK-ROUNDING-001`), including its step-6 hard-constraint recheck;
+- recommendation rounding (`ALK-ROUNDING-001`), including its step-6 hard-constraint recheck;
 - `SAFETY_RETURN` integration, the intervention lock and
   `ALK-RETURN-TERMINATED-BY-SAFETY-001`;
 - the magnesium-gate surfacing of `ALK-SAFETY-MG-OVERRIDE-001`;
@@ -5838,7 +5838,7 @@ maintenanceActionStatus = DEFERRED_BY_SAFETY_RETURN
 
 Reason:
 
-> the immediate safety intervention must not be mixed with a second new Alk actuator change whose causal effect would then be inseparable.
+> the immediate safety intervention must not be mixed with a second new Alk dose-change recommendation whose causal effect would then be inseparable.
 
 This does not erase the maintenance inference. It defers its implementation until the safety intervention has ended and a new eligible maintenance assessment exists.
 
@@ -5891,7 +5891,7 @@ Reason:
 
 #### 5. Intervention lock
 
-`SAFETY_RETURN` owns the Alk intervention lock for **new Alk actuator changes** while active.
+`SAFETY_RETURN` owns the Alk intervention lock for **new Alk dose-change recommendations** while active.
 
 That means:
 - no new maintenance-dose change is implemented;
@@ -5963,7 +5963,7 @@ The Alk safety return remains subject to:
 - Alk potency validity;
 - the composite 0.50 dKH/day Alk rail;
 - liquid-volume guard;
-- actuator/pour resolution;
+- rounding for legibility;
 - actual implementation logging;
 - all non-magnesium safety constraints.
 
@@ -6041,7 +6041,7 @@ Cards must render the scheduler output and must not invent a separate safety cad
 
 #### 10. Intervention lock is a recommendation lock, not fictional pump control
 
-The intervention lock prevents the **engine from recommending/starting** a second Alk actuator intervention.
+The intervention lock prevents the **engine from recommending/starting** a second Alk dose-change intervention.
 
 It does not assert that the keeper physically cannot change a pump or manually add Alk.
 
@@ -6565,7 +6565,7 @@ Under 48 hours is normally too weak for ordinary maintenance inference, but it i
 
 `ALK-008` above states which spacing is too close. This rule states **which cluster
 survives**, so the surviving set — and therefore \(Sxx\), \(\sigma_S\), \(S_{supported}\)
-and the recommended actuator command — is deterministic rather than an implementation
+and the recommended recommendation — is deterministic rather than an implementation
 choice.
 
 Within the selected analytical segment, order candidate clusters by representative
@@ -6632,7 +6632,7 @@ substance:
    than computed from one arbitrarily chosen member;
 3. selection must therefore **never depend on arbitrary event order, ID order, insertion
    order, database ordering or implementation sorting.** Any of those would make the
-   actuator command a property of how the rows happened to be stored.
+   recommendation a property of how the rows happened to be stored.
 
 Pooling within a **same-method** episode is retained exactly as it was: the episode value is
 the median of the **pooled raw readings**, not the mean of two cluster medians; the spread
@@ -6852,7 +6852,7 @@ The uncertainty model already gives the desired behaviour:
 
 - sparse/noisy evidence → \(\sigma_S\) large → supported slope shrinks toward zero;
 - longer clean evidence → \(\sigma_S\) falls → a persistent slow trend becomes supportable;
-- tiny supported corrections may still round to HOLD at actuator resolution;
+- tiny supported corrections may still round to HOLD at rounding to the current dose;
 - no separate percentage or endpoint threshold is needed to suppress noise.
 
 This lets the Alk noise floor participate quantitatively rather than acting as a second binary gate.
@@ -7042,7 +7042,7 @@ S_{observed}\ne0
 
 the result is `UNCERTAINTY_LIMITED`, not `STABLE`.
 
-`S_supported` is the actuator/action-sizing slope.
+`S_supported` is the recommendation/action-sizing slope.
 
 It must not replace:
 - \(S_{observed}\) for best-estimate consumption;
@@ -7677,7 +7677,7 @@ Therefore `D_eff` does **not** imply that physical pump telemetry is mandatory, 
 
 This is the engine's central best estimate of actual Alk demand under the simple mass-balance model.
 
-It is **not** itself the dose actuator command.
+It is **not** itself the dose recommendation.
 
 Output includes:
 - \(C_{estimate}\);
@@ -7730,20 +7730,42 @@ not licence to interchange the names.
 
 **Unknown handling — refuse, do not assume zero.**
 
+**Amended by owner decision 25 — the high-breach refusal is a PRECONDITION, evaluated
+BEFORE branch selection.** Decision 20 established the refusal but attached it to the sizing
+formula, and branch A's formula does not reference \(D_{current}\), so the refusal had no
+branch to attach to and two readings of the same state disagreed. It is now evaluated once,
+ahead of the branch tree, and applies **identically to branches A, B and B'**:
+
 ```text
-D_current unknown or not configured:
-    EVERY calculation that takes D_current as an input is NOT_RUN. It is not
-      substituted, not defaulted and not assumed:
-        - high-breach safety sizing        (branches B and B' - the formula that
-          temporarySafetyRateAdvisoryMlPerDay = NOT_RUN      uses D_current)
-        - temporarySafetyPumpCommandMlPerDay = NOT_RUN
-        - ordinary maintenance sizing, capping and rounding (ALK-044,
-          ALK-STEP-CAP-001, ALK-ROUNDING-001, ALK-049), which take D_current
-          directly: recommendedDoseMlPerDay = WITHHELD
-    the measured state and the reason are surfaced
-    doser configuration is requested through the EXISTING anomaly/confirmation machinery
-    reason = SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
-    0 mL/day is NOT emitted as though it were a computed recommendation
+HIGH-BREACH PRECONDITION, evaluated BEFORE branch A / B / B' selection:
+
+    D_current unknown or not configured
+        -> NO temporary safety recommendation is produced, on ANY branch
+        -> temporarySafetyRateContinuousMlPerDay     = NOT_RUN
+           temporarySafetyRateRecommendationMlPerDay = NOT_RUN
+        -> the measured state and the reason are surfaced
+        -> doser configuration is requested through the EXISTING confirmation machinery
+           (CORE-INFORM-PROCEED-001, ALK-CAPABILITY-CONTRACT-001)
+        -> reason = SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
+        -> 0 mL/day is NOT emitted as though it were a computed recommendation
+        -> the branch is NOT selected, because selection does not run
+
+    This applies to branch A even though branch A's own formula
+    max(0, (C_estimate + S_safety) / P_selected) does not contain D_current.
+    The precondition is about the STATE, not about which symbols a formula uses.
+```
+
+**Exactly one outcome per state.** A high-breach state produces **either** a numeric
+temporary safety recommendation **or** this refusal — never both, and never a different
+answer under a different reading of the rules. `INV-G15` asserts it.
+
+Everything else about the two unknowns is unchanged:
+
+```text
+D_current unknown, elsewhere:
+    ordinary maintenance sizing, capping and rounding (ALK-044, ALK-STEP-CAP-001,
+      ALK-ROUNDING-001, ALK-049) take D_current directly:
+      recommendedDoseMlPerDay = WITHHELD
     consumption is UNAFFECTED where D_history is available
 
 D_history unavailable:
@@ -7754,29 +7776,18 @@ D_history unavailable:
     safety sizing is UNAFFECTED where D_current is known
 ```
 
-> **RECORDED EXPOSURE — `OI-BRANCHAREFUSAL-001`, OPEN. Not decided here.** The unknown block
-> above is written as "every calculation that **takes** \(D_{current}\)". The high-breach
-> **branch A** formula \(\max(0,(C_{estimate}+S_{safety})/P_{selected})\) does **not** take
-> \(D_{current}\): it needs \(C_{estimate}\), which needs \(D_{history}\). So on branch A
-> with \(D_{current}\) unknown and \(D_{history}\) available, every input the safety rate
-> needs is present, and the rule above does not withhold it.
+> **RESOLVED by owner decision 25.** This was `OI-BRANCHAREFUSAL-001`. The question was
+> whether high-breach branch A refuses when \(D_{current}\) is unknown, given that branch A's
+> formula \(\max(0,(C_{estimate}+S_{safety})/P_{selected})\) does not reference
+> \(D_{current}\) at all. Decision 20 stated the refusal without naming a branch, so the same
+> state — \(A_{now}\) 11.5, \(C_{estimate}\) +0.60, \(P\) 0.0693 — yielded **1.44 mL/day**
+> under one reading and a refusal under the other.
 >
-> Owner decision 20 states the refusal as "if \(D_{current}\) is unknown or not configured,
-> no temporary safety rate is emitted", without naming a branch. Read literally that
-> withholds a computable safety reduction above the outer bound — the outcome decision 22's
-> own rationale rejects. Read against the branch formulas it does not apply to A at all. The
-> two readings give **1.44 mL/day** and **`NOT_RUN`** on the same state
-> (\(A_{now}\) 11.5, \(C_{estimate}\) +0.60, \(P\) 0.0693). That is an actuator command,
-> so it is the owner's to settle.
->
-> **Until it is decided, branch A with an unknown \(D_{current}\) is `NOT_RUN`** — the
-> conservative reading of the decision as written — and the state is surfaced with
-> `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN` plus the required dKH movement and
-> direction under `CORE-INFORM-PROCEED-001`, so the keeper is not left with silence. An
-> implementer must **not** instead emit the branch-A rate. Note also that
-> `ALK-ROUNDING-001`'s tie-toward-current and step-toward-current steps have no operand
-> without \(D_{current}\), so a branch-A rate could not be rounded to an executable command
-> in that state even if it were emitted.
+> The refusal is now a **precondition evaluated before branch selection**, above, and it
+> applies identically to A, B and B'. The precondition is about the state, not about which
+> symbols a formula happens to use. `INV-G15` asserts that no high-breach state produces both
+> a numeric recommendation and a refusal, and that the same state cannot produce different
+> outputs under different readings.
 
 The two unknowns are **independent**. \(D_{history}\) unavailable does not prevent safety
 sizing when \(D_{current}\) is known; \(D_{current}\) unknown does not prevent consumption
@@ -7787,7 +7798,7 @@ already carried. It introduces no number.
 
 ---
 
-## ALK-023 — Best-estimate maintenance requirement versus recommended actuator dose
+## ALK-023 — Best-estimate maintenance requirement versus the recommended dose
 
 `ALK-MAINTENANCE-SEMANTICS-001`
 
@@ -7815,9 +7826,9 @@ This answers:
 
 > If the observed slope estimate were exactly correct, what maintenance dose would produce approximately zero slope?
 
-It is **not yet the recommended actuator dose**.
+It is **not yet the recommended dose**.
 
-The conservative actuator candidate is instead:
+The conservative recommendation candidate is instead:
 
 \[
 \boxed{
@@ -7838,7 +7849,7 @@ bestEstimateMaintenanceDose: 11.2 mL/day
 recommendedDose: 10.5 mL/day
 ```
 
-when uncertainty support deliberately makes the first actuator step more conservative.
+when uncertainty support deliberately makes the first recommended step more conservative.
 
 The two values must never share one field named `maintenanceDose`.
 
@@ -7902,7 +7913,7 @@ D_{current}
 \frac{S_{observed}}{P_{selected}}
 \]
 
-The actuator candidate uses:
+The recommendation candidate uses:
 
 \[
 D_{action,continuous}
@@ -7947,7 +7958,7 @@ D_{current}
 \frac{S_{observed}}{P_{selected}}
 \]
 
-Conservative actuator candidate:
+Conservative recommendation candidate:
 
 \[
 D_{action,continuous}
@@ -7957,7 +7968,7 @@ D_{current}
 \frac{S_{supported}}{P_{selected}}
 \]
 
-with the applicable slopes positive, so the actuator candidate lies below current dose.
+with the applicable slopes positive, so the recommendation candidate lies below current dose.
 
 The recommendation seeks stability, not a deliberate fall back into range.
 
@@ -8210,7 +8221,7 @@ ceiling for it.** The band still scales with \(\sigma_S\) and still has no fixed
 it no longer controls the delivered high-breach rate: that comes from \(R_{down}\) and the
 established dose, both of which are bounded. What the band still decides is the recorded
 maintenance classification, the wording and the maintenance evidence state — none of which
-sizes an actuator command.
+sizes an recommendation.
 
 ### Slight negative within uncertainty
 
@@ -8835,7 +8846,7 @@ Raw mathematical maintenance change:
 
 The observed slope \(S\) remains visible and auditable.
 
-The maintenance actuator is sized from \(S_{supported}\), not directly from the full observed slope.
+The maintenance recommendation is sized from \(S_{supported}\), not directly from the full observed slope.
 
 Then:
 
@@ -8881,11 +8892,11 @@ Anti-chatter instead comes from:
 
 Once alkalinity movement has already satisfied the evidence rules and \(S_{supported}\neq0\), V2 must **not add a second detectability gate that can permanently suppress a real slow drift**.
 
-The minimum actuator requirement is:
+The minimum recommendable change is:
 
 \[
 |\Delta D_{recommended}|
-\ge actuatorIncrementMlPerDay
+\ge recommendationPrecisionMlPerDay
 \]
 
 after all continuous safety constraints are applied.
@@ -8901,7 +8912,7 @@ D_{rounded}-D_{current}
 )
 \]
 
-If rounding returns the recommendation to the current dose, HOLD because the actuator cannot represent the supported correction.
+If rounding returns the recommendation to the current dose, HOLD because the recommendation cannot represent the supported correction.
 
 If the rounded change is non-zero but its expected response is too small to distinguish in one ordinary 48-hour interval:
 - the change may still be recommended;
@@ -8911,7 +8922,7 @@ If the rounded change is non-zero but its expected response is too small to dist
 
 Reason:
 
-A separate “must be detectable within the next test” gate would negate the supported-slope design. A long clean series can support a small real drift even when the resulting actuator change cannot be verified from one two-day interval.
+A separate “must be detectable within the next test” gate would negate the supported-slope design. A long clean series can support a small real drift even when the resulting recommended change cannot be verified from one two-day interval.
 
 ---
 
@@ -9029,15 +9040,15 @@ V2 retains for ordinary established maintenance dosing:
 \le 25\%
 \]
 
-provided the percentage cap is actuator-meaningful.
+provided the percentage cap is larger than one recommendation-precision step.
 
 Let:
 
 \[
-R_{pump}=actuatorIncrementMlPerDay
+R_{pump}=recommendationPrecisionMlPerDay
 \]
 
-The ordinary 25% percentage cap is actuator-meaningful only when:
+The ordinary 25% percentage cap is meaningful only when:
 
 \[
 0.25D_{current}\ge R_{pump}
@@ -9065,7 +9076,7 @@ including:
 D_{current}=0
 \]
 
-the percentage cap is **inactive** because it would permit less than one representable actuator step and could trap the controller at zero/tiny dosing forever.
+the percentage cap is **inactive** because it would permit less than one representable recommendation step and could trap the controller at zero/tiny dosing forever.
 
 In this regime:
 
@@ -9094,7 +9105,7 @@ D_{current}\ge4R_{pump}
 
 the ordinary 25% cap becomes active automatically.
 
-This is a deterministic consequence of the 25% cap and actuator resolution, not a separately chosen tank-size threshold.
+This is a deterministic consequence of the 25% cap and rounding to the current dose, not a separately chosen tank-size threshold.
 
 ### Narrow rapid/outer-bound relaxation
 
@@ -9146,54 +9157,54 @@ Therefore:
 - no HIGH=100% / MODERATE=75% coefficient;
 - no user-adjustable confidence damping.
 
-After uncertainty support is applied, the recommendation proceeds through physical safety caps, empirical sanity checks and actuator rounding.
+After uncertainty support is applied, the recommendation proceeds through physical safety caps, empirical sanity checks and recommendation rounding.
 
 Confidence remains an output/description of the evidence, not a coefficient that manufactures the dose number.
 
 ---
 
-## ALK-048B — Actuator rounding
+## ALK-048B — Recommendation rounding
 
 `ALK-ROUNDING-001`
 
-This rule owns final actuator rounding for **maintenance mL/day recommendations**.
+This rule owns final recommendation rounding for **maintenance mL/day recommendations**.
 
 Inputs:
 
 ```text
 D_current
 D_continuous_feasible
-R_pump = actuatorIncrementMlPerDay
+R_precision = recommendationPrecisionMlPerDay
 ```
 
 Preconditions:
 
-- `R_pump` is known and greater than zero;
+- `R_precision` is known and greater than zero;
 - the continuous candidate has already passed the applicable evidence, physical-rail, step-cap, empirical-bracket and non-negative-dose rules.
 
 ### Canonical rounding
 
-1. Find the two adjacent representable actuator settings around `D_continuous_feasible`.
+1. Find the two adjacent representable recommendation values around `D_continuous_feasible`.
 2. Choose the representable setting with the smallest absolute distance from `D_continuous_feasible`.
 3. If the continuous candidate is an exact midpoint, choose the tied setting **closer to `D_current`**.
 4. If a tie still remains, choose the **lower** representable setting.
 5. Recalculate the actual dose delta and physical Alk effect from the rounded command.
-6. Recheck all hard constraints that can be affected by actuator discretisation. These
+6. Recheck all hard constraints that can be affected by rounding to the recommendation precision. These
    include the physical rate rail (`ALK-046`) and the liquid-volume guard
    (`ALK-LIQUID-VOLUME-GUARD-001`).
-7. If the rounded command violates a hard constraint only because rounding moved the command farther from `D_current`, move by actuator increments **toward `D_current`** until the command is feasible.
+7. If the rounded command violates a hard constraint only because rounding moved the command farther from `D_current`, move by recommendation precisions **toward `D_current`** until the command is feasible.
 8. If no changed representable command remains feasible and the result returns to the current command:
 
 ```text
 recommendation = HOLD
-reason = ACTUATOR_RESOLUTION
+reason = MAINTENANCE_ROUNDS_TO_CURRENT_DOSE
 ```
 
 Do not force a one-increment change merely to avoid HOLD.
 
 ### Scope
 
-M-1's actuator increment requirement applies to final actionable **maintenance mL/day**.
+M-1's recommendation precision requirement applies to final actionable **maintenance mL/day**.
 
 A one-off urgent `SAFETY_RETURN` correction volume remains governed by `ALK-SAFETY-CORRECTION-RESOLUTION-001` and is not blocked merely because a maintenance-rate increment is unknown.
 
@@ -9265,10 +9276,10 @@ V2 calculation order:
 6. evaluate empirical bracket conflict;
 7. clamp to non-negative dose;
 8. apply `ALK-LIQUID-VOLUME-GUARD-001` to the continuous candidate. If the candidate
-   exceeds \(V_{alk,max,24h}\), **withhold the executable command** and stop: the rounding
+   exceeds \(V_{alk,max,24h}\), **withhold the recommendation** and stop: the rounding
    step below is not entered, and the guard value itself is never emitted as the
    recommendation;
-9. apply actuator rounding under `ALK-ROUNDING-001`, whose step 6 rechecks the physical
+9. apply recommendation rounding under `ALK-ROUNDING-001`, whose step 6 rechecks the physical
    rate rail and `ALK-LIQUID-VOLUME-GUARD-001` against the discretised command;
 10. recalculate expected physical response from the rounded dose;
 11. assert `ALK-COMPOSITE-RAIL-001` over all simultaneously recommended intentional
@@ -9283,7 +9294,7 @@ rounding moved the command" precondition is false, and no rule would refuse it.
 This replaces V1's “round first among the constraints” rule.
 
 Reason:
-constraints should operate on the continuous physical estimate; pump rounding is a property of the actuator and should be applied to the final feasible command.
+constraints should operate on the continuous physical estimate; pump rounding is a property of the recommendation and should be applied to the final feasible command.
 
 ---
 
@@ -9794,7 +9805,7 @@ Rules:
 - calculate at full precision;
 - apply rate rail;
 - apply `ALK-LIQUID-VOLUME-GUARD-001`;
-- round actuator/pour volume last;
+- round the recommended volume last;
 - log actual amount delivered;
 - retest according to plan.
 
@@ -9843,7 +9854,7 @@ this rule body now agree.
 
 If a recommended 24-hour delivery would exceed \(V_{alk,max,24h}\):
 
-- **withhold the executable dosing command**;
+- **withhold the recommended rate**;
 - **do not** cap the command to the guard value and present the capped figure as the
   recommendation. A 2%-of-volume figure is the edge of a safety guard, not a result the
   engine derived, and issuing it would be indistinguishable from a real recommendation;
@@ -9857,14 +9868,14 @@ If a recommended 24-hour delivery would exceed \(V_{alk,max,24h}\):
 
 ```text
 liquidVolumeGuardExceeded = true
-executableDosingCommand   = WITHHELD
+recommendedDoseMlPerDay   = WITHHELD
 reason                    = SAFETY_LIQUID_GUARD_EXCEEDED
 ```
 
 ### Pipeline position
 
 The guard is a **hard constraint**. It is evaluated on the continuous candidate and then
-**rechecked after actuator rounding/discretisation**, in `ALK-ROUNDING-001` step 6,
+**rechecked after recommendation rounding/discretisation**, in `ALK-ROUNDING-001` step 6,
 alongside the physical rate rail — because rounding away from the current command can move
 a command across the guard exactly as `WG-ALK-063` demonstrates for the rail.
 
@@ -9875,7 +9886,7 @@ The guard binds at **both** positions, and the pre-rounding evaluation is not ad
    step 7 — which fires only where rounding *alone* caused the violation — is not reached.
 2. **On the rounded command**, in `ALK-ROUNDING-001` step 6. Where a compliant continuous
    candidate rounds to a command that exceeds the guard, step 7 applies as written: step
-   toward the current command by actuator increments until feasible. If no changed
+   toward the current command by recommendation precisions until feasible. If no changed
    representable command is feasible, the outcome is the withheld state above.
 
 **Neither position may emit the guard value itself as the recommendation**, whether reached
@@ -10122,10 +10133,10 @@ These fields answer different questions and must not be collapsed:
 |---|---|---|
 | `observedSlope` \(S_{observed}\) | Robust central estimate of what Alk is doing | Physical demand estimate, risk forecast, explanation |
 | `slopeUncertainty` \(\sigma_S\) | Deterministic controller uncertainty around observed slope | Supported-slope calculation |
-| `supportedSlope` \(S_{supported}\) | Portion of observed slope sufficiently separated from uncertainty for action sizing | Maintenance actuator sizing |
+| `supportedSlope` \(S_{supported}\) | Portion of observed slope sufficiently separated from uncertainty for action sizing | Maintenance recommendation sizing |
 | `consumptionEstimate` \(C_{estimate}\) | Best-estimate biological/system Alk demand from mass balance | Diagnostics, best-estimate maintenance, plausibility |
 | `maintenanceEstimate` | Dose predicted to give zero slope if the observed estimate were exact | Audit/explanation |
-| `continuousActionCandidate` | Dose derived from supported slope before physical/actuator limits | Recommendation pipeline |
+| `continuousActionCandidate` | Dose derived from supported slope before physical limits and rounding | Recommendation pipeline |
 | `recommendedDose` | Final feasible rounded dose | User action |
 | `predictedPostSlope` | Expected slope after the actual final recommended dose | Intervention response benchmark |
 
@@ -10212,7 +10223,7 @@ S_{supported}
 \Delta D_{supported}
 \]
 
-followed by safety/actuator constraints.
+followed by safety constraints and rounding.
 
 ### LOW
 Examples:
@@ -10730,7 +10741,7 @@ The supported slow-drift pathway would become functionally unreachable for small
 Remove the second detectability gate.
 
 Once a slow drift has earned action:
-- an actuator-resolvable non-zero adjustment is allowed;
+- a non-zero adjustment at the recommendation precision is allowed;
 - response may require multiple tests to assess.
 
 This produced `ALK-MINIMUM-ACTION-001`.
@@ -10970,7 +10981,7 @@ D=0.1\ mL/day
 
 Part III still needs an explicit **baseline/startup rule** for:
 - current dose = zero;
-- current dose so small that the percentage cap is not actuator-meaningful.
+- current dose so small that the percentage cap is smaller than one recommendation-precision step.
 
 This is a genuine remaining policy gap, not solved by C2.
 
@@ -10996,7 +11007,7 @@ rounding may return the same current dose.
 
 Required result:
 - HOLD;
-- reason = ACTUATOR_RESOLUTION;
+- reason = MAINTENANCE_ROUNDS_TO_CURRENT_DOSE;
 - continue evidence collection.
 
 Do not force a 0.1 mL step merely to avoid returning HOLD unless the rounding policy explicitly selects directional ceiling rather than nearest resolution.
@@ -11416,7 +11427,7 @@ Required:
 
 Round 1 discovered four material specification gaps plus three resolved interactions.
 
-## Resolved interaction R1 — predicted response must use final actuator command
+## Resolved interaction R1 — predicted response must use final recommendation
 
 Canonical:
 `ALK-PREDICTED-POST-SLOPE-001`.
@@ -11444,21 +11455,21 @@ Resolved by `ALK-STEP-CAP-001`.
 When:
 
 \[
-D_{current}<4\times actuatorIncrementMlPerDay
+D_{current}<4\times recommendationPrecisionMlPerDay
 \]
 
-the 25% cap is actuator-meaningless and is disabled.
+the 25% cap is smaller than one recommendation-precision step and is disabled.
 
 Evidence and physical-effect rails remain active.
 
-## Resolved gap O2 — actuator rounding direction
+## Resolved gap O2 — recommendation rounding direction
 
 Resolved by `ALK-ROUNDING-001`.
 
 - nearest pump increment;
 - exact ties toward current dose;
 - post-rounding hard-constraint recheck;
-- if rounded command returns to current dose → HOLD / ACTUATOR_RESOLUTION.
+- if the rounded recommendation returns to the current dose → HOLD / MAINTENANCE_ROUNDS_TO_CURRENT_DOSE.
 
 ## Resolved gap O3 — exact intervention response band
 
@@ -14732,7 +14743,7 @@ The canon now distinguishes:
 
 Physical demand uses observed slope.
 
-Actuator sizing uses supported slope.
+Recommendation sizing uses supported slope.
 
 Risk forecast uses sufficiently established observed slope.
 
@@ -14861,7 +14872,7 @@ Return plans:
 PASS.
 
 Ordinary maintenance step:
-- 25% where percentage cap is actuator-meaningful.
+- 25% where the percentage cap exceeds one recommendation-precision step.
 
 Exceptional maintenance step:
 - up to 50% only for confirmed rapid movement plus actual/forecast outer-bound risk.
@@ -14878,7 +14889,7 @@ Zero/tiny dose uses deterministic baseline-establishment handling rather than `2
 
 PASS.
 
-Nearest actuator increment.
+Nearest recommendation precision.
 
 Exact ties toward current dose.
 
@@ -15018,7 +15029,7 @@ outerBoundState = BREACHED_LOW
 interventionType = SAFETY_RETURN
 priority = URGENT
 safetyDestination = 7.20 dKH
-safetyCorrection ≈ 5.772 mL before actuator/pour rounding
+safetyCorrection ≈ 5.772 mL before rounding for legibility
 acceptedPermanentMaintenance = HOLD established maintenance
 ```
 
@@ -15134,13 +15145,13 @@ Later post-change measurements may establish a new current maintenance trend ind
 
 ---
 
-## WG-ALK-045 — Missing actuator increment refuses final actionable mL/day
+## WG-ALK-045 — Missing recommendation precision refuses final actionable mL/day
 
 Inputs:
 - sufficient supported falling Alk trend;
 - valid configured potency;
 - current dose known;
-- `actuatorIncrementMlPerDay = MISSING`.
+- `recommendationPrecisionMlPerDay = MISSING`.
 
 Required:
 
@@ -15149,7 +15160,7 @@ observedSlope = calculated
 supportedSlope = calculated
 continuousActionCandidate = calculated
 recommendedDose = WITHHELD
-reason = ACTUATOR_INCREMENT_REQUIRED
+reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID   # only where a CONFIGURED precision is <= 0
 ```
 
 The app must ask for the implementable dosing increment.
@@ -15341,8 +15352,8 @@ Required:
 ```text
 outerBoundState = BREACHED_HIGH
 interventionType = SAFETY_RETURN
-temporarySafetyRateAdvisoryMlPerDay = 2.784992784992785
-temporarySafetyPumpCommandMlPerDay = 2.8      # ALK-ROUNDING-001, 0.1 mL/day increment
+temporarySafetyRateContinuousMlPerDay = 2.784992784992785
+temporarySafetyRateRecommendationMlPerDay = 2.8      # ALK-ROUNDING-001, 0.1 mL/day increment
 maintenanceEstimateStatus = UNRESOLVED
 actualDoseState = unchanged until user/pump confirms implementation
 nextTest ≈ 24 h
@@ -15597,7 +15608,7 @@ card independently hardcodes a conflicting safety retest time
 
 ---
 
-## WG-ALK-061 — Missing maintenance actuator increment does not block safety correction
+## WG-ALK-061 — Missing maintenance recommendation precision does not block safety correction
 
 Inputs:
 
@@ -15605,7 +15616,7 @@ Inputs:
 Alk = 6.80 dKH
 low safety destination = 7.20 dKH
 P_selected = 0.0693 dKH/mL
-actuatorIncrementMlPerDay = MISSING
+recommendationPrecisionMlPerDay = MISSING
 ```
 
 Required dKH movement:
@@ -15629,14 +15640,14 @@ Required:
 ```text
 safetyCorrectionStatus = ACTIONABLE
 safetyCorrectionVolume ≈ 5.772 mL before display formatting
-maintenanceRateRoundingCapability = MISSING
-reason ACTUATOR_INCREMENT_REQUIRED does not block SAFETY_RETURN
+maintenanceRateRoundingPrecision = MISSING
+the retired ACTUATOR_INCREMENT_REQUIRED refusal did not block SAFETY_RETURN, and no longer exists at all (owner decision 23)
 ```
 
 Forbidden:
 
 ```text
-withhold urgent safety correction solely because actuatorIncrementMlPerDay is missing
+withhold urgent safety correction solely because recommendationPrecisionMlPerDay is missing
 ```
 
 If `P_selected` is invalid/unknown, the mL value is withheld and only the required dKH movement may be stated.
@@ -15654,7 +15665,7 @@ Alk dKH  = [8.80, 8.50, 8.20, 7.90, 7.60]
 sigma_Alk_base = 0.10 dKH
 P_selected = 0.0693 dKH/mL
 D_current = 9.0 mL/day
-actuatorIncrementMlPerDay = 0.1 mL/day
+recommendationPrecisionMlPerDay = 0.1 mL/day
 ```
 
 Theil–Sen observed slope:
@@ -15729,7 +15740,7 @@ D_{continuous}
 10.8725\ mL/day
 \]
 
-With 0.1 mL/day actuator increment:
+With 0.1 mL/day recommendation precision:
 
 ```text
 recommendedDose = 10.9 mL/day
@@ -15760,7 +15771,7 @@ Inputs:
 ```text
 D_current = 9.0 mL/day
 D_continuous_feasible = 16.352941 mL/day
-actuatorIncrementMlPerDay = 0.10 mL/day
+recommendationPrecisionMlPerDay = 0.10 mL/day
 P_selected = 0.0680 dKH/mL
 physicalEffectRail = 0.50 dKH/day
 ```
@@ -15779,7 +15790,7 @@ but:
 
 which exceeds the rail.
 
-`ALK-ROUNDING-001` therefore moves one actuator step toward the current dose:
+`ALK-ROUNDING-001` therefore moves one recommendation-precision step toward the current dose:
 
 ```text
 recommendedDose = 16.3 mL/day
@@ -15925,12 +15936,12 @@ Disable the affected optional analysis/subsystem while unrelated Alk control con
 
 ---
 
-## M-1 — Actuator increment
+## M-1 — Recommendation precision — **actuator limb RETIRED by owner decision 23**
 
 ### Canonical datum
 
 ```text
-actuatorIncrementMlPerDay
+recommendationPrecisionMlPerDay
 ```
 
 The smallest maintenance-dose change the keeper can reliably implement.
@@ -15947,7 +15958,7 @@ New required Alk dosing-setup field for final actionable maintenance recommendat
 
 ```text
 REFUSE
-reason = ACTUATOR_INCREMENT_REQUIRED
+reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID   # only where a CONFIGURED precision is <= 0
 ```
 
 The engine may still calculate:
@@ -15967,9 +15978,9 @@ This refusal does **not** apply to the one-off correction volume produced by:
 ALK-SAFETY-CORRECTION-RESOLUTION-001
 ```
 
-An urgent `SAFETY_RETURN` may calculate and emit its one-off mL correction from valid potency even when `actuatorIncrementMlPerDay` is missing.
+An urgent `SAFETY_RETURN` may calculate and emit its one-off mL correction from valid potency even when `recommendationPrecisionMlPerDay` is missing.
 
-`actuatorIncrementMlPerDay` in older Part III wording is interpreted as this actuator increment and should be implemented under the portable field above.
+`recommendationPrecisionMlPerDay` in older Part III wording is interpreted as this recommendation precision and should be implemented under the portable field above.
 
 ---
 
@@ -16365,7 +16376,7 @@ reason = HISTORICAL_CONFIGURATION_UNAVAILABLE
 Consequences:
 
 - preserve raw historical measurements/events;
-- do not backfill today's target range, net volume, potency or actuator resolution into the old period;
+- do not backfill today's target range, net volume, potency or rounding to the current dose into the old period;
 - current V2 analysis from the first valid configuration version onward proceeds normally;
 - config-independent historical analysis may still run if its own inputs are valid.
 
@@ -16462,7 +16473,7 @@ This is a capability deferral, not a retreat from the learner design.
 
 | Review item | Required behaviour when missing |
 |---|---|
-| M-1 actuator increment | **REFUSE** final actionable dose; request setup value |
+| M-1 recommendation precision | **REFUSE** final actionable dose; request setup value |
 | M-2 solution context | Core uses theoretical potency; potency learner **NOT_RUN** |
 | M-3 delivery context | Core uses confirmed programmed dose; potency learner **NOT_RUN** |
 | M-4 replacement-water Alk | **DEGRADE** to deterministic unknown-WC branch |
@@ -16613,7 +16624,7 @@ F-1  safety + maintenance composite rail wording
 F-2  B_safety apparent adaptivity
      CLOSED — explicitly documented as fixed 0.20 dKH controller constant in Freeze 2
 
-F-3  M-1 actuator-increment refusal versus SAFETY_RETURN
+F-3  M-1 recommendation-precision refusal versus SAFETY_RETURN
      CLOSED — M-1 applies to maintenance mL/day; one-off safety correction is explicitly exempt
 
 N-6  ALK-022 D_eff pointer to M-6
@@ -16643,7 +16654,7 @@ Core Alk V2 may be implemented subject to:
 At minimum:
 - precise `measuredAt` for new V2 measurements;
 - dose-event `recordedAt` / `effectiveAt` / confidence;
-- `actuatorIncrementMlPerDay`;
+- `recommendationPrecisionMlPerDay`;
 - configured/theoretical potency inputs;
 - persistent intervention prediction snapshot for new V2 interventions.
 
@@ -16788,6 +16799,10 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | **20** `D_established` renamed and split into two distinct quantities | `ALK-DELIVERY-RATE-BASIS-001` (new, in `ALK-022`); `ALK-HIGH-BREACH-SAFETY-SIZING-001`, `ALK-CONSUMPTION-ESTIMATE-001`, `ALK-031` amended | `OI-DELIVERYRATEBASIS-001`; **opens** `OI-BRANCHAREFUSAL-001` |
 | **21** advisory ceiling and floor — escalate rather than calculate | `ALK-ADVISORY-RANGE-BOUNDARY-001` (new, in `ALK-003A`); `ALK-HIGH-BREACH-SAFETY-SIZING-001`, `ALK-OUTER-BOUND-ACTION-001`, `ALK-031`, `ALK-EPISODE-SINGLE-OUTPUT-001` (`ALK-005D`), `ALK-DECIMAL-THRESHOLD-001` (`ALK-005E`) amended | narrows `OI-SIZINGFLAT-001`, does **not** close it; **opens** `OI-ADVISORYEXCEPTION-001`, `OI-ADVISORYMEMBERS-001`, `OI-ADVISORYRETEST-001`, `OI-ADVISORYRETURN-001` |
 | **22** uncomputable consumption under high breach | `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` (new, in `ALK-003A`) | `OI-UNCOMPUTABLEC-001` |
+| **23** the application is recommend-only; there is no actuator | `ALK-RECOMMEND-ONLY-001` (new, in `ALK-001`); `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` and `ALK-SAFETY-CORRECTION-RESOLUTION-001` **RETIRED**; `ALK-ROUNDING-001`, `ALK-049`, `ALK-STEP-CAP-001`, `ALK-CAPABILITY-CONTRACT-001` (`M-1`), `ALK-LIQUID-VOLUME-GUARD-001`, `ALK-SAFETY-RETURN-INTEGRATION-001` amended | `OI-SAFETYRATE-001` reclassified **INAPPLICABLE** |
+| **24** the advisory boundary is a warning, not a refusal | `ALK-ADVISORY-RANGE-BOUNDARY-001` rewritten; `ALK-EPISODE-SINGLE-OUTPUT-001`, `ALK-031`, `ALK-HIGH-BREACH-SAFETY-SIZING-001` amended | `OI-ADVISORYEXCEPTION-001`, `OI-ADVISORYRETURN-001`, `OI-ADVISORYMEMBERS-001`; `OI-SIZINGFLAT-001` **stays open and is no longer narrowed** |
+| **25** branch A refuses on an unknown `D_current` | `ALK-DELIVERY-RATE-BASIS-001` amended (pre-branch precondition); `ALK-HIGH-BREACH-SAFETY-SIZING-001` amended | `OI-BRANCHAREFUSAL-001` |
+| **26** one retest answer | `ALK-ADVISORY-RANGE-BOUNDARY-001` amended; `ALK-RETEST-SCHEDULER-001` confirmed sole authority | `OI-ADVISORYRETEST-001` |
 
 All eleven blocking items are closed, and so are the three items independent review of the
 first encoding opened. Every withheld output they gated now has a determined value or a
@@ -16796,7 +16811,7 @@ first encoding opened. Every withheld output they gated now has a determined val
 ### Decisions 16–19 — what they supersede
 
 Independent review of the F5-13/14/15 amendments reported six findings that could change an
-actuator command, a safety action, evidence selection, outer-bound classification,
+recommendation, a safety action, evidence selection, outer-bound classification,
 `rapidConfirmed` or a retest output. They were reported rather than resolved. The owner then
 decided them as decisions 16–19, which are part of `ALK_V2_FREEZE_5` and **supersede the
 earlier Freeze-5 wording wherever they conflict**:
@@ -16905,6 +16920,20 @@ D_history           = interval-mean delivery rate  # decision 20, renamed, not a
 Decision 20 renames and separates quantities the canon already carried and introduces no
 number. Decision 22 adds a branch over the state space and introduces no number: it reuses
 \(R_{down}\), the 0.50 rail, \(P_{selected}\) and \(D_{current}\).
+
+**Decisions 23–26 introduce no constant at all.**
+
+```text
+recommendationPrecisionMlPerDay = the RENAMED recommendationPrecisionMlPerDay, same value,
+                                  now a display convention rather than a device
+                                  capability (decision 23). Not a new constant.
+advisory range offset = 1.0 dKH   unchanged by decision 24; only what happens at the
+                                  boundary changes, from withholding to warning.
+```
+
+Decision 23 **removes** a configured quantity's meaning rather than adding one; decisions
+24, 25 and 26 change where a rule is evaluated and what it emits, using only quantities the
+canon already froze.
 
 No epsilon exists for the advisory-boundary comparison. `ALK-DECIMAL-THRESHOLD-001`'s exact
 decimal semantics govern it, and the comparison is inclusive at the boundary.
@@ -17609,7 +17638,7 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-OUTER-BOUNDS-001` | `WG-ALK-041`, `WG-ALK-043` |
 | `ALK-OUTER-BOUND-ACTION-001` | `WG-ALK-041`, `WG-ALK-051` |
 | `ALK-SAFETY-BUFFER-001` | `WG-ALK-041`, `WG-ALK-053` |
-| `ALK-SAFETY-CORRECTION-RESOLUTION-001` | `WG-ALK-061` |
+| `ALK-RECOMMEND-ONLY-001` | `AD-REC-001`, `AD-REC-002` |
 | `ALK-HIGH-BREACH-UNRESOLVED-001` | `WG-ALK-051`, `AD-SAF-007` |
 | `ALK-SAFETY-RETURN-INTEGRATION-001` | `WG-ALK-052`, `WG-ALK-056`, `WG-ALK-058`, `WG-ALK-059`, `WG-ALK-060` |
 | `ALK-SAFETY-MG-OVERRIDE-001` | `WG-ALK-055` |
@@ -17664,7 +17693,6 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-RETURN-TERMINATED-BY-SAFETY-001` | `AD-RTN-004`, `AD-RTN-005` |
 | `ALK-RETEST-SCHEDULER-001` | `AD-RET-001`, `AD-RET-002`, `AD-RET-003`, `AD-RET-004`, `WG-ALK-060` |
 | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` | `WG-ALK-011`, `AD-SEG-006`, `ALK-G022` |
-| `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | `AD-SAF-002`, `AD-SAF-005` |
 | `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002`, `AD-SAF-008` |
 | `ALK-SAME-TIMESTAMP-COALESCE-001` | `AD-SEG-007`, `AD-SEG-008`, `AD-EPI-002` |
 | `ALK-HIGH-BREACH-SAFETY-SIZING-001` | `AD-SAF-007`, `AD-SAF-008`, `AD-CON-002`, `WG-ALK-051` |

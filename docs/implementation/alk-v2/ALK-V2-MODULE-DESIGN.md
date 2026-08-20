@@ -148,7 +148,7 @@ recommendation, which is what makes `INV-E6` (overshoot orthogonality) structura
 | `dec.safety` | `SAFETY` | position + outer bounds + consumption + potency → `SafetyState` | pure total |
 | `dec.rails` | `SAFETY` | candidate movement components → rail-constrained components | pure total |
 | `dec.maintenance` | `MAINTENANCE` | supported slope + potency + dose + constraints → `DoseRecommendation` | pure total |
-| `dec.rounding` | `MAINTENANCE` | continuous candidate + current + increment + hard constraints → actuator command | pure total |
+| `dec.rounding` | `MAINTENANCE` | continuous candidate + current + increment + hard constraints → recommendation | pure total |
 | `dec.returnplan` | `RETURN` | position + trajectory + opt-in + potency → `ReturnPlan` | pure total |
 | `dec.retest` | `RETEST` | full engine state + `asOf` → `RetestDecision` | pure total |
 | `dec.capability` | `CAPABILITY` | ledger + configuration → `CapabilityState[]` | pure total |
