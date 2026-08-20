@@ -26,17 +26,52 @@ and the migration document is wrong.
 
 ## Current contents
 
-- `DATA-PROVENANCE.md` — provenance and analytical eligibility of the owner's historical
-  records.
+- `DATA-PROVENANCE.md` — the **principles**: measurement truth, time precision,
+  dose-context completeness and analytical eligibility as four independent properties,
+  and the prohibitions that follow from them.
+- `V1-DATA-PROVENANCE.md` — the **dataset-level detail** underneath those principles,
+  per dataset, with the owner's provenance correction applied.
+- `V1-APPLICATION-SALVAGE.md` — the V1 surface, interaction, feature and tooling
+  inventory, with a disposition and reason for each item, and a section measuring the
+  build-one screen set against it.
+- `UNMIGRATED-V1-CANON.md` — V1 decisions carrying substantial reasoning that no V2
+  document owns, recorded so `MASTER RULE 2` is satisfied.
+- `V1-OPEN-OWNER-QUESTIONS.md` — questions V1 raised and never answered. Recorded, not
+  answered.
 
-## What exists now, and what does not
+## Where the salvage work came from
 
-The **agent and routine** portion of the salvage work is complete and lives in
-`docs/process/V1-AGENT-SALVAGE-AUDIT.md`. It inventories and dispositions all 28 V1 agent
-definitions and all 19 V1 routines against a first-hand read of the V1 repository, and it
-records where V1 chemistry sits without reproducing its values.
+All four V1 documents were written from the V1 repository at commit
+`9276a2ca254e88d19e0f02dced42a1b896499780`, read-only, together with the V1 salvage
+reconnaissance report.
 
-Still absent, deliberately: the V1 **application-code** salvage inventory, the V1
-journeys and tests, and the unmigrated-V1-canon record. The final reviewed salvage report
-for those is to be supplied separately, and inventing substitutes would fabricate salvage
-findings. Phase 0 is therefore not complete.
+**That report was never committed to V1.** The branch named for it,
+`claude/v1-salvage-reconnaissance-6rgcl1`, is identical to V1's `main` at that commit and
+contains the reconnaissance *brief*, not its findings — the brief forbade changing files.
+Every claim checkable in V1 source was therefore checked against V1 source.
+
+The agent and routine portion of the salvage work is separate and lives in
+`docs/process/V1-AGENT-SALVAGE-AUDIT.md`. Together the five documents complete the Phase 0
+salvage deliverables.
+
+## Two things to know before reading them
+
+**The owner's historical readings are real measurements.** The reconnaissance report
+concluded otherwise, inferring from a V1 source comment that most were fabricated seed
+data. **That conclusion is withdrawn.** What is genuinely missing is narrower: the
+accompanying dose history. `V1-DATA-PROVENANCE.md` §1 states the correction and lists every
+conclusion it withdraws.
+
+**One conflict between these documents is recorded and not resolved.** `DATA-PROVENANCE.md`
+§1 lists water-change, ICP and lighting records as owner-confirmed genuine;
+`V1-DATA-PROVENANCE.md` §5 records that the reconnaissance found all three byte-identical
+to named V1 constants and that the owner's correction has not been extended to them.
+Neither document is amended to agree with the other. It is question Q9 in
+`V1-OPEN-OWNER-QUESTIONS.md`.
+
+## Numeric chemistry
+
+**No migration document reproduces V1 numeric chemistry values**, following the precedent
+of `docs/process/V1-AGENT-SALVAGE-AUDIT.md`. Where a figure matters, its **kind** and its
+**location in V1** are named so a reader can go and look. Chemistry authority is
+`docs/canon/` and nothing else.

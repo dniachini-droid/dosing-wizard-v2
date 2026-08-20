@@ -51,14 +51,25 @@ Create a clean V2 project without losing hard-won V1 knowledge.
   - `DECISIONS.md`
 - Preserve the frozen Shared V2 and Alk V2 canon.
 - Preserve the Alk implementation handoff.
-- Preserve the final V1 salvage inventory.
+- Preserve the final V1 salvage inventory. **Done** — carried into V2 as
+  `docs/process/V1-AGENT-SALVAGE-AUDIT.md` (agents and routines) and
+  `docs/migration/V1-APPLICATION-SALVAGE.md` (screens, flows, components, tooling).
+  Both were written from the V1 repository at commit `9276a2c`, read-only.
+  The reconnaissance report itself was never committed to V1 — see
+  `docs/migration/README.md`.
 - Create:
-  - V1 salvage disposition;
-  - unmigrated V1 canon record;
-  - historical-data provenance record.
+  - V1 salvage disposition — **done**, as the disposition column of the two inventories above;
+  - unmigrated V1 canon record — **done**, `docs/migration/UNMIGRATED-V1-CANON.md`;
+  - historical-data provenance record — **done**, `docs/migration/DATA-PROVENANCE.md`
+    (principles) and `docs/migration/V1-DATA-PROVENANCE.md` (dataset detail, with the
+    owner's provenance correction applied).
 - Preserve selected V1 journeys, failure cases, tests and design provenance as reference.
+  **Partly done** — the application inventory dispositions V1's journeys, test estate and
+  failure catalogue and cites them by location; no V1 file has been copied into
+  `docs/v1-reference/`.
 - Do not import V1 runtime chemistry architecture.
-- Record unresolved V1 questions without forcing premature decisions.
+- Record unresolved V1 questions without forcing premature decisions. **Done** —
+  `docs/migration/V1-OPEN-OWNER-QUESTIONS.md` records eleven, and answers none.
 
 ## Exit criteria
 
@@ -67,6 +78,18 @@ Create a clean V2 project without losing hard-won V1 knowledge.
 - Frozen canon is present and clearly authoritative.
 - V1 material is clearly marked reference-only where appropriate.
 - No application runtime has yet been built accidentally from V1 assumptions.
+
+## Status
+
+The salvage deliverables above are **complete**. Whether Phase 0 is closed also depends on
+the remaining exit criteria and is `PROJECT-STATE.md`'s to record, not this document's.
+
+**A gap this work measured, recorded here because it is a sequencing fact.** The build-one
+screen set was designed before the application salvage inventory existed, and omits
+substantial V1 surfaces — the tasks and maintenance calendar, the Test Lab checklist, the
+reading-arrival moment, the dose-expectation moment and the ICP flow among them.
+`docs/migration/V1-APPLICATION-SALVAGE.md` §12 lists them in full. **Nothing here decides
+whether any of them enters build one.**
 
 ---
 
