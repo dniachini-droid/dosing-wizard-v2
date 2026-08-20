@@ -82,7 +82,8 @@ a calcium calculation").
 
 | Module | Owner | In → Out | Purity |
 |---|---|---|---|
-| `obs.cluster` | `SEGMENTATION` | readings + policy → `MeasurementCluster[]` | pure total |
+| `obs.episode` | `SEGMENTATION` | readings + policy → `TestingEpisode[]` with `episodeValueDkh`, `episodeAt` and `combinedMeasurementCount` | pure total |
+| `obs.cluster` | `SEGMENTATION` | `TestingEpisode[]` from `obs.episode` → the pooled `MeasurementCluster[]` **inside** each episode. It has **no independent grouping authority**: it never re-groups readings and never decides membership (`MASTER RULE 1`; `ALK-V2-DATA-CONTRACT.md`). | pure total |
 | `obs.independence` | `SEGMENTATION` | clusters + policy → independent subset \| `NotRun` | pure total |
 | `obs.position` | `VALIDATION` | latest valid cluster + config → `Position`, `outerBoundState` | pure total |
 
@@ -147,7 +148,7 @@ recommendation, which is what makes `INV-E6` (overshoot orthogonality) structura
 | `dec.safety` | `SAFETY` | position + outer bounds + consumption + potency → `SafetyState` | pure total |
 | `dec.rails` | `SAFETY` | candidate movement components → rail-constrained components | pure total |
 | `dec.maintenance` | `MAINTENANCE` | supported slope + potency + dose + constraints → `DoseRecommendation` | pure total |
-| `dec.rounding` | `MAINTENANCE` | continuous candidate + current + increment + hard constraints → actuator command | pure total |
+| `dec.rounding` | `MAINTENANCE` | continuous candidate + current + increment + hard constraints → recommendation | pure total |
 | `dec.returnplan` | `RETURN` | position + trajectory + opt-in + potency → `ReturnPlan` | pure total |
 | `dec.retest` | `RETEST` | full engine state + `asOf` → `RetestDecision` | pure total |
 | `dec.capability` | `CAPABILITY` | ledger + configuration → `CapabilityState[]` | pure total |
@@ -208,7 +209,7 @@ so `INV-I2` (one authoritative owner per rule) is checkable mechanically.
 | Owner | Modules |
 |---|---|
 | `VALIDATION` | `fact.validation`, `fact.ledger`, `fact.configuration`, `obs.position`, `kernel.time` |
-| `SEGMENTATION` | `obs.cluster`, `obs.independence`, `seg.*` |
+| `SEGMENTATION` | `obs.episode`, `obs.cluster`, `obs.independence`, `seg.*` |
 | `TREND` | `traj.trend`, `traj.evidence`, `traj.rapid`, `traj.forecast` |
 | `UNCERTAINTY` | `traj.uncertainty` |
 | `SUPPORT` | `traj.support` |
@@ -264,24 +265,40 @@ AlkPolicy {
   potency      { minSideClusters, minSideSpanDays, snrDiagnostic, snrCalibration,
                  envelopeLow, envelopeHigh, calibratedN, calibratedSpanDays,
                  calibratedRDisp, strongN, strongSpanDays, strongRDisp, reassessDelta }
-  waterChange  { materialityFloorDkh, unknownAssumedMismatchDkh, unknownBreakFraction }
+  waterChange  { materialityFloorDkh, unknownAssumedMismatchDkh, unknownBreakFraction,
+                 normalizationConfidenceTier }   // MEASURED_SAME_BATCH  (F5-10)
   retest       { routineCadenceHours, rapidHours, safetyHours,
-                 postChangeFirstHours, postChangeSecondHours }
+                 postChangeFirstHours, postChangeSecondHours,
+                 signalRequiredMovementDkh,      // 0.10                 (F5-09)
+                 boundarySafetyLeadDays,         // 1.0                  (F5-09)
+                 observationFloorHours,          // 24                   (F5-09)
+                 observationCeilingHours }       // 96                   (F5-09)
   safety       { outerMinDkh, outerMaxDkh, bSafetyDkh, maxSafetyMove24hDkh,
                  rateRailDkhPerDay, ordinaryStepCap, exceptionalStepCap,
                  stepCapMeaningfulMultiple, liquidGuardFraction }
-  unavailable  { kDetect, requiredMovement, boundarySafetyMargin,
-                 minimumUsefulInterval, maximumObservationInterval,
-                 minimumExposure, suspicionThreshold,
-                 waterChangeNormalizationTier, consumptionUncertaintyModel,
-                 confidenceDerivation }        // all explicitly ABSENT — see OI-*
+  unavailable  { minimumExposure,               // OI-EXPOSURE-001, still absent
+                 normalizationUncertaintyModel }// OI-NORMUNCERT-001, still absent
+  notRun       { kDetect,                       // canonised NOT_RUN     (F5-09)
+                 returnPlanArrivalCadence,      // canonised NOT_RUN     (F5-09)
+                 suspicionThreshold,            // canonised NOT_RUN     (F5-02)
+                 confidenceClassification }     // UNSPECIFIED           (F5-12)
 }
 ```
 
-The `unavailable` block is deliberate. Every field in it is a policy value the shared
-architecture references and the Alk canon never supplies. Representing them as explicitly
-absent — rather than omitting them — is what lets `INV-I6` assert that the dependent output
-refused instead of defaulting.
+Two blocks, and the distinction is load-bearing.
+
+`unavailable` is a policy value the shared architecture references and the Alk canon still
+never supplies. Representing them as explicitly absent — rather than omitting them — is
+what lets `INV-I6` assert that the dependent output refused instead of defaulting.
+
+`notRun` is a value `ALK_V2_FREEZE_5` **decided not to supply**. The engine emits the named
+`NOT_RUN` state and its reason code. Reading a `notRun` field as though it were merely
+missing, or supplying one from a neighbouring parameter, is a conformance failure — the
+owner's decision is that the analysis does not run, not that it is pending.
+
+The negative-consumption materiality boundary, the water-change normalization tier and the
+four scheduler values above moved **out** of the absent set at Freeze 5. Each is derived
+from a constant already in `policy`, so none of them is a new number.
 
 ---
 

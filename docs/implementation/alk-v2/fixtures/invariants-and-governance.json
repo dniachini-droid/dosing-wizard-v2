@@ -1,115 +1,618 @@
 {
   "corpusId": "alk-v2-invariants-and-governance",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "note": "Invariant fixtures named by the CANON RULE COVERAGE MANIFEST, plus the canon's governance scenarios. Invariants are property tests, not single-input goldens: each states the property, how to generate inputs, and what must hold for every generated case.",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [
-    { "fixtureId": "INV-CANON-001", "title": "Canon / reference integrity", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-001", "CORE-CANON-COVERAGE-001"] },
+    {
+      "fixtureId": "INV-CANON-001",
+      "title": "Canon / reference integrity",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-001",
+          "CORE-CANON-COVERAGE-001"
+        ]
+      },
       "kind": "STRUCTURAL",
       "property": "Zero dangling stable rule references; every active normative stable rule body appears exactly once in the coverage manifest; every manifest rule has at least one existing fixture id; every listed fixture id exists.",
       "appliedToThisPackage": "The checker runs over ALK-V2-RULE-TRACEABILITY.md and fixtures/index.json, not over the canon (which must not be modified).",
-      "negativeControl": "Rename one fixture id in index.json without updating the traceability table; the checker must fail." },
-
-    { "fixtureId": "INV-CORE-ADVISORY-001", "title": "Advisory truth and non-adherence", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-002", "CORE-ADVISORY-RESPONSIBILITY-001", "CORE-INFORM-PROCEED-001", "SURFACE-INFORM-PROCEED-001"] },
+      "negativeControl": "Rename one fixture id in index.json without updating the traceability table; the checker must fail."
+    },
+    {
+      "fixtureId": "INV-CORE-ADVISORY-001",
+      "title": "Advisory truth and non-adherence",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-002",
+          "CORE-ADVISORY-RESPONSIBILITY-001",
+          "CORE-INFORM-PROCEED-001",
+          "SURFACE-INFORM-PROCEED-001"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "For every generated history: (a) a recommendation never becomes an implementation without an implementation event; (b) confirmed non-adherence may be surfaced but never creates a punitive lockout; (c) UNKNOWN implementation stays UNKNOWN; (d) engine-originated uncertainty and capability gaps still refuse or degrade as canon requires.",
       "generator": "Randomise over {recommendation issued, implementation CONFIRMED_IMPLEMENTED | CONFIRMED_NOT_IMPLEMENTED | UNKNOWN} x {0..5 subsequent readings}.",
-      "mustHold": ["implementationState is never rewritten by the engine", "a current assessment always RUNs when its own inputs are valid", "no output is withheld solely because prior advice was ignored"] },
-
-    { "fixtureId": "INV-NONADHERENCE-001", "title": "Non-adherence rescue complexity", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-003", "CORE-NONADHERENCE-COMPLEXITY-001", "SIM-NONADHERENCE-001", "X-GOV-004"] },
+      "mustHold": [
+        "implementationState is never rewritten by the engine",
+        "a current assessment always RUNs when its own inputs are valid",
+        "no output is withheld solely because prior advice was ignored"
+      ]
+    },
+    {
+      "fixtureId": "INV-NONADHERENCE-001",
+      "title": "Non-adherence rescue complexity",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-003",
+          "CORE-NONADHERENCE-COMPLEXITY-001",
+          "SIM-NONADHERENCE-001",
+          "X-GOV-004"
+        ]
+      },
       "kind": "SIMULATION",
       "property": "Under a hostile simulated keeper who ignores every recommendation, the engine remains deterministic, dimensionally valid, rail-respecting and non-oscillatory, and continues producing the best supported current advice.",
       "generator": "Long-run simulation: A_new = A_old + (P D - C) dt + known external inputs + measurement noise, with the keeper never implementing any recommendation.",
-      "mustHold": ["deterministic = true", "stateValid = true", "railsPreserved = true", "recommendationVsImplementationTruth preserved", "currentBestAdvice still produced where supported", "no runaway or oscillating dose recommendation"],
-      "classificationRule": "If a bad outcome is caused solely by repeated confirmed non-adherence, failureClass = NONADHERENCE_OUTCOME and no new rescue state is required. If the same run reveals a runaway recommendation, a unit or sign error, corrupted state, a rail violation or an unsupported confident recommendation, failureClass includes ENGINE_FAILURE and the defect must be fixed." },
-
-    { "fixtureId": "INV-CORE-OWNER-001", "title": "One analytical owner", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-004", "CORE-SOURCE-001"] },
+      "mustHold": [
+        "deterministic = true",
+        "stateValid = true",
+        "railsPreserved = true",
+        "recommendationVsImplementationTruth preserved",
+        "currentBestAdvice still produced where supported",
+        "no runaway or oscillating dose recommendation"
+      ],
+      "classificationRule": "If a bad outcome is caused solely by repeated confirmed non-adherence, failureClass = NONADHERENCE_OUTCOME and no new rescue state is required. If the same run reveals a runaway recommendation, a unit or sign error, corrupted state, a rail violation or an unsupported confident recommendation, failureClass includes ENGINE_FAILURE and the defect must be fixed."
+    },
+    {
+      "fixtureId": "INV-CORE-OWNER-001",
+      "title": "One analytical owner",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-004",
+          "CORE-SOURCE-001"
+        ]
+      },
       "kind": "STRUCTURAL",
       "property": "The domain engine owns chemistry; presentation renders structured output; no UI component independently calculates slope, dose, response class or retest time; one retest scheduler owns chemistry timing.",
       "check": "Static dependency check: no module in the presentation layer may import or reference a function from TREND, UNCERTAINTY, SUPPORT, CONSUMPTION, MAINTENANCE, RESPONSE, SAFETY or RETEST. Presentation receives EngineResult only.",
-      "negativeControl": "Add a slope recomputation to a card module; the check must fail." },
-
-    { "fixtureId": "INV-SURFACE-WORDING-001", "title": "Surface wording contract", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-005", "SURFACE-WORDING-001", "IX-002", "IX-003", "IX-004A", "IX-005", "IX-006", "ALK-CARD-ATTRIBUTION-001"] },
+      "negativeControl": "Add a slope recomputation to a card module; the check must fail."
+    },
+    {
+      "fixtureId": "INV-SURFACE-WORDING-001",
+      "title": "Surface wording contract",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-005",
+          "SURFACE-WORDING-001",
+          "IX-002",
+          "IX-003",
+          "IX-004A",
+          "IX-005",
+          "IX-006",
+          "ALK-CARD-ATTRIBUTION-001"
+        ]
+      },
       "kind": "CONTRACT",
       "property": "Snapshot tests verify: conclusion before basis; no first person; dose mentioned only when relevant; units always present with chemical values and rates; recent-intervention precedence; no causal 'working' claim before a formal favourable class; no unsupported causal speculation; non-adherence wording informs without shaming or lockout; insufficiency wording is actionable; outer-bound wording never uses 'safe' or 'unsafe'.",
       "mandatoryCardStructures": [
-        { "when": "responseAttribution = NOT_ATTRIBUTABLE_SMALL_SIGNAL", "fullCardMustShow": ["current Alk value", "current observed post-change slope", "current supported post-change slope", "current maintenance conclusion", "secondary explanation that the previous dose change was too small to isolate independently", "next test timing"], "headlineMustNotLeadWith": "not attributable" }
+        {
+          "when": "responseAttribution = NOT_ATTRIBUTABLE_SMALL_SIGNAL",
+          "fullCardMustShow": [
+            "current Alk value",
+            "current observed post-change slope",
+            "current supported post-change slope",
+            "current maintenance conclusion",
+            "secondary explanation that the previous dose change was too small to isolate independently",
+            "next test timing"
+          ],
+          "headlineMustNotLeadWith": "not attributable"
+        }
       ],
-      "forbiddenStrings": ["The dose change is working. (before a formal favourable class)", "still falling (where causal continuity was not established)", "safe", "unsafe", "The current dose looks appropriate so far"] },
-
-    { "fixtureId": "INV-CONFIG-001", "title": "Effective-dated configuration", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-006", "SHARED-CONFIG-VERSION-001"] },
+      "forbiddenStrings": [
+        "The dose change is working. (before a formal favourable class)",
+        "still falling (where causal continuity was not established)",
+        "safe",
+        "unsafe",
+        "The current dose looks appropriate so far"
+      ]
+    },
+    {
+      "fixtureId": "INV-CONFIG-001",
+      "title": "Effective-dated configuration",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-006",
+          "SHARED-CONFIG-VERSION-001"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "The same raw pre-V2 history plus two different current target ranges must not rewrite the historical target configuration. Historical config-dependent replay before the first proven configuration version remains NOT_RUN.",
       "generator": "Fix a legacy ledger; vary the current target range across {[8.2,8.8], [8.4,9.0]}; replay assessments both before and after the first proven effectiveFrom.",
-      "mustHold": ["historical assessments byte-identical across both variants", "pre-effectiveFrom replay returns NOT_RUN / HISTORICAL_CONFIGURATION_UNAVAILABLE in both variants"] },
-
-    { "fixtureId": "INV-TIME-001", "title": "Legacy absolute-time provenance", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-007", "SHARED-LEGACY-TIME-001", "DATA-PROVENANCE.md §2"] },
+      "mustHold": [
+        "historical assessments byte-identical across both variants",
+        "pre-effectiveFrom replay returns NOT_RUN / HISTORICAL_CONFIGURATION_UNAVAILABLE in both variants"
+      ]
+    },
+    {
+      "fixtureId": "INV-TIME-001",
+      "title": "Legacy absolute-time provenance",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-007",
+          "SHARED-LEGACY-TIME-001",
+          "DATA-PROVENANCE.md §2"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "Legacy date-only and local-time-without-zone records never gain fabricated noon or current-zone instants. Exact elapsed-time calculations use only EXACT_ABSOLUTE or RECONSTRUCTED_WITH_PROVENANCE instants.",
       "generator": "Randomise the host process timezone and the viewer's display timezone across at least {UTC, +10:00, -07:00, Europe/London during and outside DST}.",
-      "mustHold": ["every DATE_ONLY record's stored provenance is unchanged after any number of read/render cycles", "engine output is byte-identical across all host and display timezones", "no analysis consuming a DATE_ONLY or LOCAL_TIME_ZONE_UNKNOWN instant produces a rate"] },
-
-    { "fixtureId": "INV-ALK-STAGING-001", "title": "No V1 staging or confidence multiplier", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-008", "ALK-STAGING-001", "ALK-048"] },
+      "mustHold": [
+        "every DATE_ONLY record's stored provenance is unchanged after any number of read/render cycles",
+        "engine output is byte-identical across all host and display timezones",
+        "no analysis consuming a DATE_ONLY or LOCAL_TIME_ZONE_UNKNOWN instant produces a rate"
+      ]
+    },
+    {
+      "fixtureId": "INV-ALK-STAGING-001",
+      "title": "No V1 staging or confidence multiplier",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-008",
+          "ALK-STAGING-001",
+          "ALK-048"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "Given the same supported slope and the same final physical constraints, changing a presentation confidence label must not change the numerical maintenance dose. No 100/90/70/55% raw-mL staging band may run.",
       "generator": "Fix an EngineResult's numeric inputs; vary recommendationConfidence across {LOW, MODERATE, HIGH, UNSPECIFIED}.",
-      "mustHold": ["recommendedDoseMlPerDay identical in all four cases", "no constant in {1.00, 0.90, 0.75, 0.70, 0.55} appears in the maintenance pipeline"] },
-
-    { "fixtureId": "INV-ALK-VARIABLES-001", "title": "Variable semantics are dimension-safe", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-009", "ALK-VARIABLE-SEMANTICS-001", "Part I §44"] },
+      "mustHold": [
+        "recommendedDoseMlPerDay identical in all four cases",
+        "no constant in {1.00, 0.90, 0.75, 0.70, 0.55} appears in the maintenance pipeline"
+      ]
+    },
+    {
+      "fixtureId": "INV-ALK-VARIABLES-001",
+      "title": "Variable semantics are dimension-safe",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-009",
+          "ALK-VARIABLE-SEMANTICS-001",
+          "Part I §44"
+        ]
+      },
       "kind": "STRUCTURAL",
       "property": "Level targets, maintenance dose rates, temporary movement components, correction volumes and potency remain separate domain concepts. A field named target must not carry both chemical level and mL/day semantics.",
       "check": "Every numeric field in the data contract carries exactly one dimension suffix; no field appears with two dimensions across any state; the seven ALK-069A quantities exist as seven distinct named fields.",
-      "negativeControl": "Merge maintenanceEstimate and continuousActionCandidate into one field named maintenanceDose; the check must fail." },
-
-    { "fixtureId": "INV-ALK-CONFIDENCE-001", "title": "Confidence is output, not a dose multiplier", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-INV-010", "ALK-CONFIDENCE-OUTPUT-001"] },
+      "negativeControl": "Merge maintenanceEstimate and continuousActionCandidate into one field named maintenanceDose; the check must fail."
+    },
+    {
+      "fixtureId": "INV-ALK-CONFIDENCE-001",
+      "title": "Confidence is output, not a dose multiplier",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-INV-010",
+          "ALK-CONFIDENCE-OUTPUT-001"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "For identical evidence and supported slope, changing only a descriptive confidence label cannot alter the dose calculation.",
       "relationToStaging": "Narrower than INV-ALK-STAGING-001: that one forbids the staging mechanism, this one forbids any confidence-to-number path at all.",
-      "mustHold": ["recommendationConfidence has no read path into any arithmetic function"] },
-
-    { "fixtureId": "INV-REPLAY-001", "title": "Deterministic replay", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["Part II §64", "ALK-G040", "WG-ALK-040"] },
+      "mustHold": [
+        "recommendationConfidence has no read path into any arithmetic function"
+      ]
+    },
+    {
+      "fixtureId": "INV-REPLAY-001",
+      "title": "Deterministic replay",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "Part II §64",
+          "ALK-G040",
+          "WG-ALK-040"
+        ]
+      },
       "kind": "PROPERTY",
       "property": "Same event ledger + same configuration versions + same asOf + same engine/canon version produces a byte-identical EngineResult and AuditTrace.",
       "generator": "Shuffle the input event array order (preserving instants), vary host locale and timezone, run twice in one process and once in a fresh process.",
-      "mustHold": ["all runs byte-identical", "no clock read outside the passed asOf", "no unseeded randomness", "sort key is (absoluteInstant, eventOrdinal, eventId)"] },
-
-    { "fixtureId": "X-MIG-001", "title": "Ca/Mg logging remains inert during the Alk-only runtime", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-MIG-001", "MIGRATION-ALK-ONLY-001", "MIGRATION-INERT-CA-MG-MEASUREMENTS-001", "MIGRATION-MG-GATE-ISOLATION-001"] },
-      "kind": "GOLDEN", "equivalentTo": "AD-CAP-001",
-      "input": { "runtime": "ALK_V2_ONLY", "loggedCaPpm": 455, "loggedCaAt": "2026-08-19T20:00", "loggedMgPpm": 1180, "loggedMgAt": "2026-08-19T20:01" },
-      "expectedAction": { "stored": ["Ca measurement", "Mg measurement", "timestamps"], "historyChartEligibility": true,
-        "notRun": ["Ca trend", "Ca evidence", "Ca maintenance", "Mg trend", "Mg evidence", "Mg maintenance"], "notifications": "NONE", "magnesiumGateState": "UNKNOWN" },
-      "forbidden": { "cases": ["derive magnesiumGateState = ALERT_LOW from 1180 ppm", "derive Ca/Mg trend from logged history", "create a Ca/Mg retest schedule", "render a Ca/Mg advisory verdict"] } },
-
-    { "fixtureId": "X-GOV-001", "title": "Confirmed ignored recommendation: reassess and continue", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-001"] },
+      "mustHold": [
+        "all runs byte-identical",
+        "no clock read outside the passed asOf",
+        "no unseeded randomness",
+        "sort key is (absoluteInstant, eventOrdinal, eventId)"
+      ]
+    },
+    {
+      "fixtureId": "X-MIG-001",
+      "title": "Ca/Mg logging remains inert during the Alk-only runtime",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-MIG-001",
+          "MIGRATION-ALK-ONLY-001",
+          "MIGRATION-INERT-CA-MG-MEASUREMENTS-001",
+          "MIGRATION-MG-GATE-ISOLATION-001"
+        ]
+      },
       "kind": "GOLDEN",
-      "input": { "day0": { "appRecommends": ["Alk retest in 48 h", "maintenance increase"], "keeperConfirms": "maintenance increase NOT IMPLEMENTED" }, "day4": { "newValidAlkReading": true } },
-      "expectedAction": { "priorImplementationState": "CONFIRMED_NOT_IMPLEMENTED", "currentAssessment": "RUN", "currentRecommendation": "best supported recommendation from current facts", "punitiveLockout": false, "cardMayNameThePriorChangeWasNotMade": true },
-      "expectedReasonCodes": ["PRESENTATION_INFORM_AND_PROCEED"],
-      "forbidden": { "note": "Refusing current advice solely because the Day-0 recommendation was ignored is forbidden." } },
-
-    { "fixtureId": "X-GOV-002", "title": "Unknown implementation retains evidence guards", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-002"] },
-      "kind": "GOLDEN",
-      "input": { "day0": { "appRecommends": "dose change", "implementationConfirmation": "absent" }, "day4": { "newAlkReading": true } },
-      "expectedAction": { "priorImplementationState": "UNKNOWN", "ifImplementationIsLoadBearingForAttribution": { "causalResponseAttribution": "WITHHELD_OR_CONFOUNDED", "potencyLearning": "NOT_RUN" }, "currentPosition": "reported from the valid Day-4 reading" },
-      "forbidden": { "cases": ["assume the dose was changed", "assume the dose was not changed"] } },
-
-    { "fixtureId": "X-GOV-003", "title": "Inform and proceed versus refuse", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-003", "CORE-INFORM-PROCEED-001"] },
-      "kind": "GOLDEN",
+      "equivalentTo": "AD-CAP-001",
       "input": {
-        "caseA": { "alk": "below outer operating range", "mg": "ALERT_LOW", "alkPotency": "valid" },
-        "caseB": { "requiredAlkMovementDkh": 0.30, "selectedAlkPotency": "UNKNOWN" }
+        "runtime": "ALK_V2_ONLY",
+        "loggedCaPpm": 455,
+        "loggedCaAt": "2026-08-19T20:00",
+        "loggedMgPpm": 1180,
+        "loggedMgAt": "2026-08-19T20:01"
       },
       "expectedAction": {
-        "caseA": { "alkSafetyReturn": "recommended", "mgWarning": "shown" },
-        "caseB": { "requiredDkhMovement": "may be shown", "recommendedMlDose": "WITHHELD", "reason": "POTENCY_REQUIRED" }
+        "stored": [
+          "Ca measurement",
+          "Mg measurement",
+          "timestamps"
+        ],
+        "historyChartEligibility": true,
+        "notRun": [
+          "Ca trend",
+          "Ca evidence",
+          "Ca maintenance",
+          "Mg trend",
+          "Mg evidence",
+          "Mg maintenance"
+        ],
+        "notifications": "NONE",
+        "magnesiumGateState": "UNKNOWN"
       },
-      "expectedReasonCodes": ["SAFETY_MG_GATE_OVERRIDDEN", "POTENCY_REQUIRED"],
-      "forbidden": { "cases": ["withhold the valid Alk safety action solely because low Mg may make the result harder to hold", "guess an mL dose"] } },
-
-    { "fixtureId": "X-GOV-004", "title": "Repeated ignored guidance is a stress test, not a rescue-state requirement", "provenance": { "class": "CANON_VERBATIM", "canonSource": ["X-GOV-004"] },
-      "kind": "SIMULATION", "equivalentTo": "INV-NONADHERENCE-001",
-      "input": { "simulation": "keeper repeatedly logs worsening Alk and confirms multiple prior recommendations were not implemented; chemistry eventually reaches an extreme value" },
-      "expectedAction": { "requiredEngineProperties": ["deterministic", "stateValid", "railsPreserved", "recommendationVsImplementationTruth preserved", "currentBestAdvice still produced where supported"] },
-      "classificationRule": "NONADHERENCE_OUTCOME alone requires no new rescue state. ENGINE_FAILURE indicators (runaway dose recommendation, unit/sign error, corrupted state, rail violation, unsupported confident recommendation) must be fixed regardless of keeper behaviour." }
+      "forbidden": {
+        "cases": [
+          "derive magnesiumGateState = ALERT_LOW from 1180 ppm",
+          "derive Ca/Mg trend from logged history",
+          "create a Ca/Mg retest schedule",
+          "render a Ca/Mg advisory verdict"
+        ]
+      }
+    },
+    {
+      "fixtureId": "X-GOV-001",
+      "title": "Confirmed ignored recommendation: reassess and continue",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-GOV-001"
+        ]
+      },
+      "kind": "GOLDEN",
+      "input": {
+        "day0": {
+          "appRecommends": [
+            "Alk retest in 48 h",
+            "maintenance increase"
+          ],
+          "keeperConfirms": "maintenance increase NOT IMPLEMENTED"
+        },
+        "day4": {
+          "newValidAlkReading": true
+        }
+      },
+      "expectedAction": {
+        "priorImplementationState": "CONFIRMED_NOT_IMPLEMENTED",
+        "currentAssessment": "RUN",
+        "currentRecommendation": "best supported recommendation from current facts",
+        "punitiveLockout": false,
+        "cardMayNameThePriorChangeWasNotMade": true
+      },
+      "expectedReasonCodes": [
+        "PRESENTATION_INFORM_AND_PROCEED"
+      ],
+      "forbidden": {
+        "note": "Refusing current advice solely because the Day-0 recommendation was ignored is forbidden."
+      }
+    },
+    {
+      "fixtureId": "X-GOV-002",
+      "title": "Unknown implementation retains evidence guards",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-GOV-002"
+        ]
+      },
+      "kind": "GOLDEN",
+      "input": {
+        "day0": {
+          "appRecommends": "dose change",
+          "implementationConfirmation": "absent"
+        },
+        "day4": {
+          "newAlkReading": true
+        }
+      },
+      "expectedAction": {
+        "priorImplementationState": "UNKNOWN",
+        "ifImplementationIsLoadBearingForAttribution": {
+          "causalResponseAttribution": "WITHHELD_OR_CONFOUNDED",
+          "potencyLearning": "NOT_RUN"
+        },
+        "currentPosition": "reported from the valid Day-4 reading"
+      },
+      "forbidden": {
+        "cases": [
+          "assume the dose was changed",
+          "assume the dose was not changed"
+        ]
+      }
+    },
+    {
+      "fixtureId": "X-GOV-003",
+      "title": "Inform and proceed versus refuse",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-GOV-003",
+          "CORE-INFORM-PROCEED-001"
+        ]
+      },
+      "kind": "GOLDEN",
+      "input": {
+        "caseA": {
+          "alk": "below outer operating range",
+          "mg": "ALERT_LOW",
+          "alkPotency": "valid"
+        },
+        "caseB": {
+          "requiredAlkMovementDkh": 0.3,
+          "selectedAlkPotency": "UNKNOWN"
+        }
+      },
+      "expectedAction": {
+        "caseA": {
+          "alkSafetyReturn": "recommended",
+          "mgWarning": "shown"
+        },
+        "caseB": {
+          "requiredDkhMovement": "may be shown",
+          "recommendedMlDose": "WITHHELD",
+          "reason": "POTENCY_REQUIRED"
+        }
+      },
+      "expectedReasonCodes": [
+        "SAFETY_MG_GATE_OVERRIDDEN",
+        "POTENCY_REQUIRED"
+      ],
+      "forbidden": {
+        "cases": [
+          "withhold the valid Alk safety action solely because low Mg may make the result harder to hold",
+          "guess an mL dose"
+        ]
+      }
+    },
+    {
+      "fixtureId": "X-GOV-004",
+      "title": "Repeated ignored guidance is a stress test, not a rescue-state requirement",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "X-GOV-004"
+        ]
+      },
+      "kind": "SIMULATION",
+      "equivalentTo": "INV-NONADHERENCE-001",
+      "input": {
+        "simulation": "keeper repeatedly logs worsening Alk and confirms multiple prior recommendations were not implemented; chemistry eventually reaches an extreme value"
+      },
+      "expectedAction": {
+        "requiredEngineProperties": [
+          "deterministic",
+          "stateValid",
+          "railsPreserved",
+          "recommendationVsImplementationTruth preserved",
+          "currentBestAdvice still produced where supported"
+        ]
+      },
+      "classificationRule": "NONADHERENCE_OUTCOME alone requires no new rescue state. ENGINE_FAILURE indicators (runaway dose recommendation, unit/sign error, corrupted state, rail violation, unsupported confident recommendation) must be fixed regardless of keeper behaviour."
+    },
+    {
+      "fixtureId": "INV-G12",
+      "title": "Exactly one high-breach branch is selected, always",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001",
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+          "ALK-003A"
+        ]
+      },
+      "kind": "PROPERTY",
+      "property": "For every state with A_now > OuterMax - the WHOLE high-breach region, with no upper limit, since owner decision 24 removed the AdvisoryCeiling bound - THAT REACHES BRANCH SELECTION, exactly one of the three high-breach predicates is selected: A (C_estimate >= 0 and physically interpretable), B (C_estimate negative, either side of the materiality boundary) or B' (C_estimate not computable at all). Never zero branches; never two. A state REACHES branch selection when the pre-branch precondition of ALK-DELIVERY-RATE-BASIS-001 passes, i.e. when D_current is known; where it is unknown, owner decision 25 refuses BEFORE selection and INV-G15 governs instead. INV-G12 and INV-G15 are complementary and must never be read as competing answers for the same state.",
+      "generator": "Cross C_estimate over {positive, exactly zero, negative-not-material, negative-material, NOT COMPUTABLE} with D_current over {known above the floor, known at the floor, known below the floor, unknown}, at several A_now above OuterMax INCLUDING at and beyond AdvisoryCeiling, and several sigma_S. States with D_current unknown are expected to be refused by the precondition and to select NO branch; they are checked against INV-G15, not against the partition.",
+      "mustHold": [
+        "exactly one branch is selected for every generated state",
+        "C_estimate exactly zero selects A, not B - the comparison is C_estimate >= 0",
+        "B and B' produce the identical max(0, D_current - R_down / P_selected)",
+        "maintenanceEstimateStatus is UNRESOLVED on both B and B'",
+        "an unknown D_current does not create a fourth branch, because it does not reach the branch tree at all: owner decision 25 refuses in a PRECONDITION evaluated BEFORE selection, so preconditionPassed is false and branchSelected is NOT_RUN. Under owner decision 20 alone this line read that the branch was still selected and only the rate was NOT_RUN; decision 25 replaced that reading.",
+        "an invalid P_selected DOES reach selection: the precondition passes, branch B' is selected because an invalid potency also makes C_estimate uncomputable, and the pre-existing potency clause withholds the mL figure while stating the required dKH movement",
+        "every state at or beyond AdvisoryCeiling still selects a branch and still states a rate - the boundary attaches a warning and gates nothing (owner decision 24)",
+        "no generated state selects zero branches"
+      ],
+      "negativeControl": "Remove the B' branch so a non-computable C_estimate falls through; AD-SAF-009 must fail with zero branches selected. Separately, route a non-computable C_estimate to A by treating it as zero; AD-SAF-009 must fail on the emitted rate.",
+      "whyItExists": "Before owner decision 22, a high breach with no computable consumption estimate matched neither C >= 0 nor C < 0. The state produced no delivery response at all above the outer bound, and nothing in the corpus asserted that the predicates covered the space.",
+      "openIssues": [
+        "OI-UNCOMPUTABLEC-001 - RESOLVED by owner decision 22",
+        "OI-BRANCHAREFUSAL-001 - RESOLVED by owner decision 25; this invariant was amended to scope itself to the states that REACH selection"
+      ]
+    },
+    {
+      "fixtureId": "INV-G13",
+      "title": "Beyond the advisory boundary the engine warns, and the answer does not change",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-ADVISORY-RANGE-BOUNDARY-001",
+          "ALK-DECIMAL-THRESHOLD-001",
+          "ALK-RETEST-SCHEDULER-001"
+        ],
+        "note": "REWRITTEN by owner decision 24, which superseded decision 21's withholding. Under decision 21 this invariant asserted the opposite: that at and beyond the boundary recommendedDoseMlPerDay was WITHHELD and both rate fields NOT_RUN."
+      },
+      "kind": "PROPERTY",
+      "property": "At and beyond AdvisoryCeiling or AdvisoryFloor the ordinary rules produce the ordinary recommendation, unchanged, and the boundary adds advisoryConfidenceWarning = ATTACHED beside it. Nothing is withheld, nothing is zero, nothing is NOT_RUN because of the boundary, and no escalation replaces an answer.",
+      "generator": "Sweep the resolved episode value through boundary - 1 precision step, exactly boundary, and boundary + 1 precision step, and the three mirrored cases at the floor, at several configured (outerMin, outerMax) pairs so the boundary is exercised as an OFFSET and not as a pinned level. Include configurations where binary64 and exact decimal disagree.",
+      "mustHold": [
+        "the recommendation immediately below the boundary and the recommendation at and above it are produced by the same rules and are the same number",
+        "the only difference across the boundary is advisoryConfidenceWarning: NONE below, ATTACHED at and beyond",
+        "attaching the warning changes none of the recommended rate, the trajectory, the consumption estimate, the retest schedule, the outer-bound classification, the evidence state, or any rail or guard",
+        "the interval the warning renders equals the interval ALK-RETEST-SCHEDULER-001 produced, in every generated case (owner decision 26); the warning submits no candidate and computes no next-test time",
+        "the boundary is computed and compared in EXACT DECIMAL: OuterMin 8.2 with A_now 7.2 (exact floor 7.2, binary64 7.199999999999999) must warn",
+        "every field any case states is stated by every case and is identical across the boundary - a field present on one side only is how a change hides"
+      ],
+      "negativeControl": "Revert the boundary to withholding; AD-ESC-001 and AD-ESC-002 must fail. Change the recommended rate at the boundary; AD-ESC-001 must fail. Let the warning state its own interval; AD-ESC-001 must fail. Compare in binary64; AD-ESC-002's straddling case must fail.",
+      "scope": "This invariant does NOT assert that the sized rate responds to A_now. It does not, at any level, and decision 24 WIDENED that exposure by removing the ceiling that used to bound it. OI-SIZINGFLAT-001 stays open and is no longer narrowed.",
+      "whyItExists": "Decision 21 made the boundary a refusal. Withholding advice was reasoned about as though it stopped delivery, which it never could: the application has no connection to any doser (ALK-RECOMMEND-ONLY-001).",
+      "openIssues": [
+        "OI-ADVISORYEXCEPTION-001 - RESOLVED by owner decision 24",
+        "OI-ADVISORYMEMBERS-001 - RESOLVED by owner decision 24",
+        "OI-ADVISORYRETURN-001 - RESOLVED by owner decision 24",
+        "OI-ADVISORYRETEST-001 - RESOLVED by owner decision 26",
+        "OI-SIZINGFLAT-001 - STILL OPEN, and NO LONGER NARROWED"
+      ],
+      "fixtures": [
+        "AD-ESC-001",
+        "AD-ESC-002",
+        "AD-ESC-003"
+      ]
+    },
+    {
+      "fixtureId": "INV-G14",
+      "title": "D_current and D_history are never interchanged",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-DELIVERY-RATE-BASIS-001",
+          "ALK-CONSUMPTION-ESTIMATE-001",
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001"
+        ],
+        "note": "Owner decision 20. Amended by owner decision 25: the D_current refusal is a precondition evaluated before branch selection, so it reaches branch A too."
+      },
+      "kind": "PROPERTY",
+      "property": "High-breach safety sizing uses D_current and consumption uses D_history. The two are distinct quantities and are never substituted for one another in either direction.",
+      "generator": "Intervals whose programmed dose changes mid-interval, in BOTH directions, so D_current != D_history and the sign of the difference varies; crossed with {D_current known, D_current unknown} x {D_history available, D_history unavailable}.",
+      "mustHold": [
+        "safety sizing takes D_current and consumption takes D_history, on every generated interval and in both directions of dose change",
+        "D_current unknown: no safety rate on ANY branch (owner decision 25's precondition), recommendedDoseMlPerDay WITHHELD, and never 0, while consumption still runs where D_history is available",
+        "D_history unavailable: consumption is UNRESOLVED, while safety sizing still runs where D_current is known",
+        "a D_history that integrates to EXACTLY ZERO - the doser off for the whole interval - is a value, not an absence, and must not fall back to D_current",
+        "D_established appears nowhere as a live name"
+      ],
+      "negativeControl": "Swap D_current for D_history in the safety formula; AD-DHS-001 must fail in BOTH directions. Emit 0 when D_current is unknown; AD-DHS-002 must fail. Withhold safety sizing because D_history is unavailable; AD-DHS-003 must fail.",
+      "whyItExists": "One name carried two quantities. On a constant-dose segment they are numerically equal, so every existing fixture passed either way and the defect was invisible to the whole corpus.",
+      "openIssues": [
+        "OI-DELIVERYRATEBASIS-001 - RESOLVED by owner decision 20"
+      ],
+      "fixtures": [
+        "AD-DHS-001",
+        "AD-DHS-002",
+        "AD-DHS-003"
+      ]
+    },
+    {
+      "fixtureId": "INV-G15",
+      "title": "A high-breach state gives one answer, not two",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-DELIVERY-RATE-BASIS-001",
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+          "ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001"
+        ],
+        "note": "Owner decision 25. INV-G12 partitions the states that REACH branch selection; this invariant governs the gate in front of it. The two are complementary and must never be read as competing answers for the same state."
+      },
+      "kind": "PROPERTY",
+      "property": "No high-breach state produces both a numeric temporary safety recommendation and a refusal, and no state produces different outputs under different readings of the rules. Where D_current is unknown the precondition refuses BEFORE branch selection, so no branch is selected and no branch's formula runs - including branch A, whose formula does not reference D_current at all.",
+      "generator": "Every high-breach state, crossed with D_current in {known, unknown} and C_estimate in {positive-interpretable, zero, positive-uninterpretable, negative-material, negative-not-material, NOT COMPUTABLE}, at several P_selected including invalid.",
+      "mustHold": [
+        "no state produces both a numeric temporary safety recommendation and a refusal",
+        "D_current unknown: preconditionPassed is false, branchSelected is NOT_RUN, and no branch formula is evaluated - branch A included",
+        "D_current known: the precondition passes and exactly one branch produces exactly one recommendation",
+        "the same state cannot produce different outputs under different readings; evaluating the refusal inside a branch formula is not a valid reading under owner decision 25, and the assertion exists because before it, it was"
+      ],
+      "negativeControl": "Remove the precondition and let branch A size from C_estimate; AD-SAF-010's BRANCH_A_D_CURRENT_UNKNOWN case must fail with a numeric 1.443001443001443 rounding to 1.4. Emit both a number and a refusal; AD-SAF-010 must fail. Restore the decision-20 reading so a D_current-unknown state selects branch B; AD-DHS-002 and AD-SAF-010 must then disagree with each other.",
+      "whyItExists": "Decision 20 attached the refusal to a formula. Branch A's formula max(0, (C_estimate + S_safety) / P_selected) contains no D_current, so one reading refused and another recommended 1.4 mL/day, on the same tank state.",
+      "openIssues": [
+        "OI-BRANCHAREFUSAL-001 - RESOLVED by owner decision 25"
+      ],
+      "fixtures": [
+        "AD-SAF-010",
+        "AD-DHS-002"
+      ]
+    },
+    {
+      "fixtureId": "INV-G16",
+      "title": "There is no actuator, and no output is withheld for want of one",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RECOMMEND-ONLY-001",
+          "ALK-ROUNDING-001"
+        ],
+        "note": "Owner decision 23."
+      },
+      "kind": "PROPERTY",
+      "property": "The engine emits exactly one recommended rate wherever a rate is calculable - never a pair, under any names - and no output is withheld, refused, gated or NOT_RUN because a device increment is unknown.",
+      "generator": "Every state that previously depended on actuatorIncrementMlPerDay, crossed with recommendationPrecisionMlPerDay in {configured and > 0, not configured, configured and <= 0}.",
+      "mustHold": [
+        "exactly one recommended rate is emitted wherever a rate is calculable, never a pair under any names",
+        "no precision configured: the full-precision recommendation is stated, no default increment is assumed, and ALK-ROUNDING-001 step 6's hard-constraint recheck still runs",
+        "a precision configured and > 0: the recommendation is rounded to it",
+        "a precision configured and <= 0: VALIDATION_RECOMMENDATION_PRECISION_INVALID, which is a bad configured value and always was",
+        "no refusal, invariant or recorded exposure asserts that withholding an output causes delivery to continue, rise, run on or persist",
+        "what still withholds, and none of it is a device capability: an invalid or unavailable P_selected withholds the mL/day figure and states the dKH movement and direction; an unknown D_current refuses under INV-G15; the liquid-volume guard withholds a physically implausible volume"
+      ],
+      "negativeControl": "Reinstate the advisory/executable split; AD-REC-001 and AD-SAF-005 must fail. Withhold a recommendation because no precision is configured; WG-ALK-045 and AD-SAF-005 must fail. Assert that withholding keeps a pump running; AD-REC-002 must fail.",
+      "whyItExists": "The package was written as though the engine drove a doser. It never did, and a whole layer of refusals, statuses and paired outputs existed to manage a connection that does not exist.",
+      "openIssues": [
+        "OI-SAFETYRATE-001 - reclassified INAPPLICABLE by owner decision 23"
+      ],
+      "fixtures": [
+        "AD-REC-001",
+        "AD-REC-002",
+        "AD-SAF-005",
+        "WG-ALK-045"
+      ]
+    },
+    {
+      "fixtureId": "INV-G17",
+      "title": "The advisory warning field has exactly two states",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-ADVISORY-RANGE-BOUNDARY-001"
+        ],
+        "note": "Owner decision 29. Numbered G17 and not G14: the decisions 27-29 encoding first gave this invariant INV-G14, which owner decision 20 had already taken. The duplicate was corrected in the same pass; INV-G14 remains decision 20's."
+      },
+      "kind": "PROPERTY",
+      "property": "advisoryConfidenceWarning is present or absent and there is no third value. It takes only ATTACHED or NONE, in every state and in every fixture. NOT_RUN does not exist.",
+      "generator": "Every reachable state of the advisory boundary: resolved values below, at and beyond AdvisoryCeiling and AdvisoryFloor; a resolved value with no outer bound configured; and an episode whose every measurement is INVALID, so no observation resolves at all.",
+      "mustHold": [
+        "advisoryConfidenceWarning is ATTACHED or NONE and never any third value",
+        "NOT_RUN does not appear in the data-contract enumeration, in any fixture leaf, in the algorithm contract's failure state, or in any rule text that sets the field",
+        "where no reading resolves there is nothing to warn about, so the field is NONE - absent - and the absence of an observation is not represented as a third value of this field",
+        "the absence of a warning is not itself an output: no reason code, retest change or dose change follows from NONE"
+      ],
+      "negativeControl": "Reinstate NOT_RUN anywhere - the data-contract enumeration, a fixture leaf, or the algorithm contract's failure state - and AD-ESC-003 must fail. Set the field to NOT_RUN on the NO_VALID_READING state and AD-ESC-003 must fail.",
+      "whyItExists": "OI-ADVISORYWARNSTATE-001 recorded that the third value's trigger set was never stated in the rule that owns the field. Owner decision 29 removes the value rather than specifying it.",
+      "openIssues": [
+        "OI-ADVISORYWARNSTATE-001 - resolved by owner decision 29"
+      ],
+      "fixtures": [
+        "AD-ESC-003"
+      ]
+    }
   ]
 }

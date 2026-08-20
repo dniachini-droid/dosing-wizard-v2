@@ -17,7 +17,7 @@ The sole behavioural authority is:
 
 `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md`
 
-Current frozen authorities are `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_4`.
+Current frozen authorities are `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_5`.
 
 `docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md` is a preserved
 historical handoff. Its freeze identifiers (`SHARED_V2_FREEZE_1`,

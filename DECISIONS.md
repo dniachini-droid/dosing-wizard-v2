@@ -432,3 +432,141 @@ valuable product output.
 - Correlation is not presented as cause without evidence that supports the claim.
 - Refusal and "insufficient evidence" are designed states with designed presentation.
 - This constraint binds the AI layer identically; explanation may not become invention.
+
+---
+
+## DEC-016 — The conformance harness is a required check
+
+- **ID:** DEC-016
+- **Date:** 2026-08-20
+- **Status:** ACTIVE
+
+**Decision**
+
+The Alk V2 conformance harness (`tools/conformance/run-conformance.py`) is a **required
+check**. No change to the engine, to the fixture corpus, to the invariant set, to the
+reason-code catalogue or to the data contract merges unless the harness passes.
+
+The mutation harness (`tools/conformance/run-mutations.py`) is required alongside it, and
+for the same reason: a suite that has never been shown to fail is not a gate. A change
+that adds a checker adds its negative control in the same change.
+
+The harness is red today, and that is the correct reading of the repository's state:
+there is no engine, so every executable fixture fails as `ENGINE_ABSENT`, and three
+mechanical checks report pre-existing defects in the alk-v2 documents. "Required" means
+the gate must pass before an engine change merges; it does not mean the repository is
+green now.
+
+**Rationale**
+
+The repository held 160 fixtures and 60 invariants with no way to execute any of them.
+Every claim about correctness was therefore a review opinion, and `CLAUDE.md` already
+prefers a deterministic test to prose review. A gate that can be skipped is a gate that
+will be skipped on the change that most needed it, which is why this is recorded as a
+decision rather than left as a habit.
+
+Canon `CORE-CANON-COVERAGE-001` item 9 already carries the governing principle for the
+mutation half: no checker is trusted as a gate until a deliberate mutation of the defect
+class it targets has been shown to fail it.
+
+**Consequences**
+
+- The harness runs on every change that touches the engine or the alk-v2 package, and its
+  real output — not a summary of it — goes into the run record.
+- **"Required" is a comparison, not an absolute.** The gate must run, its real
+  output must be in the pull request, and no subject may fail at head that passed at
+  the base commit. A subject failing at both is pre-existing and is named, not blocked
+  on. The mutation harness has no such allowance: it compares against its own baseline
+  internally and must be green. A rule no change could satisfy would be waived on the
+  change that most needed it, which is this decision's own rationale.
+- `/implement`, `/implement-chemistry` and `/pr-gate` all name it. A run that did not run
+  it says so and says why.
+- A new checker without a negative control is an incomplete change, and the control must
+  be shown to fire **for the mechanism it names**. A sabotage that turns something else
+  red is not a demonstration; the mutation harness enforces this and reports
+  `NOT CAUGHT BY ITS NAMED MECHANISM` when it happens. This is not hypothetical — the
+  first version of this harness published a control that passed for the wrong reason
+  while the checker it claimed to guard could not fire at all.
+- This decision does not by itself configure any CI enforcement. Enforcement on GitHub
+  depends on branch protection, which is `OD-001` and still open. Until then this is
+  process discipline like everything else in this repository, and
+  `docs/process/AUTONOMY-AND-CONTROLS.md` governs what that is worth.
+
+---
+
+## DEC-017 — `jake` runs after the reviewer sequence, not within it
+
+- **ID:** DEC-017
+- **Date:** 2026-08-20
+- **Status:** ACTIVE
+
+**Decision**
+
+`jake` is **not a reviewer**. He sorts what the reviewers produced. He therefore runs as a
+post-processing step **over the output of** a review sequence, never as a stage inside
+one.
+
+Specifically, `/implement-chemistry`'s reviewer sequence stays exactly as it is —
+fixtures and invariants, then `canon-conformance-auditor` and `breaker` concurrently,
+then one fix pass — and remains closed to extension. `jake` runs after that sequence has
+finished, on its combined findings, and before the pull request is opened.
+
+**Rationale**
+
+`/implement-chemistry` says "This sequence is fixed. Do not shorten it and do not extend
+it." The agent roster's composition table described the same workflow as running two
+further agents inside it. Both statements could not be true, and the roster is not the
+authority on what a skill runs.
+
+Resolving it by relaxing the skill would have removed the only guarantee the fixed
+sequence provides. Resolving it by dropping `jake` would have lost a distinct and useful
+question — whether a finding matters to the person using the product — which no reviewer
+asks. Neither was necessary, because `jake` is not a reviewer: he consumes finished
+reports and produces an orthogonal label. A step that runs strictly after a sequence, on
+its output, does not extend that sequence.
+
+**Consequences**
+
+- `.claude/skills/implement-chemistry/SKILL.md` states that the *reviewer* sequence is
+  fixed, and carries `jake` as an explicitly separate post-sequence step.
+- `docs/process/AGENT-ROSTER.md`'s composition table matches what the skills actually
+  run, rather than describing a composition no skill implements.
+- `jake` still changes no severity and closes no finding; `DEC-017` is about ordering,
+  and the roster remains the authority on what he may do.
+- The placement of this entry in the ledger was directed by the owner. It does not
+  resolve `OD-002` (whether the ledger covers process architecture), which stays open.
+
+---
+
+## DEC-018 — `normal-operation-reviewer` is a specialist trigger, not a standing stage
+
+- **ID:** DEC-018
+- **Date:** 2026-08-20
+- **Status:** ACTIVE
+
+**Decision**
+
+`normal-operation-reviewer` is wired into `/implement` and `/pr-gate` as a **specialist
+trigger**, on the same footing as the other specialists there: it is added when the change
+materially touches trend, dose, retest or user-visible output behaviour, and a run states
+whether it added it and why.
+
+It is **not** added to `/implement-chemistry`'s fixed reviewer sequence by this decision.
+
+**Rationale**
+
+The owner's instruction was to wire it into `/implement` and `/pr-gate`, and that is what
+this does. `/implement-chemistry`'s sequence is closed to extension (`DEC-017`), and
+`normal-operation-reviewer` — unlike `jake` — *is* a reviewer, so adding it there would be
+an extension of exactly the kind the fixed sequence forbids. Adding it anyway, on the
+strength of a roster row that has now been corrected, would have been the quiet
+extension this repository is built to catch.
+
+Whether chemistry work should also get an ordinary-use review is a real question and a
+reasonable one. It is raised as `OD-004` rather than answered here.
+
+**Consequences**
+
+- `/implement` step 5 and `/pr-gate` step 2 both list it, with its trigger.
+- Chemistry work reaches it only if the session runs `/implement` rather than
+  `/implement-chemistry`, which is the gap `OD-004` names.

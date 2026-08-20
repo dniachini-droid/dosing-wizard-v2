@@ -33,6 +33,14 @@ The following historical records are **owner-confirmed genuine**:
 These are real observations of a real tank, made by the owner. They are not test
 fixtures, not synthetic data and not estimates. They are preserved as recorded.
 
+> **Three of those four rows are contested, and this document does not settle it.** The V1
+> salvage reconnaissance found the historical **water-change, ICP and lighting** records
+> byte-identical to named V1 source constants, and the owner's confirmation — which covers
+> the **chemistry readings** explicitly — has not been extended to them. Both readings are
+> live. See `V1-DATA-PROVENANCE.md` §5 and question Q9 in `V1-OPEN-OWNER-QUESTIONS.md`.
+> **This note records the disagreement; it does not resolve it and it amends nothing above.**
+> The chemistry readings are not in doubt.
+
 Measurement truth is not conditional on anything below. A reading whose exact time is
 unknown, or whose surrounding dosing context is missing, is still a genuine measurement
 and is preserved as one.

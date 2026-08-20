@@ -1,8 +1,14 @@
 # V2 agent roster
 
-Nine agents. Each has one job that no other agent has. This document is the
+Eleven agents. Each has one job that no other agent has. This document is the
 authority on what each may and may not do; the definitions in `.claude/agents/`
 are the operative copies and must match it.
+
+Nine of them look for failure or for authority. The two added on 2026-08-20 —
+`jake` and `normal-operation-reviewer` — exist because neither of those two
+things is the same as asking whether the product works for the person using it.
+They share one standard, `docs/process/PRODUCT-REVIEW-CRITERIA.md`, which is a
+file rather than prompt text precisely so that there is one copy of it.
 
 ## Shape of the workforce
 
@@ -39,11 +45,23 @@ freeze identifier, not to reconcile a contradiction.
 | `architecture-reviewer` | ✓ | ✓ | ✓ | — | ✓ | — |
 | `migration-auditor` | ✓ | ✓ | ✓ | — | — | — |
 | `adjudicator` | ✓ | ✓ | ✓ | — | — | — |
+| `jake` | ✓ | ✓ | ✓ | — | — | — |
+| `normal-operation-reviewer` | ✓ | ✓ | ✓ | — | — | — |
 
 `Bash` goes to exactly two agents, because their work requires executing
 something: `breaker` must reproduce a failure to be allowed to report it, and
 `test-engineer` must observe a suite actually running. `WebFetch`/`WebSearch` go
 to exactly two, both required to source claims from current primary material.
+
+**`normal-operation-reviewer` has no `Bash`, and that is a live limitation
+rather than an oversight.** It evaluates what the engine does on ordinary
+readings, which will eventually mean running something. Today there is no
+runtime to run (`PROJECT-STATE.md`), so the grant would buy nothing and would
+widen the write surface for no benefit; it hand-traces the specification
+instead, and says so in every report. When an executable engine exists, whether
+to grant it `Bash` — or to have the invoking session supply engine output for
+comparison, which is the design as written — is an owner decision, not a change
+an agent or a run makes on its own initiative.
 
 **Stated plainly: `Bash` is not a read-only grant.** It can write to disk by
 redirection, and it carries `curl` and therefore the whole GitHub API. The
@@ -68,9 +86,9 @@ bind file-editing tools and not `Bash`. Everything else is process discipline.
 
 | Work | Workflow | Reviewers |
 |---|---|---|
-| Ordinary implementation | `/implement` | one by default; specialists where materially relevant |
-| Chemistry, controller, dosing, safety rails | `/implement-chemistry` | fixtures, then `canon-conformance-auditor` + `breaker` |
-| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default |
+| Ordinary implementation | `/implement` | one by default; specialists where materially relevant; `jake` after, if there are findings |
+| Chemistry, controller, dosing, safety rails | `/implement-chemistry` | harness, fixtures and invariants, then `canon-conformance-auditor` + `breaker`; `jake` after the sequence |
+| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default; `jake` after, if there are findings |
 | One unresolved blocking question | `/research-sprint` | `domain-verifier` if scientific |
 | Unattended overnight work | **withdrawn** — see `/overnight-cycle` | — |
 
@@ -78,6 +96,63 @@ bind file-editing tools and not `Bash`. Everything else is process discipline.
 fix-and-recheck pass. If material findings survive it, the run stops and reports
 rather than looping. `adjudicator` is invoked when reviewers disagree or a
 finding is contested — not as a routine stage.
+
+## Composition of a review round
+
+Which reviewers run is a decision, and it is recorded here so that it is
+explicit rather than habitual. A run states which of these it ran, and which it
+considered and did not, with reasons.
+
+**This table describes what the skills in `.claude/skills/` actually run.** It
+is a description, not an instruction to them: where this table and a skill
+disagree, the skill is what happens and this table is wrong. It was wrong once
+already — an earlier version of this row described `/implement-chemistry` as
+running two agents inside a sequence that skill declares closed to extension.
+That contradiction was resolved by `DEC-017` and `DEC-018`, in the direction of
+the skill.
+
+| Situation | Reviewers, in order | Notes |
+|---|---|---|
+| Documentation or cross-document change | `integrator` | The primary reviewer while the repository is documentation-only |
+| Ordinary implementation | one reviewer whose subject the change is in, plus specialists it triggers | `/implement` step 5 lists the triggers |
+| Chemistry, controller, dosing, safety rails | fixtures and invariants and the conformance harness, then `canon-conformance-auditor` + `breaker` concurrently, then one fix pass | `/implement-chemistry` steps 3–6. **This reviewer sequence is fixed and closed to extension.** |
+| Any change to trend, dose, retest or user-visible output behaviour | `normal-operation-reviewer`, as a specialist trigger in `/implement` step 5 and `/pr-gate` step 2 | The change is in the ordinary middle (`PRC-003`), which is where the product earns its value (`DEC-018`) |
+| Any round that produced findings the owner will read | `jake`, strictly after the reviewers and before the fix pass | Sorts what matters from what does not; adds nothing new (`DEC-017`) |
+| Reviewers disagree, or a finding is contested | `adjudicator` | Not a routine stage; runs before `jake` where both run |
+| A question no authority settles | `advisor` | Invoked by the session; agents cannot invoke each other |
+
+**`jake` runs after the reviewer sequence, not within it** (`DEC-017`). He is
+not a reviewer: he consumes finished reports and produces an orthogonal label,
+so a step that runs strictly after a sequence, on its output, does not extend
+that sequence. This is why he can sit inside `/implement-chemistry` — at step 6,
+after both reviewers and before the single fix pass — while that skill's
+reviewer sequence stays closed. He takes the same slot `adjudicator` does, and
+for the same reason: his sorting is only useful if it reaches the fix pass.
+Running him before the reviewers have finished gives him a partial finding set
+to sort, and his output looks identical either way.
+
+**`normal-operation-reviewer` is a reviewer, and that difference is
+load-bearing.** It is wired into `/implement` and `/pr-gate` as a specialist
+trigger (`DEC-018`). It is deliberately **not** in `/implement-chemistry`'s
+fixed sequence, because adding a reviewer there is exactly the extension that
+sequence forbids, and the argument that lets `jake` past does not carry across.
+Whether chemistry work should get an ordinary-use review anyway is a real
+question, and it is open as `OD-004` rather than settled here.
+
+Where it does run, it runs independently of `breaker`, not after it: they answer
+different questions and neither's result should shape the other's. Where both
+run, `jake` receives both.
+
+**Neither is a gate.** A round with no findings has nothing for `jake` to sort,
+and a change that touches nothing the user sees does not need
+`normal-operation-reviewer`. Saying so in the run record is the requirement;
+running them by reflex is not.
+
+**The conformance harness is a gate** (`DEC-016`), and it is the one thing in
+this table that is not an agent. `tools/conformance/run-conformance.py` and
+`tools/conformance/run-mutations.py` run before the reviewers in `/implement`
+and `/implement-chemistry`, and again in `/pr-gate`. A rule that a test can pin
+should be pinned by a test; the reviewers are for what is left over.
 
 **Deterministic tests are preferred to prose review.** A rule that can be pinned
 by a failing test should be, and review is what is left over.
@@ -365,7 +440,113 @@ Never concludes a review is clean without stating what nobody examined.
 another agent's severity, and only with a quoted authority. It absorbs the
 deduplication, noise-deletion and severity-verification work that V1 split
 across a separate triage role; see `V1-AGENT-SALVAGE-AUDIT.md` for why that
-split was not retained.
+split was not retained. `jake` is not that role returning — he sorts by
+*product relevance* and may not touch severity at all.
+
+---
+
+## 10. `jake`
+
+**Question it owns:** of everything the adversarial reviewers found, what would
+actually affect a real reef keeper using this product?
+
+**Authority.** Reads the reports of `breaker` and `canon-conformance-auditor`
+(and other reviewers where the session supplies them) and sorts every finding
+into exactly one of `BUG`, `EDGE CASE` or `ALREADY COVERED`, against
+`docs/process/PRODUCT-REVIEW-CRITERIA.md`. Classifies by whether the reference
+system would plausibly reach the state, not by severity: a severe consequence
+in an unreachable state is an `EDGE CASE`, a mild inconsistency in an everyday
+state is a `BUG`. Resolves uncertainty toward `BUG`. Gives `BUG`s in full and
+`EDGE CASE`s one line each, and states his own misclassification risk so the
+owner can spot-check rather than trust. May say a finding is mistaken, showing
+what he checked.
+
+**Not its authority.** Never changes a severity — that is `adjudicator`'s and
+only with a quoted authority. Never fixes, never amends canon, never closes a
+finding, never decides. Never buries a `CANON_DEFECT`, whatever its
+classification. Never downgrades lost or fabricated data, non-determinism, or a
+confident wrong number on the argument that the product cannot drive a pump —
+`PRC-001` covers physical dosing harm and nothing else. Never runs the review
+himself or reconstructs a report he was not given.
+
+**Tools:** `Read`, `Grep`, `Glob`. He reads the reports and checks them against
+the repository; anything more would let him act on what he sorts.
+
+**Invoke when:** a review round has produced adversarial or conformance findings
+that the owner will read. After the reviewers have finished, and — where the
+workflow has one — before the fix pass, so that the sorting reaches the work
+(`DEC-017`). Never inside a reviewer sequence.
+
+**Overlap prevention.** This is the boundary that matters, because `adjudicator`
+and `jake` both stand between reviewers and the reader.
+
+- `adjudicator` asks **is it true, and at what severity** — verifying evidence
+  against cited authority, clustering by root cause, resolving disagreement
+  where an authority decides it. Its axis is correctness.
+- `jake` asks **does it matter to the user** — reachability by the reference
+  system. His axis is product relevance.
+
+They are orthogonal and both answers can be interesting at once: `BLOCKER` +
+`EDGE CASE` is a real, verified defect nobody will meet, and the owner should
+see both labels rather than one averaged into the other. Where both run,
+`adjudicator` runs first and `jake` sorts its adjudicated list; `jake` takes the
+severities as given. Neither may do the other's job, and `jake` producing a
+severity or `adjudicator` producing a `BUG`/`EDGE CASE` label is a defect in
+this roster's terms.
+
+---
+
+## 11. `normal-operation-reviewer`
+
+**Question it owns:** on an ordinary tank, with ordinary readings, does this
+product give a sensible answer?
+
+**Authority.** Constructs and evaluates realistic reading sequences for the
+reference system (`PRC-006`) — steady state, slow downward and upward drift, a
+dose change and the response that follows, a rise that returns, increasing
+consumption as the system matures, a water change inside an observation window,
+a missed test, and potency calibration across an attributable dose change. For
+each: what the engine recommends, whether it follows from the readings, whether
+the stated reasoning matches the arithmetic, whether the retest interval is
+practical for a human being, and whether an experienced keeper would find the
+answer defensible. Explicitly flags results that are arithmetically correct but
+practically unreasonable, a withheld recommendation on an ordinary sequence,
+reasoning text that does not match the computed numbers, and impractical retest
+intervals. Leads its report with whatever an experienced keeper would consider
+wrong.
+
+**Not its authority.** Never produces chemistry — configuration comes from canon
+or `docs/implementation/alk-v2/fixtures/config-defaults.json`, and constructed
+readings are labelled synthetic. **Never states a practical objection as a
+number**: the moment "a keeper would expect X" requires a figure, it reports
+that canon does not determine it and stops. Never presents a hand-trace as an
+observed engine result. Never edits canon, specification, fixtures or the issue
+register. Never turns to hostile input — a sequence that only misbehaves once
+made adversarial belongs to `breaker`.
+
+**Tools:** `Read`, `Grep`, `Glob`. No `Bash`, for the reason given under **Tool
+grants** — there is nothing yet to execute, and the grant is an owner decision
+when there is.
+
+**Capability today.** It operates in **specification mode**: no V2 runtime
+exists, so it hand-traces each sequence through the algorithm contract and canon
+and reports what the engine would be required to produce, showing its own
+arithmetic. In **runtime mode** the invoking session supplies actual engine
+output and the agent compares it with the trace. Every report states which mode
+it was in.
+
+**Invoke when:** any change to trend, dosing, retest or user-visible output
+behaviour; as part of the chemistry review round; and periodically against the
+specification as a whole, which is where it is most useful right now.
+
+**Overlap prevention.** `breaker` asks what makes this fail. This agent asks
+whether the ordinary case is any good, and the two do not share a finding class:
+a defect only reachable by hostile input is `breaker`'s and is handed over in one
+line. `canon-conformance-auditor` asks whether behaviour matches canon; this
+agent may find behaviour that matches canon perfectly and is still unusable,
+which is reported without a severity because no authority supports calling it a
+defect. `test-engineer` asks whether a test would fail; this agent supplies the
+ordinary-use scenarios that are worth pinning, and does not write them.
 
 ---
 
@@ -384,7 +565,8 @@ As of this writing:
 | Identifier | Status |
 |---|---|
 | `SHARED_V2_FREEZE_2` | **CURRENT** — shared architecture |
-| `ALK_V2_FREEZE_4` | **CURRENT** — alkalinity behaviour |
+| `ALK_V2_FREEZE_5` | **CURRENT** — alkalinity behaviour |
+| `ALK_V2_FREEZE_4` | **HISTORICAL** — superseded by `ALK_V2_FREEZE_5` |
 | `SHARED_V2_FREEZE_1` | **HISTORICAL** — superseded by `SHARED_V2_FREEZE_2` |
 | `ALK_V2_FREEZE_3` | **HISTORICAL** — superseded by `ALK_V2_FREEZE_4` |
 
@@ -429,9 +611,22 @@ Two dispositions `adjudicator` may additionally assign:
 one ends its report with a `not examined, and why` section. `adjudicator` may not
 declare a review clean without it, and an unstated gap reads as coverage.
 
-`advisor` is the single documented exception: it produces classifications, not
-findings, and has its own closed vocabulary below. It has no severity field, by
-design.
+There are three documented exceptions, and no others.
+
+1. **`advisor`** produces classifications, not findings, and has its own closed
+   vocabulary below. It has no severity field, by design.
+2. **`jake`** produces a second, orthogonal label — `BUG`, `EDGE CASE`,
+   `ALREADY COVERED` — over findings that already carry a severity. It adds no
+   severity and changes none: the originating reviewer's severity travels with
+   the finding unchanged. Its closed vocabulary is below.
+3. **`normal-operation-reviewer`** reports one class of observation with **no
+   severity at all**: behaviour that conforms to canon exactly and that an
+   experienced keeper would still find indefensible. Assigning a severity there
+   would assert a defect no authority supports; omitting the observation would
+   lose the only signal the product has that a canon rule may not survive contact
+   with a real tank. It goes to the owner in its own section, labelled as not
+   claiming canon is wrong. Everything else that agent reports uses the standard
+   vocabulary.
 
 ## Classification vocabulary — `advisor` only
 
@@ -452,6 +647,25 @@ exists to prevent.
 The two vocabularies do not overlap and are not interchangeable. `CANON_DEFECT`
 appears in both because it is the same finding reached two ways.
 
+## Classification vocabulary — `jake` only
+
+Closed, three values, applied to findings that already carry a severity. The
+axis is **reachability by the reference system**, never severity.
+
+| Classification | What it means | What the consumer does |
+|---|---|---|
+| `BUG` | Wrong, contradictory or non-deterministic output on a sequence the reference system plausibly produces in ordinary use | Read it in full; it is described completely in the report |
+| `EDGE CASE` | Requires a state the reference system would not plausibly reach, or a deliberately constructed input. The generic no-recommendation message is correct handling | One line each; the owner is not expected to read further |
+| `ALREADY COVERED` | The generic no-recommendation rule already produces acceptable behaviour as canon stands | Count and identifiers only |
+
+**Uncertainty resolves to `BUG`**, and every finding resolved that way appears
+under the report's misclassification-risk section. A `CANON_DEFECT` keeps its
+severity on its line and is named in the summary whatever its classification.
+
+This vocabulary and the severity vocabulary are orthogonal and are read
+together: `BLOCKER` + `EDGE CASE` is a coherent pair and means a verified defect
+nobody will meet.
+
 ---
 
 ## Roles deliberately absent
@@ -460,7 +674,7 @@ appears in both because it is the same finding reached two ways.
 |---|---|
 | Implementer / fixer | The main session is the only writer. A separate writing agent reintroduces the concurrent-write failure mode for no benefit. |
 | Planner | Planning is `/implement` steps 1–2, in the session that will do the work. Splitting plan from implementation across contexts loses the reason for every scope boundary. |
-| Triage analyst | Absorbed into `adjudicator`. Retaining it creates circular responsibility with `adjudicator` and `integrator` and no rule for who wins. Reasoning in `V1-AGENT-SALVAGE-AUDIT.md`. |
+| Triage analyst (V1's) | Still absent. Its five jobs — deduplicate to root cause, verify severity, delete noise, prioritise, cap the backlog — remain `adjudicator`'s, for the reasons in `V1-AGENT-SALVAGE-AUDIT.md`. **`jake` is not a reinstatement of it:** he verifies no severity, deletes nothing, and sets no priority. He answers a question V1's triage never asked — whether the finding matters to the person using the product — against a criteria file V1 had no equivalent of. |
 | Per-surface auditors | V2 forbids surfaces from recomputing chemistry (`DEC-003`), so per-surface parity auditing has nothing to audit. `integrator` enforces the ownership rule that makes them unnecessary. |
 | Accessibility, performance, security, PWA auditors | Premature. No stack is chosen and no application code exists. `architecture-reviewer` covers the architectural form of these questions now; dedicated auditors are added when there is something to audit. |
 | Docs scribe | Documentation is written by the session doing the work. Its *review* responsibility — dead cross-references, stale statements, duplicated instruction — is assigned to `integrator` rather than to a separate agent. |
