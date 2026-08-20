@@ -390,8 +390,11 @@ def main():
                  'cPlusKSigma', 'materiallyNegative')
 
     def mass_balance(fid, fn, path, stated, inp, S, sig):
-        """Recompute the mass-balance family for one declared (dose, potency) context."""
-        wanted = [k for k in MASS_KEYS if k in stated]
+        """Recompute the mass-balance family for one declared (dose, potency) context.
+
+        A stated NOT_RUN is the canonised ABSENCE of a value, not a value the recompute
+        failed to reach, so it is skipped rather than reported as unreadable."""
+        wanted = [k for k in MASS_KEYS if k in stated and stated[k] != 'NOT_RUN']
         if not wanted:
             return
         P = inp.get('selectedPotencyDkhPerMl') or inp.get('potencyDkhPerMl')

@@ -5240,7 +5240,7 @@ This exemption is narrow:
 `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`
 
 The high-breach paths below produce \(D_{safety,temp}\), a temporary safety **rate** in
-mL/day — from consumption where \(C_{estimate}\) is usable, and from the established-dose
+mL/day — from consumption where \(C_{estimate}\) is usable, and from the configured-delivery
 contribution where it is not (`ALK-HIGH-BREACH-SAFETY-SIZING-001`, owner decision 16).
 Both forms are the same output and take this rule's advisory/executable separation
 unchanged. It is neither a one-off correction volume nor an ordinary maintenance-rate
@@ -5376,6 +5376,88 @@ claim about biological consumption in either direction.
 If the app cannot directly control the pump, it says the temporary rate **is recommended**
 and does not mark it as actually implemented until implementation is confirmed.
 
+#### Advisory range boundary — escalate rather than calculate
+
+`ALK-ADVISORY-RANGE-BOUNDARY-001`
+
+**Owner decision 21.** Beyond a bounded distance outside the configured operating envelope,
+the engine stops advising and escalates. The boundary is defined as an **offset from the
+already-configured bounds**, so no free-standing numeric level is introduced — only the
+offset itself:
+
+\[
+\boxed{
+AdvisoryCeiling = OuterMax + 1.0\ \text{dKH}
+\qquad
+AdvisoryFloor = OuterMin - 1.0\ \text{dKH}
+}
+\]
+
+For the owner's configured bounds (`OuterMin` 7.0, `OuterMax` 11.0) this places the ceiling
+at **12.0 dKH** and the floor at **6.0 dKH**. The boundary moves with the configuration; it
+is not a second set of pinned levels.
+
+**Trigger.** Escalation applies when the resolved episode value is
+
+- at or beyond \(AdvisoryCeiling\) — that is, \(A_{now}\ge AdvisoryCeiling\); or
+- at or beyond \(AdvisoryFloor\) on the low side — that is, \(A_{now}\le AdvisoryFloor\).
+
+Both comparisons are **inclusive at the boundary**: exactly 12.0 dKH escalates, and exactly
+6.0 dKH escalates. `ALK-DECIMAL-THRESHOLD-001`'s exact decimal comparison governs the test,
+so no epsilon exists or may be introduced.
+
+**Where it is evaluated.** On the **resolved episode value**, after episode resolution
+(`ALK-EPISODE-RESOLUTION-001`) and **before** high-breach safety sizing
+(`ALK-HIGH-BREACH-SAFETY-SIZING-001`). A contested episode does not bypass the check: if
+**every** member of a contested episode is at or beyond the boundary, escalation applies —
+the disagreement is about which extreme value is right, not about whether the state is
+beyond what the engine will advise on. Where the members straddle the boundary, the episode
+is contested, no value is resolved, and `ALK-EPISODE-RESOLUTION-001`'s `REPEAT_NOW`
+behaviour governs unchanged.
+
+**What is emitted.** When the trigger holds:
+
+```text
+recommendedDoseMlPerDay             = NOT_RUN
+temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+maintenanceEstimateStatus           = UNRESOLVED
+reason = SAFETY_ADVISORY_RANGE_EXCEEDED
+```
+
+**No dose recommendation, no temporary safety rate, no executable command — and not zero.**
+Delivery guidance is **withheld**, not set. Zero is a delivery instruction; withholding is
+the absence of one, and the two must not be conflated.
+
+The single exception is an **already-authoritative safety rule that explicitly governs the
+state**. Where such a rule applies on its own terms — the one-off safety correction volume
+of `ALK-SAFETY-CORRECTION-RESOLUTION-001`, the `SAFETY_RETURN` machinery of
+`ALK-SAFETY-RETURN-INTEGRATION-001`, the composite rail, the liquid-volume guard, the
+magnesium surfacing of `ALK-SAFETY-MG-OVERRIDE-001` — it continues to govern and this rule
+does not withhold its output. This rule withholds the **engine's own sized delivery
+guidance**, nothing else.
+
+**The escalation output states, in Part IX wording:**
+
+- the measured value;
+- that it is outside the range the engine will advise on;
+- that the reading should be **confirmed by a second test**;
+- that the **doser should be checked** for fault or overdose;
+- that correction at this level requires **experienced judgement about the specific
+  system**, which the engine does not have.
+
+**Preserved unchanged:** the outer-bound classification
+(`outerBoundState = BREACHED_HIGH` / `BREACHED_LOW`) — escalation does not reclassify it;
+shortened and reprioritised retesting (`ALK-RETEST-SCHEDULER-001`, the ~24 h high-breach
+cadence, `REPEAT_NOW` where a repeat rule already requires one); every raw measurement and
+audit record.
+
+**Scope, stated so it is not over-read.** This rule **narrows but does not resolve** the
+open finding that safety sizing is flat above the rail: between \(OuterMax\) and
+\(AdvisoryCeiling\), \(R_{down}\) still saturates at 0.50 dKH/day and the sized rate stops
+responding to \(A_{now}\). That region remains open and is **not** closed here. No branch
+boundary elsewhere is moved to reduce it.
+
 #### High breach — safety-dose sizing when consumption is unusable
 
 `ALK-HIGH-BREACH-SAFETY-SIZING-001`
@@ -5402,7 +5484,7 @@ A_{now}-A_{safe,high},
 }
 \]
 
-and the temporary safety rate is derived from the **controllable established-dose
+and the temporary safety rate is derived from the **controllable configured-delivery
 contribution** instead of from \(C_{estimate}\):
 
 \[
@@ -5412,30 +5494,66 @@ D_{safety,temp}
 \max
 \left(
 0,
-D_{established}
+D_{current}
 -
 \frac{R_{down}}{P_{selected}}
 \right)
 }
 \]
 
-where \(D_{established}\) is the established maintenance delivery rate in mL/day — the rate
-actually being delivered, on the same dose-history basis every other Alk calculation uses —
-and \(P_{selected}\) is the selected potency in dKH/mL.
+**Amended by owner decision 20.** This formula previously named \(D_{established}\) — a
+single name that was also being used for the interval-mean delivery rate that consumption
+estimation needs. `ALK-DELIVERY-RATE-BASIS-001` splits it, and high-breach safety sizing
+takes \(D_{current}\): the alkalinity delivery rate the doser is **configured to be
+delivering at the time of the recommendation**. Superseded wording, preserved rather than
+rewritten away:
+
+> \[
+> D_{safety,temp} = \max\left(0, D_{established} - \frac{R_{down}}{P_{selected}}\right)
+> \]
+>
+> where \(D_{established}\) is the established maintenance delivery rate in mL/day — the
+> rate actually being delivered, on the same dose-history basis every other Alk calculation
+> uses.
+
+\(P_{selected}\) is the selected potency in dKH/mL. Sizing a temporary reduction asks what
+is being **delivered now**, not what was delivered on average across a past interval, so
+\(D_{history}\) is the wrong input here and may **not** be substituted for
+\(D_{current}\). Where the doser has been on one constant rate for the whole interval the
+two are numerically equal; that coincidence is not a licence to interchange them.
+
+**\(D_{current}\) unknown — refuse, never assume zero.** If \(D_{current}\) is unknown or
+not configured, **no temporary safety rate is emitted at all**:
+
+```text
+temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+maintenanceEstimateStatus           = UNRESOLVED
+reason = SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
+```
+
+The engine surfaces the measured state and the reason, and requests doser configuration
+through the **existing** anomaly/confirmation machinery (`CORE-INFORM-PROCEED-001`,
+`ALK-CAPABILITY-CONTRACT-001`) — no new prompt mechanism is introduced. The outer-bound
+state, `SAFETY_RETURN` and the shortened retest cadence continue unchanged.
+
+Emitting `0 mL/day` here is **forbidden**. Zero is a computed floor reached only through the
+\(\max(0,\cdot)\) above with a known \(D_{current}\); presenting it as a recommendation when
+the delivered rate is unknown would state a computed answer the engine does not have.
 
 This is a **temporary high-breach safety delivery rate**, not a newly inferred maintenance
 requirement:
 
 ```text
 maintenanceEstimateStatus = UNRESOLVED
-reason                    = SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
+reason                    = SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
 ```
 
-**Zero is a floor, not a decision.** Delivery reaches 0 mL/day only where the established
+**Zero is a floor, not a decision.** Delivery reaches 0 mL/day only where the configured
 contribution cannot absorb the requested \(R_{down}\):
 
 \[
-D_{established}\le\frac{R_{down}}{P_{selected}}
+D_{current}\le\frac{R_{down}}{P_{selected}}
 \]
 
 ```text
@@ -5446,13 +5564,13 @@ Negative-consumption materiality never selects zero versus a held rate. It class
 maintenance model and its evidence, and nothing else here.
 
 **What this rule requires, stated so it is checkable.** All three hold **above the zero
-floor** — that is, where \(D_{established}>R_{down}/P_{selected}\). At or below the floor the
+floor** — that is, where \(D_{current}>R_{down}/P_{selected}\). At or below the floor the
 rate is 0 and varies with nothing, which is the floor's purpose and not a violation:
 
 - the safety response **varies with \(A_{now}\)** through \(R_{down}\), monotonically,
   until the 0.50 dKH/day rail binds and \(R_{down}\) saturates;
-- the safety response varies **continuously with \(D_{established}\)**: one actuator
-  increment more established dose gives exactly one increment more safety rate. The
+- the safety response varies **continuously with \(D_{current}\)**: one actuator
+  increment more configured dose gives exactly one increment more safety rate. The
   1.5 mL/day → pause versus 1.6 mL/day → hold discontinuity that
   `ALK-HIGH-BREACH-NO-PAUSE-001` previously produced is removed and must not reappear;
 - the materiality classification may change the recorded classification, the wording and
@@ -5460,8 +5578,13 @@ rate is 0 and varies with nothing, which is the floor's purpose and not a violat
   \(D_{safety,temp}\) — at, above or below the floor.
 
 Two clusters of readings fall at the floor rather than above it: with \(P=0.0693\),
-\(R_{down}/P_{selected}\) is 3.6–7.2 mL/day, so an established dose below that delivers
+\(R_{down}/P_{selected}\) is 3.6–7.2 mL/day, so a configured dose below that delivers
 zero. `AD-CON-002` is such a case and is not a counter-example to the bullets above.
+
+**Where this rule sits in the sequence.** The escalation check of
+`ALK-ADVISORY-RANGE-BOUNDARY-001` is evaluated **before** this rule. At or beyond
+`AdvisoryCeiling` no rate is sized here at all. This rule governs the band
+\(OuterMax < A_{now} < AdvisoryCeiling\).
 
 **Everything else is preserved and still applies:**
 
@@ -5479,7 +5602,75 @@ zero. `AD-CON-002` is such a case and is not a counter-example to the bullets ab
 - shortened/reprioritised high-breach retesting.
 
 No new constant is introduced. \(R_{down}\), the 0.50 rail, \(P_{selected}\) and the
-established maintenance rate are all already frozen.
+configured delivery rate are all already frozen.
+
+#### High breach — consumption not computable at all
+
+`ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`
+
+**Owner decision 22.** Where \(OuterMax < A_{now} < AdvisoryCeiling\) and \(C_{estimate}\)
+is **not computable at all** — insufficient history, a first-ever test, an unknown dose
+history, or any other state in which the mass balance cannot be evaluated rather than
+evaluating to a number — the state takes the **branch B pathway**:
+
+\[
+\boxed{
+D_{safety,temp}
+=
+\max
+\left(
+0,
+D_{current}
+-
+\frac{R_{down}}{P_{selected}}
+\right)
+}
+\]
+
+with
+
+```text
+maintenanceEstimateStatus = UNRESOLVED
+reason = SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE
+       + SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+```
+
+and the reason the estimate could not be computed surfaced with it.
+
+**Rationale, encoded because it is the point of the branch.** Sizing the temporary safety
+reduction requires knowing **what is being delivered**, not what is being consumed. The
+absence of a consumption estimate does not prevent a defensible downward safety action: the
+engine still knows the level is above the outer bound, still knows how far down it wants to
+move (\(R_{down}\)), and still knows the configured delivery rate it can reduce. Withholding
+a reduction for want of a consumption number would leave delivery running unchanged above
+the outer bound, which is the outcome decision 16 already rejected.
+
+**Distinct from an unknown \(D_{current}\).** This branch requires \(D_{current}\) to be
+**known**. Where \(D_{current}\) itself is unknown, `ALK-HIGH-BREACH-SAFETY-SIZING-001`
+**refuses** under owner decision 20 and emits no rate — not this branch, and not zero. The
+two states are not interchangeable: one is missing the consumption estimate, the other is
+missing the quantity the formula reduces.
+
+**The three high-breach predicates are jointly exhaustive and mutually exclusive** over the
+state space \(OuterMax < A_{now} < AdvisoryCeiling\):
+
+```text
+A.   C_estimate >= 0 and physically interpretable
+       -> sized from consumption            (ALK-003A interpretable branch)
+B.   C_estimate negative, either side of the materiality boundary
+       -> sized from D_current              (ALK-HIGH-BREACH-SAFETY-SIZING-001)
+B'.  C_estimate not computable
+       -> sized from D_current              (this rule)
+```
+
+Every high-breach state below \(AdvisoryCeiling\) selects **exactly one** of A, B and B'.
+There is no fourth branch and no state that selects none: a computable estimate is either
+non-negative (A) or negative (B), and an estimate that cannot be computed is B'. This is
+asserted as an invariant, not left to inspection.
+
+**Not addressed here.** The discontinuity in sized rate as \(C_{estimate}\) crosses zero
+between branches A and B remains **open** and is deliberately not closed by this rule. No
+branch boundary is adjusted to reduce it.
 
 ### Composite movement constraint
 
@@ -7291,26 +7482,36 @@ When eligible:
 \boxed{
 C_{estimate}
 =
-P_{selected}D
+P_{selected}D_{history}
 -
 S_{observed}
 }
 \]
 
-where \(D\) is the actual effective maintenance input for the analysed interval.
+where \(D_{history}\) is the actual effective maintenance input for the analysed interval,
+as defined by `ALK-DELIVERY-RATE-BASIS-001` below.
 
-For a constant-dose clean segment:
+**Amended by owner decision 20.** This equation previously wrote the quantity as a bare
+\(D\), described as "the actual effective maintenance input for the analysed interval", and
+elsewhere the same interval quantity was called \(D_{established}\) — the same name the
+high-breach sizing rule used for the *configured* rate. The two are now separate names.
+Consumption estimation is an **interval-based** calculation and takes \(D_{history}\).
+
+For a constant-dose clean segment the interval mean is the constant itself:
 
 \[
-D=D_{current}
+D_{history}=D_{current}
 \]
+
+This is a **numerical coincidence on that segment**, not an identity. It does not license
+substituting one for the other anywhere else.
 
 For an exact mixed-dose interval where the policy allows interval consumption, apply **M-6 — Delivered volume versus programmed schedule**.
 
 The effective interval rate is:
 
 \[
-D=D_{eff}
+D_{history}=D_{eff}
 =
 \frac{IntegratedDoseVolume}{ElapsedDays}
 \]
@@ -7355,6 +7556,68 @@ Output includes:
 Negative-consumption validity checks use \(C_{estimate}\).
 
 Do not substitute \(S_{supported}\) into the physical mass-balance equation merely to make the estimate more conservative.
+
+### Delivery-rate basis — two distinct quantities
+
+`ALK-DELIVERY-RATE-BASIS-001`
+
+**Owner decision 20.** The single name \(D_{established}\) was being used for two different
+physical quantities: the rate the doser is *set to now*, and the mean rate actually
+*delivered across a past interval*. Those are different numbers whenever the dose changed
+inside the interval, and each is the correct input for a different calculation. The name is
+split. It must not survive as a live name anywhere.
+
+\[
+\boxed{
+\begin{aligned}
+D_{current}\;&:\;\text{the alkalinity delivery rate the doser is \textbf{configured to be}}\\
+             &\quad\ \text{delivering \textbf{at the time of the recommendation}, mL/day}\\[4pt]
+D_{history}\;&:\;\text{the \textbf{time-weighted mean} alkalinity delivery rate actually}\\
+             &\quad\ \text{delivered \textbf{across the trend interval} under consideration, mL/day}
+\end{aligned}
+}
+\]
+
+**Which calculation takes which.**
+
+| Calculation | Quantity | Why |
+|---|---|---|
+| High-breach temporary safety-dose sizing (`ALK-HIGH-BREACH-SAFETY-SIZING-001`, `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`) | \(D_{current}\) | the reduction is applied to what the pump is set to now |
+| Consumption estimation (`ALK-CONSUMPTION-ESTIMATE-001`) | \(D_{history}\) | mass balance over an interval must account for what was actually delivered over it |
+| Every other **interval-based** calculation | \(D_{history}\) | same reason |
+| Maintenance sizing, step cap, rounding, tie-toward-current (`ALK-044`, `ALK-STEP-CAP-001`, `ALK-ROUNDING-001`, `ALK-049`) | \(D_{current}\) | these already used \(D_{current}\) under that name and are unchanged |
+
+\(D_{history}\) is exactly the interval quantity M-6 already governs: \(D_{eff}\) on an
+integrable mixed interval, and the constant rate on a constant-dose clean segment. Its
+eligible bases, its `NOT_RUN` behaviour and its segmentation fallback are unchanged. On a
+constant-dose clean segment \(D_{history}=D_{current}\) **numerically**; that coincidence is
+not licence to interchange the names.
+
+**Unknown handling — refuse, do not assume zero.**
+
+```text
+D_current unknown or not configured:
+    no temporary safety rate is emitted
+    temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+    temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+    the measured state and the reason are surfaced
+    doser configuration is requested through the EXISTING anomaly/confirmation machinery
+    reason = SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
+    0 mL/day is NOT emitted as though it were a computed recommendation
+
+D_history unavailable:
+    consumption estimation is UNRESOLVED under the existing unresolved-consumption
+      handling (ALK-HIGH-BREACH-UNRESOLVED-001, ALK-NEGATIVE-CONSUMPTION-001)
+    reason = CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE
+    position, trend and outer-bound state are unaffected (Part II §70.1-70.3)
+```
+
+The two unknowns are **independent**. \(D_{history}\) unavailable does not prevent safety
+sizing when \(D_{current}\) is known; \(D_{current}\) unknown does not prevent consumption
+estimation when \(D_{history}\) is available.
+
+**No new constant, no new threshold.** This rule renames and separates quantities the canon
+already carried. It introduces no number.
 
 ---
 
@@ -7826,7 +8089,7 @@ Default response to materially unexplained negative consumption:
 
 ### Explicit outer-bound exception
 
-If the latest Alk is **above `OuterMax`**, `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes a temporary reduction of actual Alk delivery, which floors at 0 mL/day where the established contribution cannot absorb \(R_{down}\).
+If the latest Alk is **above `OuterMax`** and below `AdvisoryCeiling`, `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes a temporary reduction of actual Alk delivery, which floors at 0 mL/day where the configured contribution cannot absorb \(R_{down}\). At or beyond `AdvisoryCeiling`, `ALK-ADVISORY-RANGE-BOUNDARY-001` withholds the rate instead of sizing one.
 
 That is a safety fail-safe, not a new maintenance estimate.
 
@@ -7834,12 +8097,17 @@ Therefore these two statements are simultaneously true:
 
 ```text
 acceptedPermanentMaintenanceEstimate = preserved / unresolved
-temporarySafetyDoseRecommendation = max(0, D_established - R_down / P_selected)
+temporarySafetyDoseRecommendation = max(0, D_current - R_down / P_selected)
 ```
 
 **Superseded by owner decision 16**, preserved for history — this section previously read
 `temporarySafetyDoseRecommendation = 0 mL/day`, chosen by the materiality classification
 rather than sized.
+
+**Amended by owner decision 20**, preserved for history. Superseded wording: the sized form
+above previously read `max(0, D_established - R_down / P_selected)`. That name covered two
+different quantities and is split by `ALK-DELIVERY-RATE-BASIS-001`; safety sizing takes
+`D_current` and interval calculations take `D_history`.
 
 This deliberately removes V1's ordinary exception that allowed position/trajectory to size a permanent maintenance reduction when the mass-balance model itself was non-physical, while preserving the separate outer-bound fail-safe.
 
@@ -8558,7 +8826,7 @@ Do not issue +0.604 dKH/day as two independently legal recommendations.
 
 ### High-breach unresolved fail-safe
 
-The temporary high-breach safety rate under `ALK-HIGH-BREACH-SAFETY-SIZING-001` — including the case where it floors at 0 mL/day — is not a modeled trajectory target, because \(C_{estimate}\) is not usable and the rate is derived from the established-dose contribution rather than from a consumption model.
+The temporary high-breach safety rate under `ALK-HIGH-BREACH-SAFETY-SIZING-001` — including the case where it floors at 0 mL/day — is not a modeled trajectory target, because \(C_{estimate}\) is not usable and the rate is derived from the configured-delivery contribution (\(D_{current}\)) rather than from a consumption model.
 
 Do not manufacture a predicted movement solely to force that fail-safe through the ordinary rail calculation.
 
@@ -16347,6 +16615,9 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | **17** one canonical Alk testing episode | `ALK-TESTING-EPISODE-001` (new, `ALK-005B`); `ALK-REPEAT-SPREAD-DOMAIN-001` (new, in `ALK-005`); `ALK-SAME-TIMESTAMP-COALESCE-001` amended | `OI-EPISODE-001` |
 | **18** repeat-spread domain and exact decimal thresholds | `ALK-REPEAT-SPREAD-DOMAIN-001` (new, in `ALK-005`); `ALK-DECIMAL-THRESHOLD-001` (new, `ALK-005E`) | `OI-CROSSMETHOD-001`, `OI-DECIMALTHRESHOLD-001` |
 | **19** one episode output for every Alk consumer | `ALK-EPISODE-RESOLUTION-001` (new, `ALK-005C`); `ALK-EPISODE-SINGLE-OUTPUT-001` (new, `ALK-005D`); `ALK-010` and `ALK-RAPID-BASIS-001` amended | `OI-EPISODECONSUMER-001` |
+| **20** `D_established` renamed and split into two distinct quantities | `ALK-DELIVERY-RATE-BASIS-001` (new, in `ALK-022`); `ALK-HIGH-BREACH-SAFETY-SIZING-001`, `ALK-CONSUMPTION-ESTIMATE-001`, `ALK-031` amended | `OI-DELIVERYRATEBASIS-001` |
+| **21** advisory ceiling and floor — escalate rather than calculate | `ALK-ADVISORY-RANGE-BOUNDARY-001` (new, in `ALK-003A`) | narrows `OI-SIZINGFLAT-001`, does **not** close it |
+| **22** uncomputable consumption under high breach | `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` (new, in `ALK-003A`) | `OI-UNCOMPUTABLEC-001` |
 
 All eleven blocking items are closed, and so are the three items independent review of the
 first encoding opened. Every withheld output they gated now has a determined value or a
@@ -16374,6 +16645,29 @@ The findings closed are `F5-13-NO-SAFETY-RATE`, `F5-13-BAND-WIDTH` (as a sizing 
 `F5-14-POSITION-ORDER`, `F5-14-RAPID-SCOPE`, `F5-14-EPSILON`, `ALK-005-FP-BOUNDARY` and
 `F5-14-ALK005-DOMAIN`. Their register entries are section A3 of
 `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md`.
+
+### Decisions 20–22 — what they supersede
+
+Review of the decisions 16–19 encoding reported further findings against the high-breach
+safety path. The owner decided three of them as decisions 20, 21 and 22, which are part of
+`ALK_V2_FREEZE_5` and **supersede the earlier wording wherever they conflict**:
+
+| Superseded | By | Effect |
+|---|---|---|
+| `D_established` as a single name for both the configured rate and the interval-mean delivered rate | `ALK-DELIVERY-RATE-BASIS-001` | two named quantities, `D_current` and `D_history`; `D_established` is not a live name |
+| Superseded wording `D_safety,temp = max(0, D_established − R_down/P_selected)` | `ALK-HIGH-BREACH-SAFETY-SIZING-001` (amended) | the sizing input is `D_current`; `D_history` may not be substituted |
+| an unknown delivered rate treated as sizable | `ALK-DELIVERY-RATE-BASIS-001` | unknown `D_current` **refuses**: no rate, no command, and **not** 0 mL/day |
+| `C_estimate = P_selected · D − S_observed` with an unnamed interval `D` | `ALK-CONSUMPTION-ESTIMATE-001` (amended) | the interval quantity is `D_history`, named |
+| the engine advising at any distance outside the outer envelope | `ALK-ADVISORY-RANGE-BOUNDARY-001` | at or beyond `OuterMax + 1.0 dKH` / `OuterMin − 1.0 dKH` the engine escalates and withholds delivery guidance |
+| a high breach with a non-computable `C_estimate` falling through with no branch | `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` | branch B′ sizes from `D_current`; the maintenance estimate stays `UNRESOLVED` |
+
+Decision 21 introduces **one offset**, ±1.0 dKH from the already-configured outer bounds,
+and no free-standing level. Decisions 20 and 22 introduce **no constant at all**.
+
+`OI-SIZINGFLAT-001` (sizing flat above the rail) and `OI-CZERODISCONT-001` (the branch A/B
+discontinuity at `C_estimate = 0`) are **deliberately left open**. Decision 21 narrows the
+first by bounding the region it applies to; neither is closed, and no branch boundary was
+moved to reduce the second.
 
 ### The three amendments
 
@@ -16413,7 +16707,10 @@ Decisions 16–19 introduce **no new numeric constant either**:
 0.50 dKH/day rail   = ALK-046       # decision 16, R_down saturation
 A_safe,high         = ALK-003A      # decision 16, R_down
 P_selected          = ALK-014/016   # decision 16, dose-equivalent of R_down
-D_established       = dose history  # decision 16, the controllable contribution
+D_current           = doser configuration   # not a constant
+                                            # renamed from D_established by decision 20
+D_history           = interval-mean rate    # renamed from the bare D of ALK-022 by
+                                            # decision 20; not a constant
 30 min episode window = ALK-005 / Part II §5.3   # decision 17 membership
 0.20 dKH spread     = ALK-005       # decision 18, same-method domain only
 ```
@@ -16422,6 +16719,25 @@ Decision 18 explicitly **forbids** an epsilon for the decimal comparison, and fo
 cross-method concordance threshold; decision 16 explicitly **forbids** a new ceiling for the
 \(1.28\sigma_S\) maintenance-classification band. Both absences are canonised as `NOT_RUN`
 rather than filled.
+
+**Decisions 20–22 introduce exactly one new constant, and it is an offset:**
+
+```text
+advisory range offset = 1.0 dKH     # decision 21, the ONLY new number
+                                    # AdvisoryCeiling = OuterMax + 1.0 dKH
+                                    # AdvisoryFloor   = OuterMin - 1.0 dKH
+                                    # a boundary is an OFFSET from the configured
+                                    # bounds, never a free-standing pinned level
+D_current           = doser configuration          # decision 20, renamed, not a constant
+D_history           = interval-mean delivery rate  # decision 20, renamed, not a constant
+```
+
+Decision 20 renames and separates quantities the canon already carried and introduces no
+number. Decision 22 adds a branch over the state space and introduces no number: it reuses
+\(R_{down}\), the 0.50 rail, \(P_{selected}\) and \(D_{current}\).
+
+No epsilon exists for the advisory-boundary comparison. `ALK-DECIMAL-THRESHOLD-001`'s exact
+decimal semantics govern it, and the comparison is inclusive at the boundary.
 
 `sigma_P`, `sigma_D`, `K_detect`, a generic `RequiredMovement`, a `boundarySafetyMargin`
 distinct from the 24 h lead, a `minimumExposure`, a scheduler minimum useful interval, an
@@ -16466,7 +16782,16 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
   removes it from safety sizing and deliberately leaves its width uncapped;
 - **outer-bound classification from a contested episode** — no worst-case-member rule is
   created; the classification is withheld and an immediate repeat requested
-  (`ALK-EPISODE-SINGLE-OUTPUT-001`).
+  (`ALK-EPISODE-SINGLE-OUTPUT-001`);
+- **safety sizing is flat above the rail** (`OI-SIZINGFLAT-001`) — once
+  \(A_{now}-A_{safe,high}\ge0.50\), \(R_{down}\) saturates and \(D_{safety,temp}\) stops
+  responding to the level. Decision 21 **narrows** the exposure by bounding the region to
+  \(OuterMax < A_{now} < AdvisoryCeiling\) and escalating beyond it. It does **not** close
+  the item: inside that band the flatness remains;
+- **the sized-rate discontinuity at \(C_{estimate}=0\)** (`OI-CZERODISCONT-001`) — branch A
+  sizes from consumption and branch B/B′ from \(D_{current}\), and the two need not meet at
+  \(C_{estimate}=0\). Decision 22 adds the missing B′ branch and explicitly does **not**
+  address this; no branch boundary was moved to reduce it.
 
 ### Freeze status
 
@@ -17170,6 +17495,9 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-EPISODE-RESOLUTION-001` | `AD-EPI-002`, `AD-EPI-003` |
 | `ALK-EPISODE-SINGLE-OUTPUT-001` | `AD-EPI-003`, `AD-EPI-004` |
 | `ALK-DECIMAL-THRESHOLD-001` | `AD-VAL-002` |
+| `ALK-DELIVERY-RATE-BASIS-001` | `AD-DHS-001`, `AD-DHS-002`, `AD-DHS-003` |
+| `ALK-ADVISORY-RANGE-BOUNDARY-001` | `AD-ESC-001`, `AD-ESC-002`, `AD-ESC-003` |
+| `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` | `AD-SAF-009`, `INV-G12` |
 
 ---
 

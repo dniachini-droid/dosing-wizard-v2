@@ -17,11 +17,11 @@
   "finding"
  ],
  "totals": {
-  "rules": 279,
+  "rules": 282,
   "byOwner": {
    "AUDIT": 12,
    "CAPABILITY": 20,
-   "CONSUMPTION": 7,
+   "CONSUMPTION": 8,
    "MAINTENANCE": 27,
    "OUTPUT": 20,
    "POTENCY": 18,
@@ -29,7 +29,7 @@
    "RESPONSE": 27,
    "RETEST": 14,
    "RETURN": 12,
-   "SAFETY": 16,
+   "SAFETY": 18,
    "SEGMENTATION": 40,
    "SUPPORT": 2,
    "TREND": 19,
@@ -37,7 +37,6 @@
    "VALIDATION": 23
   },
   "byFinding": {
-   "NO_PROBLEM (RESOLVED by owner decision 16)": 1,
    "NO_PROBLEM (RESOLVED by owner decision 17)": 1,
    "NO_PROBLEM (RESOLVED by owner decision 18)": 2,
    "NO_PROBLEM (RESOLVED by owner decision 19)": 1,
@@ -49,11 +48,11 @@
    "CANON_DEFECT (minor)": 1,
    "CANON_DEFECT (minor; guard position RESOLVED F5-06, composite-rail position still derived)": 1,
    "IMPLEMENTATION_DETAIL_ALREADY_DETERMINED": 8,
-   "NO_PROBLEM": 214,
+   "NO_PROBLEM": 213,
    "NO_PROBLEM (RESOLVED F5-01)": 2,
    "NO_PROBLEM (RESOLVED F5-01, F5-14)": 1,
    "NO_PROBLEM (RESOLVED F5-02)": 6,
-   "NO_PROBLEM (RESOLVED F5-03)": 3,
+   "NO_PROBLEM (RESOLVED F5-03)": 2,
    "NO_PROBLEM (RESOLVED F5-03, F5-13)": 1,
    "NO_PROBLEM (RESOLVED F5-04)": 2,
    "NO_PROBLEM (RESOLVED F5-05)": 4,
@@ -65,9 +64,15 @@
    "NO_PROBLEM (RESOLVED F5-10)": 3,
    "NO_PROBLEM (RESOLVED F5-11)": 3,
    "NO_PROBLEM (RESOLVED F5-12)": 2,
-   "NO_PROBLEM (RESOLVED F5-13)": 1,
    "NO_PROBLEM (RESOLVED F5-14)": 1,
-   "NO_PROBLEM (accepted residual, F5-02)": 1
+   "NO_PROBLEM (accepted residual, F5-02)": 1,
+   "NO_PROBLEM (RESOLVED F5-03; sizing superseded by owner decision 16)": 1,
+   "NO_PROBLEM (interval quantity named D_history by owner decision 20)": 1,
+   "NO_PROBLEM (RESOLVED F5-13; delivered rate superseded by owner decision 16)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 16; sizing input renamed by owner decision 20)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 20)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 21)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 22)": 1
   },
   "byActivity": {
    "ACTIVE": 258,
@@ -78,7 +83,7 @@
  },
  "groups": [
   {
-   "group": "Master Rules & Part I \u2014 Core architecture",
+   "group": "Master Rules & Part I — Core architecture",
    "rules": [
     {
      "id": "CORE-CANON-COVERAGE-001",
@@ -908,7 +913,7 @@
    ]
   },
   {
-   "group": "Part II \u2014 Shared measurement, evidence, segmentation, intervention",
+   "group": "Part II — Shared measurement, evidence, segmentation, intervention",
    "rules": [
     {
      "id": "PII-1.1",
@@ -2068,7 +2073,7 @@
    ]
   },
   {
-   "group": "Part III \u2014 Alkalinity engine",
+   "group": "Part III — Alkalinity engine",
    "rules": [
     {
      "id": "ALK-001",
@@ -2183,7 +2188,7 @@
      "inputs": "A_now > OuterMax, C_estimate negative or otherwise unusable",
      "output": "routes to ALK-HIGH-BREACH-SAFETY-SIZING-001; maintenance model left unresolved",
      "equation": "A_now > OuterMax and C_estimate not usable for sizing -> size under ALK-HIGH-BREACH-SAFETY-SIZING-001; maintenanceEstimateStatus = UNRESOLVED; retest approx 24 h",
-     "reasonCodes": "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE",
+     "reasonCodes": "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE",
      "fixtures": "WG-ALK-051, AD-CON-002, AD-SAF-007",
      "boundaries": "the automatic zero-dose pause is superseded by owner decision 16; zero is reached only by the sizing floor; a fail-safe for a broken model, not a claim that consumption is zero",
      "dependencies": "ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-NEGATIVE-MATERIALITY-001",
@@ -2555,15 +2560,15 @@
      "canon": "ALK-022",
      "title": "Current consumption best estimate",
      "owner": "CONSUMPTION",
-     "inputs": "P_selected, D, S_observed",
+     "inputs": "P_selected, D_history (interval-mean delivered rate), S_observed",
      "output": "C_estimate",
-     "equation": "C = P_selected D - S_observed, using the OBSERVED slope",
+     "equation": "C_estimate = P_selected * D_history - S_observed; D_history = D_eff on an integrable mixed interval, the constant rate on a constant-dose clean segment",
      "reasonCodes": "CONSUMPTION_*",
-     "fixtures": "WG-ALK-013, AD-MNT-005, INV-B2",
-     "boundaries": "never substitute S_supported to be conservative",
+     "fixtures": "WG-ALK-013, AD-MNT-005, INV-B2, AD-DHS-001, AD-DHS-003",
+     "boundaries": "never substitute S_supported to be conservative; D_history, never D_current (ALK-DELIVERY-RATE-BASIS-001, owner decision 20); D_history unavailable -> consumption UNRESOLVED, safety sizing unaffected",
      "dependencies": "SHARED-DELIVERY-BASIS-001",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM"
+     "finding": "NO_PROBLEM (interval quantity named D_history by owner decision 20)"
     },
     {
      "id": "ALK-MAINTENANCE-SEMANTICS-001",
@@ -3662,7 +3667,7 @@
     },
     {
      "id": "ALK-RETURN-TERMINATED-BY-SAFETY-001",
-     "canon": "ALK-003A \u00a75",
+     "canon": "ALK-003A §5",
      "title": "Entering SAFETY_RETURN terminates an active return plan",
      "owner": "SAFETY",
      "inputs": "active return plan, outer-bound breach",
@@ -3753,17 +3758,17 @@
     {
      "id": "ALK-HIGH-BREACH-SAFETY-SIZING-001",
      "canon": "ALK-003A",
-     "title": "High-breach temporary safety rate is sized from the established dose",
+     "title": "High-breach temporary safety rate is sized from the configured delivery rate",
      "owner": "SAFETY",
-     "inputs": "A_now > OuterMax; A_safe,high; D_established; P_selected; C_estimate < 0",
+     "inputs": "OuterMax < A_now < AdvisoryCeiling; A_safe,high; D_current; P_selected; C_estimate < 0",
      "output": "temporary safety rate in mL/day; zero only by the floor",
-     "equation": "R_down = min(A_now - A_safe,high, 0.50); D_safety,temp = max(0, D_established - R_down / P_selected)",
-     "reasonCodes": "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE, SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO",
-     "fixtures": "AD-SAF-007, AD-SAF-008, AD-CON-002, WG-ALK-051",
-     "boundaries": "C_estimate never enters the sizing; materiality never selects 0 versus a held rate; the rate varies with A_now until the 0.50 rail binds and moves one increment per increment of established dose",
-     "dependencies": "ALK-OUTER-BOUND-ACTION-001, ALK-SAFETY-TEMP-RATE-RESOLUTION-001, ALK-046, ALK-COMPOSITE-RAIL-001, ALK-LIQUID-VOLUME-GUARD-001, ALK-ROUNDING-001",
+     "equation": "R_down = min(A_now - A_safe,high, 0.50); D_safety,temp = max(0, D_current - R_down / P_selected)",
+     "reasonCodes": "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE, SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO, SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN",
+     "fixtures": "AD-SAF-007, AD-SAF-008, AD-CON-002, WG-ALK-051, AD-DHS-001, AD-DHS-002",
+     "boundaries": "C_estimate never enters the sizing; materiality never selects 0 versus a held rate; the rate varies with A_now until the 0.50 rail binds and moves one increment per increment of D_current; D_history may NOT be substituted for D_current; D_current unknown REFUSES - no rate, no command, and not 0 mL/day; evaluated only below AdvisoryCeiling",
+     "dependencies": "ALK-OUTER-BOUND-ACTION-001, ALK-DELIVERY-RATE-BASIS-001, ALK-ADVISORY-RANGE-BOUNDARY-001, ALK-SAFETY-TEMP-RATE-RESOLUTION-001, ALK-046, ALK-COMPOSITE-RAIL-001, ALK-LIQUID-VOLUME-GUARD-001, ALK-ROUNDING-001",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM (RESOLVED by owner decision 16)"
+     "finding": "NO_PROBLEM (RESOLVED by owner decision 16; sizing input renamed by owner decision 20)"
     },
     {
      "id": "ALK-REPEAT-SPREAD-DOMAIN-001",
@@ -3839,6 +3844,51 @@
      "dependencies": "ALK-005, ALK-004, ALK-003A, PII-64",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM (RESOLVED by owner decision 18)"
+    },
+    {
+     "id": "ALK-DELIVERY-RATE-BASIS-001",
+     "canon": "ALK-022",
+     "owner": "CONSUMPTION",
+     "title": "D_current and D_history are two distinct delivery-rate quantities",
+     "inputs": "doser configuration at asOf; dose-event ledger over the analysed interval",
+     "output": "D_current (mL/day, configured now) and D_history (mL/day, time-weighted interval mean) as two separate named quantities",
+     "equation": "D_current = configured delivery rate at the time of the recommendation; D_history = IntegratedDoseVolume / ElapsedDays over the analysed interval (= D_current on a constant-dose clean segment, numerically only)",
+     "reasonCodes": "SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN, CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE",
+     "fixtures": "AD-DHS-001, AD-DHS-002, AD-DHS-003",
+     "boundaries": "D_established is retired and is not a live name; safety sizing takes D_current; consumption and every other interval-based calculation takes D_history; the two unknowns are independent - D_history unavailable does not block sizing, D_current unknown does not block consumption; D_current unknown emits NO rate and NOT 0 mL/day; no new constant",
+     "dependencies": "SHARED-DELIVERY-BASIS-001, ALK-CONSUMPTION-ESTIMATE-001, ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM (RESOLVED by owner decision 20)"
+    },
+    {
+     "id": "ALK-ADVISORY-RANGE-BOUNDARY-001",
+     "canon": "ALK-003A",
+     "owner": "SAFETY",
+     "title": "Advisory ceiling and floor - escalate rather than calculate",
+     "inputs": "resolved episode value A_now; outerMin; outerMax",
+     "output": "escalation output; delivery guidance withheld, not set",
+     "equation": "AdvisoryCeiling = OuterMax + 1.0 dKH; AdvisoryFloor = OuterMin - 1.0 dKH; escalate iff A_now >= AdvisoryCeiling or A_now <= AdvisoryFloor, inclusive, exact decimal comparison",
+     "reasonCodes": "SAFETY_ADVISORY_RANGE_EXCEEDED",
+     "fixtures": "AD-ESC-001, AD-ESC-002, AD-ESC-003",
+     "boundaries": "evaluated on the resolved episode value after ALK-EPISODE-RESOLUTION-001 and BEFORE high-breach sizing; a contested episode whose members are ALL beyond the boundary escalates rather than being withheld as contested; emits NO dose, NO temporary safety rate, NO executable command and NOT zero; outerBoundState is NOT reclassified; shortened/reprioritised retesting is preserved; maintenance estimate UNRESOLVED; an already-authoritative safety rule that explicitly governs the state still governs; NO epsilon; narrows but does NOT close the flat-above-the-rail exposure",
+     "dependencies": "ALK-OUTER-BOUNDS-001, ALK-EPISODE-RESOLUTION-001, ALK-DECIMAL-THRESHOLD-001, ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-RETEST-SCHEDULER-001, ALK-SAFETY-CORRECTION-RESOLUTION-001, ALK-SAFETY-RETURN-INTEGRATION-001",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM (RESOLVED by owner decision 21)"
+    },
+    {
+     "id": "ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001",
+     "canon": "ALK-003A",
+     "owner": "SAFETY",
+     "title": "High breach with a consumption estimate that cannot be computed at all",
+     "inputs": "OuterMax < A_now < AdvisoryCeiling; C_estimate NOT COMPUTABLE; D_current known; P_selected",
+     "output": "temporary safety rate in mL/day (branch B'); maintenance estimate UNRESOLVED with the reason surfaced",
+     "equation": "D_safety,temp = max(0, D_current - R_down / P_selected)",
+     "reasonCodes": "SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE, SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE, SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO",
+     "fixtures": "AD-SAF-009, INV-G12",
+     "boundaries": "insufficient history, first-ever test or unknown dose history - the mass balance cannot be EVALUATED, as distinct from evaluating to a number; DISTINCT from D_current unknown, which REFUSES under owner decision 20; branches A, B and B' are jointly exhaustive and mutually exclusive below AdvisoryCeiling; does NOT address the C_estimate = 0 discontinuity and moves no branch boundary",
+     "dependencies": "ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-DELIVERY-RATE-BASIS-001, ALK-ADVISORY-RANGE-BOUNDARY-001, ALK-HIGH-BREACH-UNRESOLVED-001",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM (RESOLVED by owner decision 22)"
     }
    ]
   },

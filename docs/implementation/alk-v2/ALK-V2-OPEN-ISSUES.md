@@ -57,6 +57,13 @@ Twenty-seven items remain from the original register. Freeze-5 review opened thr
 `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001`, in section A2 — and
 the owner then decided all three as amendments F5-13, F5-14 and F5-15. They are closed.
 
+Review of the decisions 16–19 encoding then opened four more, in section A4. The owner
+decided two of them as decisions 20 and 22. **Two remain open** —
+`OI-SIZINGFLAT-001` and `OI-CZERODISCONT-001` — and are the first `CANON_DEFECT` +
+`OWNER_DECISION_REQUIRED` items to be left open deliberately since Freeze 5 closed the
+blocking register. Neither withholds an output: both name an exposure inside a path that
+still runs, and both forbid the implementation from compensating for it.
+
 That the register grew and then closed is the intended shape. A review of a canon reissue
 that found nothing new would mean the review was not adversarial; a review whose findings
 were then absorbed by derivation rather than by decision would mean the governance was not
@@ -1197,6 +1204,14 @@ the record of why the decision was needed.
 > `maintenanceEstimateStatus` stays `UNRESOLVED`. No ceiling is invented for the
 > `1.28·sigma_S` band; decision 16 removes that band from sizing instead.
 >
+> **Amended by owner decision 20.** The sizing input above is `D_current`, not
+> `D_established` — that name is split by `ALK-DELIVERY-RATE-BASIS-001` and is no longer
+> live. Decision 16's wording is preserved above as the record of what was decided when.
+> See `OI-DELIVERYRATEBASIS-001`. **Bounded by owner decision 21**: the sizing rule governs
+> `OuterMax < A_now < AdvisoryCeiling`; beyond it the engine escalates and emits no rate.
+> **Extended by owner decision 22**: a `C_estimate` that cannot be computed at all takes the
+> same formula, as branch B′. See `OI-UNCOMPUTABLEC-001`.
+>
 > **Fixtures:** `AD-SAF-007` (sweep, rail saturation, zero floor, materiality straddle),
 > `AD-SAF-008` (continuity negative control), `AD-CON-002` (amended), `WG-ALK-051` (amended).
 
@@ -1389,6 +1404,243 @@ readings of `A_latest` gave `S_rapid` of −0.32, −0.14 and −0.23 dKH/day; t
 threshold sits between them, so `rapidConfirmed` flipped. That flag gates the ~24 h rapid
 cadence, the bypass of the 3-cluster / 4-day minimum, and eligibility for the 50% step cap
 rather than 25%.
+
+---
+
+# A4. Opened by review of the decisions 16–19 encoding
+
+Focused review of the decisions 16–19 encoding raised findings against the high-breach
+safety path. Four of them are recorded here. **Two are resolved by owner decisions 20 and
+22. Two remain open and are deliberately not closed** — decision 21 narrows one of them and
+explicitly declines to close it.
+
+> **Register provenance, stated plainly.** These four findings were raised as
+> `D-ESTABLISHED-UNDEFINED`, `SIZING-FLAT-ABOVE-THE-RAIL`,
+> `SIZING-NO-BRANCH-FOR-UNCOMPUTABLE-C` and `SIZING-C-ZERO-DISCONTINUITY`. They had **no
+> entries in this register** before this pass — the finding IDs existed only in the review
+> that raised them. The entries below were created here so the decisions have something to
+> close and the two open items have somewhere to live. The finding text is reproduced from
+> the finding as raised; where a detail was not in the finding, it is not invented.
+
+| Finding as raised | Register item | Status |
+|---|---|---|
+| `D-ESTABLISHED-UNDEFINED` | `OI-DELIVERYRATEBASIS-001` | RESOLVED by owner decision 20 |
+| `SIZING-NO-BRANCH-FOR-UNCOMPUTABLE-C` | `OI-UNCOMPUTABLEC-001` | RESOLVED by owner decision 22 |
+| `SIZING-FLAT-ABOVE-THE-RAIL` | `OI-SIZINGFLAT-001` | **OPEN** — narrowed by decision 21, not closed |
+| `SIZING-C-ZERO-DISCONTINUITY` | `OI-CZERODISCONT-001` | **OPEN** — not addressed |
+
+## OI-DELIVERYRATEBASIS-001 — `D_established` names two different physical quantities
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-CONSUMPTION-ESTIMATE-001`; `ALK-022`; M-6
+- **Owner module:** `CONSUMPTION`
+- **Raised by:** review of the decisions 16–19 encoding, as `D-ESTABLISHED-UNDEFINED`
+
+> **RESOLVED by owner decision 20.**
+>
+> Encoded as `ALK-DELIVERY-RATE-BASIS-001` (canon, in `ALK-022`). The name is split into two:
+>
+> ```text
+> D_current  = the alkalinity delivery rate the doser is CONFIGURED to be delivering
+>              at the time of the recommendation
+> D_history  = the TIME-WEIGHTED MEAN alkalinity delivery rate actually delivered
+>              across the trend interval under consideration
+> ```
+>
+> `ALK-HIGH-BREACH-SAFETY-SIZING-001` is amended to
+> `D_safety,temp = max(0, D_current - R_down / P_selected)`. Consumption estimation and
+> every other interval-based calculation take `D_history`. `D_established` is not a live
+> name anywhere: the reason code `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` and the
+> payload field `establishedDoseMlPerDay` are retired and renamed to
+> `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` and `currentDoseMlPerDay`.
+>
+> **Unknown handling refuses; it does not assume zero.** `D_current` unknown ⇒ no temporary
+> safety rate, no executable command, and **not** `0 mL/day`; the measured state and the
+> reason are surfaced and doser configuration is requested through the existing
+> anomaly/confirmation machinery. `D_history` unavailable ⇒ consumption `UNRESOLVED` under
+> the existing unresolved-consumption handling. The two are independent.
+>
+> **Fixtures:** `AD-DHS-001` (mixed-dose interval, increase and decrease), `AD-DHS-002`
+> (negative control: `D_current` unknown ⇒ refusal, not zero), `AD-DHS-003` (`D_history`
+> unavailable ⇒ consumption `UNRESOLVED`, sizing still runs). **Invariant:** `INV-G14`.
+> `INV-G10` and `INV-G11` amended for the rename.
+
+### The finding, as reported
+
+**`D-ESTABLISHED-UNDEFINED`.** `ALK-HIGH-BREACH-SAFETY-SIZING-001` sized the temporary
+safety rate from `D_established`, defined in the canon as "the established maintenance
+delivery rate in mL/day — the rate actually being delivered, on the same dose-history basis
+every other Alk calculation uses". That definition names two different physical quantities
+in one sentence:
+
+- **"the rate actually being delivered"** — the doser's configuration *now*, at the moment
+  the recommendation is made;
+- **"on the same dose-history basis every other Alk calculation uses"** — the interval
+  quantity `ALK-CONSUMPTION-ESTIMATE-001` calls `D`, which for a mixed interval is
+  `D_eff = IntegratedDoseVolume / ElapsedDays` over the *past* interval.
+
+On a constant-dose clean segment the two are numerically equal, which is why the entire
+fixture corpus passed under either reading and why nothing in the package could distinguish
+them. On an interval whose dose changed they differ, and the actuator command differs with
+them. On a 7-day interval running 8.0 mL/day for four days and 12.0 mL/day for three,
+`D_current = 12.0` and `D_history = 68/7 ≈ 9.714`: with `R_down/P_selected = 5.772`, the
+sized rate is either 6.228 or 3.942 mL/day — 6.2 or 3.9 at a 0.1 mL/day increment. Reverse
+the schedule and the error reverses sign, so a test that checked only the magnitude of the
+discrepancy would not have caught the substitution.
+
+Nothing in the canon said which reading governed, and the two readings disagree about the
+direction of the correction as well as its size.
+
+---
+
+## OI-UNCOMPUTABLEC-001 — no high-breach branch exists for a `C_estimate` that cannot be computed
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-003A`; `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** review of the decisions 16–19 encoding, as `SIZING-NO-BRANCH-FOR-UNCOMPUTABLE-C`
+
+> **RESOLVED by owner decision 22.**
+>
+> Encoded as `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` (canon, in `ALK-003A`). Where
+> `OuterMax < A_now < AdvisoryCeiling` and `C_estimate` is not computable at all —
+> insufficient history, a first-ever test, an unknown dose history — the state takes the
+> **branch B pathway**:
+>
+> ```text
+> D_safety,temp = max(0, D_current - R_down / P_selected)
+> ```
+>
+> with `maintenanceEstimateStatus = UNRESOLVED` and the reason surfaced.
+>
+> **Rationale encoded:** sizing the temporary safety reduction requires knowing what is
+> being *delivered*, not what is being *consumed*. Absence of a consumption estimate does
+> not prevent a defensible downward safety action.
+>
+> **Distinct from `D_current` unknown**, which refuses under decision 20 and emits no rate.
+>
+> The three high-breach predicates — A (`C_estimate >= 0`), B (`C_estimate < 0`) and
+> B′ (`C_estimate` not computable) — are **jointly exhaustive and mutually exclusive** over
+> the state space below `AdvisoryCeiling`, and an invariant asserts that exactly one branch
+> is selected for any such state.
+>
+> **Fixtures:** `AD-SAF-009` (first-ever test, high breach, `D_current` known),
+> `AD-DHS-003` (`D_history` unavailable ⇒ the same branch), `INV-G12`
+> (branch exhaustiveness). **Invariant:** `INV-G12`.
+
+### The finding, as reported
+
+**`SIZING-NO-BRANCH-FOR-UNCOMPUTABLE-C`.** After owner decision 16 the high-breach tree read:
+
+```text
+C_estimate >= 0   -> size from consumption
+C_estimate <  0   -> size from the established-dose contribution
+```
+
+Both predicates presuppose that `C_estimate` **is a number**. A state in which it cannot be
+computed at all matches neither. `C_estimate = P_selected · D − S_observed` requires a
+potency, a delivery-rate basis and an observed slope; a first-ever test has no slope, a
+tank with no dose history has no `D`, and an interval whose only delivery basis is
+`COMMAND_ONLY_UNCONFIRMED` has no eligible `D_eff`. The canon's own failure state for those
+inputs is `NOT_RUN`, not a value.
+
+The consequence above the outer bound was the same one decision 16 had just abolished on the
+middle branch: no delivery response at all. A tank measuring 11.5 dKH on its first-ever test
+kept dosing at the configured rate, with a ~24 h retest and nothing else — and the engine
+had every quantity it needed to size a reduction (`R_down` from the level, `P_selected`,
+and the configured rate), lacking only the one quantity the reduction does not depend on.
+
+---
+
+## OI-SIZINGFLAT-001 — the sized safety rate stops responding to the level above the rail
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-046`; `ALK-ADVISORY-RANGE-BOUNDARY-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** review of the decisions 16–19 encoding, as `SIZING-FLAT-ABOVE-THE-RAIL`
+- **Status:** **OPEN.** Narrowed by owner decision 21. **Not closed.**
+
+> **NARROWED by owner decision 21 — this item remains OPEN.**
+>
+> `ALK-ADVISORY-RANGE-BOUNDARY-001` bounds the region in which the flat response is
+> reachable: at or beyond `AdvisoryCeiling = OuterMax + 1.0 dKH` the engine emits no sized
+> rate at all and escalates instead. The exposure is therefore confined to
+> `OuterMax < A_now < AdvisoryCeiling` — for the owner's configured bounds, 11.0 to
+> 12.0 dKH.
+>
+> **Inside that band the finding stands unchanged.** `R_down` still saturates at the
+> 0.50 dKH/day rail, and the sized rate still stops responding to `A_now` above
+> `A_safe,high + 0.50 = 11.30 dKH`. Nothing here closes it, and no branch boundary was
+> moved to reduce it.
+
+### The finding, as reported
+
+**`SIZING-FLAT-ABOVE-THE-RAIL`.** `R_down = min(A_now − A_safe,high, 0.50)` saturates once
+`A_now ≥ A_safe,high + 0.50`. With the owner's `A_safe,high = 10.80`, that is 11.30 dKH.
+Above it, `D_safety,temp = max(0, D_current − R_down/P_selected)` is constant in `A_now`:
+11.30 dKH and 15.00 dKH receive the identical delivered rate, the identical pump command
+and the identical ~24 h retest. The rule's own stated requirement — "the safety response
+varies with `A_now` through `R_down`, monotonically, until the 0.50 dKH/day rail binds and
+`R_down` saturates" — is satisfied by construction and describes the flatness rather than
+excluding it.
+
+The 0.50 dKH/day rail is a rate-of-change limit on how fast the engine will *move* the tank,
+which is a defensible thing to cap. The finding is that it also caps how much information
+about the level reaches the delivery decision, so the engine's response to a moderate breach
+and to a severe one is indistinguishable.
+
+### Until closed
+
+`ALK-HIGH-BREACH-SAFETY-SIZING-001` governs unchanged inside the band. The flat response is
+a **named, accepted exposure**, not a defect the implementation may compensate for: an
+implementation must **not** invent an escalating `R_down`, a second rail, a severity
+multiplier or a level-dependent term. Beyond `AdvisoryCeiling`,
+`ALK-ADVISORY-RANGE-BOUNDARY-001` governs.
+
+---
+
+## OI-CZERODISCONT-001 — the sized rate is discontinuous where `C_estimate` crosses zero
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-003A` interpretable branch; `ALK-HIGH-BREACH-SAFETY-SIZING-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** review of the decisions 16–19 encoding, as `SIZING-C-ZERO-DISCONTINUITY`
+- **Status:** **OPEN.** Not addressed by decisions 20, 21 or 22.
+
+> **NOT ADDRESSED. This item remains OPEN.**
+>
+> Owner decision 22 adds branch B′ for a `C_estimate` that cannot be computed. It explicitly
+> does **not** address the discontinuity between branches A and B, and **no branch boundary
+> was adjusted to reduce it**. Branch B′ inherits branch B's formula exactly, so it adds no
+> new discontinuity of its own.
+
+### The finding, as reported
+
+**`SIZING-C-ZERO-DISCONTINUITY`.** The two high-breach sizing formulas are unrelated
+functions that meet at `C_estimate = 0` only by coincidence:
+
+```text
+A  (C_estimate >= 0):  D_safety,temp = max(0, (C_estimate + S_safety) / P_selected)
+B  (C_estimate <  0):  D_safety,temp = max(0,  D_current - R_down / P_selected)
+```
+
+At `C_estimate = 0` exactly, A gives `max(0, −R_down/P_selected) = 0`. B, evaluated at a
+`C_estimate` infinitesimally below zero, gives `max(0, D_current − R_down/P_selected)`,
+which is the configured rate less the same quantity — for `D_current = 9.0`,
+`R_down = 0.50` and `P = 0.0693`, that is 1.785 mL/day. An arbitrarily small change in the
+consumption estimate therefore moves the delivered rate between 0 and 1.785 mL/day, in the
+same tank state.
+
+This is structurally the same defect owner decision 16 removed at the materiality boundary,
+displaced to the branch boundary above it. It is not reachable by the same mechanism —
+`C_estimate` is a continuous physical estimate, not a classification — but the delivered
+rate is still a step function of it.
+
+### Until closed
+
+Both formulas govern on their own sides of `C_estimate = 0`, exactly as written. An
+implementation must **not** blend, interpolate, clamp or reorder them, and must not move the
+branch boundary. The discontinuity is a named exposure.
 
 ---
 
@@ -2176,19 +2428,23 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 |---|---|---|
 | **OPENED by Freeze-5 review, CLOSED by F5-13/14/15** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
 | **RESOLVED by owner decisions 16–19** | 5 | OI-HIGHBREACHSIZING-001, OI-EPISODE-001, OI-CROSSMETHOD-001, OI-DECIMALTHRESHOLD-001, OI-EPISODECONSUMER-001 |
+| **OPENED by decisions 16–19 review, RESOLVED by owner decisions 20 and 22** | 2 | OI-DELIVERYRATEBASIS-001, OI-UNCOMPUTABLEC-001 |
+| **OPENED by decisions 16–19 review, LEFT OPEN** | 2 | OI-SIZINGFLAT-001 (narrowed by decision 21, not closed), OI-CZERODISCONT-001 (not addressed) |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-43 distinct issue IDs (3 + 13 + 11 + 13 + 3). **Sixteen are resolved by Freeze 5** — the
+47 distinct issue IDs (3 + 13 + 11 + 13 + 3 + 4). **Sixteen are resolved by Freeze 5** — the
 thirteen its original decisions closed, plus the three its review opened and its amendments
-F5-13, F5-14 and F5-15 then closed.
+F5-13, F5-14 and F5-15 then closed. Seven more are resolved by owner decisions 16–22.
 
-All eleven `OWNER_DECISION_REQUIRED` items across both rounds were decided by the owner.
+Every `OWNER_DECISION_REQUIRED` item across the first three rounds was decided by the owner.
 None was resolved by derivation. **Nothing is blocking, and no output is withheld for want
-of a decision.**
+of a decision** — including the two items section A4 leaves open: `OI-SIZINGFLAT-001` and
+`OI-CZERODISCONT-001` both name an exposure inside a path that runs and produces a value,
+and both forbid the implementation from compensating.
 
 `OI-PIPELINE-001` remains open only for the composite rail's position; its liquid-guard
 limb is closed by F5-06. `OI-STABLE-001` is confirmed rather than closed: F5-04 explicitly

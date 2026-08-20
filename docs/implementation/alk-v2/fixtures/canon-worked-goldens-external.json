@@ -160,7 +160,7 @@
       },
       "expectedReasonCodes": [
         "SAFETY_OUTER_BOUND_BREACHED_HIGH",
-        "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE",
+        "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE",
         "RETEST_HIGH_BREACH_FAILSAFE"
       ],
       "forbidden": {

@@ -68,7 +68,10 @@ NEW_RULES=['ALK-INDEPENDENT-SELECTION-001','ALK-SUSPECT-DETECTION-001','ALK-NEGA
  'ALK-HIGH-BREACH-NO-PAUSE-001','ALK-SAME-TIMESTAMP-COALESCE-001',
  # owner decisions 16-19
  'ALK-HIGH-BREACH-SAFETY-SIZING-001','ALK-REPEAT-SPREAD-DOMAIN-001','ALK-TESTING-EPISODE-001',
- 'ALK-EPISODE-RESOLUTION-001','ALK-EPISODE-SINGLE-OUTPUT-001','ALK-DECIMAL-THRESHOLD-001']
+ 'ALK-EPISODE-RESOLUTION-001','ALK-EPISODE-SINGLE-OUTPUT-001','ALK-DECIMAL-THRESHOLD-001',
+ # owner decisions 20-22
+ 'ALK-DELIVERY-RATE-BASIS-001','ALK-ADVISORY-RANGE-BOUNDARY-001',
+ 'ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001']
 for rid in NEW_RULES:
     # a body = the id on its own line as a backticked marker in the canon
     body = re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M) is not None
@@ -101,7 +104,18 @@ check('traceability fixture refs resolve (goldens)', not unknown, str(unknown[:1
 RC=open(R+'docs/implementation/alk-v2/ALK-V2-REASON-CODES.md',encoding='utf-8').read()
 body=RC.split('## Retired by')[0]
 catalogue=set(re.findall(r'^\| `([A-Z][A-Z0-9_]+)` \| `(?:INFO|GATING|REFUSAL|SAFETY)` \|', body, re.M))
-retired=set(re.findall(r'^\| `([A-Z][A-Z0-9_]+)` \|', RC.split('## Retired by')[1].split('## Appendix')[0], re.M))
+# Every retired table, not just the first. The section headings are '## Retired by ...' and
+# '### Retired by owner decisions ...', and '### Retired by' CONTAINS '## Retired by' as a
+# substring - so splitting on that substring and reading only part [1] silently dropped every
+# table from the owner-decision rounds. Three codes retired by decisions 16 and 17 were
+# therefore never enforced as retired. Found while encoding decision 20's rename; the union
+# below is the fix.
+_retired_region=RC.split('## Retired by',1)[1].split('## Appendix')[0]
+retired=set(re.findall(r'^\| `([A-Z][A-Z0-9_]+)` \|', _retired_region, re.M))
+check('retired-set parser reaches every retired table',
+      {'SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE','CLUSTER_SAME_TIMESTAMP_COALESCED',
+       'SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE'} <= retired,
+      '%d codes retired'%len(retired))
 check('catalogue and retired sets are disjoint', not (catalogue & retired), str(catalogue & retired))
 emitted=collections.Counter()
 for fid,(fn,f) in fixtures.items():
@@ -130,7 +144,8 @@ DEC={'F5-01':['OI-INDEPENDENCE-001'],'F5-02':['OI-SUSPECT-001','OI-MADFLOOR-001'
  'F5-12':['OI-CONFIDENCE-001'],'F5-13':['OI-HIGHBREACHBAND-001'],'F5-14':['OI-CLUSTERTIE-001'],
  'F5-15':['OI-RETESTFLOOR-001'],
  'D16':['OI-HIGHBREACHSIZING-001'],'D17':['OI-EPISODE-001'],
- 'D18':['OI-CROSSMETHOD-001','OI-DECIMALTHRESHOLD-001'],'D19':['OI-EPISODECONSUMER-001']}
+ 'D18':['OI-CROSSMETHOD-001','OI-DECIMALTHRESHOLD-001'],'D19':['OI-EPISODECONSUMER-001'],
+ 'D20':['OI-DELIVERYRATEBASIS-001'],'D21':['OI-SIZINGFLAT-001'],'D22':['OI-UNCOMPUTABLEC-001']}
 for dec,ois in DEC.items():
     pos=[fid for fid,(fn,f) in fixtures.items()
          if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
@@ -145,7 +160,12 @@ RESOLVED=['OI-INDEPENDENCE-001','OI-SUSPECT-001','OI-MADFLOOR-001','OI-NEGCONS-0
  'OI-RETURNDURINGSAFETY-001','OI-RAPIDBASIS-001','OI-CONFIDENCE-001',
  'OI-HIGHBREACHBAND-001','OI-CLUSTERTIE-001','OI-RETESTFLOOR-001']
 DECIDED_16_19=['OI-HIGHBREACHSIZING-001','OI-EPISODE-001','OI-CROSSMETHOD-001',
- 'OI-DECIMALTHRESHOLD-001','OI-EPISODECONSUMER-001']
+ 'OI-DECIMALTHRESHOLD-001','OI-EPISODECONSUMER-001',
+ 'OI-DELIVERYRATEBASIS-001','OI-UNCOMPUTABLEC-001']
+# Opened by the decisions 16-19 review and DELIBERATELY LEFT OPEN. A register section that
+# quietly acquired a resolution box would be a silent decision, so the gate asserts the
+# absence of one as hard as it asserts the presence of the others.
+LEFT_OPEN=['OI-SIZINGFLAT-001','OI-CZERODISCONT-001']
 for oi in DECIDED_16_19:
     m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
     if not m: check('register section for '+oi, False); continue
@@ -163,7 +183,20 @@ check('register keeps the original analysis (history not deleted)',
 n_res=OI.count('> **RESOLVED by `ALK_V2_FREEZE_5`')
 check('exactly 16 Freeze-5 resolution boxes', n_res==16, str(n_res))
 n_d=OI.count('> **RESOLVED by owner decision')
-check('exactly 5 owner-decision 16-19 resolution boxes', n_d==5, str(n_d))
+check('exactly 7 owner-decision 16-22 resolution boxes', n_d==7, str(n_d))
+for oi in LEFT_OPEN:
+    m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
+    if not m: check('register section for '+oi, False); continue
+    nxt=OI.find('\n## ', m.end()); nxt = nxt if nxt!=-1 else len(OI)
+    seg=OI[m.start():nxt]
+    check(oi+' is NOT marked resolved',
+          '> **RESOLVED' not in seg and 'RESOLVED by owner decision' not in seg
+          and '**Status:** **OPEN.**' in seg and '### Until closed' in seg)
+check('OI-SIZINGFLAT-001 is narrowed and says so, without closing',
+      'NARROWED by owner decision 21 — this item remains OPEN' in OI)
+check('OI-CZERODISCONT-001 records that no branch boundary was moved',
+      'no branch boundary\n> was adjusted to reduce it' in OI or
+      'no branch boundary was adjusted to reduce it' in OI)
 
 # ---------- 9. no new numeric constant introduced by Freeze 5 ----------
 # The Freeze-5 declaration claims no new constant. Compare against the PINNED BASE, not
@@ -180,7 +213,7 @@ for c in ['1.28','0.10 dKH','0.20 dKH','0.02','24','48','0.50']:
 # ---------- 10. invariant count ----------
 INV=open(R+'docs/implementation/alk-v2/ALK-V2-INVARIANTS.md',encoding='utf-8').read()
 n=len(re.findall(r'^### INV-', INV, re.M))
-check('invariant bodies match the coverage total', n==69 and '| **Total** | **69** |' in INV, str(n))
+check('invariant bodies match the coverage total', n==72 and '| **Total** | **72** |' in INV, str(n))
 
 # ---------- 11. canon internal consistency for the amended rules ----------
 pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
@@ -195,7 +228,10 @@ pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
        ('ALK-SAFETY-TEMP-RATE-RESOLUTION-001','temporarySafetyRateAdvisoryMlPerDay'),
        ('ALK-HIGH-BREACH-NO-PAUSE-001','does NOT choose the delivered rate'),
        ('ALK-SAME-TIMESTAMP-COALESCE-001','resolved testing-episode outputs'),
-       ('ALK-HIGH-BREACH-SAFETY-SIZING-001','D_{established}'),
+       ('ALK-HIGH-BREACH-SAFETY-SIZING-001','D_{current}'),
+       ('ALK-DELIVERY-RATE-BASIS-001','D_{history}'),
+       ('ALK-ADVISORY-RANGE-BOUNDARY-001','AdvisoryCeiling = OuterMax + 1.0'),
+       ('ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001','jointly exhaustive and mutually exclusive'),
        ('ALK-REPEAT-SPREAD-DOMAIN-001','crossMethodConcordanceThreshold'),
        ('ALK-TESTING-EPISODE-001','SAME TESTING EPISODE'),
        ('ALK-EPISODE-RESOLUTION-001','CONTESTED_METHODS'),
@@ -351,7 +387,10 @@ mismatch=[]; recomputed=0; skipped=[]
 for fid,(fn,f) in fixtures.items():
     t,a=_series(f)
     if t is None:
-        if (f.get('expectedIntermediateEvidence') or {}).get('observedSlopeDkhPerDay') is not None:
+        _st=(f.get('expectedIntermediateEvidence') or {}).get('observedSlopeDkhPerDay')
+        # A canonised NOT_RUN is the ABSENCE of a slope, not a slope the checker failed to
+        # reproduce. AD-SAF-009 is a first-ever test: it states there is no slope.
+        if isinstance(_st,(int,float)):
             skipped.append(fid)
         continue
     acc=[]; anchor=None
@@ -388,7 +427,8 @@ def _round_to(x, inc):
     if abs(dlo-dhi)<1e-12: return None
     return round(lo if dlo<dhi else hi, 10)
 
-# 15a. decision 16 - D_safety,temp = max(0, D_established - R_down/P), recomputed per case
+# 15a. decision 16 - D_safety,temp = max(0, D_current - R_down/P), recomputed per case
+#      (sizing input renamed from D_established by owner decision 20)
 f=_fx('AD-SAF-007')
 check('AD-SAF-007 exists', f is not None)
 if f:
@@ -402,7 +442,7 @@ if f:
         if c['alkDkh']<=f['input']['outerMaxDkh']: bad.append((name,'not a high breach'))
         rd=min(c['alkDkh']-ASH, 0.50)
         rdd=rd/P_SEL
-        rate=max(0.0, c['establishedDoseMlPerDay']-rdd)
+        rate=max(0.0, c['currentDoseMlPerDay']-rdd)
         for key,val in (('rDownDkh',rd),('rDownAsDoseMlPerDay',rdd)):
             if abs(cev[name][key]-val)>1e-9: bad.append((name,key,cev[name][key],val))
         if abs(cac[name]['temporarySafetyRateAdvisoryMlPerDay']-rate)>1e-9:
@@ -411,7 +451,7 @@ if f:
         if cmd is None or abs(cac[name]['temporarySafetyPumpCommandMlPerDay']-cmd)>1e-9:
             bad.append((name,'pumpCommand',cac[name].get('temporarySafetyPumpCommandMlPerDay'),cmd))
         if c['consumptionDkhPerDay']>=0: bad.append((name,'C_estimate must be negative on this path'))
-    check('AD-SAF-007 sizing recomputes from D_established - R_down/P_selected', not bad, str(bad[:4]))
+    check('AD-SAF-007 sizing recomputes from D_current - R_down/P_selected', not bad, str(bad[:4]))
     # varies with A_now until the rail binds, then saturates
     sweep=['SWEEP_11_05','SWEEP_11_20','SWEEP_11_30','SWEEP_11_80_RAIL']
     rates=[cac[n]['temporarySafetyRateAdvisoryMlPerDay'] for n in sweep]
@@ -421,9 +461,9 @@ if f:
           and abs(cev['SWEEP_11_80_RAIL']['rDownDkh']-0.50)<1e-12, str(rates[2:]))
     check('AD-SAF-007 floors at zero only when the established dose cannot absorb R_down',
           cac['FLOOR']['temporarySafetyRateAdvisoryMlPerDay']==0
-          and cin['FLOOR']['establishedDoseMlPerDay']<=cev['FLOOR']['rDownAsDoseMlPerDay'])
+          and cin['FLOOR']['currentDoseMlPerDay']<=cev['FLOOR']['rDownAsDoseMlPerDay'])
     # the materiality boundary must not move the delivered rate by more than the dose step
-    step=(cin['NOT_MATERIAL']['establishedDoseMlPerDay']-cin['MATERIAL']['establishedDoseMlPerDay'])
+    step=(cin['NOT_MATERIAL']['currentDoseMlPerDay']-cin['MATERIAL']['currentDoseMlPerDay'])
     delta=(cac['NOT_MATERIAL']['temporarySafetyRateAdvisoryMlPerDay']
            -cac['MATERIAL']['temporarySafetyRateAdvisoryMlPerDay'])
     check('AD-SAF-007 materiality does not change the rate beyond the dose step',
@@ -440,7 +480,7 @@ if f:
     if abs(rdd-rd/P_SEL)>1e-9: bad.append(('rDownAsDose',rdd,rd/P_SEL))
     rates=f['expectedAction']['temporarySafetyRateAdvisoryMlPerDay']
     prev=None
-    for d in f['input']['establishedDoseSweepMlPerDay']:
+    for d in f['input']['currentDoseSweepMlPerDay']:
         want=max(0.0, d-rdd); got=rates[repr(d) if repr(d) in rates else str(d)]
         if abs(got-want)>1e-9: bad.append((d,got,want))
         if prev is not None and abs((got-prev)-0.1)>1e-9: bad.append((d,'step',got-prev))
@@ -599,6 +639,321 @@ m=re.search(r'^`ALK-HIGH-BREACH-SAFETY-SIZING-001`\s*$', CANON, re.M)
 seg=CANON[m.start():m.start()+9000] if m else ''
 check('sizing rule scopes its monotonicity requirements above the zero floor',
       'above the zero\nfloor' in seg or 'above the zero floor' in seg)
+
+# ---------- 17. owner decisions 20-22, recomputed independently ----------
+# Every check here is written so that REVERTING the decision it encodes makes it FAIL.
+# The three reversion mutations required by the task are named against the checks that catch
+# them: [M1] D_current swapped back to D_history in the safety formula, [M2] escalation
+# bounds removed so ordinary sizing applies above the ceiling, [M3] the B' branch removed so
+# an uncomputable C_estimate falls through. The mutation runs are recorded in
+# docs/process/runs/2026-08-20-alk-v2-decisions-20-22.md.
+
+ADVISORY_OFFSET = 1.0   # decision 21, the only constant decisions 20-22 introduce
+
+# 17a. D_established is not a live name anywhere outside preserved history --------------
+# Decision 20: "D_established must not survive as a live name." A blockquote line, or a line
+# carrying its own superseded/amended marker, is preserved history and is exempt.
+D_MARKED=('previously named','previously read','Superseded wording','superseded by owner decision',
+          'Amended by owner decision','RENAMED by','renamed from','Renamed by',
+          'is a **rename, not a behaviour change**','split by','splits `D_established`',
+          'as a single name','decision 20 splits','renamed and split','renamed from',
+          'appears nowhere as a live name')
+# Scope of the exemption. A markdown TABLE ROW is its own unit - a marker in one row must
+# not exempt the next - and is exempt only if the row itself carries a marker or names the
+# quantity that replaced the old name. Everything else is scoped to its PARAGRAPH, the
+# maximal run of non-blank non-table lines, because prose wraps and a marker sentence and
+# the name it marks routinely land on different lines.
+def _units(text):
+    para=[]
+    for line in text.split('\n'):
+        if line.startswith('|'):
+            if para: yield '\n'.join(para); para=[]
+            yield line
+        elif not line.strip():
+            if para: yield '\n'.join(para); para=[]
+        else:
+            para.append(line)
+    if para: yield '\n'.join(para)
+
+live_de=[]
+for fn in sorted(glob.glob(R+'docs/canon/*.md')+glob.glob(R+'docs/implementation/alk-v2/*.md')
+                 +glob.glob(R+'docs/implementation/alk-v2/**/*.json', recursive=True)):
+    if os.path.basename(fn) in ('ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md'): continue
+    for unit in _units(open(fn,encoding='utf-8',errors='ignore').read()):
+        if 'D_established' not in unit and 'establishedDoseMlPerDay' not in unit: continue
+        if all(l.lstrip().startswith('>') for l in unit.split('\n') if l.strip()): continue
+        _flat=re.sub(r'\s+',' ',unit).lower()   # prose wraps; markers must survive the wrap
+        if any(m.lower() in _flat for m in D_MARKED): continue
+        if unit.startswith('|') and ('D_current' in unit or 'D_history' in unit
+                                     or 'currentDoseMlPerDay' in unit): continue
+        live_de.append((os.path.basename(fn), unit.strip().split('\n')[0][:70]))
+check('D_established survives nowhere as a live name', not live_de, str(live_de[:4]))
+
+# 17b. AD-DHS-001 - the split, recomputed, in both directions ---------------------------
+f=_fx('AD-DHS-001')
+check('AD-DHS-001 exists', f is not None)
+if f:
+    inp=f['input']; P=inp['selectedPotencyDkhPerMl']; INC=inp['actuatorIncrementMlPerDay']
+    S_obs=inp['observedSlopeDkhPerDay']; sig=inp['sigmaSDkhPerDay']
+    rd=min(inp['alkDkh']-inp['safetyDestinationHighDkh'], 0.50); rdd=rd/P
+    cin={c['case']:c for c in inp['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    bad=[]; errs={}
+    for name,c in cin.items():
+        # D_history is recomputed from the DECLARED SCHEDULE, never taken on trust
+        vol=sum(seg['mlPerDay']*seg['days'] for seg in c['doseSchedule'])
+        days=sum(seg['days'] for seg in c['doseSchedule'])
+        dh=vol/days
+        dc=c['currentDoseMlPerDay']
+        if abs(c['doseHistoryMeanMlPerDay']-dh)>1e-12: bad.append((name,'D_history',c['doseHistoryMeanMlPerDay'],dh))
+        if abs(days-inp['elapsedDays'])>1e-12: bad.append((name,'elapsedDays',days))
+        if abs(dc-dh)<0.5: bad.append((name,'D_current and D_history must differ MATERIALLY',dc,dh))
+        # [M1] safety sizing takes D_current. A reverted engine takes D_history.
+        want_rate=max(0.0, dc-rdd); wrong_rate=max(0.0, dh-rdd)
+        got=cac[name]['temporarySafetyRateAdvisoryMlPerDay']
+        if abs(got-want_rate)>1e-9: bad.append((name,'rate',got,want_rate))
+        if abs(got-wrong_rate)<=1e-9: bad.append((name,'rate is not distinguishable from the D_history form'))
+        cmd=_round_to(want_rate, INC)
+        if cmd is None or abs(cac[name]['temporarySafetyPumpCommandMlPerDay']-cmd)>1e-9:
+            bad.append((name,'pumpCommand',cac[name].get('temporarySafetyPumpCommandMlPerDay'),cmd))
+        if _round_to(wrong_rate, INC)==cmd: bad.append((name,'the reverted command is identical - the case cannot catch M1'))
+        # consumption takes D_history. A reverted engine takes D_current.
+        C=P*dh-S_obs; C_wrong=P*dc-S_obs
+        if abs(cev[name]['pTimesD']-P*dh)>1e-9: bad.append((name,'pTimesD',cev[name]['pTimesD'],P*dh))
+        if abs(cev[name]['consumptionDkhPerDay']-C)>1e-9: bad.append((name,'C',cev[name]['consumptionDkhPerDay'],C))
+        if abs(cev[name]['cPlusKSigma']-(C+1.28*sig))>1e-9: bad.append((name,'C+ksigma',cev[name]['cPlusKSigma']))
+        if cev[name]['materiallyNegative']!=((C+1.28*sig)<0): bad.append((name,'materiallyNegative'))
+        if C>=0: bad.append((name,'C must be negative so branch B - not A - selects the D_current form'))
+        if cev[name]['branchSelected']!='B': bad.append((name,'branchSelected',cev[name]['branchSelected']))
+        # the forbidden block must state exactly what the reverted engine produces
+        fb=f['forbidden']['cases'][name]
+        if abs(fb['temporarySafetyRateAdvisoryMlPerDay']-wrong_rate)>1e-9:
+            bad.append((name,'forbidden rate is not the reverted value',fb['temporarySafetyRateAdvisoryMlPerDay'],wrong_rate))
+        if abs(fb['consumptionDkhPerDay']-C_wrong)>1e-9:
+            bad.append((name,'forbidden consumption is not the reverted value'))
+        errs[name]=want_rate-wrong_rate
+    check('AD-DHS-001 recomputes D_history from its declared schedule and sizes from D_current',
+          not bad, str(bad[:4]))
+    # the whole point of the second case: the error REVERSES SIGN, so a magnitude-only test
+    # would not distinguish the two quantities
+    check('AD-DHS-001 the D_history substitution errs in OPPOSITE directions on the two cases',
+          len(errs)==2 and errs['INCREASED']*errs['DECREASED']<0,
+          str({k:round(v,9) for k,v in errs.items()}))
+    check('AD-DHS-001 the substitution flips a BRANCH, not just a number',
+          f['forbidden']['cases']['INCREASED']['branchSelected']=='A'
+          and (P*cin['INCREASED']['currentDoseMlPerDay']-S_obs)>0,
+          'C from D_current on INCREASED = %.6f'%(P*12.0-S_obs))
+
+# 17c. AD-DHS-002 - unknown D_current refuses, and does not emit zero -------------------
+f=_fx('AD-DHS-002')
+check('AD-DHS-002 exists', f is not None)
+if f:
+    a=f['expectedAction']; inp=f['input']; ev=f['expectedIntermediateEvidence']
+    P=inp['selectedPotencyDkhPerMl']
+    check('AD-DHS-002 declares D_current unknown', inp['currentDoseMlPerDay']=='UNKNOWN')
+    check('AD-DHS-002 emits NO rate and NO command',
+          a['temporarySafetyRateAdvisoryMlPerDay']=='NOT_RUN'
+          and a['temporarySafetyPumpCommandMlPerDay']=='NOT_RUN')
+    check('AD-DHS-002 does not emit zero anywhere on the safety path',
+          0 not in (a['temporarySafetyRateAdvisoryMlPerDay'], a['temporarySafetyPumpCommandMlPerDay'])
+          and a['recommendedDoseMlPerDay']=='WITHHELD'
+          and 0 in f['forbidden']['temporarySafetyRateAdvisoryMlPerDay'])
+    check('AD-DHS-002 keeps consumption running - the two unknowns are independent',
+          abs(a['consumptionDkhPerDay']-(P*inp['doseHistoryMeanMlPerDay']-inp['observedSlopeDkhPerDay']))<1e-9
+          and a['consumptionPhysicality']=='NON_PHYSICAL_OR_UNEXPLAINED_GAIN')
+    check('AD-DHS-002 still selects a branch - the refusal is not a fourth branch',
+          ev['branchSelected']=='B' and abs(ev['rDownDkh']-0.4)<1e-12)
+    check('AD-DHS-002 preserves the breach state and the shortened cadence',
+          a['outerBoundState']=='BREACHED_HIGH' and a['nextTestApproxHours']==24)
+    check('AD-DHS-002 forbids the floored-at-zero code, which would misread a refusal as a floor',
+          'SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO' in f['forbidden']['reasonCodes'])
+
+# 17d. AD-DHS-003 - unavailable D_history does not block sizing -------------------------
+f=_fx('AD-DHS-003')
+check('AD-DHS-003 exists', f is not None)
+if f:
+    inp=f['input']; a=f['expectedAction']; ev=f['expectedIntermediateEvidence']
+    P=inp['selectedPotencyDkhPerMl']
+    rdd=min(inp['alkDkh']-inp['safetyDestinationHighDkh'],0.50)/P
+    check('AD-DHS-003 declares D_history unavailable on an ineligible basis',
+          inp['doseHistoryMeanMlPerDay']=='NOT_RUN'
+          and inp['deliveryBasis']=='COMMAND_ONLY_UNCONFIRMED'
+          and ev['mixedIntervalIntegration']=='NOT_RUN')
+    check('AD-DHS-003 consumption is UNRESOLVED', ev['consumptionDkhPerDay']=='NOT_RUN'
+          and a['consumption']=='UNRESOLVED')
+    check('AD-DHS-003 safety sizing still runs, from D_current',
+          abs(a['temporarySafetyRateAdvisoryMlPerDay']-(inp['currentDoseMlPerDay']-rdd))<1e-9
+          and a['sizingInput']=='D_current'
+          and abs(a['temporarySafetyPumpCommandMlPerDay']-_round_to(inp['currentDoseMlPerDay']-rdd,inp['actuatorIncrementMlPerDay']))<1e-9)
+    check('AD-DHS-003 takes branch B-prime, not branch A with C treated as zero',
+          ev['branchSelected']=='B_PRIME'
+          and 0 in f['forbidden']['consumptionDkhPerDay']
+          and 'NOT_RUN' in f['forbidden']['temporarySafetyRateAdvisoryMlPerDay'])
+
+# 17e. AD-SAF-009 - branch B', recomputed -----------------------------------------------
+f=_fx('AD-SAF-009')
+check('AD-SAF-009 exists', f is not None)
+if f:
+    inp=f['input']; a=f['expectedAction']; ev=f['expectedIntermediateEvidence']
+    P=inp['selectedPotencyDkhPerMl']; INC=inp['actuatorIncrementMlPerDay']
+    rd=min(inp['alkDkh']-inp['safetyDestinationHighDkh'],0.50); rdd=rd/P
+    ceil_=inp['outerMaxDkh']+ADVISORY_OFFSET
+    want=max(0.0, inp['currentDoseMlPerDay']-rdd)
+    check('AD-SAF-009 sits inside the band the sizing rules govern',
+          abs(ev['advisoryCeilingDkh']-ceil_)<1e-12 and inp['outerMaxDkh']<inp['alkDkh']<ceil_
+          and ev['escalate'] is False)
+    check('AD-SAF-009 states an uncomputable C on a first-ever test',
+          ev['consumptionDkhPerDay']=='NOT_RUN' and ev['observedSlopeDkhPerDay']=='NOT_RUN'
+          and inp['readingCount']==1 and inp['priorReadings']==0)
+    check('AD-SAF-009 sizes from D_current under branch B-prime',
+          abs(rd-0.5)<1e-12 and abs(rdd-0.5/P)<1e-12
+          and abs(a['temporarySafetyRateAdvisoryMlPerDay']-want)<1e-9
+          and abs(a['temporarySafetyPumpCommandMlPerDay']-_round_to(want,INC))<1e-9
+          and a['maintenanceEstimateStatus']=='UNRESOLVED', '%.12f'%want)
+    # [M3] removing B' makes this state select NOTHING; treating C as 0 routes it to A,
+    # whose formula gives max(0, (0 - R_down)/P) = 0. Both are named as forbidden.
+    check('AD-SAF-009 names both reverted outcomes as forbidden',
+          set(ev['branchesAvailable'])=={'A','B','B_PRIME'} and ev['branchSelected']=='B_PRIME'
+          and ev['exactlyOneBranchSelected'] is True
+          and 'NONE' in f['forbidden']['branchSelected'] and 'A' in f['forbidden']['branchSelected']
+          and 0 in f['forbidden']['temporarySafetyRateAdvisoryMlPerDay']
+          and inp['currentDoseMlPerDay'] in f['forbidden']['temporarySafetyRateAdvisoryMlPerDay'])
+    check('AD-SAF-009 branch A on an uncomputable C would deliver zero, so zero is the tell',
+          abs(max(0.0,(0.0-rd)/P))<1e-12)
+    check('AD-SAF-009 variant separates an unknown D_current from an uncomputable C',
+          f['variant']['input']['currentDoseMlPerDay']=='UNKNOWN'
+          and f['variant']['expectedAction']['temporarySafetyRateAdvisoryMlPerDay']=='NOT_RUN'
+          and 'SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN' in f['variant']['expectedReasonCodes'])
+
+# 17f. AD-ESC-001 / AD-ESC-002 - the boundary is an OFFSET, and is inclusive -------------
+for fid,side in (('AD-ESC-001','high'),('AD-ESC-002','low')):
+    f=_fx(fid)
+    check(fid+' exists', f is not None)
+    if not f: continue
+    inp=f['input']; P=inp['selectedPotencyDkhPerMl']
+    cin={c['case']:c for c in inp['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    bad=[]; boundaries=set()
+    for name,c in cin.items():
+        if side=='high':
+            b=c['outerMaxDkh']+ADVISORY_OFFSET; esc=c['alkDkh']>=b
+        else:
+            b=c['outerMinDkh']-ADVISORY_OFFSET; esc=c['alkDkh']<=b
+        boundaries.add(round(b,9))
+        if abs(cev[name][('advisoryCeilingDkh' if side=='high' else 'advisoryFloorDkh')]-b)>1e-12:
+            bad.append((name,'boundary',b))
+        if cev[name]['escalate']!=esc: bad.append((name,'escalate',cev[name]['escalate'],esc))
+        act=cac[name]
+        if esc:
+            # [M2] a reverted engine emits an ordinary sized rate here; a badly-repaired one
+            # emits 0. Both are forbidden, and NOT_RUN is asserted positively.
+            if act.get('advisoryRangeEscalation')!='ESCALATED': bad.append((name,'not escalated'))
+            for k in ('temporarySafetyRateAdvisoryMlPerDay','temporarySafetyPumpCommandMlPerDay',
+                      'recommendedDoseMlPerDay'):
+                if k in act and act[k]!='NOT_RUN': bad.append((name,k,act[k]))
+                if act.get(k)==0: bad.append((name,k+' is zero - withheld means withheld'))
+        else:
+            if act.get('advisoryRangeEscalation')!='NONE': bad.append((name,'escalated inside the boundary'))
+    check(fid+' boundary recomputes as an offset and the comparison is inclusive', not bad, str(bad[:4]))
+    check(fid+' exercises at least two DIFFERENT boundaries, so it cannot pass on a pinned level',
+          len(boundaries)>=2, str(sorted(boundaries)))
+    check(fid+' preserves the breach classification and the shortened retest through escalation',
+          all(cac[n].get('outerBoundState')==('BREACHED_HIGH' if side=='high' else 'BREACHED_LOW')
+              for n in cac),
+          str({n:cac[n].get('outerBoundState') for n in cac}))
+
+f=_fx('AD-ESC-001')
+if f:
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    inp=f['input']; P=inp['selectedPotencyDkhPerMl']
+    rdd=0.5/P
+    check('AD-ESC-001 immediately below the ceiling still sizes an ordinary rate',
+          abs(cac['BELOW_CEILING']['temporarySafetyRateAdvisoryMlPerDay']
+              -(inp['currentDoseMlPerDay']-rdd))<1e-9,
+          '%r'%cac['BELOW_CEILING']['temporarySafetyRateAdvisoryMlPerDay'])
+    check('AD-ESC-001 states the escalation message the decision requires',
+          len(cac['AT_CEILING']['escalationMessageStates'])==5
+          and any('confirmed by a second test' in x for x in cac['AT_CEILING']['escalationMessageStates'])
+          and any('doser should be checked' in x for x in cac['AT_CEILING']['escalationMessageStates'])
+          and any('experienced judgement' in x for x in cac['AT_CEILING']['escalationMessageStates']))
+    check('AD-ESC-001 forbids exactly the reverted rate at and above the ceiling',
+          (inp['currentDoseMlPerDay']-rdd) in f['forbidden']['cases']['AT_CEILING']['temporarySafetyRateAdvisoryMlPerDay']
+          and 0 in f['forbidden']['cases']['AT_CEILING']['temporarySafetyRateAdvisoryMlPerDay'])
+    check('AD-ESC-001 records that the flat-above-the-rail exposure is NARROWED, not closed',
+          any('NARROWED but NOT closed' in x for x in f['openIssues']))
+
+f=_fx('AD-ESC-002')
+if f:
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    check("AD-ESC-002 keeps the already-authoritative low-breach correction volume through escalation",
+          all(abs(cac[n]['safetyCorrectionVolumeMl']-0.5/f['input']['selectedPotencyDkhPerMl'])<1e-9
+              for n in ('INSIDE_FLOOR','AT_FLOOR','BELOW_FLOOR')),
+          'decision 21 exception: an already-authoritative safety rule that explicitly governs the state still governs')
+    check('AD-ESC-002 withholds the engine mL/day guidance while that volume continues',
+          cac['AT_FLOOR']['temporarySafetyRateAdvisoryMlPerDay']=='NOT_RUN'
+          and cac['AT_FLOOR']['recommendedDoseMlPerDay']=='NOT_RUN')
+
+# 17g. AD-ESC-003 - a contested episode does not bypass the boundary --------------------
+f=_fx('AD-ESC-003')
+check('AD-ESC-003 exists', f is not None)
+if f:
+    inp=f['input']; ceil_=inp['outerMaxDkh']+ADVISORY_OFFSET
+    cin={c['case']:c for c in inp['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    bad=[]
+    for name,c in cin.items():
+        vals=[r['alkDkh'] for r in c['readings']]
+        allbeyond=all(v>=ceil_ for v in vals)
+        if cev[name]['everyMemberBeyondBoundary']!=allbeyond: bad.append((name,'allBeyond',vals))
+        if cev[name]['episodeStatus']!='CONTESTED_METHODS': bad.append((name,'must be contested'))
+        if cev[name]['episodeValueDkh']!='NOT_RUN': bad.append((name,'contested episodes resolve no value'))
+        want='ESCALATED' if allbeyond else 'NOT_RUN'
+        if cac[name]['advisoryRangeEscalation']!=want: bad.append((name,'escalation',cac[name]['advisoryRangeEscalation'],want))
+        if cac[name]['retest']!='REPEAT_NOW': bad.append((name,'REPEAT_NOW is preserved'))
+        if cac[name]['position']!='NOT_RUN' or cac[name]['outerBoundState']!='NOT_RUN':
+            bad.append((name,'escalation must not reclassify a contested episode'))
+    check('AD-ESC-003 escalates an all-beyond contested episode and only that one', not bad, str(bad[:4]))
+    check('AD-ESC-003 carries a straddling case, so all-beyond cannot be read as any-beyond',
+          cev['STRADDLING']['everyMemberBeyondBoundary'] is False
+          and any(v>=ceil_ for v in (r['alkDkh'] for r in cin['STRADDLING']['readings'])))
+    fb=f['forbidden']['cases']['ALL_BEYOND']
+    check('AD-ESC-003 forbids withheld-as-contested, and forbids manufacturing a member value',
+          'NONE' in fb['advisoryRangeEscalation'] and 12.3 in fb['episodeValueDkh']
+          and 12.45 in fb['episodeValueDkh'] and 0 in fb['temporarySafetyRateAdvisoryMlPerDay'])
+
+# 17h. INV-G12 - the exhaustiveness invariant exists and says what it must ---------------
+f=_fx('INV-G12')
+check('INV-G12 exists', f is not None)
+if f:
+    txt=json.dumps(f)
+    check('INV-G12 asserts joint exhaustiveness and mutual exclusion',
+          'exactly one branch is selected for every generated state' in txt
+          and 'no generated state selects zero branches' in txt
+          and 'never two' in f['property'])
+    check('INV-G12 carries the B-prime removal as its negative control',
+          "Remove the B' branch" in f['negativeControl'] and 'AD-SAF-009' in f['negativeControl'])
+
+# 17i. the new canon rules must not have introduced a second constant -------------------
+m=re.search(r'^`ALK-ADVISORY-RANGE-BOUNDARY-001`\s*$', CANON, re.M)
+seg=CANON[m.start():m.start()+9000] if m else ''
+check('the advisory boundary is defined as an OFFSET from the configured bounds',
+      'OuterMax + 1.0' in seg and 'OuterMin - 1.0' in seg
+      and 'not a second set of pinned levels' in seg)
+check('the advisory boundary declares its inclusive comparison and forbids an epsilon',
+      'inclusive at the boundary' in seg and 'no epsilon exists or may be introduced' in seg)
+check('the advisory boundary states it does NOT close the flat-above-the-rail item',
+      'narrows but does not resolve' in seg)
+m=re.search(r'^`ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`\s*$', CANON, re.M)
+seg=CANON[m.start():m.start()+9000] if m else ''
+check('branch B-prime states it does NOT close the C-zero discontinuity',
+      'remains **open**' in seg and 'No\nbranch boundary is adjusted' in seg.replace('\r','')
+      or 'No branch boundary is adjusted' in seg)
+check('the canon declares the single new constant of decisions 20-22',
+      'advisory range offset = 1.0 dKH' in CANON and 'the ONLY new number' in CANON)
 
 print()
 print('%d checks failed' % len(fails))

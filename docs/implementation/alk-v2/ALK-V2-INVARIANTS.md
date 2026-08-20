@@ -481,7 +481,7 @@ Fixture bodies for the canon-named invariants are in
   recorded here rather than deleted.
 - **Generator:** `A_now > outerMax`, sweeping `C_estimate` across the materiality boundary
   `C + 1.28·sigma_S = 0` from both sides, at several `sigma_S`, holding `A_now`,
-  `D_established` and `P_selected` fixed.
+  `D_current` and `P_selected` fixed.
 - **Assert:** the delivered rate is **identical** on both sides of the boundary; the
   classification (`NON_PHYSICAL_OR_UNEXPLAINED_GAIN` versus `UNCERTAIN_NON_RESOLVABLE`), the
   wording and the reason codes differ; the outer-bound state and the ~24 h cadence are
@@ -529,18 +529,26 @@ Fixture bodies for the canon-named invariants are in
 ### INV-G11 — The high-breach safety rate is sized, never chosen
 - **Canon:** `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`;
   `ALK-HIGH-BREACH-NO-PAUSE-001` (owner decision 16).
-- **Generator:** `A_now > outerMax` with `C_estimate < 0`, sweeping `A_now` across the
-  0.50 dKH/day rail and `D_established` across the materiality boundary
-  `C + 1.28·sigma_S = 0`, at several `sigma_S`.
-- **Assert:** `D_safety,temp == max(0, D_established − R_down / P_selected)` exactly;
-  zero occurs **iff** `D_established <= R_down / P_selected`. **Above that floor** the rate
+- **Amended by owner decision 20.** The sizing input is `D_current`, not `D_established`.
+  Superseded wording, recorded rather than deleted:
+  superseded by owner decision 20 — `D_safety,temp == max(0, D_established − R_down / P_selected)`,
+  with `D_established` described as the dose-history basis. Substituting `D_history` for
+  `D_current` is now a **failure**, not a synonym.
+- **Generator:** `outerMax < A_now < AdvisoryCeiling` with `C_estimate < 0`, sweeping
+  `A_now` across the 0.50 dKH/day rail and `D_current` across the materiality boundary
+  `C + 1.28·sigma_S = 0`, at several `sigma_S`. Include intervals whose dose changed
+  mid-interval, so `D_current != D_history`.
+- **Assert:** `D_safety,temp == max(0, D_current − R_down / P_selected)` exactly;
+  zero occurs **iff** `D_current <= R_down / P_selected`. **Above that floor** the rate
   strictly decreases as `A_now` rises until `R_down` saturates at 0.50 and is constant
-  after, and changes by exactly one actuator increment per increment of `D_established`,
+  after, and changes by exactly one actuator increment per increment of `D_current`,
   including across the materiality boundary. At or below the floor the rate is 0 and varies
   with nothing, which is the floor and not a violation. `maintenanceEstimateStatus` stays
-  `UNRESOLVED` on both branches.
+  `UNRESOLVED` on both branches. On a mixed-dose interval the rate is computed from
+  `D_current`; a rate computed from `D_history` differs and must fail.
 - **Negative control:** pause to 0 on the materially-negative branch and hold the
-  established dose on the other; `AD-SAF-007`, `AD-SAF-008` and `AD-CON-002` must fail.
+  configured dose on the other; `AD-SAF-007`, `AD-SAF-008` and `AD-CON-002` must fail.
+  Separately, swap `D_history` for `D_current` in the formula; `AD-DHS-001` must fail.
 - **Why it exists:** the superseded routing produced a 1.5 mL/day → pause versus
   1.6 mL/day → hold discontinuity, and produced no safety rate at all on the middle branch.
 
@@ -578,6 +586,74 @@ Fixture bodies for the canon-named invariants are in
   classified `ANOMALOUS` under binary64, which withholds a dose recommendation on an
   artefact of the literals.
 
+### INV-G12 — Exactly one high-breach branch is selected, always
+- **Canon:** `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`;
+  `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-003A` interpretable branch (owner decision 22).
+- **Generator:** every state with `outerMax < A_now < AdvisoryCeiling`, crossed with
+  `C_estimate ∈ {positive, exactly zero, negative-not-material, negative-material,
+  NOT COMPUTABLE}` and `D_current ∈ {known above the floor, known at the floor, known below
+  the floor, unknown}`.
+- **Assert:** for **every** generated state, exactly one of A (`C_estimate >= 0`),
+  B (`C_estimate < 0`) and B′ (`C_estimate` not computable) is selected — never zero
+  branches, never two. Where `D_current` is known, the selected branch produces a rate.
+  Where `D_current` is unknown, the branch is still selected and identified, and the
+  **rate** is `NOT_RUN` under `ALK-DELIVERY-RATE-BASIS-001` — the refusal is not a fourth
+  branch. B and B′ produce the identical `max(0, D_current − R_down / P_selected)`;
+  `maintenanceEstimateStatus` is `UNRESOLVED` on both.
+- **Negative control:** remove the B′ branch so a non-computable `C_estimate` falls through;
+  `AD-SAF-009` must fail with zero branches selected. Separately, route a non-computable
+  `C_estimate` to A by treating it as zero; `AD-SAF-009` must fail.
+- **Why it exists:** before decision 22 a high breach with no computable consumption
+  estimate matched neither `C_estimate >= 0` nor `C_estimate < 0`, and produced no delivery
+  response at all above the outer bound.
+
+### INV-G13 — Beyond the advisory boundary the engine escalates and withholds
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 21);
+  `ALK-EPISODE-RESOLUTION-001`; `ALK-DECIMAL-THRESHOLD-001`.
+- **Generator:** sweep the resolved episode value through
+  `AdvisoryCeiling − 1 increment`, exactly `AdvisoryCeiling`, `AdvisoryCeiling + 1
+  increment`, and the three mirrored cases at `AdvisoryFloor`, at several configured
+  `(outerMin, outerMax)` pairs so the boundary is exercised as an **offset** and not as a
+  pinned level. Include a contested episode all of whose members are beyond the boundary,
+  and one whose members straddle it.
+- **Assert:** immediately inside the boundary, ordinary high-breach sizing (or the ordinary
+  low-breach path) runs and emits a rate. At the boundary and beyond,
+  `recommendedDoseMlPerDay`, `temporarySafetyRateAdvisoryMlPerDay` and
+  `temporarySafetyPumpCommandMlPerDay` are all `NOT_RUN` and **none of them is `0`**;
+  `SAFETY_ADVISORY_RANGE_EXCEEDED` is emitted; `outerBoundState` is unchanged from what the
+  breach rules give; the shortened/reprioritised retest is still emitted;
+  `maintenanceEstimateStatus` is `UNRESOLVED`. A contested episode whose members are **all**
+  beyond the boundary escalates rather than being withheld as contested. A straddling
+  contested episode resolves nothing and takes `REPEAT_NOW`.
+- **Negative control:** remove the boundary so ordinary sizing applies above the ceiling;
+  `AD-ESC-001` and `AD-ESC-002` must fail. Emit `0` instead of withholding; `AD-ESC-001`
+  must fail. Let a contested episode bypass the check; `AD-ESC-003` must fail.
+- **Scope, asserted:** this invariant does **not** assert that the sized rate responds to
+  `A_now` between `outerMax` and `AdvisoryCeiling`. It does not, and that exposure stays
+  open.
+
+### INV-G14 — `D_current` and `D_history` are never interchanged
+- **Canon:** `ALK-DELIVERY-RATE-BASIS-001` (owner decision 20);
+  `ALK-CONSUMPTION-ESTIMATE-001`; `ALK-HIGH-BREACH-SAFETY-SIZING-001`.
+- **Generator:** intervals whose programmed dose changes mid-interval, in **both**
+  directions (increase and decrease), so `D_current != D_history` and the sign of the
+  difference varies; crossed with `{D_current known, D_current unknown}` ×
+  `{D_history available, D_history unavailable}`.
+- **Assert:** high-breach safety sizing uses `D_current` and consumption uses `D_history`,
+  on every generated interval and in **both** directions of dose change — so an
+  interchange is caught by a sign error, not only by a magnitude error. `D_current`
+  unknown ⇒ no safety rate, no pump command, and **not** `0`, while consumption still runs
+  if `D_history` is available. `D_history` unavailable ⇒ consumption `UNRESOLVED`, while
+  safety sizing still runs if `D_current` is known. `D_established` appears nowhere as a
+  live name.
+- **Negative control:** swap `D_current` for `D_history` in the safety formula;
+  `AD-DHS-001` must fail in **both** directions. Emit `0` when `D_current` is unknown;
+  `AD-DHS-002` must fail. Withhold safety sizing because `D_history` is unavailable;
+  `AD-DHS-003` must fail.
+- **Why it exists:** one name carried two quantities. On a constant-dose segment they are
+  numerically equal, so every existing fixture passed either way and the defect was
+  invisible to the whole corpus.
+
 ---
 
 ## Coverage
@@ -590,10 +666,10 @@ Fixture bodies for the canon-named invariants are in
 | D — Consumption and maintenance | 6 |
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
-| G — Safety | 11 |
+| G — Safety | 14 |
 | H — History and provenance | 5 |
 | I — Ownership and output contract | 10 |
-| **Total** | **69** |
+| **Total** | **72** |
 
 Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
 checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
@@ -608,6 +684,16 @@ to its formula so no classification can choose it. `INV-C13` pins one episode ou
 every consumer, under permuted order and jittered timestamps alike. `INV-C14` pins exact
 decimal comparison for the canonical thresholds. All three exist because the finding they
 close could change an actuator command, a safety action or an outer-bound classification.
+
+Three more were added by owner decisions 20–22, all in group G because all three decide a
+safety action. `INV-G12` asserts that the three high-breach predicates are jointly
+exhaustive and mutually exclusive, so no state can fall through with no delivery response.
+`INV-G13` pins the advisory boundary: at or beyond it the engine escalates and **withholds**
+delivery guidance rather than setting it to zero. `INV-G14` pins `D_current` and `D_history`
+apart, and does it on mixed-dose intervals in both directions — on a constant-dose segment
+the two are numerically equal, which is exactly why one name carrying both quantities went
+unnoticed by every fixture in the corpus. `INV-G10` and `INV-G11` were amended for the
+rename.
 
 All twelve invariants named in the preparation brief are covered:
 

@@ -313,8 +313,11 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `SAFETY_RETURN_ACTIVE` | `SAFETY` | Urgent temporary safety return in progress. | `interventionId`, `desiredMovementDkh`, `correctionVolumeMl?` |
 | `SAFETY_RETURN_COMPLETE` | `INFO` | Buffered destination reached; ordinary sequencing resumes. | `A_now`, `safetyDestinationDkh` |
 | `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | `INFO` | One-off safety volume emitted although the maintenance increment is missing. | `correctionVolumeMl`, `P` |
-| `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` | `SAFETY` | Above `outerMax` with a `C_estimate` unusable for sizing on either side of the materiality boundary. The temporary safety rate is `max(0, D_established − R_down / P_selected)`. Not a maintenance estimate. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `establishedDoseMlPerDay`, `P_selected`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
-| `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` | `SAFETY` | The sized temporary safety rate reached the zero floor because the established contribution could not absorb `R_down`. Zero is a floor, never a classification's choice. | `rDownDkh`, `rDownAsDoseMlPerDay`, `establishedDoseMlPerDay`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
+| `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling`, with a `C_estimate` that is either negative on either side of the materiality boundary or not computable at all. The temporary safety rate is `max(0, D_current − R_down / P_selected)`. Not a maintenance estimate. **Renamed by owner decision 20** from `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE`, whose name and payload used the split quantity. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `currentDoseMlPerDay`, `P_selected`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
+| `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN` | `REFUSAL` | Above `outerMax` and below `AdvisoryCeiling` with `D_current` unknown or not configured. **No** temporary safety rate and **no** executable command are emitted, and `0 mL/day` is not emitted in their place. Doser configuration is requested through the existing anomaly/confirmation machinery. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `temporarySafetyRateAdvisoryMlPerDay: NOT_RUN`, `temporarySafetyPumpCommandMlPerDay: NOT_RUN`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-DELIVERY-RATE-BASIS-001` |
+| `SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE` | `SAFETY` | Above `outerMax` and below `AdvisoryCeiling` with `C_estimate` not computable at all — insufficient history, a first-ever test, an unknown dose history. Branch B′: the rate is still sized from `D_current`, and the maintenance estimate is `UNRESOLVED`. | `A_now`, `outerMax`, `notComputableReason`, `currentDoseMlPerDay`, `rDownDkh`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001` |
+| `SAFETY_ADVISORY_RANGE_EXCEEDED` | `SAFETY` | The resolved episode value is at or beyond `AdvisoryCeiling = OuterMax + 1.0 dKH`, or at or beyond `AdvisoryFloor = OuterMin − 1.0 dKH`. The engine emits **no** dose recommendation, **no** temporary safety rate, **no** executable command — and **not** zero. Delivery guidance is withheld, not set, unless an already-authoritative safety rule explicitly governs the state. The outer-bound classification and the shortened retest cadence are unchanged. | `A_now`, `boundary: ADVISORY_CEILING \| ADVISORY_FLOOR`, `boundaryValueDkh`, `outerMin`, `outerMax`, `advisoryOffsetDkh: 1.0`, `recommendedDoseMlPerDay: NOT_RUN`, `temporarySafetyRateAdvisoryMlPerDay: NOT_RUN`, `temporarySafetyPumpCommandMlPerDay: NOT_RUN`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-ADVISORY-RANGE-BOUNDARY-001` |
+| `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` | `SAFETY` | The sized temporary safety rate reached the zero floor because the configured contribution could not absorb `R_down`. Zero is a floor, never a classification's choice, and never a stand-in for an unknown `D_current`. | `rDownDkh`, `rDownAsDoseMlPerDay`, `currentDoseMlPerDay`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
 | `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` with `C_estimate >= 0`; the temporary safety **rate** is sized from consumption rather than from the established-dose contribution. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
 | `SAFETY_HIGH_BREACH_SLOWER_DECLINE` | `INFO` | Zero dosing cannot achieve the desired decline; the achievable rate is reported. | `desiredRate`, `achievableRate`, `C_estimate` |
 | `SAFETY_RATE_RAIL_APPLIED` | `SAFETY` | 0.50 dKH/day physical-effect rail bound the change. | `uncappedEffect`, `railDkhPerDay: 0.50`, `cappedDeltaDose` |
@@ -452,8 +455,8 @@ failure.
 | `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | F5-14 removed the tie by pooling rather than by choosing, emitting `CLUSTER_SAME_TIMESTAMP_COALESCED`, **itself retired by owner decision 17**; the live replacements are `EPISODE_MEASUREMENTS_POOLED` for a same-method episode and `EPISODE_CONTESTED_METHODS` where the episode cannot be resolved | F5-14, 17 |
 | `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` (renamed: the state is decided, not unavailable) | F5-02 |
 | `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | F5-03 |
-| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | at Freeze 5: `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` (`C >= 0`), `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` (negative, not material). **Both of those first two replacements were themselves retired by owner decision 16**; the live replacements are `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` on either negative branch and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` at `C >= 0` | F5-03, F5-13, 16 |
-| `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` | F5-13 determined the band with `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED`, **itself retired by owner decision 16**; the live replacements are `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` for the classification and `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` for the delivered rate | F5-13, 16 |
+| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | at Freeze 5: `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` (`C >= 0`), `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` (negative, not material). **Both of those first two replacements were themselves retired by owner decision 16**; the live replacements are `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` (renamed from `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` by decision 20) on either negative branch and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` at `C >= 0` | F5-03, F5-13, 16 |
+| `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` | F5-13 determined the band with `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED`, **itself retired by owner decision 16**; the live replacements are `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` for the classification and `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` for the delivered rate | F5-13, 16 |
 | `RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED` | `RETURN_OFFER_AVAILABLE` / `RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY` | F5-04 |
 | `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `MAINTENANCE_HOLD_TOWARD_RANGE` | F5-05 |
 | `MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED` | `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | F5-06 |
@@ -471,9 +474,28 @@ failure.
 
 | Retired code | Replaced by | Decision |
 |---|---|---|
-| `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` | `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE`, and `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` where the rate reaches zero — decision 16 makes zero a floor rather than a chosen pause | 16 |
-| `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` | `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE`; the maintenance-side classification is carried by `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED`, which is unchanged | 16 |
+| `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` | `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE`, and `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` where the rate reaches zero — decision 16 makes zero a floor rather than a chosen pause | 16 |
+| `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` | `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE`; the maintenance-side classification is carried by `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED`, which is unchanged | 16 |
 | `CLUSTER_SAME_TIMESTAMP_COALESCED` | `EPISODE_MEASUREMENTS_POOLED` — decision 17 makes membership the testing episode rather than an identical timestamp, and forbids pooling across incompatible methods | 17 |
+
+### Retired by owner decisions 20–22
+
+| Retired code | Replaced by | Decision |
+|---|---|---|
+| `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` | `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` — decision 20 splits `D_established` into `D_current` and `D_history`; the sizing input is `D_current`, and both the code name and its `establishedDoseMlPerDay` payload field carried the ambiguous name | 20 |
+
+`SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` is a **rename, not a behaviour change**: the
+same state emits the same sized rate under the new name, with `currentDoseMlPerDay` in place
+of `establishedDoseMlPerDay` in the payload.
+
+> **Gate defect found while encoding decision 20, and fixed.** This section's heading, like
+> `### Retired by owner decisions 16–19` above it, contains the substring `## Retired by`.
+> The checker's retired-set parser split the document on that substring and read only the
+> **first** region, so every code retired by owner decisions 16 onward was silently absent
+> from the retired set and its retirement was never enforced. The parser now unions every
+> retired table. No fixture emitted one of those codes — all four occurrences sit in
+> `forbidden.reasonCodes`, which is the correct place for them — but the gate could not have
+> told anyone that.
 
 `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` remains retired. Its Freeze-5 replacement
 was `CLUSTER_SAME_TIMESTAMP_COALESCED`; that replacement is now

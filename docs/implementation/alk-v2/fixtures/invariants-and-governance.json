@@ -110,6 +110,22 @@
       "kind": "SIMULATION", "equivalentTo": "INV-NONADHERENCE-001",
       "input": { "simulation": "keeper repeatedly logs worsening Alk and confirms multiple prior recommendations were not implemented; chemistry eventually reaches an extreme value" },
       "expectedAction": { "requiredEngineProperties": ["deterministic", "stateValid", "railsPreserved", "recommendationVsImplementationTruth preserved", "currentBestAdvice still produced where supported"] },
-      "classificationRule": "NONADHERENCE_OUTCOME alone requires no new rescue state. ENGINE_FAILURE indicators (runaway dose recommendation, unit/sign error, corrupted state, rail violation, unsupported confident recommendation) must be fixed regardless of keeper behaviour." }
+      "classificationRule": "NONADHERENCE_OUTCOME alone requires no new rescue state. ENGINE_FAILURE indicators (runaway dose recommendation, unit/sign error, corrupted state, rail violation, unsupported confident recommendation) must be fixed regardless of keeper behaviour." },
+
+    { "fixtureId": "INV-G12", "title": "Exactly one high-breach branch is selected, always", "provenance": { "class": "CANON_DERIVED", "canonSource": ["ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001", "ALK-HIGH-BREACH-SAFETY-SIZING-001", "ALK-003A"] },
+      "kind": "PROPERTY",
+      "property": "For every state with OuterMax < A_now < AdvisoryCeiling, exactly one of the three high-breach predicates is selected: A (C_estimate >= 0 and physically interpretable), B (C_estimate negative, either side of the materiality boundary) or B' (C_estimate not computable at all). Never zero branches; never two.",
+      "generator": "Cross C_estimate over {positive, exactly zero, negative-not-material, negative-material, NOT COMPUTABLE} with D_current over {known above the floor, known at the floor, known below the floor, unknown}, at several A_now inside the band and several sigma_S.",
+      "mustHold": [
+        "exactly one branch is selected for every generated state",
+        "C_estimate exactly zero selects A, not B - the comparison is C_estimate >= 0",
+        "B and B' produce the identical max(0, D_current - R_down / P_selected)",
+        "maintenanceEstimateStatus is UNRESOLVED on both B and B'",
+        "an unknown D_current does not create a fourth branch: the branch is still selected and identified, and only the RATE is NOT_RUN under ALK-DELIVERY-RATE-BASIS-001",
+        "no generated state selects zero branches"
+      ],
+      "negativeControl": "Remove the B' branch so a non-computable C_estimate falls through; AD-SAF-009 must fail with zero branches selected. Separately, route a non-computable C_estimate to A by treating it as zero; AD-SAF-009 must fail on the emitted rate.",
+      "whyItExists": "Before owner decision 22, a high breach with no computable consumption estimate matched neither C >= 0 nor C < 0. The state produced no delivery response at all above the outer bound, and nothing in the corpus asserted that the predicates covered the space.",
+      "openIssues": ["OI-UNCOMPUTABLEC-001 - RESOLVED by owner decision 22"] }
   ]
 }

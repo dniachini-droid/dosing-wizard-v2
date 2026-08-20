@@ -639,7 +639,7 @@ controller (`WG-ALK-047`).
 
 ## A15 — Consumption estimate — `ALK-CONSUMPTION-ESTIMATE-001`
 
-**INPUTS** `P_selected`, `D` from `A14`, `S_observed` from `A8`.
+**INPUTS** `P_selected`, `D_history` from `A14`, `S_observed` from `A8`.
 
 **PRECONDITIONS** segment eligible for `CONSUMPTION`; `P_selected` valid; delivery basis
 eligible; trend evidence sufficient for the parameter.
@@ -647,8 +647,19 @@ eligible; trend evidence sufficient for the parameter.
 **FORMULA**
 
 ```text
-C_estimate = P_selected * D - S_observed              [dKH/day]
+C_estimate = P_selected * D_history - S_observed      [dKH/day]
 ```
+
+`D_history` is the **time-weighted mean delivery rate actually delivered across the analysed
+interval** (`ALK-DELIVERY-RATE-BASIS-001`, owner decision 20) — `D_eff` on an integrable
+mixed interval, the constant rate on a constant-dose clean segment. It is **not**
+`D_current`, the rate the doser is configured to be delivering now, even though the two are
+numerically equal on a constant-dose segment. Substituting `D_current` for `D_history` on a
+mixed interval silently mis-states consumption by the amount the dose moved.
+
+`D_history` unavailable -> `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`, consumption
+`UNRESOLVED` under the existing unresolved-consumption handling. Safety sizing is unaffected
+and still runs when `D_current` is known.
 
 **`S_observed`, never `S_supported`.** Substituting the supported slope "to be
 conservative" is explicitly forbidden — it would corrupt a physical mass balance with a
@@ -675,12 +686,12 @@ C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY
 
     high-breach consequence above OuterMax:        [ALK-HIGH-BREACH-SAFETY-SIZING-001]
         BOTH negative branches    -> C_estimate is NOT usable for safety-dose sizing
-                                     D_safety_temp = max(0, D_established
+                                     D_safety_temp = max(0, D_current
                                                             - R_down / P_selected)
                                      outer-bound state, SAFETY_RETURN and the ~24 h
                                        cadence all continue unchanged
                                      maintenanceEstimateStatus = UNRESOLVED
-                                     SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
+                                     SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
         the materiality classification does NOT choose the delivered rate
           (owner decision 16; supersedes the F5-13 split of 0 mL/day versus HOLD)
     the MAINTENANCE ESTIMATE is HOLD on both branches either way; a held estimate is NOT
@@ -1547,16 +1558,16 @@ consumption INTERPRETABLE  (C_estimate >= 0):
         ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
         P_selected invalid -> neither field; state the required dKH movement only
 
-consumption NEGATIVE - EITHER side of the materiality boundary:
+consumption NEGATIVE - EITHER side of the materiality boundary:      [branch B]
                                               [ALK-HIGH-BREACH-SAFETY-SIZING-001]
     C_estimate is NOT usable for safety-dose sizing
     R_down        = min(A_now - A_safe_high, 0.50)
-    D_safety_temp = max(0, D_established - R_down / P_selected)       [mL/day]
+    D_safety_temp = max(0, D_current - R_down / P_selected)           [mL/day]
     stop any separately temporary upward correction/return component
     safetyDoseReason          = HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING
     maintenanceEstimateStatus = UNRESOLVED
-    SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
-    D_established <= R_down / P_selected -> the rate FLOORS at 0 mL/day
+    SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+    D_current <= R_down / P_selected -> the rate FLOORS at 0 mL/day
         SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO
     do NOT label the rate a newly inferred permanent maintenance requirement
     preserve the established maintenance estimate/history separately
@@ -1565,20 +1576,52 @@ consumption NEGATIVE - EITHER side of the materiality boundary:
     the advisory/executable separation, the rails, the guard and the rounding are
     exactly those of the interpretable branch above
 
-    REQUIRED, and checkable ABOVE THE ZERO FLOOR (D_established > R_down/P_selected):
+    REQUIRED, and checkable ABOVE THE ZERO FLOOR (D_current > R_down/P_selected):
         the rate DECREASES as A_now rises, until R_down saturates at the 0.50 rail
-        the rate moves ONE actuator increment per increment of D_established,
+        the rate moves ONE actuator increment per increment of D_current,
           including across the materiality boundary
         AT OR BELOW the floor the rate is 0 and varies with nothing - that is the floor
     REQUIRED EVERYWHERE:
         the materiality classification changes wording and evidence state only
+
+consumption NOT COMPUTABLE AT ALL:                                   [branch B']
+                              [ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001]
+    insufficient history, first-ever test, unknown dose history - the mass balance
+      cannot be EVALUATED, as distinct from evaluating to a number
+    D_safety_temp = max(0, D_current - R_down / P_selected)           [mL/day]
+    maintenanceEstimateStatus = UNRESOLVED, with the reason surfaced
+    SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE
+      + SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+    everything else - rails, guard, rounding, advisory/executable separation,
+      SAFETY_RETURN integration, ~24 h cadence - exactly as branch B
+
+D_current UNKNOWN or NOT CONFIGURED - on ANY of A, B, B':
+                                      [ALK-DELIVERY-RATE-BASIS-001, decision 20]
+    temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+    temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+    NOT 0 mL/day - zero is a computed floor, never a stand-in for an unknown input
+    surface the measured state and the reason; request doser configuration through
+      the EXISTING anomaly/confirmation machinery
+    SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
+    outer-bound state, SAFETY_RETURN and the shortened cadence continue unchanged
 ```
+
+**Branch selection is total and disjoint.** Over `outerMax < A_now < AdvisoryCeiling`,
+exactly one of A (`C_estimate >= 0`), B (`C_estimate < 0`) and B′ (`C_estimate` not
+computable) is selected for every state. There is no fourth branch and no state that selects
+none. `INV-G12` asserts it.
 
 `C_estimate >= 0` is `INTERPRETABLE` and sizes from consumption. Any negative
 `C_estimate` — on either side of `ALK-NEGATIVE-MATERIALITY-001`'s boundary — is unusable for
-sizing and takes the established-dose form instead (**owner decision 16**). Both branches
-leave the **maintenance estimate** `UNRESOLVED`, and neither infers zero biological
-consumption.
+sizing and takes the `D_current` form instead (**owner decision 16**, input renamed by
+**decision 20**). Both branches leave the **maintenance estimate** `UNRESOLVED`, and neither
+infers zero biological consumption.
+
+**PRECEDING CHECK** — `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 21) is evaluated on
+the resolved episode value **before** this whole tree. At or beyond
+`AdvisoryCeiling = outerMax + 1.0 dKH` (or at or beyond `AdvisoryFloor = outerMin − 1.0 dKH`
+on the low side) none of A, B, B′ runs: no dose recommendation, no temporary safety rate, no
+executable command, and **not zero**. See `A40b`.
 
 **Superseded, preserved:** this section previously split the two negative branches, arming a
 0 mL/day pause on the materially-negative side and holding the established dose on the
@@ -1597,7 +1640,74 @@ not mark it as implemented until implementation is confirmed.
 rate emitted, pump command `NOT_RUN`), `AD-SAF-005` (negative control: the two fields must
 not be merged and no increment is invented), `AD-SAF-007` (`A_now` sweep, rail saturation,
 zero floor, materiality straddle), `AD-SAF-008` (negative control: continuity across the
-materiality boundary), `AD-CON-002` (both variants receive the same delivered rate).
+materiality boundary), `AD-CON-002` (both variants receive the same delivered rate),
+`AD-SAF-009` (branch B′: first-ever test, `C_estimate` not computable, `D_current` known),
+`AD-DHS-001` (`D_current` versus `D_history` on a mixed-dose interval, both directions),
+`AD-DHS-002` (negative control: `D_current` unknown ⇒ refusal, no rate, **not** zero),
+`AD-DHS-003` (`D_history` unavailable ⇒ consumption `UNRESOLVED`, sizing still available),
+`INV-G12` (branch exhaustiveness).
+
+## A40b — Advisory range boundary — `ALK-ADVISORY-RANGE-BOUNDARY-001`
+
+**Owner decision 21.** Evaluated on the **resolved episode value**, after
+`ALK-EPISODE-RESOLUTION-001` and **before** `A40`'s high-breach tree and before `A39`'s low
+breach.
+
+**INPUTS** resolved episode value `A_now`, `outerMin`, `outerMax`.
+
+```text
+AdvisoryCeiling = outerMax + 1.0        [dKH]     # the only new constant; an OFFSET
+AdvisoryFloor   = outerMin - 1.0        [dKH]     # from the CONFIGURED bounds
+
+escalate  <=>  A_now >= AdvisoryCeiling  OR  A_now <= AdvisoryFloor
+               inclusive at the boundary; exact decimal comparison
+               (ALK-DECIMAL-THRESHOLD-001). NO epsilon exists or may be added.
+
+escalate:
+    recommendedDoseMlPerDay             = NOT_RUN
+    temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+    temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+    maintenanceEstimateStatus           = UNRESOLVED
+    SAFETY_ADVISORY_RANGE_EXCEEDED
+    NOT zero - withheld, not set. Zero is a delivery instruction.
+
+    escalation message states: the measured value; that it is outside the range the
+      engine will advise on; that the reading should be confirmed by a second test;
+      that the doser should be checked for fault or overdose; that correction at this
+      level requires experienced judgement about the specific system
+
+    PRESERVED: outerBoundState (BREACHED_HIGH / BREACHED_LOW - NOT reclassified);
+               shortened / reprioritised retesting; every raw measurement
+
+    EXCEPTION: an already-authoritative safety rule that explicitly governs the state
+      continues to govern - ALK-SAFETY-CORRECTION-RESOLUTION-001's one-off correction
+      volume, ALK-SAFETY-RETURN-INTEGRATION-001, the composite rail, the liquid guard,
+      ALK-SAFETY-MG-OVERRIDE-001. This rule withholds the engine's OWN sized delivery
+      guidance and nothing else.
+
+CONTESTED EPISODE:
+    every member at or beyond the boundary -> ESCALATE
+      (the disagreement is about which extreme is right, not about whether the state
+       is beyond what the engine will advise on)
+    members STRADDLE the boundary -> no value resolves; ALK-EPISODE-RESOLUTION-001's
+      CONTESTED_METHODS / REPEAT_NOW behaviour governs unchanged
+```
+
+**SCOPE** This narrows but does **not** resolve `OI-SIZINGFLAT-001`. Between `outerMax` and
+`AdvisoryCeiling`, `R_down` still saturates at the 0.50 dKH/day rail and the sized rate stops
+responding to `A_now`. That item stays open.
+
+**OUTPUT** `AdvisoryRangeEscalation`.
+
+**REASON CODE** `SAFETY_ADVISORY_RANGE_EXCEEDED`.
+
+**FAILURE STATE** `outerMin` / `outerMax` unavailable ⇒ the boundary is not computable and
+this check is `NOT_RUN`; the outer-bound machinery is already unavailable in that state.
+
+**TESTS** `AD-ESC-001` (ceiling: immediately below ⇒ ordinary sizing, exactly at ⇒
+escalation, immediately above ⇒ escalation), `AD-ESC-002` (the same three against the
+floor), `AD-ESC-003` (contested episode, all members beyond ⇒ escalation, not
+withheld-as-contested).
 
 ## A41 — Safety-return completion and integration
 
