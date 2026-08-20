@@ -61,6 +61,22 @@ implementation — the canon rule ID or `DEC-nnn`, not a paraphrase.
 
 ## 4 — Pin the behaviour with deterministic tests
 
+**If the change touches the engine or anything under
+`docs/implementation/alk-v2/`, run the conformance harness. It is a required
+check (`DEC-016`).**
+
+```bash
+python3 tools/conformance/run-conformance.py [--engine '<engine command>']
+python3 tools/conformance/run-mutations.py
+```
+
+Both exit non-zero on failure. Read the harness's **NOT COVERED** section
+before believing a green fixture count: it names every fixture it could not
+execute and why, and a change claimed to be covered by a fixture in that list
+is not covered. If the change adds a checker, add its negative control to
+`tools/conformance/mutations/` in the same change and show `run-mutations.py`
+catching it.
+
 **This is the step that replaces review ceremony.** Prefer, in order:
 
 1. **An invariant or property** that must hold for all inputs.
@@ -97,12 +113,28 @@ say which you added and which you considered and did not:
 | `migration-auditor` | historical data, provenance, schema, import/export, or V1-to-V2 promotion is involved |
 | `architecture-reviewer` | the change selects or constrains technical architecture |
 | `test-engineer` | as a second opinion where coverage is the risk |
+| `normal-operation-reviewer` | the change touches trend, dose, retest or user-visible output behaviour (`DEC-018`) |
+
+`normal-operation-reviewer` asks the question no other reviewer asks — whether
+the product gives a sensible answer on an ordinary tank with ordinary readings.
+It runs independently of `breaker`, not after it: they answer different
+questions and neither's result should shape the other's. It has no runtime to
+execute yet, so it reports in specification mode and says so.
 
 **High-consequence chemistry or controller work uses the fixed sequence in
 `/implement-chemistry` instead.** Do not improvise it here.
 
 `adjudicator` is for when reviewers disagree or a finding is contested. Ordinary
 work does not need it.
+
+**`jake`, after the reviewers and before the fix pass, and only if they found
+something.** He is not a reviewer and does not extend the review (`DEC-017`); he
+sorts finished findings into `BUG`, `EDGE CASE` or `ALREADY COVERED` by whether
+the reference system would plausibly reach the state, so that the one fix pass
+at step 6 goes to what matters. He changes no severity: a `BLOCKER` marked
+`EDGE CASE` is still a `BLOCKER` and is still fixed. A round with no findings
+has nothing for him to sort — say so rather than running him by reflex. Where
+`adjudicator` also ran, it goes first and `jake` sorts its adjudicated list.
 
 ## 6 — One fix pass
 
@@ -130,7 +162,8 @@ Check: nothing outside the declared scope; no change under `docs/canon/`; no
 chemistry value the canon does not state, anywhere except a cited,
 `NON-AUTHORITATIVE — UNDER REVIEW` value under `docs/research/`; no V1 value
 carried in; no test weakened or removed; no owner decision quietly resolved; no
-governance-definition file touched (`AUTONOMY-AND-CONTROLS.md` lists them).
+governance-definition file touched (`AUTONOMY-AND-CONTROLS.md` lists them); no
+checker added without its negative control.
 
 Canon should be unchanged. Confirm it directly against the base commit, which
 anyone else can re-run:
