@@ -439,6 +439,30 @@ def _d20_retired_code_in_a_by_case_shape(pkg: str, canon: str) -> None:
     _write_json(path, doc)
 
 
+
+def _d21_fixture_requires_what_it_forbids(pkg: str, canon: str) -> None:
+    """Make a fixture require a code its own `forbidden` block bans.
+
+    A separate defect class from D-20: the code is live and catalogued, so
+    closure says nothing. The fixture simply cannot be satisfied -- clause 3 of
+    the schema's acceptance rule contradicts clause 1 -- and an engine failing
+    it would be failing the fixture, not the canon.
+    """
+    for name in sorted(os.listdir(os.path.join(pkg, "fixtures"))):
+        if not name.endswith(".json") or name in ("index.json", "_schema.json",
+                                                  "config-defaults.json"):
+            continue
+        path, doc = _fixture_file(pkg, name)
+        for body in doc.get("fixtures") or []:
+            banned = (body.get("forbidden") or {}).get("reasonCodes")
+            required = body.get("expectedReasonCodes")
+            if isinstance(banned, list) and banned and isinstance(required, list):
+                required.append(banned[0])
+                _write_json(path, doc)
+                return
+    raise RuntimeError("no fixture carries both forbidden.reasonCodes and expectedReasonCodes")
+
+
 DOCUMENT_MUTATIONS: List[DocumentMutation] = [
     DocumentMutation(
         mid="D-1",
@@ -625,9 +649,10 @@ DOCUMENT_MUTATIONS: List[DocumentMutation] = [
             "canon'. That is a different and much stronger check, it would "
             "require a numeric-literal extractor over the canon, and writing it "
             "here would be inventing a check rather than absorbing one. Until "
-            "then the inline probe in package_checks.py is the whole control, "
-            "and the limitation is recorded in "
-            "docs/process/OPEN-OWNER-DECISIONS.md as OI-CONSTSCAN-001."
+            "then the inline probe in package_checks.py is the whole control. "
+            "The limitation is not new and is already on the record: "
+            "ALK-V2-OPEN-ISSUES.md carries it as 'The new-constant scan', "
+            "which moved with the check under DEC-019."
         ),
     ),
     DocumentMutation(
@@ -729,6 +754,20 @@ DOCUMENT_MUTATIONS: List[DocumentMutation] = [
         expect_check="CHK-RC-CLOSURE-DOC",
         expect_mechanism="which is RETIRED",
         apply=_d20_retired_code_in_a_by_case_shape,
+    ),
+    DocumentMutation(
+        mid="D-21",
+        title="Make a fixture require a reason code it also forbids",
+        sabotage="a fixture's own forbidden code is appended to its expectedReasonCodes",
+        guards=(
+            "CHK-RC-CLOSURE-DOC's self-contradiction clause, absorbed from the "
+            "retired validator. The code is live and catalogued, so closure "
+            "says nothing; the fixture is simply unsatisfiable, and an engine "
+            "failing it would be failing the fixture rather than the canon."
+        ),
+        expect_check="CHK-RC-CLOSURE-DOC",
+        expect_mechanism="both requires and forbids",
+        apply=_d21_fixture_requires_what_it_forbids,
     ),
 ]
 

@@ -75,7 +75,7 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 427 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| ~~`validate-freeze-5.py`~~ | **Retired** (`DEC-019`). Its checks — rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency and independent arithmetic recomputation of every series fixture — were absorbed into the conformance harness and are now run by `python3 tools/conformance/run-conformance.py`. `docs/process/GATE-CHECK-INVENTORY.md` records what moved and what was already there. |
 | `recompute-goldens.py` | **Recorder, not a gate.** Independently recomputes every fixture-stated derived value from its declared inputs and writes a machine-readable record, so "no arithmetic moved" is a checkable claim rather than an assertion. `--diff <record>` reports every golden that moved against a stored baseline. |
 | `baselines/*.json` | Golden baseline records. `golden-baseline-65c6030.json` is the state before owner decisions 20-22; `golden-post-decisions-20-22.json` is the state after. |
 | `fixtures/*.json` | Machine-readable golden corpus — 203 fixtures plus schema, config defaults and index. |

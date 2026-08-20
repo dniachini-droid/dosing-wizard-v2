@@ -2985,7 +2985,7 @@ None of these was introduced by decisions 20–22 or 23–26, and none is fixed 
 |---|---|---|
 | Six recorder discrepancies | `continuousActionCandidateMlPerDay` on `WG-ALK-001/003/004/033` differs from the recomputation by ≤ 7.0e-5 mL/day, a rounding-order artefact; `AD-MNT-002/004` differ materially because the field name carries a **different quantity** in those two fixtures (a capped value, not the pre-cap candidate) | Step 0 baseline `golden-baseline-65c6030.json`, unchanged in every record since |
 | `variantReasonCodes` | The shape is now read by the gate, but only two fixtures use it and neither round added one | `AD-SAF-007`, `AD-CON-002` |
-| The new-constant scan | Gate check 9 is a fixed literal list of seven strings, not a delta against the frozen constant set; it cannot see a constant introduced under a name not on that list | `validate-freeze-5.py` |
+| The new-constant scan | Gate check 9 is a fixed literal list of seven strings, not a delta against the frozen constant set; it cannot see a constant introduced under a name not on that list | `CHK-CANON-CONSTANTS` in `tools/conformance/harness/package_checks.py` — the check moved with the gate (`DEC-019`) and the limit moved with it; mutation `D-13` is recorded BLOCKED for exactly this reason |
 | `ALK-SAFETY-RETURN-INTEGRATION-001` at the boundary | **No fixture anywhere states numbers** for an active return plan or a `SAFETY_RETURN` crossing the advisory boundary. `AD-REC-002` covers `IN_FLIGHT_RETURN_PLAN_TERMINATED` qualitatively only — no rate, no volume, no retest | coverage gap, `breaker` "not examined" |
 | The intervention lock and `ALK-PREDICTION-SNAPSHOT-001` at the boundary | No fixture; unattacked | coverage gap |
 | Time, timezone, DST, backdating, migration, schema versions | Out of scope for the four decisions, and entirely unattacked in this round | coverage gap |
@@ -3219,7 +3219,7 @@ changed by this pass.
 
 - **Class:** `CANON_DEFECT` (process)
 - **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
-- **Artefact:** `docs/implementation/alk-v2/validate-freeze-5.py`
+- **Artefact:** `tools/conformance/harness/package_checks.py` (the scanners moved here from the retired `validate-freeze-5.py` under `DEC-019`; the limit this item names moved with them and is not closed by the move)
 
 The committed gate is a text scanner over canon and artefacts. It can check that a retired
 word does not appear and that a required sentence does appear. It cannot check that an

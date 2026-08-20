@@ -56,6 +56,20 @@ Phase 0 — Preserve and found V2
   **No Alk output is blocked by an open issue.**
   Eleven non-blocking canon defects remain open and are listed in the Freeze-5
   declaration's *Deliberately left open* section.
+- **One executable gate exists, and only one.** The Alk V2 conformance harness
+  (`tools/conformance/run-conformance.py`, with `run-mutations.py` as its
+  negative-control set) is a required check under `DEC-016`. The alk-v2 package's own
+  `validate-freeze-5.py` was a second gate checking overlapping properties; it is
+  **retired and deleted** under `DEC-019`, but only after its 422 unique assertions were
+  moved into the harness and each was demonstrated red under a mutation (42 mutations
+  defined, 40 caught, 2 blocked with their unblocking conditions stated).
+  `docs/process/GATE-CHECK-INVENTORY.md` is the before-and-after record, including the
+  eight checks deliberately not carried across and what each dropped.
+  `recompute-goldens.py` remains in the package and is unaffected: it is a recorder, not
+  a gate.
+  The harness is **RED today, correctly**: no engine exists, so six executable fixtures
+  fail `ENGINE_ABSENT`, and five mechanical checks report pre-existing document defects
+  that predate this work and are listed in `docs/process/CONFORMANCE-HARNESS.md`.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 

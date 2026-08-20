@@ -16,9 +16,11 @@ expectations those decisions superseded.
 
 > The counts in this document were stale: they still read 178 and 66 after decisions 16–19
 > added to both. They are regenerated from `fixtures/index.json` and
-> `ALK-V2-INVARIANTS.md` here, and `validate-freeze-5.py` independently checks the fixture
+> `ALK-V2-INVARIANTS.md` here, and the conformance harness independently checks the fixture
 > total against the bodies and the invariant total against the coverage table, so the
-> staleness could not have reached either gate.
+> staleness could not have reached the gate. (Those checks were `validate-freeze-5.py`'s
+> when this was written; the validator is retired under `DEC-019` and the harness runs
+> them now.)
 
 ---
 
@@ -339,8 +341,11 @@ Recorded so their absence is a known choice, not an oversight.
 - **Fixtures for open issues that would require inventing the missing behaviour.** By
   design: those are the refusal fixtures in §5A.
 - **A committed fixture runner.** Executing a fixture needs an engine, which does not exist
-  yet. What *is* committed is `validate-freeze-5.py`, the structural gate over rule IDs,
-  traceability, the fixture index, the reason-code closed set, invariant counts and canon
-  consistency, plus independent recomputation of every series fixture — 112 assertions, shown
-  to fail on nine deliberate mutations before being trusted (`docs/process/runs/2026-08-20-alk-v2-freeze-5.md`). It checks that the corpus is
-  coherent, not that an engine reproduces it.
+  yet. What *is* committed is `tools/conformance/run-conformance.py`, the structural gate over
+  rule IDs, traceability, the fixture index, the reason-code closed set, invariant counts and
+  canon consistency, plus independent recomputation of every series fixture. It checks that the
+  corpus is coherent, not that an engine reproduces it — and it is ready to execute a fixture
+  the moment an engine speaks the documented interface. Every one of its checks has a named
+  negative control in `tools/conformance/run-mutations.py`. (This paragraph named
+  `validate-freeze-5.py` and its 112 assertions when it was written; the validator is retired
+  under `DEC-019` and its coverage moved — see `docs/process/GATE-CHECK-INVENTORY.md`.)

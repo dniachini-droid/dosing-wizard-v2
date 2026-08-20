@@ -141,3 +141,29 @@ class. The validator is unusually well commented — most checks carry a comment
 naming the mutation or review finding that caused them to exist — and no check
 required guessing. Had one, this document would stop here and the check would
 not have been moved.
+
+---
+
+## F. What happened next
+
+This document is the Part 1 deliverable and is left as it was written, before
+anything moved. The outcome is recorded separately:
+
+- `DECISIONS.md` `DEC-019` — the owner decision and its consequences.
+- `docs/process/runs/2026-08-20-gate-consolidation.md` — the run record,
+  including the full accounting of every assertion that existed before and does
+  not exist now, and the three harness runs with their actual results.
+- `tools/conformance/harness/package_checks.py` — where the 429
+  `UNIQUE_TO_FREEZE` checks live. 422 of them moved there directly; the seven
+  reason-code-shape checks went into `CHK-RC-CLOSURE-DOC` in `checks.py`, which
+  is where that defect class belongs.
+
+Two things the inventory predicted and the work confirmed:
+
+1. **Class 14, the live-text absence scanners, was the hardest and the most
+   valuable.** `D-17` reverts an owner decision by adding a contradicting
+   sentence to live canon. Every presence check in the harness passes under it.
+2. **A negative control recorded in prose is not a control.** `INV-I8`'s stated
+   control — "delete the `forbidden` block from `AD-MNT-006`" — was ported and
+   did not fire, because two more fixtures now cover that decision. That was
+   only discoverable by running it.
