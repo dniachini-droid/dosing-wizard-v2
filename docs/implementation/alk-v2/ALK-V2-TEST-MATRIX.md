@@ -2,12 +2,21 @@
 
 Index and coverage analysis for the fixture corpus in `fixtures/`.
 
-**178 fixtures across 6 files, plus 66 invariants in `ALK-V2-INVARIANTS.md`.**
+**193 fixtures across 6 files, plus 72 invariants in `ALK-V2-INVARIANTS.md`.**
 
 `ALK_V2_FREEZE_5` added 17 fixtures and 4 invariants, and rewrote the expectations of the
 15 fixtures that previously asserted a refusal for an issue the freeze decided. Three of
 those fixtures and two of those invariants were added by the freeze's own independent
 review, which found defects the first gate could not see.
+
+Owner decisions 16–19 added 7 more fixtures (178 → 185) and 3 invariants (66 → 69). Owner
+decisions 20–22 added 7 more (185 → 193) and 3 more (69 → 72).
+
+> The counts in this document were stale: they still read 178 and 66 after decisions 16–19
+> added to both. They are regenerated from `fixtures/index.json` and
+> `ALK-V2-INVARIANTS.md` here, and `validate-freeze-5.py` independently checks the fixture
+> total against the bodies and the invariant total against the coverage table, so the
+> staleness could not have reached either gate.
 
 ---
 
@@ -19,8 +28,8 @@ review, which found defects the first gate could not see.
 | `canon-worked-goldens-round2.json` | 20 | `WG-ALK-021` … `WG-ALK-040` — interruption, corrections, potency, edits, expiry, mirrors |
 | `canon-worked-goldens-external.json` | 27 | `WG-ALK-041` … `WG-ALK-067` — external-review corrections, safety path, capability contract |
 | `canon-named-goldens.json` | 43 | `ALK-G001` … `ALK-G040` including `G004A`, `G039A`, `G039B` |
-| `adversarial.json` | 52 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
-| `invariants-and-governance.json` | 16 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
+| `adversarial.json` | 66 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
+| `invariants-and-governance.json` | 17 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
 | `index.json` | — | Generated index; ids, counts, provenance split, open-issue coverage |
 | `config-defaults.json` | — | The canon's default worked-suite configuration plus once-derived constants |
 | `_schema.json` | — | Fixture shape, tolerances, acceptance rule, time convention |
@@ -33,7 +42,7 @@ behaviour** (`DEC-013`, canon §52).
 | Class | Count | Meaning |
 |---|---|---|
 | `CANON_VERBATIM` | 102 | Every asserted number or state appears in the canon |
-| `CANON_DERIVED` | 48 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
+| `CANON_DERIVED` | 63 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
 | `CANON_QUALITATIVE` | 28 | The canon states states and prohibitions but no arithmetic |
 
 The derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
@@ -158,6 +167,9 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | **17** canonical testing episode | `AD-EPI-001`, `AD-SEG-007` | `AD-EPI-002` (incompatible methods contested, three-minute offset, reversed insertion order), `AD-SEG-008` |
 | **18** repeat-spread domain and exact decimals | `AD-VAL-002` | `AD-VAL-002` straddling pairs and `CROSS_METHOD`; `AD-EPI-002` |
 | **19** one episode output per consumer | `AD-EPI-003`, `AD-EPI-004` | `AD-EPI-003` (both ordering answers and the older episode forbidden), `AD-EPI-004` (both member slopes and the older-pair fallback forbidden) |
+| **20** `D_current` / `D_history` split | `AD-DHS-001` (mixed-dose interval, both directions), `AD-DHS-003` (`D_history` unavailable, sizing still runs) | `AD-DHS-002` (`D_current` unknown ⇒ refusal; `0` and the `D_history` substitution both forbidden); `AD-DHS-001` `forbidden.cases` state exactly what a reverted engine produces, and the error reverses sign between the two cases |
+| **21** advisory ceiling and floor | `AD-ESC-001` (ceiling: below / at / above, at two configured bound pairs), `AD-ESC-002` (floor, mirrored) | `AD-ESC-001` and `AD-ESC-002` forbid both the reverted sized rate and a `0` in place of the withheld one; `AD-ESC-003` forbids a contested episode bypassing the check, and carries a straddling case so all-beyond cannot be read as any-beyond |
+| **22** uncomputable consumption, branch B′ | `AD-SAF-009` (first-ever test, `D_current` known), `AD-DHS-003` | `AD-SAF-009` forbids falling through with no branch, forbids routing to branch A (which would deliver `0`), and forbids refusing as though `D_current` were unknown; `INV-G12` asserts exactly one branch |
 
 ## 5A. Still-open-issue coverage
 
@@ -180,8 +192,15 @@ silently picks a default.
 | `OI-HIGHBREACHBAND-001` | `AD-CON-002` |
 | `OI-CLUSTERTIE-001` | `AD-SEG-007` |
 | `OI-RETESTFLOOR-001` | `AD-RET-001` |
+| `OI-SIZINGFLAT-001` **(OPEN)** | `AD-ESC-001`, `AD-ESC-002`, `AD-ESC-003` |
+| `OI-CZERODISCONT-001` **(OPEN)** | — no fixture; the exposure is a discontinuity between two branch formulas, both of which are pinned on their own sides by `AD-SAF-007` and the `ALK-003A` interpretable-branch goldens |
 
-All three were closed by amendments F5-13, F5-14 and F5-15; the rows are kept so the fixture that pins each decision is findable from its issue id.
+All three of the Freeze-5-review items were closed by amendments F5-13, F5-14 and F5-15; the rows are kept so the fixture that pins each decision is findable from its issue id.
+
+The last two rows are the items owner decisions 20–22 **deliberately left open**.
+`OI-SIZINGFLAT-001`'s fixtures assert the *bound* decision 21 places on the exposure, not
+its removal: they pin where the engine stops advising, and each records in `openIssues`
+that the flat response inside the band is narrowed and **not** closed.
 
 The remaining open issues (`OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
 `OI-POTENCYSNAP-001`, `OI-PLANTARGETEDIT-001`, and the pinned conventions) are covered by

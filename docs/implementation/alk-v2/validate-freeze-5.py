@@ -657,7 +657,7 @@ D_MARKED=('previously named','previously read','Superseded wording','superseded 
           'Amended by owner decision','RENAMED by','renamed from','Renamed by',
           'is a **rename, not a behaviour change**','split by','splits `D_established`',
           'as a single name','decision 20 splits','renamed and split','renamed from',
-          'appears nowhere as a live name')
+          'appears nowhere as a live name','must not survive as a live name')
 # Scope of the exemption. A markdown TABLE ROW is its own unit - a marker in one row must
 # not exempt the next - and is exempt only if the row itself carries a marker or names the
 # quantity that replaced the old name. Everything else is scoped to its PARAGRAPH, the
@@ -680,7 +680,11 @@ for fn in sorted(glob.glob(R+'docs/canon/*.md')+glob.glob(R+'docs/implementation
                  +glob.glob(R+'docs/implementation/alk-v2/**/*.json', recursive=True)):
     if os.path.basename(fn) in ('ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md'): continue
     for unit in _units(open(fn,encoding='utf-8',errors='ignore').read()):
-        if 'D_established' not in unit and 'establishedDoseMlPerDay' not in unit: continue
+        # Every spelling the package uses for the retired name. The LaTeX form D_{established}
+        # does NOT contain the substring D_established, and checking only the bare spelling
+        # left the canon's own boxed formula - the single most load-bearing occurrence -
+        # invisible to this check. Demonstrated by mutation M1b.
+        if not re.search(r'D_\{?established\}?|establishedDoseMlPerDay|ESTABLISHED_DOSE', unit): continue
         if all(l.lstrip().startswith('>') for l in unit.split('\n') if l.strip()): continue
         _flat=re.sub(r'\s+',' ',unit).lower()   # prose wraps; markers must survive the wrap
         if any(m.lower() in _flat for m in D_MARKED): continue
@@ -806,11 +810,16 @@ if f:
     check('AD-SAF-009 states an uncomputable C on a first-ever test',
           ev['consumptionDkhPerDay']=='NOT_RUN' and ev['observedSlopeDkhPerDay']=='NOT_RUN'
           and inp['readingCount']==1 and inp['priorReadings']==0)
+    def _num_eq(x, y, tol=1e-9):
+        """A withheld or non-numeric value is a MISMATCH, never a crash: a mutation that
+        replaces a sized rate with NOT_RUN must produce a clean FAIL line, not a traceback."""
+        return isinstance(x,(int,float)) and not isinstance(x,bool) and abs(x-y)<=tol
     check('AD-SAF-009 sizes from D_current under branch B-prime',
           abs(rd-0.5)<1e-12 and abs(rdd-0.5/P)<1e-12
-          and abs(a['temporarySafetyRateAdvisoryMlPerDay']-want)<1e-9
-          and abs(a['temporarySafetyPumpCommandMlPerDay']-_round_to(want,INC))<1e-9
-          and a['maintenanceEstimateStatus']=='UNRESOLVED', '%.12f'%want)
+          and _num_eq(a['temporarySafetyRateAdvisoryMlPerDay'], want)
+          and _num_eq(a['temporarySafetyPumpCommandMlPerDay'], _round_to(want,INC))
+          and a['maintenanceEstimateStatus']=='UNRESOLVED',
+          'want %.12f, stated %r'%(want, a['temporarySafetyRateAdvisoryMlPerDay']))
     # [M3] removing B' makes this state select NOTHING; treating C as 0 routes it to A,
     # whose formula gives max(0, (0 - R_down)/P) = 0. Both are named as forbidden.
     check('AD-SAF-009 names both reverted outcomes as forbidden',
