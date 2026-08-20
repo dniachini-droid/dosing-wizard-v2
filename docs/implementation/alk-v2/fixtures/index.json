@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 52,
+      "count": 59,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -197,7 +197,14 @@
         "AD-SAF-006",
         "AD-SEG-007",
         "AD-RET-005",
-        "AD-SEG-008"
+        "AD-SEG-008",
+        "AD-SAF-007",
+        "AD-SAF-008",
+        "AD-EPI-001",
+        "AD-EPI-002",
+        "AD-EPI-003",
+        "AD-EPI-004",
+        "AD-VAL-002"
       ]
     },
     {
@@ -225,11 +232,11 @@
     }
   ],
   "totals": {
-    "fixtures": 178,
+    "fixtures": 185,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 48,
+    "CANON_DERIVED": 55,
     "CANON_QUALITATIVE": 28,
     "CANON_VERBATIM": 102
   },
@@ -396,6 +403,13 @@
     "AD-SEG-007",
     "AD-RET-005",
     "AD-SEG-008",
+    "AD-SAF-007",
+    "AD-SAF-008",
+    "AD-EPI-001",
+    "AD-EPI-002",
+    "AD-EPI-003",
+    "AD-EPI-004",
+    "AD-VAL-002",
     "INV-CANON-001",
     "INV-CORE-ADVISORY-001",
     "INV-NONADHERENCE-001",
@@ -425,6 +439,29 @@
       "AD-MNT-006",
       "AD-MNT-007",
       "AD-MNT-008"
+    ],
+    "OI-CROSSMETHOD-001": [
+      "AD-VAL-002",
+      "AD-EPI-002"
+    ],
+    "OI-DECIMALTHRESHOLD-001": [
+      "AD-VAL-002"
+    ],
+    "OI-EPISODE-001": [
+      "AD-EPI-001",
+      "AD-EPI-002",
+      "AD-SEG-007",
+      "AD-SEG-008"
+    ],
+    "OI-EPISODECONSUMER-001": [
+      "AD-EPI-003",
+      "AD-EPI-004"
+    ],
+    "OI-HIGHBREACHSIZING-001": [
+      "AD-SAF-007",
+      "AD-SAF-008",
+      "AD-CON-002",
+      "WG-ALK-051"
     ],
     "OI-CLUSTERTIE-001": [
       "AD-SEG-007",

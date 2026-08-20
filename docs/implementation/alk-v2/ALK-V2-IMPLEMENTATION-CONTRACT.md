@@ -348,12 +348,25 @@ Canon Part II §64, `ALK-G040`, `WG-ALK-040`.
 4. No locale, timezone-of-the-viewer, or display-rounding dependence.
 5. Full stored precision throughout; rounding happens only at the actuator step and at
    presentation (Part II §2.3, `ALK-002`).
+5a. **Canonical threshold predicates compare exact decimals** (`ALK-DECIMAL-THRESHOLD-001`,
+   owner decision 18). Where both operands are exact decimals — a stored or normalized
+   decimal measurement value, a difference of such values, and a frozen decimal canon
+   constant — the comparison is performed on the exact decimal values, at the entered or
+   normalized precision, with **no** pre-rounding and **no** epsilon. A scaled-integer or
+   decimal representation is required for these operands; binary64 subtraction must not
+   decide the side. In scope: `ALK-005`'s repeat spread, `ALK-004`'s range edges,
+   `ALK-003A`'s outer-bound and safety-return-completion comparisons. Out of scope and
+   unchanged: every predicate over a derived quantity — `S_observed`, `sigma_resid`,
+   `sigma_point`, `sigma_S`, `S_supported`, `C_estimate`, `T_signal`, potency SNR and the
+   caps computed from them — which remain binary64 under items 3 and 6.
 6. Same ledger + same configuration versions + same `asOf` + same engine/canon version
    ⇒ byte-identical `EngineResult`.
 
 Floating-point tolerance for fixture comparison: absolute `1e-9` on dKH and mL
 quantities, `1e-12` on dimensionless ratios, exact equality on enums, reason codes and
-counts. Actuator commands compare exactly after rounding.
+counts. Actuator commands compare exactly after rounding. These tolerances govern **fixture
+comparison** only; the canonical threshold predicates of item 5a are exact-decimal
+comparisons at runtime and carry no tolerance at all.
 
 ---
 
@@ -364,7 +377,7 @@ independently testable against the fixture corpus.
 
 ```text
  1  time + validation + measurement model            fixtures: VAL-*, TIME-*
- 2  clustering                                       fixtures: CLU-*
+ 2  testing episodes + clustering                     fixtures: CLU-*, AD-EPI-*, AD-VAL-002
  3  event ledger + configuration versioning          fixtures: CFG-*
  4  segmentation + normalization                     fixtures: SEG-*, WC-*, COR-*
  5  trend + uncertainty + support                    fixtures: TRD-*, WG-ALK-001..004, 062

@@ -1149,6 +1149,249 @@ scheduler errs early, never late. Fixture: `AD-RET-001`.
 
 ---
 
+# A3. Opened by review of the F5-13/14/15 amendments, closed by owner decisions 16–19
+
+Focused review of the three amendments reported **six findings** that could change an
+actuator command, a safety action, evidence selection, outer-bound classification,
+`rapidConfirmed` or a retest output. Per the task constraint they were reported and left for
+the owner rather than resolved by the run that found them.
+
+**The owner then decided them**, as decisions 16, 17, 18 and 19. Those decisions are part of
+`ALK_V2_FREEZE_5` and **supersede the earlier Freeze-5 wording wherever they conflict**.
+Every item in this section is closed. The finding text is preserved below each resolution as
+the record of why the decision was needed.
+
+| Finding | Register item | Decision |
+|---|---|---|
+| `F5-13-NO-SAFETY-RATE`, `F5-13-BAND-WIDTH` | `OI-HIGHBREACHSIZING-001` | 16 |
+| `F5-14-EPSILON` | `OI-EPISODE-001` | 17 |
+| `F5-14-ALK005-DOMAIN` | `OI-CROSSMETHOD-001` | 18 |
+| `ALK-005-FP-BOUNDARY` | `OI-DECIMALTHRESHOLD-001` | 18 |
+| `F5-14-POSITION-ORDER`, `F5-14-RAPID-SCOPE` | `OI-EPISODECONSUMER-001` | 19 |
+
+## OI-HIGHBREACHSIZING-001 — no safety rate is produced on the middle high-breach branch
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-003A`; `ALK-HIGH-BREACH-UNRESOLVED-001`; `ALK-HIGH-BREACH-NO-PAUSE-001`; `ALK-NEGATIVE-MATERIALITY-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** `canon-conformance-auditor` and `breaker`, F5-13/14/15 review
+
+> **RESOLVED by owner decision 16.**
+>
+> Encoded as `ALK-HIGH-BREACH-SAFETY-SIZING-001` (canon, in `ALK-003A`).
+> `ALK-HIGH-BREACH-UNRESOLVED-001`'s automatic zero-dose pause and
+> `ALK-HIGH-BREACH-NO-PAUSE-001`'s HOLD of the established delivery rate are **superseded**
+> for the sizing choice; both keep their classification and cadence content.
+>
+> Negative-consumption materiality owns the **maintenance model**, not high-breach safety
+> sizing. Where `A_now > OuterMax` and `C_estimate < 0`, on either side of the boundary:
+>
+> ```text
+> R_down        = min(A_now - A_safe,high, 0.50)
+> D_safety,temp = max(0, D_established - R_down / P_selected)
+> ```
+>
+> Zero is a **floor**, reached only when the established contribution cannot absorb
+> `R_down`. The rate varies with `A_now` until the 0.50 dKH/day rail binds, and moves one
+> actuator increment per increment of established dose, so the discontinuity below is gone.
+> `maintenanceEstimateStatus` stays `UNRESOLVED`. No ceiling is invented for the
+> `1.28·sigma_S` band; decision 16 removes that band from sizing instead.
+>
+> **Fixtures:** `AD-SAF-007` (sweep, rail saturation, zero floor, materiality straddle),
+> `AD-SAF-008` (continuity negative control), `AD-CON-002` (amended), `WG-ALK-051` (amended).
+
+### The finding, as reported
+
+**`F5-13-NO-SAFETY-RATE`.** On the F5-13 middle branch — `A_now > OuterMax`,
+`C_estimate < 0`, `C_estimate + 1.28·sigma_S >= 0` — no safety delivery figure was produced
+at all. `ALK-003A`'s high-breach delivery path was conditioned on "If current consumption is
+physically interpretable", and `D_safety,temp` took `C_estimate` as an input;
+`ALK-HIGH-BREACH-NO-PAUSE-001` classified the branch as uninterpretable for maintenance and
+routed only `C_estimate >= 0` to that path. `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` scoped
+itself to "the high-breach **interpretable-consumption path**", so it did not reach the
+branch either. The net output above the outer bound was "keep dosing exactly as before,
+retest in ~24 h".
+
+Three properties followed:
+
+- **non-monotone in the established dose.** `C = P·D − S_observed`, so a larger established
+  dose gives a less negative estimate. On `AD-CON-002`'s numbers (`S_obs +0.15`,
+  `P 0.0693`, `1.28·sigma_S 0.045255`): `D = 1.5` → `C = −0.04605`, `C + kσ = −0.000795`,
+  materially negative → **pause to 0 mL/day**; `D = 1.6` → `C = −0.03912`,
+  `C + kσ = +0.006135`, not material → **hold at 1.6 mL/day**. One actuator increment more
+  established dosing converted a full pause into a hold, in the same tank state;
+- **no escalation with level.** Nothing on the branch was a function of `A_now`; the
+  outputs at 11.2 dKH and 15.0 dKH were identical;
+- it was the only branch above the outer bound with no delivery response at all.
+
+**`F5-13-BAND-WIDTH`.** The no-pause band is `1.28·sigma_S` wide and the canon records that
+it "widens without bound" with residual scatter. On a scattered series it was roughly 9.3×
+wider than on a clean one, tolerating an unexplained gain of about 0.42 dKH/day above the
+outer bound with no reduction in delivery. Decision 16 removes the band from sizing rather
+than capping it, so the uncapped width no longer sizes an actuator command.
+
+---
+
+## OI-EPISODE-001 — episode membership keyed on exact timestamp equality
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-SAME-TIMESTAMP-COALESCE-001`; `ALK-005`; Part II §5.2, §5.3, §5.5
+- **Owner module:** `SEGMENTATION`
+- **Raised by:** `breaker`, F5-13/14/15 review
+
+> **RESOLVED by owner decision 17.**
+>
+> Encoded as `ALK-TESTING-EPISODE-001` (canon, `ALK-005B`).
+> `ALK-SAME-TIMESTAMP-COALESCE-001`'s exact-timestamp-only membership and its pooling of
+> incompatible methods are **superseded**; it now states the selection-side consequence.
+>
+> A testing episode is the set of measurements intended to represent the same real-world
+> sampling moment, grouped by explicit repeat/confirmation relationships where present and
+> otherwise by the **existing** 30-minute `repeatClusterWindow`. No new time constant. The
+> semantic concept is **same testing episode**, not exact timestamp equality. Same-method
+> members pool under the existing representative-value rules; incompatible-method members
+> are kept distinct and never averaged.
+>
+> **Fixtures:** `AD-EPI-001` (same-method repeats), `AD-EPI-002` (three-minute offset,
+> reversed insertion order), `AD-SEG-007` and `AD-SEG-008` (amended to same-method pools).
+
+### The finding, as reported
+
+**`F5-14-EPSILON`.** Coalescing fired only on exact timestamp equality, and
+`ClusterTime = median(timestamp of included readings)` moves whenever the underlying set
+changes. Two methods run three minutes apart therefore produced two distinct representative
+timestamps, coalescing did not fire, and forward-greedy selection accepted one and rejected
+the other — so which reading governed became a property of a three-minute clerical
+difference. On `AD-SEG-007`'s own data the two branches were exactly the values that
+fixture marks forbidden: `10.5` and `11.0` mL/day. One extra repeat reading moving a
+cluster median had the same effect. No tolerance, quantisation or epsilon was defined
+anywhere in canon for that equality test.
+
+---
+
+## OI-CROSSMETHOD-001 — `ALK-005`'s 0.20 dKH applied to cross-method disagreement
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-005`; `ALK-SAME-TIMESTAMP-COALESCE-001`; Part II §5.3, §5.6
+- **Owner module:** `SEGMENTATION`
+- **Raised by:** `canon-conformance-auditor`, F5-13/14/15 review
+
+> **RESOLVED by owner decision 18.**
+>
+> Encoded as `ALK-REPEAT-SPREAD-DOMAIN-001` (canon, in `ALK-005`).
+>
+> `ALK-005`'s 0.20 dKH applies to same-method repeats, and to methods **explicitly
+> classified by canon as compatible**. It does not establish a cross-method disagreement
+> threshold and may not be applied across incompatible methods. Two canonised `NOT_RUN`
+> states are recorded rather than filled: `crossMethodConcordanceThreshold` and
+> `compatibleMethodClassification`. Where incompatible methods coexist,
+> `ALK-EPISODE-RESOLUTION-001` contests the episode instead of comparing values.
+>
+> **Fixtures:** `AD-VAL-002` (`CROSS_METHOD` case), `AD-EPI-002`.
+
+### The finding, as reported
+
+**`F5-14-ALK005-DOMAIN`.** `ALK-005`'s threshold is established over **repeats** — Part II
+§5.3 groups automatically only within "same test method or compatible method", and Part II
+§5.6 warns that "Repeats may share systematic error". Its stated justification is analytical
+repeatability: "0.20 dKH is twice the shared Alk analytical uncertainty floor". F5-14
+applied that same threshold to a pool combining two methods the fixture's own provenance
+called incompatible. Cross-method disagreement includes inter-method bias, which same-method
+repeatability does not measure, and the canon nowhere establishes 0.20 dKH as the correct
+cross-method threshold. `ALK-005`'s escape clause — "unless a known testing method justifies
+another value" — names neither a value nor a procedure.
+
+---
+
+## OI-DECIMALTHRESHOLD-001 — a canonical decimal threshold decided by binary64
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-005`; `OI-BOUNDARIES-001`; `OI-DETERMINISM-001`; `ALK-V2-IMPLEMENTATION-CONTRACT.md` §7
+- **Owner module:** `VALIDATION`
+- **Raised by:** `breaker`, F5-13/14/15 review
+
+> **RESOLVED by owner decision 18.**
+>
+> Encoded as `ALK-DECIMAL-THRESHOLD-001` (canon, `ALK-005E`).
+>
+> Canonical Alk threshold predicates over stored decimal measurement quantities compare
+> **exact decimal values**: entered/normalized precision is preserved, no pre-rounding is
+> performed to make the comparison, and **no epsilon** is introduced. So an exact spread of
+> 0.20 dKH gives `0.20 > 0.20 = false` and is not anomalous, while a spread genuinely above
+> 0.20 dKH remains anomalous. Scope is `ALK-005`'s spread, `ALK-004`'s range edges and
+> `ALK-003A`'s outer-bound and completion comparisons. Derived quantities — slopes, sigma,
+> consumption, `T_signal` — remain binary64 under the determinism contract, unchanged. No
+> threshold value and no comparison direction changes.
+>
+> **Fixture:** `AD-VAL-002`, carrying three pairs binary64 would misclassify and one it
+> would not.
+
+### The finding, as reported
+
+**`ALK-005-FP-BOUNDARY`.** The comparison is a strict `>` against a decimal constant binary64
+cannot represent exactly, applied to a difference of two inexact binary64 values, with no
+rounding or tolerance specified. `8.80 − 8.60` evaluates to `0.20000000000000107 > 0.20` and
+classified `ANOMALOUS`; other pairs with the same exact decimal difference compared `<= 0.20`
+and classified `OK`. Of 600 decimal pairs whose exact difference is 0.20, 317 compared as
+`> 0.20`. The result was deterministic and replay-stable — this was never a
+non-determinism finding — but the classification at the boundary was a property of which
+decimal values the test kit happened to report rather than of the disagreement, and
+`ANOMALOUS` withholds automatic maintenance action, forces `REPEAT_NOW` and fails
+`ALK-RAPID-001`'s internal-consistency requirement. No fixture existed at exactly 0.20;
+`AD-SEG-007` had been moved to a 0.14 spread specifically to avoid the boundary.
+
+---
+
+## OI-EPISODECONSUMER-001 — position and rapid chose among raw measurements
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-010`; `CORE-POSITION-001`; `ALK-003A`; `ALK-RAPID-BASIS-001`; `ALK-SAME-TIMESTAMP-COALESCE-001`
+- **Owner module:** `SEGMENTATION` / `SAFETY`
+- **Raised by:** `canon-conformance-auditor` and `breaker`, F5-13/14/15 review
+
+> **RESOLVED by owner decision 19.**
+>
+> Encoded as `ALK-EPISODE-RESOLUTION-001` (canon, `ALK-005C`) and
+> `ALK-EPISODE-SINGLE-OUTPUT-001` (canon, `ALK-005D`); `ALK-010` and
+> `ALK-RAPID-BASIS-001` amended to read the resolved episode.
+>
+> Episode construction and resolution run **before** downstream interpretation, and no
+> dosing or safety consumer may independently choose among raw measurements in one episode.
+> A resolved episode emits one canonical value and time for position, outer-bound
+> classification, `SAFETY_RETURN` triggering, rapid basis, selection, trajectory,
+> consumption, forecast and maintenance alike. A contested latest episode manufactures no
+> value, is not resolved by sorting, is not replaced by an older episode, and withholds the
+> affected inference with `REPEAT_NOW`. Episode resolution stays distinct from independent
+> trend selection, and the 24-hour independence rule is unchanged.
+>
+> **Recorded exposure:** no rule governs outer-bound classification from a contested
+> episode, so a contested episode straddling an outer bound withholds the classification
+> and requests an immediate repeat. No worst-case-member rule is created.
+>
+> **Fixtures:** `AD-EPI-003` (position), `AD-EPI-004` (rapid).
+
+### The findings, as reported
+
+**`F5-14-POSITION-ORDER`.** `ALK-SAME-TIMESTAMP-COALESCE-001` scoped itself to selection —
+"**Before** forward-greedy selection runs" — while `ALK-010` reads "the latest valid measured
+cluster value" directly off the cluster set, and no rule said that set was the coalesced one.
+With two clusters at the latest representative timestamp — `10.95` Hanna and `11.14`
+Salifert against `OuterMax = 11.0` — the answer was `WITHIN_BOUNDS` or `BREACHED_HIGH`
+depending on which row the store returned first, and the coalesced median `11.045` was a
+third answer. `outerBoundState` gates the whole `SAFETY_RETURN` intervention, direction
+reporting, the magnesium-gate card, the intervention lock, return-plan termination and the
+~24 h cadence.
+
+**`F5-14-RAPID-SCOPE`.** `ALK-RAPID-BASIS-001` drew its pair from "candidate clusters" and
+the coalescing rule declared itself a pre-step to selection, so whether "candidate" meant
+pre- or post-coalescing was unstated. Where the tie sat at the latest timestamp, the three
+readings of `A_latest` gave `S_rapid` of −0.32, −0.14 and −0.23 dKH/day; the 0.30 dKH/day
+threshold sits between them, so `rapidConfirmed` flipped. That flag gates the ~24 h rapid
+cadence, the bypass of the 3-cluster / 4-day minimum, and eligibility for the 50% step cap
+rather than 25%.
+
+---
+
 # B. Non-blocking canon defects
 
 ## OI-STABLE-001 — `ALK-012`'s illustrative examples contradict its normative condition
@@ -1712,9 +1955,15 @@ never regenerated.
 **Numeric representation.** Byte-identical replay requires a reproducible numeric model:
 IEEE 754 binary64 throughout; no extended-precision intermediates; no
 compiler-reordered or fused multiply-add in the chemistry path; a fixed summation order
-(the canonical event order) for `Sxx` and every other accumulation. Comparisons against
-frozen constants use the tolerances in `ALK-V2-IMPLEMENTATION-CONTRACT.md` §7; the
+(the canonical event order) for `Sxx` and every other accumulation. The
 actuator command compares exactly.
+
+**Amended by owner decision 18.** The canonical threshold predicates named in
+`ALK-DECIMAL-THRESHOLD-001` — `ALK-005`'s repeat spread, `ALK-004`'s range edges and
+`ALK-003A`'s outer-bound and completion comparisons — are **exact decimal** comparisons over
+stored decimal measurement quantities, with no pre-rounding and no epsilon. Binary64 governs
+everything derived, as above. The tolerances in `ALK-V2-IMPLEMENTATION-CONTRACT.md` §7 are
+fixture-comparison tolerances and do not apply to those predicates.
 
 No owner input is needed. Recorded because "deterministic" is not self-implementing.
 
@@ -1865,7 +2114,7 @@ therefore Day +6 under the 48-hour cadence. Feeds `OI-DAY4-001`.
 | position in range | `RangeMin ≤ A ≤ RangeMax` | `ALK-004`: 8.19 vs edge 8.20 is *below* range |
 | outer-bound breach | `A < OuterMin` / `A > OuterMax`, strict | `ALK-003A`: "At exactly an outer bound, the level is not `BREACHED`" |
 | safety-return completion | `A ≥ A_safe,low` / `A ≤ A_safe,high` | `ALK-003A` Completion |
-| repeat-cluster spread | anomalous when `max − min > 0.20` | `ALK-005` |
+| repeat-cluster spread | anomalous when `max − min > 0.20`, compared as exact decimals, same-method only | `ALK-005`; `ALK-DECIMAL-THRESHOLD-001`; `ALK-REPEAT-SPREAD-DOMAIN-001` |
 | water-change materiality | material when `|ΔA_WC| ≥ 0.10` | `ALK-033` |
 | unknown water-change break | breaks when `f ≥ 0.05` | `ALK-WATERCHANGE-UNKNOWN-001` |
 | independent spacing | independent when `Δt ≥ 24 h` | `ALK-008` excludes `< 24 h`; `ALK-RAPID-001` accepts "at least 24 hours" |
@@ -1926,6 +2175,7 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 | Status | Count | IDs |
 |---|---|---|
 | **OPENED by Freeze-5 review, CLOSED by F5-13/14/15** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
+| **RESOLVED by owner decisions 16–19** | 5 | OI-HIGHBREACHSIZING-001, OI-EPISODE-001, OI-CROSSMETHOD-001, OI-DECIMALTHRESHOLD-001, OI-EPISODECONSUMER-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |

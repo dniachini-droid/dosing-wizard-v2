@@ -82,6 +82,7 @@ a calcium calculation").
 
 | Module | Owner | In → Out | Purity |
 |---|---|---|---|
+| `obs.episode` | `SEGMENTATION` | readings + policy → `TestingEpisode[]` with `episodeStatus` | pure total |
 | `obs.cluster` | `SEGMENTATION` | readings + policy → `MeasurementCluster[]` | pure total |
 | `obs.independence` | `SEGMENTATION` | clusters + policy → independent subset \| `NotRun` | pure total |
 | `obs.position` | `VALIDATION` | latest valid cluster + config → `Position`, `outerBoundState` | pure total |
@@ -208,7 +209,7 @@ so `INV-I2` (one authoritative owner per rule) is checkable mechanically.
 | Owner | Modules |
 |---|---|
 | `VALIDATION` | `fact.validation`, `fact.ledger`, `fact.configuration`, `obs.position`, `kernel.time` |
-| `SEGMENTATION` | `obs.cluster`, `obs.independence`, `seg.*` |
+| `SEGMENTATION` | `obs.episode`, `obs.cluster`, `obs.independence`, `seg.*` |
 | `TREND` | `traj.trend`, `traj.evidence`, `traj.rapid`, `traj.forecast` |
 | `UNCERTAINTY` | `traj.uncertainty` |
 | `SUPPORT` | `traj.support` |

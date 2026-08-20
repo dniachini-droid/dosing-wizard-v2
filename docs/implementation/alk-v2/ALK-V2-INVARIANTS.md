@@ -519,6 +519,57 @@ Fixture bodies for the canon-named invariants are in
 - **Why it exists:** two fixtures shipped with expectations their own inputs did not
   produce, and one canonical quantity was stated three different ways.
 
+### INV-G11 — The high-breach safety rate is sized, never chosen
+- **Canon:** `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`;
+  `ALK-HIGH-BREACH-NO-PAUSE-001` (owner decision 16).
+- **Generator:** `A_now > outerMax` with `C_estimate < 0`, sweeping `A_now` across the
+  0.50 dKH/day rail and `D_established` across the materiality boundary
+  `C + 1.28·sigma_S = 0`, at several `sigma_S`.
+- **Assert:** `D_safety,temp == max(0, D_established − R_down / P_selected)` exactly;
+  the rate strictly decreases as `A_now` rises until `R_down` saturates at 0.50 and is
+  constant after; the rate changes by exactly one actuator increment per increment of
+  `D_established`, including across the materiality boundary; zero occurs **iff**
+  `D_established <= R_down / P_selected`; `maintenanceEstimateStatus` stays `UNRESOLVED`
+  on both branches.
+- **Negative control:** pause to 0 on the materially-negative branch and hold the
+  established dose on the other; `AD-SAF-007`, `AD-SAF-008` and `AD-CON-002` must fail.
+- **Why it exists:** the superseded routing produced a 1.5 mL/day → pause versus
+  1.6 mL/day → hold discontinuity, and produced no safety rate at all on the middle branch.
+
+### INV-C13 — One episode output for every Alk consumer
+- **Canon:** `ALK-TESTING-EPISODE-001`; `ALK-EPISODE-RESOLUTION-001`;
+  `ALK-EPISODE-SINGLE-OUTPUT-001` (owner decisions 17 and 19).
+- **Generator:** any ledger containing two or more measurements in one testing episode.
+  Permute event order, ids and insertion order; jitter the timestamps within the existing
+  30-minute window; run with same-method and with incompatible-method members.
+- **Assert:** identical `episodeStatus`, episode value, `position`, `outerBoundState`,
+  `acceptedClusterIds[]`, `sigma_S`, `rapidConfirmed` and actuator command across every
+  permutation and every jitter; a same-method episode pools to the median of the pooled raw
+  readings; an incompatible-method episode is `CONTESTED_METHODS`, emits no value, and
+  drives `position = NOT_RUN`, `outerBoundState = NOT_RUN`, `rapidConfirmed = NOT_RUN` and
+  `REPEAT_NOW`; no older episode is promoted in its place.
+- **Negative control:** select the first-inserted member of a contested episode, or average
+  the two; `AD-EPI-002`, `AD-EPI-003` and `AD-EPI-004` must fail. Move the two members three
+  minutes apart and the outputs must not change.
+- **Why it exists:** exact-timestamp coalescing left position, rapid and a three-minute
+  offset able to change an actuator command and an outer-bound classification by storage
+  order.
+
+### INV-C14 — Canonical decimal thresholds compare exactly
+- **Canon:** `ALK-DECIMAL-THRESHOLD-001`; `ALK-005`; `ALK-004`; `ALK-003A`
+  (owner decision 18).
+- **Generator:** decimal reading pairs whose exact difference is 0.20 dKH, including pairs
+  whose binary64 difference exceeds 0.20 (`8.60/8.80`, `7.30/7.50`, `9.10/9.30`) and pairs
+  whose binary64 difference falls short (`10.55/10.75`); plus readings at each preferred-range
+  and outer-bound edge.
+- **Assert:** an exact spread of 0.20 dKH is `OK` in every case; an exact spread above
+  0.20 dKH is `ANOMALOUS` in every case; no epsilon is used and no reading is pre-rounded to
+  perform the comparison; the incompatible-method case never reaches the threshold at all.
+- **Negative control:** compare in binary64; the three straddling pairs must fail.
+- **Why it exists:** 317 of 600 tested decimal pairs whose exact difference is 0.20
+  classified `ANOMALOUS` under binary64, which withholds a dose recommendation on an
+  artefact of the literals.
+
 ---
 
 ## Coverage
@@ -527,14 +578,14 @@ Fixture bodies for the canon-named invariants are in
 |---|---|
 | A — Determinism and replay | 4 |
 | B — Layer separation | 7 |
-| C — Evidence integrity | 12 |
+| C — Evidence integrity | 14 |
 | D — Consumption and maintenance | 6 |
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
-| G — Safety | 10 |
+| G — Safety | 11 |
 | H — History and provenance | 5 |
 | I — Ownership and output contract | 10 |
-| **Total** | **66** |
+| **Total** | **69** |
 
 Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
 checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
@@ -543,6 +594,12 @@ could not have caught the defects review found: it never read the canon, and it 
 recomputed a fixture. `INV-G10` and `INV-C12` pin the two amendments whose failure mode is
 a wrong actuator or safety action — pausing delivery on an uncertainty-limited estimate,
 and letting storage order decide which cluster counts.
+
+Three more were added by owner decisions 16–19. `INV-G11` pins the high-breach safety rate
+to its formula so no classification can choose it. `INV-C13` pins one episode output for
+every consumer, under permuted order and jittered timestamps alike. `INV-C14` pins exact
+decimal comparison for the canonical thresholds. All three exist because the finding they
+close could change an actuator command, a safety action or an outer-bound classification.
 
 All twelve invariants named in the preparation brief are covered:
 

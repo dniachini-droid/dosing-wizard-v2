@@ -2315,20 +2315,21 @@
     },
     {
       "fixtureId": "AD-CON-002",
-      "title": "Negative-consumption materiality straddle - one actuator increment decides whether delivery is paused",
+      "title": "Negative-consumption materiality classifies the model; it does not choose the delivered rate",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-031",
           "ALK-NEGATIVE-MATERIALITY-001",
-          "ALK-HIGH-BREACH-UNRESOLVED-001"
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001"
         ],
-        "note": "Freeze 5 F5-03. Perfect line 10.6, 10.9, 11.2 at t = 0, 2, 4 gives S_TS = +0.15, sigma_resid = 0, sigma_point = 0.10, Sxx = 8, sigma_S = 0.035355339059, 1.28*sigma_S = 0.045254833996. The materiality boundary sits at C = -0.045254833996, between the two doses below."
+        "note": "Freeze 5 F5-03, amended by owner decision 16. Perfect line 10.6, 10.9, 11.2 at t = 0, 2, 4 gives S_TS = +0.15, sigma_resid = 0, sigma_point = 0.10, Sxx = 8, sigma_S = 0.035355339059, 1.28*sigma_S = 0.045254833996. The materiality boundary sits at C = -0.045254833996, between the two doses below. Decision 16 removes the delivered rate from that boundary: both variants now receive the SAME rate, sized from R_down and the established dose."
       },
       "rulesExercised": [
         "ALK-CONSUMPTION-ESTIMATE-001",
         "ALK-NEGATIVE-MATERIALITY-001",
         "ALK-NEGATIVE-CONSUMPTION-001",
+        "ALK-HIGH-BREACH-SAFETY-SIZING-001",
         "ALK-HIGH-BREACH-UNRESOLVED-001",
         "ALK-HIGH-BREACH-NO-PAUSE-001"
       ],
@@ -2372,14 +2373,17 @@
             "cPlusKSigma": 0.006134833996,
             "materiallyNegative": false
           }
-        ]
+        ],
+        "rDownDkh": 0.4,
+        "rDownAsDoseMlPerDay": 5.772005772005772
       },
       "expectedAction": {
         "variant_1_5": {
           "consumptionPhysicality": "NON_PHYSICAL_OR_UNEXPLAINED_GAIN",
           "maintenanceAction": "HOLD",
-          "safetyDoseRecommendationMlPerDay": 0,
-          "deliveryPaused": true,
+          "temporarySafetyRateAdvisoryMlPerDay": 0,
+          "temporarySafetyPumpCommandMlPerDay": 0,
+          "rateFlooredAtZero": true,
           "maintenanceEstimateStatus": "UNRESOLVED",
           "outerBoundState": "BREACHED_HIGH",
           "nextTestApproxHours": 24
@@ -2387,58 +2391,60 @@
         "variant_1_6": {
           "consumptionPhysicality": "UNCERTAIN_NON_RESOLVABLE",
           "maintenanceAction": "HOLD",
-          "recommendedDoseMlPerDay": 1.6,
-          "safetyDoseRecommendationMlPerDay": "NOT_RUN",
-          "deliveryPaused": false,
+          "temporarySafetyRateAdvisoryMlPerDay": 0,
+          "temporarySafetyPumpCommandMlPerDay": 0,
+          "rateFlooredAtZero": true,
           "maintenanceEstimateStatus": "UNRESOLVED",
           "outerBoundState": "BREACHED_HIGH",
           "nextTestApproxHours": 24,
-          "highBreachSafetyHandlingPreserved": true,
-          "note": "Whether a negative but not materially negative estimate is physically uninterpretable is answered by ALK-HIGH-BREACH-NO-PAUSE-001: it is not, so delivery is not paused. The ~24 h cadence on this branch comes from the active SAFETY_RETURN (integration section 9), NOT from the high-breach fail-safe, which is not invoked here. MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE is likewise not emitted: canon says this branch has not demonstrated a broken mass balance."
+          "highBreachSafetyHandlingPreserved": true
         },
-        "note": "Maintenance is HOLD on both sides and neither infers zero consumption. What the boundary decides is the recorded classification AND whether alkalinity delivery is paused to 0 mL/day."
+        "deliveredRateIdenticalAcrossVariants": true,
+        "note": "Owner decision 16. max(0, D_established - 5.772005772005772) is 0 for both 1.5 and 1.6 mL/day, so the delivered rate is identical on both sides of the materiality boundary and zero is reached by the floor, not chosen by the classification. The superseded behaviour - 1.5 -> pause to 0, 1.6 -> hold 1.6 - is exactly the discontinuity this fixture must no longer canonize. AD-SAF-007 carries the non-floored cases where the rate is strictly positive and varies with A_now.",
+        "supersededExpectation": {
+          "variant_1_5": {
+            "safetyDoseRecommendationMlPerDay": 0,
+            "deliveryPaused": true
+          },
+          "variant_1_6": {
+            "recommendedDoseMlPerDay": 1.6,
+            "safetyDoseRecommendationMlPerDay": "NOT_RUN",
+            "deliveryPaused": false
+          }
+        }
       },
       "expectedReasonCodes": [
-        "SAFETY_OUTER_BOUND_BREACHED_HIGH"
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+        "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE",
+        "SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO",
+        "RETEST_SAFETY_RETURN_ACTIVE"
       ],
       "openIssues": [
         "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03)",
-        "OI-HIGHBREACHBAND-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-13)"
+        "OI-HIGHBREACHBAND-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-13), superseded for sizing by owner decision 16",
+        "OI-HIGHBREACHSIZING-001 - RESOLVED by owner decision 16"
       ],
       "forbidden": {
-        "note": "No sigma_P and no sigma_D. The comparison is strict: at exactly C + 1.28*sigma_S = 0 the result is NOT materially negative. Neither variant may size a maintenance change or clamp C to zero. Variant 1.6 must NOT pause delivery to 0 mL/day, and must NOT drop the outer-bound state or the 24 h cadence in exchange.",
+        "note": "No sigma_P and no sigma_D. The comparison is strict: at exactly C + 1.28*sigma_S = 0 the result is NOT materially negative. Neither variant may size a maintenance change or clamp C to zero. The two variants must NOT receive different delivered rates: pausing 1.5 to 0 while holding 1.6 at 1.6 mL/day is the superseded discontinuity and is now a failure.",
         "reasonCodes": [
           "CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED",
           "SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED",
-          "SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED"
+          "SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED",
+          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
         ],
         "variantSpecific": {
-          "variant_1_5_reasonCodes": [
-            "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED",
-            "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
-          ],
-          "variant_1_6_reasonCodes": [
-            "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
-            "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
-            "RETEST_HIGH_BREACH_FAILSAFE",
-            "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE"
-          ],
-          "variant_1_6_safetyDoseRecommendationMlPerDay": 0,
+          "variant_1_6_recommendedDoseMlPerDay": 1.6,
+          "variant_1_5_temporarySafetyRateAdvisoryMlPerDay": "any value differing from variant_1_6's",
           "variant_1_6_maintenanceEstimateMlPerDay": "any value inferred from C - a held dose is not a demand estimate"
         }
       },
       "variantReasonCodes": {
         "variant_1_5": [
-          "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
-          "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE",
-          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
-          "RETEST_HIGH_BREACH_FAILSAFE"
+          "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN"
         ],
         "variant_1_6": [
-          "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED",
-          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED",
-          "SAFETY_RETURN_ACTIVE",
-          "RETEST_SAFETY_RETURN_ACTIVE"
+          "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED"
         ]
       }
     },
@@ -3231,23 +3237,25 @@
     },
     {
       "fixtureId": "AD-SEG-007",
-      "title": "Two clusters sharing a representative timestamp are coalesced, not chosen between",
+      "title": "Two same-method clusters at one sampling moment are one episode, pooled not chosen between",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
+          "ALK-TESTING-EPISODE-001",
           "ALK-SAME-TIMESTAMP-COALESCE-001",
           "ALK-INDEPENDENT-SELECTION-001",
-          "Part II §5.3",
-          "Part II §5.4",
+          "Part II \u00a75.2",
+          "Part II \u00a75.4",
           "ALK-005"
         ],
-        "note": "Freeze 5 F5-14. Part II §5.3 groups automatically only within the same or a compatible method, so two incompatible methods at one instant yield two clusters at one representative time. They are pooled before selection. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the coalesced cluster OK."
+        "note": "Freeze 5 F5-14, amended by owner decisions 17 and 19. Part II \u00a75.2 explicit grouping can declare two separate same-method clusters at one sampling moment. They are one testing episode and are pooled under the existing representative-value rules. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the episode OK. The incompatible-method case is NOT this fixture - decisions 17 and 18 contest it instead, and AD-EPI-002 carries it."
       },
       "rulesExercised": [
+        "ALK-TESTING-EPISODE-001",
         "ALK-SAME-TIMESTAMP-COALESCE-001",
         "ALK-INDEPENDENT-SELECTION-001",
-        "Part II §5.4",
-        "Part II §5.6",
+        "Part II \u00a75.4",
+        "Part II \u00a75.6",
         "ALK-005"
       ],
       "input": {
@@ -3260,7 +3268,7 @@
           {
             "atDay": 0.0,
             "alkDkh": 8.74,
-            "method": "SALIFERT_TITRATION"
+            "method": "HANNA_CHECKER"
           },
           {
             "atDay": 2.0,
@@ -3312,7 +3320,8 @@
           -0.1675,
           -0.15
         ],
-        "note": "Theil-Sen over the coalesced series: median(-0.185, -0.1675, -0.15) = -0.1675. Intercept 8.67, residuals (0, -0.035, 0), MAD 0, so sigma_point falls to the 0.10 floor."
+        "note": "Theil-Sen over the coalesced series: median(-0.185, -0.1675, -0.15) = -0.1675. Intercept 8.67, residuals (0, -0.035, 0), MAD 0, so sigma_point falls to the 0.10 floor.",
+        "episodeStatus": "RESOLVED"
       },
       "expectedAction": {
         "independentSelection": "APPLIED_OVER_UNIQUE_TIMES",
@@ -3322,13 +3331,15 @@
         "note": "One instant is one testing episode however many methods were used. Selection never depends on which cluster the store happened to return first."
       },
       "expectedReasonCodes": [
-        "CLUSTER_SAME_TIMESTAMP_COALESCED",
+        "EPISODE_MEASUREMENTS_POOLED",
+        "EPISODE_RESOLVED",
         "EVIDENCE_SUFFICIENT",
         "TRAJECTORY_FALLING",
         "MAINTENANCE_INCREASE_RECOMMENDED"
       ],
       "openIssues": [
-        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14)"
+        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14); membership superseded by owner decision 17",
+        "OI-EPISODE-001 - RESOLVED by owner decision 17"
       ],
       "forbidden": {
         "recommendedDoseMlPerDay": [
@@ -3360,7 +3371,7 @@
         "reasonCodes": [
           "EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED"
         ],
-        "note": "Choosing either cluster by event order, ID order, insertion order, database ordering or implementation sorting is forbidden - the two branches differ by 0.5 mL/day. Averaging the two cluster MEDIANS is also forbidden: the coalesced value is the median of the POOLED raw readings. The two coincide for this two-reading pool and do not in general, so an implementation must pool rather than average."
+        "note": "Choosing either cluster by event order, ID order, insertion order, database ordering or implementation sorting is forbidden - the two branches differ by 0.5 mL/day. Averaging the two cluster MEDIANS is also forbidden: the episode value is the median of the POOLED raw readings. The two coincide for this two-reading pool and do not in general, so an implementation must pool rather than average. Pooling applies to same-method measurements only; incompatible methods are contested under ALK-EPISODE-RESOLUTION-001."
       }
     },
     {
@@ -3438,22 +3449,24 @@
     },
     {
       "fixtureId": "AD-SEG-008",
-      "title": "Coalescing does not launder an internally inconsistent same-timestamp pool",
+      "title": "Pooling does not launder an internally inconsistent same-method episode",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
+          "ALK-TESTING-EPISODE-001",
           "ALK-SAME-TIMESTAMP-COALESCE-001",
           "ALK-005",
-          "Part II §5.6",
-          "Part II §48"
+          "Part II \u00a75.6",
+          "Part II \u00a748"
         ],
-        "note": "Freeze 5 F5-14 negative control. Same shape as AD-SEG-007 with a wider disagreement between the two methods: pooled spread 0.30 > 0.20, so ALK-005 marks the coalesced cluster ANOMALOUS."
+        "note": "Freeze 5 F5-14 negative control, amended by owner decision 17. Same shape as AD-SEG-007 with a wider disagreement between two same-method clusters: pooled spread 0.30 > 0.20, so ALK-005 marks the episode ANOMALOUS. ALK-005 applies here precisely because the readings are same-method."
       },
       "rulesExercised": [
+        "ALK-TESTING-EPISODE-001",
         "ALK-SAME-TIMESTAMP-COALESCE-001",
         "ALK-005",
-        "Part II §5.6",
-        "Part II §48"
+        "Part II \u00a75.6",
+        "Part II \u00a748"
       ],
       "input": {
         "clusters": [
@@ -3465,7 +3478,7 @@
           {
             "atDay": 0.0,
             "alkDkh": 8.9,
-            "method": "SALIFERT_TITRATION"
+            "method": "HANNA_CHECKER"
           },
           {
             "atDay": 2.0,
@@ -3488,7 +3501,8 @@
         "coalescedSpreadDkh": 0.3,
         "alk005ThresholdDkh": 0.2,
         "coalescedClusterStatus": "ANOMALOUS",
-        "note": "0.30 > 0.20, so the pooled cluster is ANOMALOUS under ALK-005. It is a historical cluster here, not the latest, so Part II §49 retention and the OI-ANOMCLUSTER-001 handling apply."
+        "note": "0.30 > 0.20, so the pooled same-method episode is ANOMALOUS under ALK-005. The episode is RESOLVED - one value exists - and separately ANOMALOUS on its spread; the two states are not the same thing. It is a historical episode here, not the latest, so Part II \u00a749 retention and the OI-ANOMCLUSTER-001 handling apply.",
+        "episodeStatus": "RESOLVED"
       },
       "expectedAction": {
         "movementEvidence": "ANOMALOUS",
@@ -3497,17 +3511,906 @@
         "medianConclusionManufactured": false
       },
       "expectedReasonCodes": [
-        "CLUSTER_SAME_TIMESTAMP_COALESCED",
+        "EPISODE_MEASUREMENTS_POOLED",
         "CLUSTER_ANOMALOUS_SPREAD",
         "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER"
       ],
       "openIssues": [
-        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14)",
+        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14); membership superseded by owner decision 17",
         "OI-ANOMCLUSTER-001 - OPEN, unchanged: what a historical anomalous cluster contributes"
       ],
       "forbidden": {
         "coalescedClusterStatus": "OK",
-        "note": "Coalescing pools measurements and re-applies the existing rules; it must not suppress ALK-005. Reporting a clean 8.75 dKH from two methods that disagree by 0.30 dKH is exactly the laundering this control exists to catch."
+        "note": "Pooling re-applies the existing rules to a larger same-method pool; it must not suppress ALK-005. Reporting a clean 8.75 dKH from same-method readings that disagree by 0.30 dKH is exactly the laundering this control exists to catch. Applying this same threshold across incompatible methods is separately forbidden by ALK-REPEAT-SPREAD-DOMAIN-001."
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-007",
+      "title": "High breach with an unusable consumption estimate sizes the safety rate from the established dose",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+          "ALK-OUTER-BOUND-ACTION-001",
+          "ALK-HIGH-BREACH-UNRESOLVED-001"
+        ],
+        "note": "Owner decision 16. D_safety,temp = max(0, D_established - R_down / P_selected), R_down = min(A_now - 10.80, 0.50). C_estimate and sigma_S are stated inputs exactly as in AD-SAF-002; with D_established = 9.0 and P = 0.0693 a C_estimate of -0.20 corresponds to S_observed = 0.8237 dKH/day, and the materiality cases correspond to S_observed = 0.80. R_down/P at the rail is the corpus derived constant railAsDoseDeltaMlPerDay = 7.215007215007215."
+      },
+      "rulesExercised": [
+        "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+        "ALK-HIGH-BREACH-UNRESOLVED-001",
+        "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-NEGATIVE-MATERIALITY-001",
+        "ALK-ROUNDING-001",
+        "ALK-046"
+      ],
+      "input": {
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1,
+        "netVolumeL": 77,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "cases": [
+          {
+            "case": "SWEEP_11_05",
+            "alkDkh": 11.05,
+            "establishedDoseMlPerDay": 9.0,
+            "consumptionDkhPerDay": -0.2
+          },
+          {
+            "case": "SWEEP_11_20",
+            "alkDkh": 11.2,
+            "establishedDoseMlPerDay": 9.0,
+            "consumptionDkhPerDay": -0.2
+          },
+          {
+            "case": "SWEEP_11_30",
+            "alkDkh": 11.3,
+            "establishedDoseMlPerDay": 9.0,
+            "consumptionDkhPerDay": -0.2
+          },
+          {
+            "case": "SWEEP_11_80_RAIL",
+            "alkDkh": 11.8,
+            "establishedDoseMlPerDay": 9.0,
+            "consumptionDkhPerDay": -0.2
+          },
+          {
+            "case": "FLOOR",
+            "alkDkh": 11.3,
+            "establishedDoseMlPerDay": 5.0,
+            "consumptionDkhPerDay": -0.2
+          },
+          {
+            "case": "MATERIAL",
+            "alkDkh": 11.2,
+            "establishedDoseMlPerDay": 10.8,
+            "consumptionDkhPerDay": -0.05156
+          },
+          {
+            "case": "NOT_MATERIAL",
+            "alkDkh": 11.2,
+            "establishedDoseMlPerDay": 10.9,
+            "consumptionDkhPerDay": -0.04463
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "materialityMarginDkhPerDay": 0.045254833996,
+        "cases": [
+          {
+            "case": "SWEEP_11_05",
+            "rDownDkh": 0.25,
+            "rDownAsDoseMlPerDay": 3.6075036075036073,
+            "materiallyNegative": true
+          },
+          {
+            "case": "SWEEP_11_20",
+            "rDownDkh": 0.4,
+            "rDownAsDoseMlPerDay": 5.772005772005772,
+            "materiallyNegative": true
+          },
+          {
+            "case": "SWEEP_11_30",
+            "rDownDkh": 0.5,
+            "rDownAsDoseMlPerDay": 7.215007215007215,
+            "materiallyNegative": true
+          },
+          {
+            "case": "SWEEP_11_80_RAIL",
+            "rDownDkh": 0.5,
+            "rDownAsDoseMlPerDay": 7.215007215007215,
+            "railBound": true,
+            "materiallyNegative": true
+          },
+          {
+            "case": "FLOOR",
+            "rDownDkh": 0.5,
+            "rDownAsDoseMlPerDay": 7.215007215007215,
+            "materiallyNegative": true
+          },
+          {
+            "case": "MATERIAL",
+            "rDownDkh": 0.4,
+            "rDownAsDoseMlPerDay": 5.772005772005772,
+            "cPlusKSigma": -0.006305166004,
+            "materiallyNegative": true
+          },
+          {
+            "case": "NOT_MATERIAL",
+            "rDownDkh": 0.4,
+            "rDownAsDoseMlPerDay": 5.772005772005772,
+            "cPlusKSigma": 0.000624833996,
+            "materiallyNegative": false
+          }
+        ]
+      },
+      "expectedAction": {
+        "cases": [
+          {
+            "case": "SWEEP_11_05",
+            "temporarySafetyRateAdvisoryMlPerDay": 5.392496392496392,
+            "temporarySafetyPumpCommandMlPerDay": 5.4
+          },
+          {
+            "case": "SWEEP_11_20",
+            "temporarySafetyRateAdvisoryMlPerDay": 3.227994227994228,
+            "temporarySafetyPumpCommandMlPerDay": 3.2
+          },
+          {
+            "case": "SWEEP_11_30",
+            "temporarySafetyRateAdvisoryMlPerDay": 1.784992784992785,
+            "temporarySafetyPumpCommandMlPerDay": 1.8
+          },
+          {
+            "case": "SWEEP_11_80_RAIL",
+            "temporarySafetyRateAdvisoryMlPerDay": 1.784992784992785,
+            "temporarySafetyPumpCommandMlPerDay": 1.8,
+            "note": "Identical to 11.30 because R_down saturates at the 0.50 dKH/day rail. Below saturation the rate must strictly decrease as A_now rises."
+          },
+          {
+            "case": "FLOOR",
+            "temporarySafetyRateAdvisoryMlPerDay": 0,
+            "temporarySafetyPumpCommandMlPerDay": 0,
+            "note": "Zero is reached because 5.0 <= 7.215007215007215, not because the estimate is materially negative."
+          },
+          {
+            "case": "MATERIAL",
+            "temporarySafetyRateAdvisoryMlPerDay": 5.027994227994228,
+            "temporarySafetyPumpCommandMlPerDay": 5.0
+          },
+          {
+            "case": "NOT_MATERIAL",
+            "temporarySafetyRateAdvisoryMlPerDay": 5.127994227994228,
+            "temporarySafetyPumpCommandMlPerDay": 5.1,
+            "note": "Exactly one actuator increment above the MATERIAL case, which differs from it by exactly one increment of established dose. The materiality boundary lies between the two and changes nothing about the rate."
+          }
+        ],
+        "everyCase": {
+          "outerBoundState": "BREACHED_HIGH",
+          "interventionType": "SAFETY_RETURN",
+          "maintenanceEstimateStatus": "UNRESOLVED",
+          "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN",
+          "nextTestApproxHours": 24,
+          "liquidGuardMlPer24h": 1540,
+          "liquidGuardBinding": false,
+          "railsStillApplied": [
+            "ALK-046",
+            "ALK-COMPOSITE-RAIL-001",
+            "ALK-LIQUID-VOLUME-GUARD-001",
+            "ALK-ROUNDING-001"
+          ]
+        }
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+        "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE",
+        "RETEST_SAFETY_RETURN_ACTIVE"
+      ],
+      "variantReasonCodes": {
+        "FLOOR": [
+          "SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO",
+          "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN"
+        ],
+        "MATERIAL": [
+          "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN"
+        ],
+        "NOT_MATERIAL": [
+          "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED"
+        ]
+      },
+      "openIssues": [
+        "OI-HIGHBREACHSIZING-001 - RESOLVED by owner decision 16",
+        "OI-HIGHBREACHBAND-001 - superseded for sizing by owner decision 16"
+      ],
+      "forbidden": {
+        "note": "C_estimate may not enter the sizing on any of these cases. The old interpretable-branch formula max(0,(C+S_safety)/P) gives 0 for MATERIAL and NOT_MATERIAL alike and is forbidden here. A rate that does not vary with A_now below the rail is forbidden. Pausing to 0 on MATERIAL and holding 10.9 on NOT_MATERIAL is forbidden - that is the superseded discontinuity.",
+        "reasonCodes": [
+          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
+        ],
+        "temporarySafetyRateAdvisoryMlPerDay": {
+          "MATERIAL": 0,
+          "NOT_MATERIAL": 10.9
+        }
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-008",
+      "title": "Negative-consumption materiality may not select the high-breach delivered rate",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+          "ALK-HIGH-BREACH-NO-PAUSE-001",
+          "ALK-NEGATIVE-MATERIALITY-001"
+        ],
+        "note": "Owner decision 16 negative control, on AD-SAF-007's MATERIAL / NOT_MATERIAL pair and on AD-CON-002's original doses."
+      },
+      "rulesExercised": [
+        "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+        "ALK-HIGH-BREACH-NO-PAUSE-001",
+        "ALK-NEGATIVE-MATERIALITY-001",
+        "ALK-NEGATIVE-CONSUMPTION-001"
+      ],
+      "input": {
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "alkDkh": 11.2,
+        "establishedDoseSweepMlPerDay": [
+          10.7,
+          10.8,
+          10.9,
+          11.0
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "rDownDkh": 0.4,
+        "rDownAsDoseMlPerDay": 5.772005772005772,
+        "note": "C_estimate = 0.0693 * D - 0.80 across the sweep; the materiality boundary falls between 10.8 and 10.9. The delivered rate must be continuous across it."
+      },
+      "expectedAction": {
+        "temporarySafetyRateAdvisoryMlPerDay": {
+          "10.7": 4.927994227994228,
+          "10.8": 5.027994227994228,
+          "10.9": 5.127994227994228,
+          "11.0": 5.227994227994228
+        },
+        "successiveDifferenceMlPerDay": 0.1,
+        "discontinuityAcrossMaterialityBoundary": 0,
+        "maintenanceEstimateStatus": "UNRESOLVED"
+      },
+      "expectedReasonCodes": [
+        "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE"
+      ],
+      "openIssues": [
+        "OI-HIGHBREACHSIZING-001 - RESOLVED by owner decision 16"
+      ],
+      "forbidden": {
+        "note": "Any step in the delivered rate at the materiality boundary is a failure. So is a zero rate at 10.8 beside a held 10.9. So is inferring zero biological consumption from either branch, and so is sizing a maintenance change from the negative arithmetic.",
+        "temporarySafetyRateAdvisoryMlPerDay": {
+          "10.8": 0,
+          "10.9": 10.9
+        },
+        "reasonCodes": [
+          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED",
+          "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-EPI-001",
+      "title": "Same-method repeats inside the 30-minute window are one resolved testing episode",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-TESTING-EPISODE-001",
+          "ALK-EPISODE-RESOLUTION-001",
+          "ALK-005",
+          "Part II \u00a75.3",
+          "Part II \u00a75.4",
+          "Part II \u00a75.5"
+        ],
+        "note": "Owner decision 17. Every reading is within 30 minutes of every other AND of the first, so the fixture does not depend on how Part II \u00a75.3's window is anchored - that anchoring is a pre-existing wording question and is deliberately not exercised here."
+      },
+      "rulesExercised": [
+        "ALK-TESTING-EPISODE-001",
+        "ALK-EPISODE-RESOLUTION-001",
+        "ALK-005",
+        "ALK-008"
+      ],
+      "input": {
+        "episodes": [
+          {
+            "readings": [
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 8.62,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:12:00+10:00",
+                "alkDkh": 8.7,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:26:00+10:00",
+                "alkDkh": 8.66,
+                "method": "HANNA_CHECKER"
+              }
+            ]
+          },
+          {
+            "readings": [
+              {
+                "at": "2026-08-22T09:05:00+10:00",
+                "alkDkh": 8.4,
+                "method": "HANNA_CHECKER"
+              }
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "episodeCount": 2,
+        "episode1": {
+          "episodeStatus": "RESOLVED",
+          "episodeValueDkh": 8.66,
+          "episodeTime": "2026-08-20T09:12:00+10:00",
+          "spreadDkh": 0.08,
+          "alk005ThresholdDkh": 0.2,
+          "clusterStatus": "OK",
+          "independentObservations": 1
+        },
+        "episode2": {
+          "episodeStatus": "RESOLVED",
+          "episodeValueDkh": 8.4,
+          "independentObservations": 1
+        },
+        "separationHours": 48.0
+      },
+      "expectedAction": {
+        "independentClusterCount": 2,
+        "movementEvidence": "INSUFFICIENT",
+        "note": "Three repeats are one testing episode and one independent observation. ALK-MINIMUM-CADENCE-001 still needs three independent episodes over four days, so this is INSUFFICIENT - repeated testing cannot buy evidence count."
+      },
+      "expectedReasonCodes": [
+        "EPISODE_MEASUREMENTS_POOLED",
+        "EPISODE_RESOLVED",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS"
+      ],
+      "openIssues": [
+        "OI-EPISODE-001 - RESOLVED by owner decision 17"
+      ],
+      "forbidden": {
+        "note": "Counting the three repeats as three independent observations, or emitting the mean 8.66 by averaging rather than the median of the pooled raw readings, or splitting them into three episodes because their timestamps differ.",
+        "independentClusterCount": 4
+      }
+    },
+    {
+      "fixtureId": "AD-EPI-002",
+      "title": "Incompatible methods inside one episode are contested, never averaged and never ordered",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-TESTING-EPISODE-001",
+          "ALK-EPISODE-RESOLUTION-001",
+          "ALK-REPEAT-SPREAD-DOMAIN-001",
+          "ALK-SAME-TIMESTAMP-COALESCE-001"
+        ],
+        "note": "Owner decisions 17 and 18. The pair disagrees by 0.19 dKH, which is BELOW ALK-005's 0.20 - the episode is contested anyway, because 0.20 is a same-method repeat threshold and does not apply across incompatible methods. The three-minute case is the one F5-14's exact-timestamp rule could not reach."
+      },
+      "rulesExercised": [
+        "ALK-TESTING-EPISODE-001",
+        "ALK-EPISODE-RESOLUTION-001",
+        "ALK-REPEAT-SPREAD-DOMAIN-001",
+        "ALK-SAME-TIMESTAMP-COALESCE-001",
+        "Part II \u00a748"
+      ],
+      "input": {
+        "cases": [
+          {
+            "case": "SAME_INSTANT",
+            "readings": [
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 10.95,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 11.14,
+                "method": "SALIFERT_TITRATION"
+              }
+            ]
+          },
+          {
+            "case": "THREE_MINUTE_OFFSET",
+            "readings": [
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 10.95,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:03:00+10:00",
+                "alkDkh": 11.14,
+                "method": "SALIFERT_TITRATION"
+              }
+            ]
+          },
+          {
+            "case": "REVERSED_INSERTION_ORDER",
+            "readings": [
+              {
+                "at": "2026-08-20T09:03:00+10:00",
+                "alkDkh": 11.14,
+                "method": "SALIFERT_TITRATION"
+              },
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 10.95,
+                "method": "HANNA_CHECKER"
+              }
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "everyCase": {
+          "episodeCount": 1,
+          "episodeStatus": "CONTESTED_METHODS",
+          "episodeValueDkh": "NOT_RUN",
+          "crossMethodSpreadDkh": 0.19,
+          "alk005Applied": false,
+          "crossMethodConcordanceThreshold": "NOT_RUN",
+          "compatibleMethodClassification": "NOT_RUN",
+          "allRawReadingsPreserved": true
+        },
+        "note": "All three cases produce byte-identical output. The 0.19 dKH disagreement is never compared against 0.20."
+      },
+      "expectedAction": {
+        "automaticMaintenanceAction": "WITHHELD",
+        "position": "NOT_RUN",
+        "outerBoundState": "NOT_RUN",
+        "retest": "REPEAT_NOW",
+        "olderEpisodePromoted": false
+      },
+      "expectedReasonCodes": [
+        "EPISODE_CONTESTED_METHODS",
+        "EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT",
+        "EPISODE_POSITION_WITHHELD",
+        "RETEST_EPISODE_CONTESTED"
+      ],
+      "openIssues": [
+        "OI-EPISODE-001 - RESOLVED by owner decision 17",
+        "OI-CROSSMETHOD-001 - RESOLVED by owner decision 18",
+        "OI-CLUSTERTIE-001 - superseded for membership by owner decision 17"
+      ],
+      "forbidden": {
+        "episodeValueDkh": [
+          11.045,
+          10.95,
+          11.14
+        ],
+        "note": "Averaging or pooling the two into 11.045, selecting either by event, ID, insertion, database or sort order, applying ALK-005's 0.20 dKH to the 0.19 cross-method disagreement and calling the episode OK, or treating the three-minute case as two independent episodes. THREE_MINUTE_OFFSET must not differ from SAME_INSTANT in any output field.",
+        "reasonCodes": [
+          "CLUSTER_ANOMALOUS_SPREAD",
+          "EPISODE_MEASUREMENTS_POOLED",
+          "EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-EPI-003",
+      "title": "Position reads the resolved episode; a contested latest episode withholds it",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-EPISODE-SINGLE-OUTPUT-001",
+          "ALK-010",
+          "CORE-POSITION-001",
+          "ALK-003A"
+        ],
+        "note": "Owner decision 19. The contested pair straddles OuterMax = 11.0: 10.95 is within bounds and 11.14 is breached. Under F5-14 the answer depended on which row the store returned first."
+      },
+      "rulesExercised": [
+        "ALK-EPISODE-SINGLE-OUTPUT-001",
+        "ALK-EPISODE-RESOLUTION-001",
+        "ALK-010",
+        "ALK-003A",
+        "Part II \u00a748"
+      ],
+      "input": {
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "priorEpisode": {
+          "at": "2026-08-19T09:00:00+10:00",
+          "alkDkh": 10.6,
+          "method": "HANNA_CHECKER",
+          "episodeStatus": "RESOLVED"
+        },
+        "cases": [
+          {
+            "case": "RESOLVED_LATEST",
+            "readings": [
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 11.02,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:08:00+10:00",
+                "alkDkh": 11.06,
+                "method": "HANNA_CHECKER"
+              }
+            ]
+          },
+          {
+            "case": "CONTESTED_LATEST",
+            "readings": [
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 10.95,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "at": "2026-08-20T09:00:00+10:00",
+                "alkDkh": 11.14,
+                "method": "SALIFERT_TITRATION"
+              }
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "RESOLVED_LATEST": {
+          "episodeStatus": "RESOLVED",
+          "episodeValueDkh": 11.04,
+          "spreadDkh": 0.04,
+          "clusterStatus": "OK"
+        },
+        "CONTESTED_LATEST": {
+          "episodeStatus": "CONTESTED_METHODS",
+          "episodeValueDkh": "NOT_RUN"
+        }
+      },
+      "expectedAction": {
+        "RESOLVED_LATEST": {
+          "positionDkh": 11.04,
+          "position": "ALERT_HIGH",
+          "outerBoundState": "BREACHED_HIGH",
+          "interventionType": "SAFETY_RETURN",
+          "nextTestApproxHours": 24
+        },
+        "CONTESTED_LATEST": {
+          "position": "NOT_RUN",
+          "outerBoundState": "NOT_RUN",
+          "interventionType": "NOT_RUN",
+          "retest": "REPEAT_NOW",
+          "latestEpisodeSurfaced": true,
+          "priorEpisodePromotedToPosition": false,
+          "note": "No worst-case-member rule exists and none is created: the classification is withheld and an immediate repeat requested. The exposure is recorded in ALK-EPISODE-SINGLE-OUTPUT-001."
+        }
+      },
+      "expectedReasonCodes": [
+        "EPISODE_CONTESTED_METHODS",
+        "EPISODE_POSITION_WITHHELD",
+        "RETEST_EPISODE_CONTESTED"
+      ],
+      "openIssues": [
+        "OI-EPISODECONSUMER-001 - RESOLVED by owner decision 19"
+      ],
+      "forbidden": {
+        "CONTESTED_LATEST": {
+          "outerBoundState": [
+            "WITHIN_BOUNDS",
+            "BREACHED_HIGH"
+          ],
+          "positionDkh": [
+            10.95,
+            11.14,
+            11.045,
+            10.6
+          ]
+        },
+        "note": "WITHIN_BOUNDS from 10.95 or BREACHED_HIGH from 11.14 - either chosen by ordering - is the defect this fixture exists to catch. Silently using yesterday's 10.60 is equally forbidden."
+      }
+    },
+    {
+      "fixtureId": "AD-EPI-004",
+      "title": "Rapid detection consumes resolved episodes only",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RAPID-BASIS-001",
+          "ALK-EPISODE-SINGLE-OUTPUT-001",
+          "ALK-008",
+          "ALK-RAPID-001"
+        ],
+        "note": "Owner decision 19, on AD-RAP-001's candidate-cluster series. Case A is unchanged behaviour: a resolved episode not accepted for ordinary trend still contributes to rapid. Case B contests the latest episode."
+      },
+      "rulesExercised": [
+        "ALK-RAPID-BASIS-001",
+        "ALK-RAPID-001",
+        "ALK-EPISODE-SINGLE-OUTPUT-001",
+        "ALK-EPISODE-RESOLUTION-001",
+        "ALK-INDEPENDENT-SELECTION-001"
+      ],
+      "input": {
+        "cases": [
+          {
+            "case": "RESOLVED_NOT_ACCEPTED",
+            "episodes": [
+              {
+                "atDay": 0.0,
+                "alkDkh": 8.6,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "atDay": 1.5,
+                "alkDkh": 8.5,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "atDay": 2.0,
+                "alkDkh": 7.95,
+                "method": "HANNA_CHECKER"
+              }
+            ]
+          },
+          {
+            "case": "CONTESTED_LATEST",
+            "episodes": [
+              {
+                "atDay": 0.0,
+                "alkDkh": 8.6,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "atDay": 1.5,
+                "alkDkh": 8.5,
+                "method": "HANNA_CHECKER"
+              },
+              {
+                "atDay": 2.0,
+                "readings": [
+                  {
+                    "alkDkh": 7.95,
+                    "method": "HANNA_CHECKER"
+                  },
+                  {
+                    "alkDkh": 8.3,
+                    "method": "SALIFERT_TITRATION"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "RESOLVED_NOT_ACCEPTED": {
+          "acceptedByForwardGreedy": [
+            0.0,
+            1.5
+          ],
+          "notAccepted": [
+            2.0
+          ],
+          "rapidPairDays": [
+            0.0,
+            2.0
+          ],
+          "rapidPairSlopeDkhPerDay": -0.325,
+          "rapidThresholdDkhPerDay": 0.3
+        },
+        "CONTESTED_LATEST": {
+          "latestEpisodeStatus": "CONTESTED_METHODS",
+          "latestEpisodeValueDkh": "NOT_RUN",
+          "rapidPair": "NOT_RUN"
+        }
+      },
+      "expectedAction": {
+        "RESOLVED_NOT_ACCEPTED": {
+          "rapidBasis": "LATEST_INDEPENDENT_PAIR",
+          "rapidConfirmed": true,
+          "note": "ALK-008's grant is unchanged: an episode too close for ordinary trend still contributes to rapid."
+        },
+        "CONTESTED_LATEST": {
+          "rapidConfirmed": "NOT_RUN",
+          "automaticMaintenanceAction": "WITHHELD",
+          "retest": "REPEAT_NOW",
+          "note": "The latest episode is a member of the pair by definition. It emits no value, so the determination is withheld - it is not computed from the older resolved pair as though the latest episode did not exist."
+        }
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_RAPID_CONFIRMED",
+        "EPISODE_CONTESTED_METHODS",
+        "EVIDENCE_WITHHELD_CONTESTED_EPISODE",
+        "RETEST_EPISODE_CONTESTED"
+      ],
+      "openIssues": [
+        "OI-EPISODECONSUMER-001 - RESOLVED by owner decision 19",
+        "OI-RAPIDBASIS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-07), unchanged"
+      ],
+      "forbidden": {
+        "CONTESTED_LATEST": {
+          "rapidConfirmed": [
+            true,
+            false
+          ],
+          "rapidPairSlopeDkhPerDay": [
+            -0.325,
+            -0.15,
+            -0.06666666666666667
+          ]
+        },
+        "note": "Taking 7.95 (rapid, -0.325), taking 8.30 (not rapid, -0.15), or falling back to the older resolved pair 8.6 -> 8.5 over 1.5 days (-0.0666...) are all forbidden. One contested episode may not flip rapidConfirmed in either direction."
+      }
+    },
+    {
+      "fixtureId": "AD-VAL-002",
+      "title": "The 0.20 dKH repeat threshold is exact-decimal and same-method only",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-DECIMAL-THRESHOLD-001",
+          "ALK-REPEAT-SPREAD-DOMAIN-001",
+          "ALK-005",
+          "OI-BOUNDARIES-001"
+        ],
+        "note": "Owner decision 18. Under binary64 the differences 8.80-8.60, 7.30-7.50 and 9.30-9.10 all evaluate strictly greater than 0.20 (0.20000000000000107, 0.20000000000000018, 0.20000000000000107) and would classify ANOMALOUS. Exact decimal comparison gives 0.20 > 0.20 = false. 10.75-10.55 evaluates to 0.1999999999999993 and agrees either way - it is included so the fixture is not only about pairs that straddle."
+      },
+      "rulesExercised": [
+        "ALK-DECIMAL-THRESHOLD-001",
+        "ALK-005",
+        "ALK-REPEAT-SPREAD-DOMAIN-001",
+        "Part II \u00a75.6"
+      ],
+      "input": {
+        "alk005ThresholdDkh": 0.2,
+        "cases": [
+          {
+            "case": "BELOW",
+            "readingsDkh": [
+              8.6,
+              8.74
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "EXACT_STRADDLING_A",
+            "readingsDkh": [
+              8.6,
+              8.8
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "EXACT_STRADDLING_B",
+            "readingsDkh": [
+              7.3,
+              7.5
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "EXACT_STRADDLING_C",
+            "readingsDkh": [
+              9.1,
+              9.3
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "EXACT_AGREEING",
+            "readingsDkh": [
+              10.55,
+              10.75
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "ABOVE",
+            "readingsDkh": [
+              8.6,
+              8.81
+            ],
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "case": "CROSS_METHOD",
+            "readingsDkh": [
+              10.95,
+              11.14
+            ],
+            "methods": [
+              "HANNA_CHECKER",
+              "SALIFERT_TITRATION"
+            ]
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "cases": [
+          {
+            "case": "BELOW",
+            "exactDecimalSpreadDkh": 0.14,
+            "binary64SpreadGreaterThanThreshold": false,
+            "clusterStatus": "OK"
+          },
+          {
+            "case": "EXACT_STRADDLING_A",
+            "exactDecimalSpreadDkh": 0.2,
+            "binary64SpreadGreaterThanThreshold": true,
+            "clusterStatus": "OK"
+          },
+          {
+            "case": "EXACT_STRADDLING_B",
+            "exactDecimalSpreadDkh": 0.2,
+            "binary64SpreadGreaterThanThreshold": true,
+            "clusterStatus": "OK"
+          },
+          {
+            "case": "EXACT_STRADDLING_C",
+            "exactDecimalSpreadDkh": 0.2,
+            "binary64SpreadGreaterThanThreshold": true,
+            "clusterStatus": "OK"
+          },
+          {
+            "case": "EXACT_AGREEING",
+            "exactDecimalSpreadDkh": 0.2,
+            "binary64SpreadGreaterThanThreshold": false,
+            "clusterStatus": "OK"
+          },
+          {
+            "case": "ABOVE",
+            "exactDecimalSpreadDkh": 0.21,
+            "binary64SpreadGreaterThanThreshold": true,
+            "clusterStatus": "ANOMALOUS"
+          },
+          {
+            "case": "CROSS_METHOD",
+            "exactDecimalSpreadDkh": 0.19,
+            "alk005Applied": false,
+            "episodeStatus": "CONTESTED_METHODS"
+          }
+        ]
+      },
+      "expectedAction": {
+        "sameMethodCases": {
+          "comparisonSemantics": "EXACT_DECIMAL",
+          "preRoundingBeforeComparison": false,
+          "epsilon": "NONE"
+        },
+        "CROSS_METHOD": {
+          "automaticMaintenanceAction": "WITHHELD",
+          "retest": "REPEAT_NOW",
+          "note": "0.19 is below 0.20, and that is irrelevant: the threshold is not applied across incompatible methods at all."
+        }
+      },
+      "expectedReasonCodes": [
+        "CLUSTER_ANOMALOUS_SPREAD",
+        "EPISODE_CONTESTED_METHODS"
+      ],
+      "openIssues": [
+        "OI-DECIMALTHRESHOLD-001 - RESOLVED by owner decision 18",
+        "OI-CROSSMETHOD-001 - RESOLVED by owner decision 18"
+      ],
+      "forbidden": {
+        "clusterStatus": {
+          "EXACT_STRADDLING_A": "ANOMALOUS",
+          "EXACT_STRADDLING_B": "ANOMALOUS",
+          "EXACT_STRADDLING_C": "ANOMALOUS",
+          "CROSS_METHOD": "OK"
+        },
+        "note": "Deciding any exact-0.20 case by binary64, introducing an epsilon to hide the problem, pre-rounding the readings to compare them, or reporting the cross-method pair as an OK cluster because 0.19 < 0.20."
       }
     }
   ]

@@ -190,9 +190,14 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `spreadDkh` | dKH | `max − min` over members. |
 | `madDkh` | dKH | `median(|x_i − median(x)|)`. |
 | `sigmaClusterDkh` | dKH | `max(SIGMA_ALK_BASE, 1.4826 · madDkh)`. **Never** divided by `√n` (Part II §5.6). |
-| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`). |
+| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`), compared as **exact decimals** (`ALK-DECIMAL-THRESHOLD-001`): an exact spread of `0.20` is `OK`. Applies to same-method members only (`ALK-REPEAT-SPREAD-DOMAIN-001`). |
 | `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
-| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling same-timestamp clusters (`ALK-SAME-TIMESTAMP-COALESCE-001`). The source clusters are retained for audit; the pooled cluster is what selection sees. |
+| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling **same-method** measurements inside one testing episode (`ALK-TESTING-EPISODE-001`). The source clusters are retained for audit; the resolved episode value is what selection sees. |
+| `episodeId` | — | The testing episode this measurement belongs to (`ALK-TESTING-EPISODE-001`). Membership is the episode — explicit repeat relationship, otherwise the existing 30-minute window — not an identical timestamp. |
+| `episodeStatus` | — | `RESOLVED` \| `CONTESTED_METHODS` (`ALK-EPISODE-RESOLUTION-001`). `CONTESTED_METHODS` emits **no** episode value; members are preserved and kept distinct, `ALK-005` is not applied across them, and the affected inference is withheld. |
+| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads (`ALK-EPISODE-SINGLE-OUTPUT-001`). `NOT_RUN` on a contested episode. |
+| `episodeAt` | — | The one canonical episode time, under Part II §5.5. |
+| `episodeMethods[]` | — | The distinct methods present in the episode. More than one, with no canon compatibility classification, is what makes an episode contested. |
 
 Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
 member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention
@@ -688,10 +693,12 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `bSafetyDkh` | dKH | `0.20`, fixed. **Never** recomputed from the current kit, residual scatter or `sigma_point` (`ALK-SAFETY-BUFFER-001` Freeze-2 interpretation). |
 | `desiredMovementDkh` | dKH | `min(A_safe,low − A_now, 0.50)` low; `min(A_now − A_safe,high, 0.50)` high. |
 | `safetyCorrectionVolumeMl` | mL | `ΔA_safety / P_selected`. Low breach only. **A volume.** |
-| `temporarySafetyRateAdvisoryMlPerDay` | mL/day | High breach with interpretable consumption. **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the actuator increment is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). |
+| `temporarySafetyRateAdvisoryMlPerDay` | mL/day | High breach, from consumption where `C_estimate >= 0` and from the established-dose contribution where it is negative (`ALK-HIGH-BREACH-SAFETY-SIZING-001`). **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the actuator increment is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). |
 | `temporarySafetyPumpCommandMlPerDay` | mL/day | The executable rounded pump command for the same rate. `NOT_RUN` while `actuatorIncrementMlPerDay` is unavailable. **Never merged with the field above** — that merge is what `M-1` and F5-11 exist to prevent. |
-| `safetyDoseRecommendationMlPerDay` | mL/day | `0` under `ALK-HIGH-BREACH-UNRESOLVED-001`. `NOT_RUN` where `C_estimate` is negative but not materially negative — delivery is not paused and the established dose is held (`ALK-HIGH-BREACH-NO-PAUSE-001`). |
-| `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE`. |
+| `safetyDoseRecommendationMlPerDay` | mL/day | **Superseded by owner decision 16.** The high-breach delivered figure is now `temporarySafetyRateAdvisoryMlPerDay`, sized as `max(0, D_established − R_down / P_selected)` on either negative branch (`ALK-HIGH-BREACH-SAFETY-SIZING-001`). Zero appears only when that expression floors. |
+| `establishedDoseMlPerDay` | mL/day | The established maintenance delivery rate the high-breach sizing reduces. Dose-history basis, unchanged. |
+| `rDownDkh` | dKH | `min(A_now − A_safe,high, 0.50)`. The requested downward effect, rail-bounded. |
+| `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |
 | `interventionLockOwner` | — | `NONE` \| `SAFETY_RETURN` \| `ORDINARY_INTERVENTION`. |
 | `compositeMovementDkhPer24h` | dKH | Signed sum of all simultaneously recommended intentional components; `|·| ≤ 0.50`. |

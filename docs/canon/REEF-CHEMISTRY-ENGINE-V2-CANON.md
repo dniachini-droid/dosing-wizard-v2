@@ -5239,10 +5239,13 @@ This exemption is narrow:
 
 `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`
 
-The high-breach interpretable-consumption path below produces \(D_{safety,temp}\), a
-temporary safety **rate** in mL/day. It is neither a one-off correction volume nor an
-ordinary maintenance-rate recommendation, so neither the exemption above nor `M-1`'s
-prohibition previously named it.
+The high-breach paths below produce \(D_{safety,temp}\), a temporary safety **rate** in
+mL/day — from consumption where \(C_{estimate}\) is usable, and from the established-dose
+contribution where it is not (`ALK-HIGH-BREACH-SAFETY-SIZING-001`, owner decision 16).
+Both forms are the same output and take this rule's advisory/executable separation
+unchanged. It is neither a one-off correction volume nor an ordinary maintenance-rate
+recommendation, so neither the exemption above nor `M-1`'s prohibition previously named
+it.
 
 The exemption is extended to cover it. When `actuatorIncrementMlPerDay` is unavailable, the
 **exact calculated temporary safety rate may be emitted as an advisory rate**.
@@ -5277,7 +5280,10 @@ clamp already inside \(D_{safety,temp}\).
 
 For \(A_{now}>OuterMax\), the app cannot deliver a negative chemical correction.
 
-If current consumption is physically interpretable, define:
+This branch applies where \(C_{estimate}\ge0\) and current consumption is physically
+interpretable. Where \(C_{estimate}<0\), the estimate is not usable for sizing and
+`ALK-HIGH-BREACH-SAFETY-SIZING-001` below owns the temporary rate instead (**owner
+decision 16**). Define:
 
 \[
 R_{down}
@@ -5318,9 +5324,25 @@ S=PD-C
 
 If zero dosing cannot achieve the desired decline, report the slower physically achievable decline rather than inventing negative dosing.
 
-#### High breach — consumption physically uninterpretable
+#### High breach — consumption not usable for sizing
 
 `ALK-HIGH-BREACH-UNRESOLVED-001`
+
+**Amended by owner decision 16.** This rule's *automatic zero-dose pause* is superseded by
+`ALK-HIGH-BREACH-SAFETY-SIZING-001` below. What it says about the maintenance model, the
+temporary correction component and the retest cadence is unchanged and still governs. The
+superseded wording is preserved here so the change is visible rather than silently
+rewritten:
+
+> - **recommend a temporary pause of Alk dosing to 0 mL/day pending the next valid Alk assessment;**
+>
+> ```text
+> safetyDoseRecommendation = 0 mL/day
+> safetyDoseReason = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
+> ```
+
+Zero delivery is no longer *chosen* because the estimate is uninterpretable. It is now
+reached only where the sizing rule below floors at zero.
 
 If:
 
@@ -5328,17 +5350,17 @@ If:
 A_{now}>OuterMax
 \]
 
-and \(C_{estimate}\) is physically uninterpretable:
+and \(C_{estimate}\) is not usable for safety-dose sizing — it is negative, on either side
+of `ALK-NEGATIVE-MATERIALITY-001`'s boundary, or otherwise physically uninterpretable:
 
 - stop any separately temporary upward correction/return component;
-- **recommend a temporary pause of Alk dosing to 0 mL/day pending the next valid Alk assessment;**
-- do **not** label 0 mL/day as a newly inferred permanent maintenance requirement;
+- size the temporary safety rate under `ALK-HIGH-BREACH-SAFETY-SIZING-001` below;
+- do **not** label that rate as a newly inferred permanent maintenance requirement;
 - preserve the established maintenance estimate/history separately;
 - set:
 
 ```text
-safetyDoseRecommendation = 0 mL/day
-safetyDoseReason = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
+safetyDoseReason = HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING
 maintenanceEstimateStatus = UNRESOLVED
 ```
 
@@ -5346,11 +5368,112 @@ maintenanceEstimateStatus = UNRESOLVED
 
 Reason:
 
-> when the level is already above the outer bound and mass-balance arithmetic cannot support a maintenance estimate, continuing Alk addition is not the conservative default.
+> when the level is already above the outer bound and mass-balance arithmetic cannot support a maintenance estimate, continuing to supply alkalinity at the established rate is not the conservative default. The conservative default is to reduce delivery by the amount the level is asking for, which is what the sizing rule below does.
 
-This temporary zero-dose safety pause is a fail-safe response to an invalid model, not an inferred claim that biological consumption is zero.
+The temporary safety rate is a fail-safe response to an invalid model, not an inferred
+claim about biological consumption in either direction.
 
-If the app cannot directly control the pump, it says **pause dosing is recommended** and does not mark dosing as actually paused until implementation is confirmed.
+If the app cannot directly control the pump, it says the temporary rate **is recommended**
+and does not mark it as actually implemented until implementation is confirmed.
+
+#### High breach — safety-dose sizing when consumption is unusable
+
+`ALK-HIGH-BREACH-SAFETY-SIZING-001`
+
+**Owner decision 16.** Negative-consumption materiality owns interpretation of the
+**maintenance model**. It does **not** own high-breach temporary safety-dose sizing and may
+not choose the delivered safety rate. This supersedes, for that choice only:
+
+- `ALK-HIGH-BREACH-UNRESOLVED-001`'s automatic pause to 0 mL/day; and
+- `ALK-HIGH-BREACH-NO-PAUSE-001`'s HOLD of the established delivery rate.
+
+Where \(A_{now}>OuterMax\) and \(C_{estimate}<0\), the estimate is unusable for sizing on
+**either** side of the materiality boundary. The desired downward safety effect is the one
+this section already defines:
+
+\[
+\boxed{
+R_{down}
+=
+\min(
+A_{now}-A_{safe,high},
+0.50
+)
+}
+\]
+
+and the temporary safety rate is derived from the **controllable established-dose
+contribution** instead of from \(C_{estimate}\):
+
+\[
+\boxed{
+D_{safety,temp}
+=
+\max
+\left(
+0,
+D_{established}
+-
+\frac{R_{down}}{P_{selected}}
+\right)
+}
+\]
+
+where \(D_{established}\) is the established maintenance delivery rate in mL/day — the rate
+actually being delivered, on the same dose-history basis every other Alk calculation uses —
+and \(P_{selected}\) is the selected potency in dKH/mL.
+
+This is a **temporary high-breach safety delivery rate**, not a newly inferred maintenance
+requirement:
+
+```text
+maintenanceEstimateStatus = UNRESOLVED
+reason                    = SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
+```
+
+**Zero is a floor, not a decision.** Delivery reaches 0 mL/day only where the established
+contribution cannot absorb the requested \(R_{down}\):
+
+\[
+D_{established}\le\frac{R_{down}}{P_{selected}}
+\]
+
+```text
+reason = SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO
+```
+
+Negative-consumption materiality never selects zero versus a held rate. It classifies the
+maintenance model and its evidence, and nothing else here.
+
+**What this rule requires, stated so it is checkable:**
+
+- the safety response **varies with \(A_{now}\)** through \(R_{down}\), monotonically,
+  until the 0.50 dKH/day rail binds and \(R_{down}\) saturates;
+- the safety response varies **continuously with \(D_{established}\)**: one actuator
+  increment more established dose gives exactly one increment more safety rate. The
+  1.5 mL/day → pause versus 1.6 mL/day → hold discontinuity that
+  `ALK-HIGH-BREACH-NO-PAUSE-001` previously produced is removed and must not reappear;
+- the materiality classification may change the recorded classification, the wording and
+  the maintenance evidence state on either side of the boundary. It may **not** change
+  \(D_{safety,temp}\).
+
+**Everything else is preserved and still applies:**
+
+- potency validity — if \(P_{selected}\) is unavailable or invalid, \(D_{safety,temp}\) is
+  not calculable, and the engine states the required dKH movement and direction only under
+  `CORE-INFORM-PROCEED-001`;
+- actuator-increment handling and the advisory-versus-executable separation of
+  `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`;
+- the composite 0.50 dKH/day rail (`ALK-046`, `ALK-COMPOSITE-RAIL-001`);
+- the liquid-volume guard (`ALK-LIQUID-VOLUME-GUARD-001`);
+- actuator rounding (`ALK-ROUNDING-001`), including its step-6 hard-constraint recheck;
+- `SAFETY_RETURN` integration, the intervention lock and
+  `ALK-RETURN-TERMINATED-BY-SAFETY-001`;
+- the magnesium-gate surfacing of `ALK-SAFETY-MG-OVERRIDE-001`;
+- shortened/reprioritised high-breach retesting.
+
+No new constant is introduced. \(R_{down}\), the 0.50 rail, \(P_{selected}\) and the
+established maintenance rate are all already frozen.
 
 ### Composite movement constraint
 
@@ -5685,6 +5808,255 @@ Reason:
 
 This threshold is an engineering judgement, not a biological safety limit.
 
+### Domain of the repeat-spread threshold
+
+`ALK-REPEAT-SPREAD-DOMAIN-001`
+
+**Owner decision 18.** The `0.20 dKH` threshold above is a **repeat** threshold. It applies
+to measurements from:
+
+- the **same** test method; or
+- methods **explicitly classified by canon as compatible**.
+
+It does **not** establish a cross-method disagreement threshold, and it may not be applied
+across incompatible methods. Its stated justification — twice the shared Alk analytical
+uncertainty floor — is a statement about analytical repeatability, which is not what
+disagreement between two different methods measures.
+
+```text
+crossMethodConcordanceThreshold = NOT_RUN
+reason = VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED
+```
+
+No cross-method numerical concordance threshold is invented here. Where incompatible
+methods coexist, `ALK-EPISODE-RESOLUTION-001` below governs, and it resolves the situation
+by withholding rather than by comparing.
+
+Method compatibility is itself a canon classification:
+
+```text
+compatibleMethodClassification = NOT_RUN
+```
+
+**No canon rule currently classifies any two distinct Alk test methods as compatible.**
+Until such a classification is frozen, only same-method measurements group. This is a
+canonised state, not an undefined one, and it follows the same pattern as
+`ALK-SUSPECT-DETECTION-001`: the missing item is named and deferred rather than guessed.
+
+---
+
+## ALK-005B — Canonical Alk testing episode
+
+`ALK-TESTING-EPISODE-001`
+
+**Owner decision 17.** An Alk **testing episode** is the set of Alk measurements intended to
+represent the **same real-world sampling moment**.
+
+Membership uses what the canon already has, and introduces **no new time constant**:
+
+1. **explicit repeat/confirmation relationships** where present (Part II §5.2); otherwise
+2. the existing canonical **30-minute `repeatClusterWindow`** (Part II §5.3, `ALK-005`).
+
+**The semantic concept is SAME TESTING EPISODE, not exact timestamp equality.** Two
+measurements three minutes apart inside the window are one episode; two measurements
+sharing an identical representative timestamp are also one episode. This **supersedes** the
+exact-timestamp-only scope of `ALK-SAME-TIMESTAMP-COALESCE-001`, which is amended below and
+now states the selection-side consequence only.
+
+Within one episode:
+
+1. **same-method** measurements — and measurements from methods canon has explicitly
+   classified as compatible, of which there are currently none
+   (`ALK-REPEAT-SPREAD-DOMAIN-001`) — form the normal repeat cluster under the existing
+   representative-value rules, Part II §5.4–§5.6 and `ALK-005`;
+2. **incompatible-method measurements must not be averaged, pooled or coalesced into one
+   numerical value** merely because their timestamps match or fall inside the episode
+   window;
+3. incompatible-method measurements remain **distinct evidence within the same episode**.
+   They are not separate episodes, and they are not one value;
+4. an episode that cannot produce one defensible resolved Alk value is **contested**, and
+   `ALK-EPISODE-RESOLUTION-001` governs it.
+
+```text
+reason = EPISODE_MEASUREMENTS_POOLED        # same-method pool inside one episode
+reason = EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT
+```
+
+Episode construction runs on **measurements**, before clusters are consumed by anything
+downstream. It never deletes, hides, invalidates or down-weights a measurement.
+
+---
+
+## ALK-005C — Episode resolution
+
+`ALK-EPISODE-RESOLUTION-001`
+
+**Owner decisions 17 and 18.** After the existing validity and status rules have been
+applied — `INVALID` measurements are excluded from analysis under Part II §4.3, and are
+excluded here too — an episode is:
+
+```text
+episodeStatus = RESOLVED
+```
+
+when every remaining measurement in it is same-method, or belongs to a canon-classified
+compatible set. The episode then emits one canonical value and time under Part II §5.4 and
+§5.5, with spread and status under Part II §5.6 and `ALK-005`. A resolved episode may still
+be `ANOMALOUS` on its own same-method spread; that path is unchanged.
+
+Otherwise:
+
+```text
+episodeStatus = CONTESTED_METHODS
+reason        = EPISODE_CONTESTED_METHODS
+```
+
+On a contested episode, all of the following hold together:
+
+- **preserve the individual measurements.** Nothing is discarded, marked invalid or hidden;
+- **do not average** the incompatible-method measurements into one episode value;
+- **do not apply `ALK-005`'s 0.20 dKH threshold** across them
+  (`ALK-REPEAT-SPREAD-DOMAIN-001`);
+- **do not choose a governing value** by event order, ID order, insertion order, database
+  order or arbitrary sorting. No such choice is admissible, and an implementation that
+  makes one is defective however stable its own ordering happens to be;
+- **withhold the affected automatic inference** rather than manufacturing a value;
+- **request resolution through the existing anomaly/retest machinery** — `ALK-051` and
+  Part II §48 already own this, and the immediate-repeat candidate of
+  `ALK-RETEST-SCHEDULER-001` carries it:
+
+```text
+retest = REPEAT_NOW
+reason = RETEST_EPISODE_CONTESTED
+```
+
+- **do not silently fall back to an older Alk episode** as though the latest evidence did
+  not exist. Part II §48's "do not silently exclude it and act on older data as though it
+  did not exist" governs unchanged.
+
+Resolution is by **confirmation**, not by arithmetic: a further measurement, an explicit
+user resolution, or an existing validity rule that removes one of the competing
+measurements. No numeric tie-break exists, and none is created here.
+
+---
+
+## ALK-005D — One episode output for every Alk consumer
+
+`ALK-EPISODE-SINGLE-OUTPUT-001`
+
+**Owner decision 19.** Testing-episode construction and resolution occur **before**
+downstream Alk interpretation. **No dosing or safety consumer may independently choose
+among raw Alk measurements belonging to the same testing episode.**
+
+Every one of the following consumes the same resolved canonical episode representation, and
+none of them re-derives it:
+
+| Consumer | Rule |
+|---|---|
+| current position | `ALK-010` / `CORE-POSITION-001` |
+| preferred-range and outer-bound classification | `ALK-004`, `ALK-003A` |
+| `SAFETY_RETURN` triggering | `ALK-OUTER-BOUND-ACTION-001` |
+| rapid detection basis | `ALK-RAPID-BASIS-001` |
+| independent-cluster / trend selection | `ALK-INDEPENDENT-SELECTION-001` |
+| ordinary trajectory | `ALK-MOVEMENT-001`, `ALK-SUPPORTED-SLOPE-001` |
+| consumption estimation | `ALK-CONSUMPTION-ESTIMATE-001` |
+| forecast | `ALK-FORECAST-SLOPE-001`, `ALK-062` |
+| maintenance-dose calculation | `ALK-049` pipeline |
+
+This is `MASTER RULE 1` and `X-INV-004` applied to the episode: one owner constructs the
+episode, and everything downstream reads its output.
+
+**For a RESOLVED episode** — emit one canonical episode value and time for downstream use.
+
+**For a CONTESTED or otherwise unresolved latest episode:**
+
+- do **not** manufacture a representative Alk value;
+- do **not** select whichever measurement happens to sort first or last;
+- do **not** silently discard the latest episode and act on older evidence;
+- **withhold the affected automatic inference** and invoke the existing resolving/retest
+  behaviour, **unless an already-authoritative safety rule explicitly governs the
+  unresolved state**.
+
+```text
+position         = NOT_RUN
+outerBoundState  = NOT_RUN
+reason           = EPISODE_POSITION_WITHHELD
+retest           = REPEAT_NOW
+```
+
+**Recorded exposure, not an invention.** No current Alk rule governs outer-bound
+classification from a contested episode: `ALK-003A` requires "the latest **valid** Alk", and
+a contested episode has not produced one. So where a contested latest episode straddles an
+outer bound — one method above it, one below — the classification is withheld and an
+immediate repeat is requested, and no `SAFETY_RETURN` is triggered from that episode until
+it resolves. The alternative would be a worst-case-member rule, which no canon states and
+which is **not** created here. This exposure is named deliberately, as
+`ALK-SUSPECT-DETECTION-001`'s residual is, so that it is visible rather than implied.
+
+The older episode is not promoted in its place, and the contested episode is surfaced.
+
+### Episode resolution is not independent-trend selection
+
+The two are distinct and must stay distinct:
+
+- **episode resolution** decides what one sampling moment measured;
+- **independent selection** (`ALK-INDEPENDENT-SELECTION-001`) decides which resolved
+  episodes are far enough apart to count as separate maintenance-trend observations.
+
+A resolved episode that is **too close in time** to count as a full-strength ordinary
+maintenance-trend observation may still contribute to rapid detection exactly where
+`ALK-008` and `ALK-RAPID-001` already permit it. **The existing 24-hour independent-spacing
+rule is unchanged.**
+
+---
+
+## ALK-005E — Exact decimal semantics for canonical thresholds
+
+`ALK-DECIMAL-THRESHOLD-001`
+
+**Owner decision 18.** A canonical Alk threshold predicate must not be decided by binary
+floating-point representation error.
+
+For user-entered decimal chemistry quantities:
+
+- **preserve the entered/normalized decimal precision** through storage and comparison;
+- **compare exact decimal values** for canonical threshold predicates;
+- **do not pre-round** the chemistry reading merely to perform the comparison;
+- **do not let binary64 representation error decide which side of a canonical decimal
+  threshold applies**;
+- **no epsilon.** An arbitrary tolerance would be a new constant and is forbidden here.
+
+**Scope — where both operands are exact decimals:** a stored or normalized decimal
+measurement value, a difference of such values, and a frozen decimal canon constant. The
+predicates this governs are:
+
+| Predicate | Rule |
+|---|---|
+| repeat-cluster spread `max(A_i) − min(A_i) > 0.20` | `ALK-005` |
+| position against the preferred range edges | `ALK-004` |
+| outer-bound breach against `OuterMin` / `OuterMax` | `ALK-003A` |
+| safety-return completion against `A_safe,low` / `A_safe,high` | `ALK-003A` |
+
+Worked consequence, which is the reason this rule exists:
+
+```text
+exact decimal spread 0.20 dKH:   0.20 > 0.20  ->  false  ->  NOT anomalous
+exact decimal spread 0.21 dKH:   0.21 > 0.20  ->  true   ->  ANOMALOUS
+```
+
+Under binary64 the same comparison on `8.80 − 8.60` yields `0.20000000000000107 > 0.20`,
+which is `true`. That outcome is a property of the decimal literals, not of the
+measurement, and it is now excluded. **No threshold value and no comparison direction is
+changed by this rule** — `ALK-005` remains strictly greater-than, and every boundary in
+`OI-BOUNDARIES-001` keeps the inclusivity it already had.
+
+**Out of scope, and unchanged:** predicates over quantities produced by division or a
+robust estimator — \(S_{observed}\), \(S_{TS}\), \(\sigma_{resid}\), \(\sigma_S\),
+\(S_{supported}\), \(C_{estimate}\), \(T_{signal}\), potency SNR, and the rate and
+percentage caps computed from them. Those remain IEEE 754 binary64 under the existing
+determinism contract, evaluated in the canonical fixed order. This rule does not extend to
+them and does not change them.
+
 ---
 
 ## ALK-005A — Suspicious-reading detection basis
@@ -5884,45 +6256,52 @@ never do is alter a **historical assessment record**, which stays immutable unde
 `ALK-065`. Implementations must not present the appended-data guarantee as covering
 backdated entries.
 
-### Same-timestamp coalescing, before selection
+### Selection runs over resolved testing episodes
 
 `ALK-SAME-TIMESTAMP-COALESCE-001`
 
-Two candidate clusters may share a representative time. Part II §5.3 groups automatically
-only within the same or a compatible test method, so two incompatible methods run at one
-instant yield two clusters at one timestamp, and Part II §5.2 explicit grouping can do the
-same.
+**Amended by owner decisions 17 and 19.** This rule originally keyed on **exact timestamp
+equality** and pooled the underlying measurements of any clusters sharing a representative
+time, including measurements from incompatible methods. Both of those are superseded:
 
-**Clusters sharing an identical representative timestamp are not separate independent
-testing episodes.** One instant is one testing episode however many methods were used.
+- membership is now the **testing episode** of `ALK-TESTING-EPISODE-001` — explicit repeat
+  relationships, otherwise the existing 30-minute window — not exact timestamp equality. A
+  three-minute offset no longer reopens the problem this rule was written to close;
+- **incompatible-method measurements inside one episode are no longer pooled into one
+  value.** `ALK-EPISODE-RESOLUTION-001` contests the episode instead, and
+  `ALK-REPEAT-SPREAD-DOMAIN-001` withholds `ALK-005`'s 0.20 dKH threshold from that
+  comparison.
 
-Independent-cluster selection must therefore **never depend on arbitrary event order, ID
-order, insertion order, database ordering or implementation sorting.** Any of those would
-make the actuator command a property of how the rows happened to be stored.
+The superseded mechanics are preserved here rather than deleted:
 
-**Before** forward-greedy selection runs, coalesce same-timestamp clusters:
+> **Before** forward-greedy selection runs, coalesce same-timestamp clusters: group
+> candidate clusters by identical representative timestamp; where a group holds more than
+> one cluster, pool their combined underlying measurements and build a single cluster from
+> that pool… `reason = CLUSTER_SAME_TIMESTAMP_COALESCED`
 
-1. group candidate clusters by identical representative timestamp;
-2. where a group holds more than one cluster, pool their **combined underlying
-   measurements** and build a single cluster from that pool using the existing canonical
-   cluster-construction and representative-value rules — Part II §5.4 representative value,
-   §5.5 representative timestamp, §5.6 internal spread, and `ALK-005`;
-3. run forward-greedy selection over the resulting **unique-time** cluster sequence.
+What this rule now states is the **selection-side consequence**, and it is unchanged in
+substance:
 
-Coalescing applies the existing rules to a larger pool; it introduces no new arithmetic.
-Two consequences follow from those rules and must not be suppressed:
+1. independent-cluster selection operates over **resolved testing-episode outputs**, one
+   value and one time per episode (`ALK-EPISODE-SINGLE-OUTPUT-001`);
+2. a **contested** episode emits no value, so it supplies no candidate to selection, and
+   the affected automatic inference is withheld under `ALK-EPISODE-RESOLUTION-001` rather
+   than computed from one arbitrarily chosen member;
+3. selection must therefore **never depend on arbitrary event order, ID order, insertion
+   order, database ordering or implementation sorting.** Any of those would make the
+   actuator command a property of how the rows happened to be stored.
 
-- the coalesced cluster's representative value is the median of the **pooled raw readings**,
-  not the mean of the two cluster medians;
-- the coalesced cluster's spread is measured over the pooled readings, so `ALK-005` applies
-  to it. A pool spanning more than 0.20 dKH becomes `ANOMALOUS` and takes Part II §48's
-  path. **Coalescing never launders an internally inconsistent set into a clean one.**
+Pooling within a **same-method** episode is retained exactly as it was: the episode value is
+the median of the **pooled raw readings**, not the mean of two cluster medians; the spread
+is measured over the pooled readings, so `ALK-005` applies and a same-method pool spanning
+more than 0.20 dKH becomes `ANOMALOUS` and takes Part II §48's path. **Pooling never
+launders an internally inconsistent same-method set into a clean one.**
 
 ```text
-reason = CLUSTER_SAME_TIMESTAMP_COALESCED
+reason = EPISODE_MEASUREMENTS_POOLED
 ```
 
-Selection then proceeds over distinct timestamps, so the ordering in step 1 of the
+Selection then proceeds over one candidate per episode, so the ordering in step 1 of the
 forward-greedy algorithm is total and the tie cannot arise.
 
 Worked instance. Candidate clusters at t = 0.0, 0.5, 2.0, 4.0 days:
@@ -5987,6 +6366,25 @@ Current alkalinity position is the latest valid measured cluster value.
 A fitted alkalinity value may not overrule it.
 
 This retains one of the strongest corrections made late in V1.
+
+### Position reads the resolved episode
+
+**Owner decision 19.** "The latest valid measured cluster value" is the value of the
+**latest resolved testing episode** (`ALK-EPISODE-SINGLE-OUTPUT-001`). Position is a
+consumer of episode resolution, not an independent chooser among the measurements inside
+one episode.
+
+Where the latest episode is `CONTESTED_METHODS`:
+
+```text
+position        = NOT_RUN
+outerBoundState = NOT_RUN
+reason          = EPISODE_POSITION_WITHHELD
+retest          = REPEAT_NOW
+```
+
+Position is **not** taken from whichever competing measurement sorts first or last, and the
+previous resolved episode is **not** silently promoted in its place.
 
 **V1 disposition:** KEEP.
 
@@ -6385,8 +6783,13 @@ is at least 24 hours before it. This is exactly what this rule's own requirement
 — "two independent testing episodes; at least 24 hours elapsed between their representative
 times" — stated explicitly so it is not re-derived differently by two implementations.
 
-The pair is drawn from **candidate** clusters, not only from those accepted under
-`ALK-INDEPENDENT-SELECTION-001`. `ALK-008` grants a cluster that is not accepted for
+The pair is drawn from **resolved testing-episode outputs** — candidate episodes, whether
+or not they were accepted under `ALK-INDEPENDENT-SELECTION-001` (**owner decision 19**). A
+`CONTESTED_METHODS` episode emits no value, supplies no member of the pair, and therefore
+**cannot flip `rapidConfirmed` in either direction**; the competing measurements inside it
+are never compared against the 0.30 dKH/day threshold individually. What the pair is *not*
+restricted to is the **accepted** set: it is drawn from candidate episodes, not only from
+those accepted under `ALK-INDEPENDENT-SELECTION-001`. `ALK-008` grants a cluster that is not accepted for
 ordinary trend the right to "contribute to a rapid-change rule", and that grant is
 unchanged. Restricting the pair to accepted clusters would revoke it and would exclude the
 newest reading from rapid detection in exactly the case that matters: candidates at
@@ -7277,7 +7680,11 @@ states: on either branch the estimate cannot by itself reduce an established mai
 dose, and the action is HOLD.
 
 `ALK-HIGH-BREACH-UNRESOLVED-001` asks a different question — whether \(C_{estimate}\) is
-"physically uninterpretable" — and `ALK-HIGH-BREACH-NO-PAUSE-001` below answers it.
+usable for high-breach safety-dose sizing — and `ALK-HIGH-BREACH-NO-PAUSE-001` below
+answers it. Owner decision 16 then removes the *sizing* choice from this boundary
+altogether: on either negative branch the delivered temporary safety rate is
+`ALK-HIGH-BREACH-SAFETY-SIZING-001`'s, and this boundary decides classification, wording
+and the maintenance evidence state only.
 
 ### High breach and a negative estimate
 
@@ -7286,28 +7693,41 @@ dose, and the action is HOLD.
 Above the outer bound, with \(C_{estimate}<0\):
 
 ```text
-materially negative   -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN
-                      -> physically uninterpretable
-                      -> ALK-HIGH-BREACH-UNRESOLVED-001 applies
-                         (temporary pause of Alk delivery to 0 mL/day)
-
+materially negative   -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN     (classification)
 negative, NOT materially negative
-                      -> UNCERTAIN_NON_RESOLVABLE
-                      -> DO NOT recommend pausing established maintenance dosing
-                         to 0 mL/day
-                      -> HOLD the established maintenance dose
-                      -> reason = SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
+                      -> UNCERTAIN_NON_RESOLVABLE             (classification)
+
+both negative branches
+                      -> C_estimate is NOT usable for safety-dose sizing
+                      -> delivered temporary safety rate =
+                         ALK-HIGH-BREACH-SAFETY-SIZING-001    (owner decision 16)
+                      -> maintenanceEstimateStatus = UNRESOLVED
+                      -> the classification does NOT choose the delivered rate
 
 C_estimate >= 0       -> interpretable
                       -> High breach - interpretable consumption; D_safety,temp
 ```
 
-On the middle branch the estimate is **uncertainty-limited/uninterpretable for maintenance
-purposes**. It is not evidence that the tank needs no alkalinity, and it is not a reason to
-stop supplying it. Specifically, and all four hold together:
+**Superseded by owner decision 16**, and preserved here rather than deleted — this rule
+previously routed the two negative branches to two different *delivered* outcomes:
 
-- **HOLD** the established maintenance dose. `ALK-NEGATIVE-CONSUMPTION-001` already forbids
-  the negative arithmetic from changing it in either direction;
+> ```text
+> materially negative        -> temporary pause of Alk delivery to 0 mL/day
+> negative, NOT materially   -> HOLD the established maintenance dose
+>                            -> reason = SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
+> ```
+
+Neither branch chooses a delivered rate any longer.
+
+On the middle branch the estimate is **uncertainty-limited/uninterpretable for maintenance
+purposes**. It is not evidence that the tank needs no alkalinity, and it is not by itself a
+reason to stop supplying it. Specifically, and all four hold together:
+
+- the **maintenance estimate** is not sized from the negative arithmetic in either
+  direction (`ALK-NEGATIVE-CONSUMPTION-001`), and `maintenanceEstimateStatus` stays
+  `UNRESOLVED`. **Superseded by owner decision 16:** this bullet previously required
+  holding the established dose as the *delivered* response. The delivered high-breach rate
+  is now `ALK-HIGH-BREACH-SAFETY-SIZING-001`'s, on both negative branches alike;
 - the **separate high-breach safety handling is preserved**: the outer-bound state, the
   `SAFETY_RETURN` intervention, `ALK-003A`'s position and direction reporting and the
   magnesium-gate surfacing all continue exactly as they would otherwise;
@@ -7326,10 +7746,14 @@ negative range would contradict the conservatism that justifies the boundary.
 The middle band's width is \(1.28\sigma_S\), so it scales with \(\sigma_S\) and has **no
 fixed size**. For three clusters on a clean line over four days it is
 \(-0.045255 \le C_{estimate} < 0\) dKH/day; with a longer span it narrows, and with
-residual scatter above the 0.10 floor it widens without bound. A noisy series therefore
-tolerates a larger unexplained gain on this branch than a clean one does, which is the
-direct consequence of using \(\sigma_S\) as the boundary and is recorded here rather than
-implied.
+residual scatter above the 0.10 floor it widens without bound.
+
+**Owner decision 16 removes that width from safety sizing, and deliberately invents no
+ceiling for it.** The band still scales with \(\sigma_S\) and still has no fixed size, but
+it no longer controls the delivered high-breach rate: that comes from \(R_{down}\) and the
+established dose, both of which are bounded. What the band still decides is the recorded
+maintenance classification, the wording and the maintenance evidence state — none of which
+sizes an actuator command.
 
 ### Slight negative within uncertainty
 
@@ -7374,7 +7798,7 @@ Default response to materially unexplained negative consumption:
 
 ### Explicit outer-bound exception
 
-If the latest Alk is **above `OuterMax`**, `ALK-HIGH-BREACH-UNRESOLVED-001` may recommend a temporary pause of actual Alk delivery to 0 mL/day.
+If the latest Alk is **above `OuterMax`**, `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes a temporary reduction of actual Alk delivery, which floors at 0 mL/day where the established contribution cannot absorb \(R_{down}\).
 
 That is a safety fail-safe, not a new maintenance estimate.
 
@@ -7382,8 +7806,12 @@ Therefore these two statements are simultaneously true:
 
 ```text
 acceptedPermanentMaintenanceEstimate = preserved / unresolved
-temporarySafetyDoseRecommendation = 0 mL/day
+temporarySafetyDoseRecommendation = max(0, D_established - R_down / P_selected)
 ```
+
+**Superseded by owner decision 16**, preserved for history — this section previously read
+`temporarySafetyDoseRecommendation = 0 mL/day`, chosen by the materiality classification
+rather than sized.
 
 This deliberately removes V1's ordinary exception that allowed position/trajectory to size a permanent maintenance reduction when the mass-balance model itself was non-physical, while preserving the separate outer-bound fail-safe.
 
@@ -8102,7 +8530,7 @@ Do not issue +0.604 dKH/day as two independently legal recommendations.
 
 ### High-breach unresolved fail-safe
 
-The temporary 0 mL/day pause under `ALK-HIGH-BREACH-UNRESOLVED-001` is not a modeled trajectory target because consumption is explicitly uninterpretable.
+The temporary high-breach safety rate under `ALK-HIGH-BREACH-SAFETY-SIZING-001` — including the case where it floors at 0 mL/day — is not a modeled trajectory target, because \(C_{estimate}\) is not usable and the rate is derived from the established-dose contribution rather than from a consumption model.
 
 Do not manufacture a predicted movement solely to force that fail-safe through the ordinary rail calculation.
 
@@ -14403,24 +14831,44 @@ not silent adoption of 0.140.
 ---
 
 
-## WG-ALK-051 — High breach + uninterpretable consumption pauses Alk addition
+## WG-ALK-051 — High breach + unusable consumption sizes a temporary safety rate
+
+**Amended by owner decision 16.** The inputs are unchanged; the potency already implied by
+the default configuration is now stated because the sizing rule needs it.
 
 Inputs:
 
 ```text
 OuterMax = 11.0 dKH
+A_safe,high = 10.80 dKH
 latest Alk = 11.40 dKH
 current Alk dose = 10.0 mL/day
-consumptionEstimate = NON_PHYSICAL_OR_UNINTERPRETABLE
+P_selected = 0.0693 dKH/mL
+consumptionEstimate = NEGATIVE, NOT USABLE FOR SIZING
 no temporary upward correction active
 ```
+
+Sizing under `ALK-HIGH-BREACH-SAFETY-SIZING-001`:
+
+\[
+R_{down}=\min(11.40-10.80,\ 0.50)=0.50\ dKH/day
+\]
+
+\[
+\frac{R_{down}}{P_{selected}}=7.215007215007215\ mL/day
+\]
+
+\[
+D_{safety,temp}=\max(0,\ 10.0-7.215007215007215)=2.784992784992785\ mL/day
+\]
 
 Required:
 
 ```text
 outerBoundState = BREACHED_HIGH
 interventionType = SAFETY_RETURN
-safetyDoseRecommendation = 0 mL/day
+temporarySafetyRateAdvisoryMlPerDay = 2.784992784992785
+temporarySafetyPumpCommandMlPerDay = 2.8      # ALK-ROUNDING-001, 0.1 mL/day increment
 maintenanceEstimateStatus = UNRESOLVED
 actualDoseState = unchanged until user/pump confirms implementation
 nextTest ≈ 24 h
@@ -14430,7 +14878,11 @@ Forbidden:
 
 ```text
 recommend continuing 10.0 mL/day merely because permanent maintenance cannot be recalculated
+pause to 0 mL/day chosen by the materiality classification rather than reached by the sizing floor
 ```
+
+**Superseded wording, preserved:** this golden previously required
+`safetyDoseRecommendation = 0 mL/day` on the materially-negative branch.
 
 ---
 
@@ -15856,10 +16308,37 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | F5-13 no zero-dose pause on an uncertainty-limited negative estimate | `ALK-HIGH-BREACH-NO-PAUSE-001` (new, in `ALK-031`) | `OI-HIGHBREACHBAND-001` |
 | F5-14 coalesce same-timestamp clusters before selection | `ALK-SAME-TIMESTAMP-COALESCE-001` (new, under `ALK-008`) | `OI-CLUSTERTIE-001` |
 | F5-15 24 h floor on the ordinary signal candidate | `ALK-RETEST-SCHEDULER-001` amended (`ALK-053A`) | `OI-RETESTFLOOR-001` |
+| **16** high-breach safety sizing when consumption is unusable | `ALK-HIGH-BREACH-SAFETY-SIZING-001` (new, in `ALK-003A`); `ALK-HIGH-BREACH-UNRESOLVED-001`, `ALK-HIGH-BREACH-NO-PAUSE-001`, `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`, `WG-ALK-051` amended | `OI-HIGHBREACHSIZING-001` |
+| **17** one canonical Alk testing episode | `ALK-TESTING-EPISODE-001` (new, `ALK-005B`); `ALK-REPEAT-SPREAD-DOMAIN-001` (new, in `ALK-005`); `ALK-SAME-TIMESTAMP-COALESCE-001` amended | `OI-EPISODE-001` |
+| **18** repeat-spread domain and exact decimal thresholds | `ALK-REPEAT-SPREAD-DOMAIN-001` (new, in `ALK-005`); `ALK-DECIMAL-THRESHOLD-001` (new, `ALK-005E`) | `OI-CROSSMETHOD-001`, `OI-DECIMALTHRESHOLD-001` |
+| **19** one episode output for every Alk consumer | `ALK-EPISODE-RESOLUTION-001` (new, `ALK-005C`); `ALK-EPISODE-SINGLE-OUTPUT-001` (new, `ALK-005D`); `ALK-010` and `ALK-RAPID-BASIS-001` amended | `OI-EPISODECONSUMER-001` |
 
 All eleven blocking items are closed, and so are the three items independent review of the
 first encoding opened. Every withheld output they gated now has a determined value or a
 **canonised** `NOT_RUN`.
+
+### Decisions 16–19 — what they supersede
+
+Independent review of the F5-13/14/15 amendments reported six findings that could change an
+actuator command, a safety action, evidence selection, outer-bound classification,
+`rapidConfirmed` or a retest output. They were reported rather than resolved. The owner then
+decided them as decisions 16–19, which are part of `ALK_V2_FREEZE_5` and **supersede the
+earlier Freeze-5 wording wherever they conflict**:
+
+| Superseded | By | Effect |
+|---|---|---|
+| `ALK-HIGH-BREACH-UNRESOLVED-001`'s automatic pause to 0 mL/day | `ALK-HIGH-BREACH-SAFETY-SIZING-001` | zero is a floor reached by sizing, never a classification's choice |
+| `ALK-HIGH-BREACH-NO-PAUSE-001`'s HOLD of the established delivery rate | `ALK-HIGH-BREACH-SAFETY-SIZING-001` | the delivered rate is sized from `R_down` and the established dose |
+| `ALK-SAME-TIMESTAMP-COALESCE-001`'s exact-timestamp-only membership | `ALK-TESTING-EPISODE-001` | membership is the episode; a three-minute offset changes nothing |
+| `ALK-SAME-TIMESTAMP-COALESCE-001`'s pooling of incompatible methods | `ALK-EPISODE-RESOLUTION-001` | incompatible methods are contested, never averaged |
+| `ALK-005`'s 0.20 dKH applied across methods | `ALK-REPEAT-SPREAD-DOMAIN-001` | 0.20 dKH is a same-method repeat threshold only |
+| binary64 deciding a canonical decimal threshold | `ALK-DECIMAL-THRESHOLD-001` | exact decimal comparison; `0.20 > 0.20` is false |
+| any consumer choosing among raw measurements in one episode | `ALK-EPISODE-SINGLE-OUTPUT-001` | position, rapid, selection and forecast all read one resolved value |
+
+The findings closed are `F5-13-NO-SAFETY-RATE`, `F5-13-BAND-WIDTH` (as a sizing issue),
+`F5-14-POSITION-ORDER`, `F5-14-RAPID-SCOPE`, `F5-14-EPSILON`, `ALK-005-FP-BOUNDARY` and
+`F5-14-ALK005-DOMAIN`. Their register entries are section A3 of
+`docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md`.
 
 ### The three amendments
 
@@ -15889,6 +16368,22 @@ sigma_Alk_base      = 0.10 dKH      # F5-09 T_signal numerator
 
 F5-14 introduces no constant at all: it pools measurements and re-applies Part II §5.4-§5.6
 and `ALK-005` to the larger pool.
+
+Decisions 16–19 introduce **no new numeric constant either**:
+
+```text
+0.50 dKH/day rail   = ALK-046       # decision 16, R_down saturation
+A_safe,high         = ALK-003A      # decision 16, R_down
+P_selected          = ALK-014/016   # decision 16, dose-equivalent of R_down
+D_established       = dose history  # decision 16, the controllable contribution
+30 min episode window = ALK-005 / Part II §5.3   # decision 17 membership
+0.20 dKH spread     = ALK-005       # decision 18, same-method domain only
+```
+
+Decision 18 explicitly **forbids** an epsilon for the decimal comparison, and forbids a
+cross-method concordance threshold; decision 16 explicitly **forbids** a new ceiling for the
+\(1.28\sigma_S\) maintenance-classification band. Both absences are canonised as `NOT_RUN`
+rather than filled.
 
 `sigma_P`, `sigma_D`, `K_detect`, a generic `RequiredMovement`, a `boundarySafetyMargin`
 distinct from the 24 h lead, a `minimumExposure`, a scheduler minimum useful interval, an
@@ -15924,7 +16419,16 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
 - normalization uncertainty propagation (`OI-NORMUNCERT-001`);
 - minimum post-change exposure (`OI-EXPOSURE-001`);
 - `ALK-037`'s Day-4 wording (`OI-DAY4-001`) and `ALK-012`'s illustrative examples
-  (`OI-STABLE-001`), both documentation defects whose normative text already governs.
+  (`OI-STABLE-001`), both documentation defects whose normative text already governs;
+- **method compatibility classification** — which Alk test methods, if any, are compatible
+  (`compatibleMethodClassification = NOT_RUN`, `ALK-REPEAT-SPREAD-DOMAIN-001`);
+- **cross-method concordance** — any numeric threshold for disagreement between
+  incompatible methods (`crossMethodConcordanceThreshold = NOT_RUN`);
+- **a ceiling for the \(1.28\sigma_S\) maintenance-classification band** — decision 16
+  removes it from safety sizing and deliberately leaves its width uncapped;
+- **outer-bound classification from a contested episode** — no worst-case-member rule is
+  created; the classification is withheld and an immediate repeat requested
+  (`ALK-EPISODE-SINGLE-OUTPUT-001`).
 
 ### Freeze status
 
@@ -16565,7 +17069,7 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-OUTER-BOUND-ACTION-001` | `WG-ALK-041`, `WG-ALK-051` |
 | `ALK-SAFETY-BUFFER-001` | `WG-ALK-041`, `WG-ALK-053` |
 | `ALK-SAFETY-CORRECTION-RESOLUTION-001` | `WG-ALK-061` |
-| `ALK-HIGH-BREACH-UNRESOLVED-001` | `WG-ALK-051` |
+| `ALK-HIGH-BREACH-UNRESOLVED-001` | `WG-ALK-051`, `AD-SAF-007` |
 | `ALK-SAFETY-RETURN-INTEGRATION-001` | `WG-ALK-052`, `WG-ALK-056`, `WG-ALK-058`, `WG-ALK-059`, `WG-ALK-060` |
 | `ALK-SAFETY-MG-OVERRIDE-001` | `WG-ALK-055` |
 | `ALK-MINIMUM-CADENCE-001` | `ALK-G002`, `ALK-G003`, `WG-ALK-049` |
@@ -16615,13 +17119,19 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-NEGATIVE-MATERIALITY-001` | `AD-CON-002`, `WG-ALK-013`, `ALK-G026` |
 | `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` | `WG-ALK-014`, `AD-RTN-003`, `AD-MNT-008` |
 | `ALK-TOWARD-RANGE-HOLD-001` | `AD-MNT-006`, `AD-MNT-007`, `AD-MNT-008` |
-| `ALK-RAPID-BASIS-001` | `AD-RAP-001` |
+| `ALK-RAPID-BASIS-001` | `AD-RAP-001`, `AD-EPI-004` |
 | `ALK-RETURN-TERMINATED-BY-SAFETY-001` | `AD-RTN-004`, `AD-RTN-005` |
 | `ALK-RETEST-SCHEDULER-001` | `AD-RET-001`, `AD-RET-002`, `AD-RET-003`, `AD-RET-004`, `WG-ALK-060` |
 | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` | `WG-ALK-011`, `AD-SEG-006`, `ALK-G022` |
 | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | `AD-SAF-002`, `AD-SAF-005` |
-| `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002` |
-| `ALK-SAME-TIMESTAMP-COALESCE-001` | `AD-SEG-007`, `AD-SEG-008` |
+| `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002`, `AD-SAF-008` |
+| `ALK-SAME-TIMESTAMP-COALESCE-001` | `AD-SEG-007`, `AD-SEG-008`, `AD-EPI-002` |
+| `ALK-HIGH-BREACH-SAFETY-SIZING-001` | `AD-SAF-007`, `AD-SAF-008`, `AD-CON-002`, `WG-ALK-051` |
+| `ALK-REPEAT-SPREAD-DOMAIN-001` | `AD-VAL-002`, `AD-EPI-002` |
+| `ALK-TESTING-EPISODE-001` | `AD-EPI-001`, `AD-EPI-002` |
+| `ALK-EPISODE-RESOLUTION-001` | `AD-EPI-002`, `AD-EPI-003` |
+| `ALK-EPISODE-SINGLE-OUTPUT-001` | `AD-EPI-003`, `AD-EPI-004` |
+| `ALK-DECIMAL-THRESHOLD-001` | `AD-VAL-002` |
 
 ---
 

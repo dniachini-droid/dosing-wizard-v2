@@ -58,17 +58,17 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 112 assertions over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
-| `fixtures/*.json` | Machine-readable golden corpus — 178 fixtures plus schema, config defaults and index. |
-| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 273-rule traceability inventory. |
+| `validate-freeze-5.py` | Mechanical gate: 171 assertions over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| `fixtures/*.json` | Machine-readable golden corpus — 185 fixtures plus schema, config defaults and index. |
+| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 279-rule traceability inventory. |
 
 ## At a glance
 
 ```text
-273  normative canon rules inventoried, each with exactly one implementation owner
-178  fixtures  (102 canon-verbatim, 48 canon-derived, 28 canon-qualitative)
-241  reason codes across 23 owner groups  (18 retired by Freeze 5)
- 66  machine-testable invariants
+279  normative canon rules inventoried, each with exactly one implementation owner
+185  fixtures  (102 canon-verbatim, 55 canon-derived, 28 canon-qualitative)
+248  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 more by owner decisions 16-19)
+ 69  machine-testable invariants
  43  open issues  (16 resolved by Freeze 5 and its amendments,
                   11 canon defects carried forward, 13 pinned, 3 no-problem)
   0  outputs withheld for want of an owner decision

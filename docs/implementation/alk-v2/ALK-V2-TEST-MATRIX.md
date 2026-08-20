@@ -151,9 +151,13 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | F5-10 water-change confidence tier | `WG-ALK-011`, `ALK-G022` | `AD-SEG-006` — same arithmetic, lower tier, opposite outcome |
 | F5-11 temporary safety rate | `AD-SAF-002` | `AD-SAF-005` three capability cases |
 | F5-12 recommendation confidence | `AD-OUT-001` | same fixture: the three-valued label and any arithmetic path forbidden |
-| F5-13 no pause on an uncertainty-limited negative | `AD-CON-002` variant 1.6, `WG-ALK-051` | `AD-CON-002` variant 1.5 — one increment apart, opposite delivery action |
-| F5-14 same-timestamp coalescing | `AD-SEG-007` | `AD-SEG-008` (a 0.30 dKH pool stays `ANOMALOUS`); both forbid order-dependent selection |
+| F5-13 no pause on an uncertainty-limited negative | `AD-CON-002` variant 1.6, `WG-ALK-051` | `AD-CON-002` variant 1.5 — superseded for sizing by owner decision 16; both variants now receive the same delivered rate |
+| F5-14 same-timestamp coalescing | `AD-SEG-007` | `AD-SEG-008` (a 0.30 dKH same-method pool stays `ANOMALOUS`); both forbid order-dependent selection |
 | F5-15 ordinary signal floor | `AD-RET-001` | `AD-RET-004` (the floor must not reach an outer-bound candidate) |
+| **16** high-breach safety sizing | `AD-SAF-007` (`A_now` sweep, rail saturation, zero floor, materiality straddle), `WG-ALK-051` | `AD-SAF-008` (continuity across the materiality boundary), `AD-CON-002` (identical delivered rate on both sides) |
+| **17** canonical testing episode | `AD-EPI-001`, `AD-SEG-007` | `AD-EPI-002` (incompatible methods contested, three-minute offset, reversed insertion order), `AD-SEG-008` |
+| **18** repeat-spread domain and exact decimals | `AD-VAL-002` | `AD-VAL-002` straddling pairs and `CROSS_METHOD`; `AD-EPI-002` |
+| **19** one episode output per consumer | `AD-EPI-003`, `AD-EPI-004` | `AD-EPI-003` (both ordering answers and the older episode forbidden), `AD-EPI-004` (both member slopes and the older-pair fallback forbidden) |
 
 ## 5A. Still-open-issue coverage
 

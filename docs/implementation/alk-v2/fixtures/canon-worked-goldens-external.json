@@ -119,22 +119,70 @@
     },
     {
       "fixtureId": "WG-ALK-051",
-      "title": "High breach plus uninterpretable consumption pauses Alk addition",
-      "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-051", "ALK-HIGH-BREACH-UNRESOLVED-001"] },
-      "rulesExercised": ["ALK-HIGH-BREACH-UNRESOLVED-001", "ALK-NEGATIVE-CONSUMPTION-001", "ALK-NEGATIVE-MATERIALITY-001"],
-      "input": { "outerMaxDkh": 11.0, "latestAlkDkh": 11.40, "currentAlkDoseMlPerDay": 10.0, "consumptionEstimate": "MATERIALLY NEGATIVE under ALK-NEGATIVE-MATERIALITY-001, i.e. C_estimate + 1.28*sigma_S < 0", "temporaryUpwardCorrectionActive": false },
+      "title": "High breach plus an unusable consumption estimate sizes a temporary safety rate",
+      "provenance": {
+        "class": "CANON_VERBATIM",
+        "canonSource": [
+          "WG-ALK-051",
+          "ALK-HIGH-BREACH-SAFETY-SIZING-001"
+        ],
+        "note": "Amended by owner decision 16 together with the canon golden. The potency is the CANON_DEFAULT the golden already assumed; R_down/P_selected is the corpus derived constant railAsDoseDeltaMlPerDay."
+      },
+      "rulesExercised": [
+        "ALK-HIGH-BREACH-SAFETY-SIZING-001",
+        "ALK-HIGH-BREACH-UNRESOLVED-001",
+        "ALK-NEGATIVE-CONSUMPTION-001",
+        "ALK-NEGATIVE-MATERIALITY-001",
+        "ALK-ROUNDING-001"
+      ],
+      "input": {
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "latestAlkDkh": 11.4,
+        "currentAlkDoseMlPerDay": 10.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1,
+        "consumptionEstimate": "MATERIALLY NEGATIVE under ALK-NEGATIVE-MATERIALITY-001, and therefore NOT USABLE for safety-dose sizing",
+        "temporaryUpwardCorrectionActive": false
+      },
       "expectedAction": {
         "outerBoundState": "BREACHED_HIGH",
         "interventionType": "SAFETY_RETURN",
-        "safetyDoseRecommendationMlPerDay": 0,
+        "temporarySafetyRateAdvisoryMlPerDay": 2.784992784992785,
+        "temporarySafetyPumpCommandMlPerDay": 2.8,
         "maintenanceEstimateStatus": "UNRESOLVED",
         "actualDoseState": "unchanged until user/pump confirms implementation",
         "failSafeGated": false,
-        "nextTestApproxHours": 24
+        "nextTestApproxHours": 24,
+        "supersededExpectation": {
+          "safetyDoseRecommendationMlPerDay": 0
+        }
       },
-      "expectedReasonCodes": ["SAFETY_OUTER_BOUND_BREACHED_HIGH", "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE", "RETEST_HIGH_BREACH_FAILSAFE"],
-      "forbidden": { "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden.", "reasonCodes": ["SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED"] },
-      "openIssues": ["OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03); the fail-safe is un-gated on the MATERIAL branch, which is this fixture. The narrow non-material band is OI-HIGHBREACHBAND-001 and is exercised by AD-CON-002."]
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+        "SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE",
+        "RETEST_HIGH_BREACH_FAILSAFE"
+      ],
+      "forbidden": {
+        "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden, and so is pausing to 0 mL/day because the estimate is materially negative - 10.0 exceeds R_down/P_selected, so the floor is not reached here.",
+        "temporarySafetyRateAdvisoryMlPerDay": [
+          0,
+          10.0
+        ],
+        "reasonCodes": [
+          "SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED",
+          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE"
+        ]
+      },
+      "openIssues": [
+        "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03)",
+        "OI-HIGHBREACHSIZING-001 - RESOLVED by owner decision 16: the material branch is sized, not paused. The narrow non-material band is OI-HIGHBREACHBAND-001 and is exercised by AD-CON-002."
+      ],
+      "expectedIntermediateEvidence": {
+        "rDownDkh": 0.5,
+        "rDownAsDoseMlPerDay": 7.215007215007215,
+        "railBound": true
+      }
     },
     {
       "fixtureId": "WG-ALK-052",

@@ -129,39 +129,57 @@ window.
 
 **PRECONDITIONS** clusters built; segment bounds known.
 
-**ALGORITHM** — step 0 first: same-timestamp clusters are coalesced *before* any of the
-selection below runs.
+**ALGORITHM** — step 0 first: testing episodes are constructed and resolved *before* any of
+the selection below runs (**owner decisions 17 and 19**; this supersedes the exact-timestamp
+coalescing step Freeze 5 first specified here).
 
 ```text
-STEP 0, before selection      [ALK-SAME-TIMESTAMP-COALESCE-001]
-    group candidates by identical representativeAt
-    for each group of size > 1:
-        pool the COMBINED underlying measurements of its clusters
-        rebuild ONE cluster from the pool using the existing rules:
-            PII-5.4 representative value   = median(pooled raw readings)
-            PII-5.5 representative timestamp
-            PII-5.6 internal spread, and ALK-005
-        CLUSTER_SAME_TIMESTAMP_COALESCED
-    selection then runs over a UNIQUE-TIME sequence, so ordering is total
+STEP 0, before selection      [ALK-TESTING-EPISODE-001, ALK-EPISODE-RESOLUTION-001]
+    group measurements into TESTING EPISODES:
+        explicit repeat/confirmation relationship (PII-5.2) where present
+        otherwise the EXISTING 30-minute repeatClusterWindow (PII-5.3, ALK-005)
+        membership is the EPISODE, not an identical timestamp - a three-minute
+        offset does not create two episodes
 
-    Reachable: PII-5.3 groups automatically only within the same or a compatible method,
-    so two incompatible methods at one instant yield two clusters at one timestamp.
+    exclude INVALID measurements (PII-4.3), then per episode:
+        all remaining members same-method (or canon-classified compatible):
+            pool the COMBINED underlying measurements
+            rebuild ONE value from the pool using the existing rules:
+                PII-5.4 representative value   = median(pooled raw readings)
+                PII-5.5 representative timestamp
+                PII-5.6 internal spread, and ALK-005
+            episodeStatus = RESOLVED
+            EPISODE_MEASUREMENTS_POOLED (+ EPISODE_RESOLVED)
+        otherwise:
+            episodeStatus = CONTESTED_METHODS
+            no episode value is emitted; members are preserved and kept distinct
+            ALK-005's 0.20 dKH is NOT applied across incompatible methods
+            EPISODE_CONTESTED_METHODS + EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT
+            RETEST_EPISODE_CONTESTED -> REPEAT_NOW  (ALK-051, PII-48)
 
-    NEVER: choose between them by event order, ID order, insertion order, database
-    ordering or implementation sorting - that makes the actuator command a property of
-    how the rows were stored.
-    NEVER: average the two cluster medians - the value is the median of the POOLED raw
-    readings.
-    NEVER: let coalescing hide an inconsistency - a pool spanning > 0.20 dKH is
+    selection then runs over ONE CANDIDATE PER EPISODE, so ordering is total
+
+    compatibleMethodClassification = NOT_RUN   [ALK-REPEAT-SPREAD-DOMAIN-001]
+    crossMethodConcordanceThreshold = NOT_RUN  - no canon rule classifies any two
+        distinct Alk methods as compatible, and no cross-method threshold exists
+
+    NEVER: choose between contested members by event order, ID order, insertion order,
+    database ordering or implementation sorting - that makes the actuator command a
+    property of how the rows were stored.
+    NEVER: average incompatible-method measurements, or average two cluster medians -
+    a same-method episode value is the median of the POOLED raw readings.
+    NEVER: let pooling hide an inconsistency - a SAME-METHOD pool spanning > 0.20 dKH is
     ANOMALOUS under ALK-005 and takes PII-48's path.
+    NEVER: fall back to an older episode because the latest one is contested.
 ```
 
 Then forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`) over the
-resulting unique-time sequence.
+resulting one-per-episode sequence (`ALK-SAME-TIMESTAMP-COALESCE-001`, amended).
 
 ```text
-candidates = coalesced clusters in the selected segment, ascending by representativeAt
-             (unique timestamps by construction after step 0)
+candidates = resolved episode outputs in the selected segment, ascending by representativeAt
+             (unique times by construction after step 0; a CONTESTED episode supplies
+              no candidate and withholds the affected inference instead)
 accepted   = []
 anchor     = null
 
@@ -214,8 +232,11 @@ cluster; any selection whose result depends on the newest reading.
 
 **TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (appended
 cluster does not change selection; backdated-earlier case asserted separately);
-`AD-SEG-007` (identical representative timestamps ⇒ coalesced, not chosen between);
-`AD-SEG-008` (a coalesced pool spanning > 0.20 dKH stays `ANOMALOUS`);
+`AD-SEG-007` (two same-method clusters at one sampling moment ⇒ pooled, not chosen between);
+`AD-SEG-008` (a same-method pool spanning > 0.20 dKH stays `ANOMALOUS`);
+`AD-EPI-001` (same-method repeats are one episode and one independent observation);
+`AD-EPI-002` (incompatible methods ⇒ `CONTESTED_METHODS`; identical output under a
+three-minute offset and under reversed insertion order);
 `EVD-002` all spacings ≥ 24 h proceeds normally.
 
 ## A5 — Segment construction
@@ -650,16 +671,18 @@ C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY
         -> maintenanceAction = HOLD
         -> CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED
 
-    high-breach consequence above OuterMax:        [ALK-HIGH-BREACH-NO-PAUSE-001]
-        materially negative      -> ALK-HIGH-BREACH-UNRESOLVED-001, 0 mL/day pause
-        NOT materially negative  -> DO NOT pause to 0 mL/day
-                                    HOLD the established maintenance dose
-                                    outer-bound state, SAFETY_RETURN and the ~24 h
-                                      cadence all continue unchanged
-                                    maintenanceEstimateStatus = UNRESOLVED
-                                    SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
-    maintenance is HOLD on both branches either way; a held dose is NOT a claim that
-    biological consumption is zero
+    high-breach consequence above OuterMax:        [ALK-HIGH-BREACH-SAFETY-SIZING-001]
+        BOTH negative branches    -> C_estimate is NOT usable for safety-dose sizing
+                                     D_safety_temp = max(0, D_established
+                                                            - R_down / P_selected)
+                                     outer-bound state, SAFETY_RETURN and the ~24 h
+                                       cadence all continue unchanged
+                                     maintenanceEstimateStatus = UNRESOLVED
+                                     SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
+        the materiality classification does NOT choose the delivered rate
+          (owner decision 16; supersedes the F5-13 split of 0 mL/day versus HOLD)
+    the MAINTENANCE ESTIMATE is HOLD on both branches either way; a held estimate is NOT
+    a claim that biological consumption is zero
 ```
 
 At exactly `C_estimate + 1.28 * sigma_S = 0` the result is **not** materially negative.
@@ -1505,7 +1528,7 @@ only to the Alk outer-bound safety return.
 **DECISION TREE**
 
 ```text
-consumption INTERPRETABLE:
+consumption INTERPRETABLE  (C_estimate >= 0):
     R_down        = min(A_now - A_safe_high, 0.50)
     S_safety      = -R_down
     D_safety_temp = max(0, (C_estimate + S_safety) / P_selected)      [mL/day]
@@ -1522,40 +1545,53 @@ consumption INTERPRETABLE:
         ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
         P_selected invalid -> neither field; state the required dKH movement only
 
-consumption NEGATIVE but NOT materially negative:      [ALK-HIGH-BREACH-NO-PAUSE-001]
-    safetyDoseRecommendationMlPerDay = NOT_RUN   (no pause to 0 mL/day)
-    recommendedDoseMlPerDay          = D_current (HOLD the established dose)
-    outerBoundState / SAFETY_RETURN / ~24 h retest continue unchanged
-    maintenanceEstimateStatus        = UNRESOLVED
-    SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
-
-consumption MATERIALLY NEGATIVE (ALK-NEGATIVE-MATERIALITY-001):
-                                                       [ALK-HIGH-BREACH-UNRESOLVED-001]
+consumption NEGATIVE - EITHER side of the materiality boundary:
+                                              [ALK-HIGH-BREACH-SAFETY-SIZING-001]
+    C_estimate is NOT usable for safety-dose sizing
+    R_down        = min(A_now - A_safe_high, 0.50)
+    D_safety_temp = max(0, D_established - R_down / P_selected)       [mL/day]
     stop any separately temporary upward correction/return component
-    safetyDoseRecommendation  = 0 mL/day
-    safetyDoseReason          = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
+    safetyDoseReason          = HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING
     maintenanceEstimateStatus = UNRESOLVED
-    do NOT label 0 mL/day a newly inferred permanent maintenance requirement
+    SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE
+    D_established <= R_down / P_selected -> the rate FLOORS at 0 mL/day
+        SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO
+    do NOT label the rate a newly inferred permanent maintenance requirement
     preserve the established maintenance estimate/history separately
     retest ~24 h, or sooner if a rapid/suspicious rule requires it
+
+    the advisory/executable separation, the rails, the guard and the rounding are
+    exactly those of the interpretable branch above
+
+    REQUIRED, and checkable:
+        the rate DECREASES as A_now rises, until R_down saturates at the 0.50 rail
+        the rate moves ONE actuator increment per increment of D_established,
+          including across the materiality boundary
+        the materiality classification changes wording and evidence state only
 ```
 
-`C_estimate >= 0` is `INTERPRETABLE`. A **materially negative** `C_estimate` arms the
-zero-dose pause. A negative `C_estimate` that is **not** materially negative does **not**:
-pausing delivery is a fail-safe against a demonstrably broken mass balance, and an estimate
-negative only inside its own uncertainty has not demonstrated one. All three branches HOLD
-maintenance, and none of them infers zero biological consumption.
+`C_estimate >= 0` is `INTERPRETABLE` and sizes from consumption. Any negative
+`C_estimate` — on either side of `ALK-NEGATIVE-MATERIALITY-001`'s boundary — is unusable for
+sizing and takes the established-dose form instead (**owner decision 16**). Both branches
+leave the **maintenance estimate** `UNRESOLVED`, and neither infers zero biological
+consumption.
 
-The zero-dose pause is a fail-safe response to an invalid model, not a claim that
-biological consumption is zero. It is **not** pushed through the ordinary rail
-calculation, because there is no modelled trajectory to rail (`ALK-046` high-breach
-clause). If the app cannot control the pump it says pausing is *recommended* and does not
-mark dosing as actually paused until implementation is confirmed.
+**Superseded, preserved:** this section previously split the two negative branches, arming a
+0 mL/day pause on the materially-negative side and holding the established dose on the
+other. That split produced a one-increment discontinuity and produced no safety rate at all
+on the middle branch.
 
-**TESTS** `WG-ALK-051` (materially negative ⇒ pause), `AD-SAF-002` (advisory rate emitted,
-pump command `NOT_RUN`), `AD-SAF-005` (negative control: the two fields must not be merged
-and no increment is invented), `AD-CON-002` (materiality straddle above `outerMax`: one
-actuator increment decides whether delivery is paused or held).
+The temporary safety rate is a fail-safe response to an invalid model, not a claim about
+biological consumption. It is **not** pushed through the ordinary rail calculation, because
+there is no modelled trajectory to rail (`ALK-046` high-breach clause); `R_down` is itself
+rail-bounded. If the app cannot control the pump it says the rate is *recommended* and does
+not mark it as implemented until implementation is confirmed.
+
+**TESTS** `WG-ALK-051` (materially negative ⇒ sized, not paused), `AD-SAF-002` (advisory
+rate emitted, pump command `NOT_RUN`), `AD-SAF-005` (negative control: the two fields must
+not be merged and no increment is invented), `AD-SAF-007` (`A_now` sweep, rail saturation,
+zero floor, materiality straddle), `AD-SAF-008` (negative control: continuity across the
+materiality boundary), `AD-CON-002` (both variants receive the same delivered rate).
 
 ## A41 — Safety-return completion and integration
 

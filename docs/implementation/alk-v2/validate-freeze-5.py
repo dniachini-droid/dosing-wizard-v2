@@ -65,7 +65,10 @@ NEW_RULES=['ALK-INDEPENDENT-SELECTION-001','ALK-SUSPECT-DETECTION-001','ALK-NEGA
  'ALK-RETURN-ELIGIBLE-TRAJECTORY-001','ALK-TOWARD-RANGE-HOLD-001','ALK-RAPID-BASIS-001',
  'ALK-RETURN-TERMINATED-BY-SAFETY-001','ALK-RETEST-SCHEDULER-001',
  'ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001','ALK-SAFETY-TEMP-RATE-RESOLUTION-001',
- 'ALK-HIGH-BREACH-NO-PAUSE-001','ALK-SAME-TIMESTAMP-COALESCE-001']
+ 'ALK-HIGH-BREACH-NO-PAUSE-001','ALK-SAME-TIMESTAMP-COALESCE-001',
+ # owner decisions 16-19
+ 'ALK-HIGH-BREACH-SAFETY-SIZING-001','ALK-REPEAT-SPREAD-DOMAIN-001','ALK-TESTING-EPISODE-001',
+ 'ALK-EPISODE-RESOLUTION-001','ALK-EPISODE-SINGLE-OUTPUT-001','ALK-DECIMAL-THRESHOLD-001']
 for rid in NEW_RULES:
     # a body = the id on its own line as a backticked marker in the canon
     body = re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M) is not None
@@ -125,7 +128,9 @@ DEC={'F5-01':['OI-INDEPENDENCE-001'],'F5-02':['OI-SUSPECT-001','OI-MADFLOOR-001'
  'F5-06':['OI-LIQUIDGUARD-001'],'F5-07':['OI-RAPIDBASIS-001'],'F5-08':['OI-RETURNDURINGSAFETY-001'],
  'F5-09':['OI-RETEST-001'],'F5-10':['OI-WATERCHANGE-001'],'F5-11':['OI-SAFETYRATE-001'],
  'F5-12':['OI-CONFIDENCE-001'],'F5-13':['OI-HIGHBREACHBAND-001'],'F5-14':['OI-CLUSTERTIE-001'],
- 'F5-15':['OI-RETESTFLOOR-001']}
+ 'F5-15':['OI-RETESTFLOOR-001'],
+ 'D16':['OI-HIGHBREACHSIZING-001'],'D17':['OI-EPISODE-001'],
+ 'D18':['OI-CROSSMETHOD-001','OI-DECIMALTHRESHOLD-001'],'D19':['OI-EPISODECONSUMER-001']}
 for dec,ois in DEC.items():
     pos=[fid for fid,(fn,f) in fixtures.items()
          if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
@@ -139,6 +144,14 @@ RESOLVED=['OI-INDEPENDENCE-001','OI-SUSPECT-001','OI-MADFLOOR-001','OI-NEGCONS-0
  'OI-RETURNOFFER-001','OI-BELOWRISING-001','OI-WATERCHANGE-001','OI-LIQUIDGUARD-001','OI-SAFETYRATE-001',
  'OI-RETURNDURINGSAFETY-001','OI-RAPIDBASIS-001','OI-CONFIDENCE-001',
  'OI-HIGHBREACHBAND-001','OI-CLUSTERTIE-001','OI-RETESTFLOOR-001']
+DECIDED_16_19=['OI-HIGHBREACHSIZING-001','OI-EPISODE-001','OI-CROSSMETHOD-001',
+ 'OI-DECIMALTHRESHOLD-001','OI-EPISODECONSUMER-001']
+for oi in DECIDED_16_19:
+    m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
+    if not m: check('register section for '+oi, False); continue
+    nxt=OI.find('\n## ', m.end()); nxt = nxt if nxt!=-1 else len(OI)
+    check(oi+' marked RESOLVED by an owner decision',
+          'RESOLVED by owner decision' in OI[m.start():nxt])
 for oi in RESOLVED:
     m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
     if not m: check('register section for '+oi, False); continue
@@ -148,7 +161,9 @@ for oi in RESOLVED:
 check('register keeps the original analysis (history not deleted)',
       'Failure scenario' in OI and 'Until closed (superseded by Freeze 5; historical)' in OI)
 n_res=OI.count('> **RESOLVED by `ALK_V2_FREEZE_5`')
-check('exactly 16 resolution boxes', n_res==16, str(n_res))
+check('exactly 16 Freeze-5 resolution boxes', n_res==16, str(n_res))
+n_d=OI.count('> **RESOLVED by owner decision')
+check('exactly 5 owner-decision 16-19 resolution boxes', n_d==5, str(n_d))
 
 # ---------- 9. no new numeric constant introduced by Freeze 5 ----------
 # The Freeze-5 declaration claims no new constant. Compare against the PINNED BASE, not
@@ -165,7 +180,7 @@ for c in ['1.28','0.10 dKH','0.20 dKH','0.02','24','48','0.50']:
 # ---------- 10. invariant count ----------
 INV=open(R+'docs/implementation/alk-v2/ALK-V2-INVARIANTS.md',encoding='utf-8').read()
 n=len(re.findall(r'^### INV-', INV, re.M))
-check('invariant bodies match the coverage total', n==66 and '| **Total** | **66** |' in INV, str(n))
+check('invariant bodies match the coverage total', n==69 and '| **Total** | **69** |' in INV, str(n))
 
 # ---------- 11. canon internal consistency for the amended rules ----------
 pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
@@ -178,8 +193,14 @@ pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
        ('ALK-RETEST-SCHEDULER-001','T_{signal,days}'),
        ('ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001','MEASURED\\\\_SAME\\\\_BATCH'),
        ('ALK-SAFETY-TEMP-RATE-RESOLUTION-001','temporarySafetyRateAdvisoryMlPerDay'),
-       ('ALK-HIGH-BREACH-NO-PAUSE-001','DO NOT recommend pausing'),
-       ('ALK-SAME-TIMESTAMP-COALESCE-001','coalesce same-timestamp clusters')]
+       ('ALK-HIGH-BREACH-NO-PAUSE-001','does NOT choose the delivered rate'),
+       ('ALK-SAME-TIMESTAMP-COALESCE-001','resolved testing-episode outputs'),
+       ('ALK-HIGH-BREACH-SAFETY-SIZING-001','D_{established}'),
+       ('ALK-REPEAT-SPREAD-DOMAIN-001','crossMethodConcordanceThreshold'),
+       ('ALK-TESTING-EPISODE-001','SAME TESTING EPISODE'),
+       ('ALK-EPISODE-RESOLUTION-001','CONTESTED_METHODS'),
+       ('ALK-EPISODE-SINGLE-OUTPUT-001','may independently choose'),
+       ('ALK-DECIMAL-THRESHOLD-001','compare exact decimal values')]
 for rid,token in pairs:
     m=re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M)
     seg=CANON[m.start():m.start()+9000] if m else ''
@@ -254,8 +275,17 @@ if len(man)==2:
     print('INFO  reported for the owner, not failed: repairing them is outside Freeze 5.')
 
 # ---------- 13. the canon may not instruct the engine to emit a retired code ----------
-canon_retired=sorted(c for c in retired if c in CANON)
-check('canon names no retired reason code', not canon_retired, str(canon_retired))
+# A retired code may still appear as PRESERVED HISTORY inside a marked superseded block -
+# decisions 16-19 supersede earlier Freeze-5 wording and the canon keeps that wording rather
+# than deleting it. History is quoted, so the exemption is exactly "on a blockquote line".
+# A retired code on any ordinary line is still a live instruction and still fails.
+canon_retired=[]
+for line in CANON.split('\n'):
+    if line.lstrip().startswith('>'): continue
+    for c in retired:
+        if c in line: canon_retired.append((c, line.strip()[:60]))
+check('canon names no retired reason code outside preserved history',
+      not canon_retired, str(sorted(set(x[0] for x in canon_retired))))
 
 # ---------- 14. independent arithmetic recomputation of every series fixture ----------
 from statistics import median as _med
@@ -342,6 +372,185 @@ check('every series fixture reproduces its stated intermediates',
       not mismatch, '%d recomputed; %s'%(recomputed,mismatch[:4]))
 check('no fixture states a slope the checker cannot recompute',
       not skipped, str(skipped))
+
+# ---------- 15. owner decisions 16-19, recomputed independently ----------
+from decimal import Decimal as _D
+
+def _fx(fid):
+    return fixtures[fid][1] if fid in fixtures else None
+
+def _round_to(x, inc):
+    """ALK-ROUNDING-001 nearest; ties are resolved toward the current dose and no case here
+    lands on a tie, so nearest is sufficient and a tie is reported as a mismatch."""
+    n=x/inc
+    lo=int(n)*inc; hi=lo+inc
+    dlo=abs(x-lo); dhi=abs(hi-x)
+    if abs(dlo-dhi)<1e-12: return None
+    return round(lo if dlo<dhi else hi, 10)
+
+# 15a. decision 16 - D_safety,temp = max(0, D_established - R_down/P), recomputed per case
+f=_fx('AD-SAF-007')
+check('AD-SAF-007 exists', f is not None)
+if f:
+    P_SEL=f['input']['selectedPotencyDkhPerMl']; ASH=f['input']['safetyDestinationHighDkh']
+    INC=f['input']['actuatorIncrementMlPerDay']
+    cin={c['case']:c for c in f['input']['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    cac={c['case']:c for c in f['expectedAction']['cases']}
+    bad=[]
+    for name,c in cin.items():
+        if c['alkDkh']<=f['input']['outerMaxDkh']: bad.append((name,'not a high breach'))
+        rd=min(c['alkDkh']-ASH, 0.50)
+        rdd=rd/P_SEL
+        rate=max(0.0, c['establishedDoseMlPerDay']-rdd)
+        for key,val in (('rDownDkh',rd),('rDownAsDoseMlPerDay',rdd)):
+            if abs(cev[name][key]-val)>1e-9: bad.append((name,key,cev[name][key],val))
+        if abs(cac[name]['temporarySafetyRateAdvisoryMlPerDay']-rate)>1e-9:
+            bad.append((name,'advisory',cac[name]['temporarySafetyRateAdvisoryMlPerDay'],rate))
+        cmd=_round_to(rate, INC)
+        if cmd is None or abs(cac[name]['temporarySafetyPumpCommandMlPerDay']-cmd)>1e-9:
+            bad.append((name,'pumpCommand',cac[name].get('temporarySafetyPumpCommandMlPerDay'),cmd))
+        if c['consumptionDkhPerDay']>=0: bad.append((name,'C_estimate must be negative on this path'))
+    check('AD-SAF-007 sizing recomputes from D_established - R_down/P_selected', not bad, str(bad[:4]))
+    # varies with A_now until the rail binds, then saturates
+    sweep=['SWEEP_11_05','SWEEP_11_20','SWEEP_11_30','SWEEP_11_80_RAIL']
+    rates=[cac[n]['temporarySafetyRateAdvisoryMlPerDay'] for n in sweep]
+    check('AD-SAF-007 safety rate strictly decreases as A_now rises below the rail',
+          rates[0]>rates[1]>rates[2], str(rates))
+    check('AD-SAF-007 R_down saturates at the 0.50 rail', abs(rates[2]-rates[3])<1e-12
+          and abs(cev['SWEEP_11_80_RAIL']['rDownDkh']-0.50)<1e-12, str(rates[2:]))
+    check('AD-SAF-007 floors at zero only when the established dose cannot absorb R_down',
+          cac['FLOOR']['temporarySafetyRateAdvisoryMlPerDay']==0
+          and cin['FLOOR']['establishedDoseMlPerDay']<=cev['FLOOR']['rDownAsDoseMlPerDay'])
+    # the materiality boundary must not move the delivered rate by more than the dose step
+    step=(cin['NOT_MATERIAL']['establishedDoseMlPerDay']-cin['MATERIAL']['establishedDoseMlPerDay'])
+    delta=(cac['NOT_MATERIAL']['temporarySafetyRateAdvisoryMlPerDay']
+           -cac['MATERIAL']['temporarySafetyRateAdvisoryMlPerDay'])
+    check('AD-SAF-007 materiality does not change the rate beyond the dose step',
+          abs(delta-step)<1e-9 and cev['MATERIAL']['materiallyNegative'] is True
+          and cev['NOT_MATERIAL']['materiallyNegative'] is False, 'step=%r delta=%r'%(step,delta))
+
+# 15b. decision 16 negative control - continuity across the materiality boundary
+f=_fx('AD-SAF-008')
+check('AD-SAF-008 exists', f is not None)
+if f:
+    P_SEL=f['input']['selectedPotencyDkhPerMl']
+    rd=f['expectedIntermediateEvidence']['rDownDkh']; rdd=f['expectedIntermediateEvidence']['rDownAsDoseMlPerDay']
+    bad=[]
+    if abs(rdd-rd/P_SEL)>1e-9: bad.append(('rDownAsDose',rdd,rd/P_SEL))
+    rates=f['expectedAction']['temporarySafetyRateAdvisoryMlPerDay']
+    prev=None
+    for d in f['input']['establishedDoseSweepMlPerDay']:
+        want=max(0.0, d-rdd); got=rates[repr(d) if repr(d) in rates else str(d)]
+        if abs(got-want)>1e-9: bad.append((d,got,want))
+        if prev is not None and abs((got-prev)-0.1)>1e-9: bad.append((d,'step',got-prev))
+        prev=got
+    check('AD-SAF-008 delivered rate is continuous across the materiality boundary', not bad, str(bad[:4]))
+    check('AD-SAF-008 records a zero discontinuity',
+          f['expectedAction']['discontinuityAcrossMaterialityBoundary']==0)
+
+# 15c. AD-CON-002 no longer canonizes the 1.5 -> pause / 1.6 -> hold discontinuity
+f=_fx('AD-CON-002')
+if f:
+    a=f['expectedAction']
+    r5=a['variant_1_5'].get('temporarySafetyRateAdvisoryMlPerDay')
+    r6=a['variant_1_6'].get('temporarySafetyRateAdvisoryMlPerDay')
+    check('AD-CON-002 delivers the same rate on both sides of the materiality boundary',
+          r5==r6 and a.get('deliveredRateIdenticalAcrossVariants') is True, '%r vs %r'%(r5,r6))
+    check('AD-CON-002 no longer states a pause on one side and a hold on the other',
+          'deliveryPaused' not in a['variant_1_5'] and 'recommendedDoseMlPerDay' not in a['variant_1_6'])
+    check('AD-CON-002 preserves the superseded expectation as history',
+          'supersededExpectation' in a)
+    # both doses are below R_down/P, so the floor - not the classification - explains the zero
+    rd=min(11.2-10.8,0.50)/0.0693
+    check('AD-CON-002 zero is the floor, not the classification',
+          1.5<=rd and 1.6<=rd and r5==0, 'R_down/P=%.9f'%rd)
+
+# 15d. decision 17/19 - contested episodes are order- and offset-invariant
+f=_fx('AD-EPI-002')
+check('AD-EPI-002 exists', f is not None)
+if f:
+    ev=f['expectedIntermediateEvidence']['everyCase']
+    cases=[c['case'] for c in f['input']['cases']]
+    check('AD-EPI-002 covers same-instant, three-minute offset and reversed insertion order',
+          set(cases)=={'SAME_INSTANT','THREE_MINUTE_OFFSET','REVERSED_INSERTION_ORDER'}, str(cases))
+    check('AD-EPI-002 states one contested episode for every case',
+          ev['episodeCount']==1 and ev['episodeStatus']=='CONTESTED_METHODS'
+          and ev['episodeValueDkh']=='NOT_RUN' and ev['alk005Applied'] is False)
+    vals=[r['alkDkh'] for c in f['input']['cases'] for r in c['readings']]
+    spread=float(max(vals)-min(vals))
+    check('AD-EPI-002 cross-method spread is below ALK-005 and contested anyway',
+          abs(ev['crossMethodSpreadDkh']-0.19)<1e-9 and ev['crossMethodSpreadDkh']<0.20,
+          '%r'%ev['crossMethodSpreadDkh'])
+    forb=f['forbidden']['episodeValueDkh']
+    check('AD-EPI-002 forbids the averaged and the order-chosen values',
+          11.045 in forb and 10.95 in forb and 11.14 in forb, str(forb))
+
+# 15e. decision 19 - position and rapid read the resolved episode
+f=_fx('AD-EPI-003')
+check('AD-EPI-003 exists', f is not None)
+if f:
+    c=f['expectedAction']['CONTESTED_LATEST']
+    check('AD-EPI-003 withholds position and outer-bound state on a contested latest episode',
+          c['position']=='NOT_RUN' and c['outerBoundState']=='NOT_RUN'
+          and c['retest']=='REPEAT_NOW' and c['priorEpisodePromotedToPosition'] is False)
+    r=f['expectedAction']['RESOLVED_LATEST']
+    reads=[x['alkDkh'] for x in f['input']['cases'][0]['readings']]
+    med=sorted(reads)[len(reads)//2] if len(reads)%2 else (sorted(reads)[len(reads)//2-1]+sorted(reads)[len(reads)//2])/2
+    check('AD-EPI-003 resolved position is the episode representative value',
+          abs(f['expectedIntermediateEvidence']['RESOLVED_LATEST']['episodeValueDkh']-med)<1e-9
+          and abs(r['positionDkh']-med)<1e-9 and r['outerBoundState']=='BREACHED_HIGH', '%r'%med)
+    forb=f['forbidden']['CONTESTED_LATEST']['positionDkh']
+    check('AD-EPI-003 forbids both ordering answers and the older episode',
+          10.95 in forb and 11.14 in forb and 10.6 in forb, str(forb))
+
+f=_fx('AD-EPI-004')
+check('AD-EPI-004 exists', f is not None)
+if f:
+    a=f['expectedAction']
+    check('AD-EPI-004 keeps a resolved non-accepted episode in the rapid pair',
+          a['RESOLVED_NOT_ACCEPTED']['rapidConfirmed'] is True)
+    ev=f['expectedIntermediateEvidence']['RESOLVED_NOT_ACCEPTED']
+    t0,t1=ev['rapidPairDays']
+    eps={e['atDay']:e['alkDkh'] for e in f['input']['cases'][0]['episodes']}
+    want=(eps[t1]-eps[t0])/(t1-t0)
+    check('AD-EPI-004 rapid pair slope recomputes', abs(ev['rapidPairSlopeDkhPerDay']-want)<1e-9
+          and abs(want)>=ev['rapidThresholdDkhPerDay'], '%r vs %r'%(ev['rapidPairSlopeDkhPerDay'],want))
+    check('AD-EPI-004 withholds rapidConfirmed on a contested latest episode',
+          a['CONTESTED_LATEST']['rapidConfirmed']=='NOT_RUN')
+    forb=f['forbidden']['CONTESTED_LATEST']['rapidPairSlopeDkhPerDay']
+    check('AD-EPI-004 forbids both member slopes and the older-pair fallback',
+          len(forb)==3 and -0.325 in forb and -0.15 in forb)
+
+# 15f. decision 18 - exact decimal semantics, recomputed with Decimal AND with binary64
+f=_fx('AD-VAL-002')
+check('AD-VAL-002 exists', f is not None)
+if f:
+    thr=f['input']['alk005ThresholdDkh']
+    cin={c['case']:c for c in f['input']['cases']}
+    cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    bad=[]; straddling=0
+    for name,c in cin.items():
+        reads=[str(x) for x in c['readingsDkh']]
+        exact=max(_D(x) for x in reads)-min(_D(x) for x in reads)
+        b64=max(float(x) for x in reads)-min(float(x) for x in reads)
+        if abs(float(cev[name]['exactDecimalSpreadDkh'])-float(exact))>1e-12:
+            bad.append((name,'spread',cev[name]['exactDecimalSpreadDkh'],str(exact)))
+        if name=='CROSS_METHOD':
+            if cev[name].get('alk005Applied') is not False or cev[name].get('episodeStatus')!='CONTESTED_METHODS':
+                bad.append((name,'cross-method must not use ALK-005'))
+            continue
+        if cev[name]['binary64SpreadGreaterThanThreshold']!=(b64>thr):
+            bad.append((name,'binary64 flag',cev[name]['binary64SpreadGreaterThanThreshold'],b64>thr))
+        want='ANOMALOUS' if exact>_D(str(thr)) else 'OK'
+        if cev[name]['clusterStatus']!=want:
+            bad.append((name,'status',cev[name]['clusterStatus'],want))
+        if exact==_D(str(thr)) and (b64>thr): straddling+=1
+    check('AD-VAL-002 exact-decimal statuses recompute', not bad, str(bad[:4]))
+    check('AD-VAL-002 carries pairs that binary64 would misclassify', straddling>=3, '%d straddling pairs'%straddling)
+    check('AD-VAL-002 exactly 0.20 is not anomalous',
+          all(cev[n]['clusterStatus']=='OK' for n in cev if n.startswith('EXACT_')))
+    check('AD-VAL-002 above 0.20 is still anomalous', cev['ABOVE']['clusterStatus']=='ANOMALOUS')
 
 print()
 print('%d checks failed' % len(fails))
