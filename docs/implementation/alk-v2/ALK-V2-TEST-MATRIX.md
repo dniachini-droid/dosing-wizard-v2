@@ -291,6 +291,9 @@ Recorded so their absence is a known choice, not an oversight.
   production wording belongs to Part IX and to the eventual UI.
 - **Fixtures for open issues that would require inventing the missing behaviour.** By
   design: those are the refusal fixtures in §5A.
-- **A committed runner.** Every count and cross-reference in this document is verifiable by
-  reading `fixtures/index.json` and `traceability/alk-v2-traceability.json`; the executable
-  checker belongs with the implementation, which does not exist yet.
+- **A committed fixture runner.** Executing a fixture needs an engine, which does not exist
+  yet. What *is* committed is `validate-freeze-5.py`, the structural gate over rule IDs,
+  traceability, the fixture index, the reason-code closed set, invariant counts and canon
+  consistency — 88 assertions, shown to fail on five deliberate mutations before being
+  trusted (`docs/process/runs/2026-08-20-alk-v2-freeze-5.md`). It checks that the corpus is
+  coherent, not that an engine reproduces it.
