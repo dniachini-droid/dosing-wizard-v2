@@ -443,8 +443,9 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** this package's conformance gate item 8; `CORE-INFORM-PROCEED-001`.
 - **Generator:** construct the trigger condition for each still-open issue whose "Until
   closed" behaviour withholds or degrades an output — `OI-EXPOSURE-001`,
-  `OI-NORMUNCERT-001`, `OI-ANOMCLUSTER-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`,
-  and the two opened by Freeze-5 review, `OI-HIGHBREACHBAND-001` and `OI-CLUSTERTIE-001`.
+  `OI-NORMUNCERT-001`, `OI-ANOMCLUSTER-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`.
+  The three items Freeze-5 review opened were closed by F5-13, F5-14 and F5-15 and are no
+  longer in this set.
 - **Assert:** the dependent output is `NOT_RUN` / `WITHHELD` with the stated reason code
   and open-issue id; no numeric default appears.
 - **Negative control:** supply a `minimumExposure` value for `OI-EXPOSURE-001` and let the
@@ -469,6 +470,28 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** at least one fixture asserts the decided behaviour, and at least one fixture
   asserts a `forbidden` entry naming the alternative the owner rejected.
 - **Negative control:** delete the `forbidden` block from `AD-MNT-006`; the check must fail.
+
+### INV-G10 — Delivery is paused only against a demonstrably broken mass balance
+- **Canon:** `ALK-HIGH-BREACH-NO-PAUSE-001`; `ALK-NEGATIVE-MATERIALITY-001`;
+  `ALK-HIGH-BREACH-UNRESOLVED-001`.
+- **Generator:** `A_now > outerMax`, sweeping `C_estimate` across the materiality boundary
+  `C + 1.28·sigma_S = 0` from both sides, at several `sigma_S`.
+- **Assert:** `safetyDoseRecommendationMlPerDay == 0` **iff** the estimate is materially
+  negative. On the non-material side the established dose is held, the outer-bound state and
+  the ~24 h cadence are still emitted, and `maintenanceEstimateStatus` is `UNRESOLVED`.
+- **Negative control:** pause on any negative `C_estimate`; `AD-CON-002` variant 1.6 must
+  fail.
+
+### INV-C12 — Independent selection never depends on storage order
+- **Canon:** `ALK-SAME-TIMESTAMP-COALESCE-001`; `ALK-INDEPENDENT-SELECTION-001`;
+  Part II §64.
+- **Generator:** any ledger containing two or more clusters that share a representative
+  timestamp; permute their event order, ids and insertion order across runs.
+- **Assert:** identical `acceptedClusterIds[]`, identical `sigma_S` and an identical
+  actuator command across every permutation; the coalesced value is the median of the
+  pooled raw readings; a pooled spread above 0.20 dKH is still `ANOMALOUS`.
+- **Negative control:** select the first-inserted of the tied clusters; `AD-SEG-007` must
+  fail, and `AD-SEG-008` must fail if coalescing suppresses `ALK-005`.
 
 ### INV-I9 — The canon's coverage manifest covers every stable rule body
 - **Canon:** `CORE-CANON-COVERAGE-001` items 1–5 and 8.
@@ -504,20 +527,22 @@ Fixture bodies for the canon-named invariants are in
 |---|---|
 | A — Determinism and replay | 4 |
 | B — Layer separation | 7 |
-| C — Evidence integrity | 11 |
+| C — Evidence integrity | 12 |
 | D — Consumption and maintenance | 6 |
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
-| G — Safety | 9 |
+| G — Safety | 10 |
 | H — History and provenance | 5 |
 | I — Ownership and output contract | 10 |
-| **Total** | **64** |
+| **Total** | **66** |
 
-Four invariants were added by `ALK_V2_FREEZE_5` and its review. `INV-I7` checks that the
-retired reason codes are gone. `INV-I8` checks that every owner decision is pinned in both
-directions. `INV-I9` and `INV-I10` exist because the first Freeze-5 gate could not have
-caught the defects review found: it never read the canon, and it never recomputed a
-fixture.
+Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
+checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
+pinned in both directions. `INV-I9` and `INV-I10` exist because the first Freeze-5 gate
+could not have caught the defects review found: it never read the canon, and it never
+recomputed a fixture. `INV-G10` and `INV-C12` pin the two amendments whose failure mode is
+a wrong actuator or safety action — pausing delivery on an uncertainty-limited estimate,
+and letting storage order decide which cluster counts.
 
 All twelve invariants named in the preparation brief are covered:
 

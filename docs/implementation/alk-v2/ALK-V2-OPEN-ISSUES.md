@@ -53,17 +53,19 @@ Items with no such box remain open, and their "Until closed" behaviour still gov
 declining to add a threshold, so the behaviour is unchanged and the exposure is now named
 rather than open.
 
-Twenty-seven items remain from the original register, and Freeze-5 review **opened three
-new ones** — `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001`, in
-section A2. Each is a question that encoding a Freeze-5 decision surfaced and that the
-decision itself does not answer. Two of them withhold a dependent output; the third does
-not.
+Twenty-seven items remain from the original register. Freeze-5 review opened three more —
+`OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001`, in section A2 — and
+the owner then decided all three as amendments F5-13, F5-14 and F5-15. They are closed.
 
-That the register grew is the intended direction. A review of a canon reissue that found
-nothing new would mean the review was not adversarial.
+That the register grew and then closed is the intended shape. A review of a canon reissue
+that found nothing new would mean the review was not adversarial; a review whose findings
+were then absorbed by derivation rather than by decision would mean the governance was not
+real.
 
-Resolution of any of them belongs to a governed Alk Freeze 6 (or a shared freeze where the
-defect is shared), per the Freeze-5 reopening rule.
+**Nothing in Freeze 5 now withholds an output for want of an owner decision.**
+
+Resolution of the twenty-seven remaining items belongs to a governed Alk Freeze 6 (or a
+shared freeze where the defect is shared), per the Freeze-5 reopening rule.
 
 ---
 
@@ -920,14 +922,16 @@ outright and a fresh opt-in is required after the safety return completes.
 
 ---
 
-# A2. Opened by `ALK_V2_FREEZE_5`
+# A2. Opened by `ALK_V2_FREEZE_5` review, closed by `ALK_V2_FREEZE_5` amendments
 
-Independent review of the Freeze-5 encoding found three points where writing a decision
-into the canon would have required a **second** decision the owner did not make. Each is
-left undetermined here rather than resolved by derivation, per the rule that a canon gap is
-never filled by the run that found it.
+Independent review of the first Freeze-5 encoding found three points where writing a
+decision into the canon would have required a **second** decision the owner had not made.
+Each was left undetermined rather than resolved by derivation, per the rule that a canon gap
+is never filled by the run that found it.
 
-These are **new** items, not reopenings. The Freeze-5 decisions they sit beside are closed.
+**The owner then decided all three**, as amendments F5-13, F5-14 and F5-15. Every item in
+this section is now closed, and the analysis below is preserved as the record of why each
+decision was needed.
 
 ## OI-HIGHBREACHBAND-001 — the high-breach status of a negative but not materially negative consumption estimate
 
@@ -935,6 +939,35 @@ These are **new** items, not reopenings. The Freeze-5 decisions they sit beside 
 - **Canon:** `ALK-NEGATIVE-MATERIALITY-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`; `ALK-031`
 - **Owner module:** `SAFETY` / `CONSUMPTION`
 - **Raised by:** `canon-conformance-auditor`, Freeze-5 review
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-13.**
+>
+> Encoded as `ALK-HIGH-BREACH-NO-PAUSE-001` (canon, in `ALK-031`).
+>
+> Everything below this box is the pre-amendment analysis, preserved as the record
+> of why the decision was needed. Its "Until closed" behaviour is **superseded**.
+
+### Freeze-5 resolution
+
+Reading (a). Above the outer bound, a negative `C_estimate` that is **not** materially
+negative does **not** cause a recommendation to pause established maintenance dosing to
+0 mL/day. It is treated as uncertainty-limited/uninterpretable for maintenance purposes:
+
+- **HOLD** the established maintenance dose;
+- the **separate high-breach safety handling is preserved** — outer-bound state,
+  `SAFETY_RETURN`, position and direction reporting, magnesium-gate surfacing;
+- **retesting is shortened/reprioritised** as already defined; the ~24 h high-breach and
+  safety-return candidates are untouched;
+- **zero biological consumption is never inferred** from it. `maintenanceEstimateStatus`
+  stays `UNRESOLVED`.
+
+The materially-negative branch still arms `ALK-HIGH-BREACH-UNRESOLVED-001`'s zero-dose
+pause, and `C_estimate >= 0` still takes the temporary-safety-rate path. The boundary
+therefore does decide the fail-safe, which is what `OI-NEGCONS-001` said it should.
+
+**Fixture:** `AD-CON-002`, whose two variants sit one actuator increment apart and now
+differ in whether delivery is paused.
+
 
 F5-03 defines materially negative consumption and states its consequence **for maintenance
 sizing**: neither branch may reduce an established maintenance dose. It says the
@@ -961,7 +994,7 @@ Two readings survive:
 `C = -0.03912`, inside the band. Under (a) the engine reports the breach and holds. Under
 (b) it recommends stopping alkalinity dosing entirely.
 
-**Until closed.**
+**Until closed (superseded by F5-13; historical).**
 
 ```text
 highBreachZeroDosePause = NOT_RUN
@@ -980,6 +1013,39 @@ Fixture: `AD-CON-002`.
 - **Canon:** `ALK-INDEPENDENT-SELECTION-001`; Part II §5.3; Part II §2.4
 - **Owner module:** `SEGMENTATION`
 - **Raised by:** `breaker`, Freeze-5 review
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-14.**
+>
+> Encoded as `ALK-SAME-TIMESTAMP-COALESCE-001` (canon, under `ALK-008`).
+>
+> Everything below this box is the pre-amendment analysis, preserved as the record
+> of why the decision was needed. Its "Until closed" behaviour is **superseded**.
+
+### Freeze-5 resolution
+
+The tie is removed rather than broken. Clusters sharing an identical representative
+timestamp **are not separate independent testing episodes** — one instant is one episode
+however many methods were used.
+
+Before forward-greedy selection runs, same-timestamp clusters are coalesced: their combined
+underlying measurements are pooled and one cluster is rebuilt from the pool using the
+existing canonical rules (Part II §5.4, §5.5, §5.6 and `ALK-005`). Selection then operates
+over a unique-time sequence, so the ordering is total and no tie can arise.
+
+Selection must **never** depend on arbitrary event order, ID order, insertion order,
+database ordering or implementation sorting. That was the actual defect: the actuator
+command was a property of how the rows happened to be stored.
+
+Two consequences follow from the existing rules and are asserted:
+
+- the coalesced value is the median of the **pooled raw readings**, not the mean of the two
+  cluster medians;
+- a pool spanning more than 0.20 dKH is `ANOMALOUS` under `ALK-005`. **Coalescing never
+  launders an internally inconsistent set into a clean one.**
+
+**Fixtures:** `AD-SEG-007` (positive), `AD-SEG-008` (negative control: a 0.30 dKH pool stays
+`ANOMALOUS`).
+
 
 F5-01 resolves which cluster survives when clusters are *close together*. It assumes
 distinct representative timestamps and states no tie-break for identical ones.
@@ -1000,7 +1066,7 @@ Day 2 and `8.00` at Day 4, `D_current = 9.0`, `P = 0.0693`.
 Both sit inside the 25% step cap and the 0.50 dKH/day rail, so nothing downstream
 reconciles them. 0.7 mL/day of divergence from one identical ledger.
 
-**Until closed.**
+**Until closed (superseded by F5-14; historical).**
 
 ```text
 independentSelection       = TIE_UNRESOLVED
@@ -1024,6 +1090,37 @@ default: Part II §5.3 kept them separate deliberately, because they are differe
 - **Owner module:** `RETEST`
 - **Raised by:** `canon-conformance-auditor` and `breaker`, Freeze-5 review
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-15.**
+>
+> Encoded as `ALK-RETEST-SCHEDULER-001` amended (canon, `ALK-053A`).
+>
+> Everything below this box is the pre-amendment analysis, preserved as the record
+> of why the decision was needed. Its "Until closed" behaviour is **superseded**.
+
+### Freeze-5 resolution
+
+The ordinary signal candidate carries a 24-hour floor **inside its own formula**:
+
+```text
+T_signal_days = max(1 day, 0.10 dKH / |S_supported|)      S_supported != 0
+```
+
+The floor applies to that candidate and no other. The explicit rapid, outer-bound/forecast,
+safety, high-breach and immediate-repeat candidates may schedule earlier than 24 hours, or
+return `TEST_NOW` / earliest-practicable semantics, when already warranted.
+
+Preserved unchanged: the ~48 h ordinary post-maintenance-change response test, the normal
+formal follow-up around Day 4, the ~Day-4 ordinary observation ceiling, and one
+authoritative scheduler choosing the earliest applicable candidate.
+
+`T_signal` was the only ordinary candidate that could fall below 24 hours — routine cadence
+is 48 h and both post-change candidates are ~48 h or later — so Part II §66's minimum useful
+interval is supplied exactly where it was reachable.
+
+**Fixture:** `AD-RET-001` (raw 22.913 h floored to 24 h and selected); `AD-RET-004` asserts
+the exemption, where an outer-bound crossing inside the safety lead still returns test-now.
+
+
 F5-09 supplies a ceiling (the ~Day-4 window) and forbids inventing constants to fill the
 previously absent generic scheduler parameters. Part II §66's **minimum useful interval**
 was one of them, so Freeze 5 does not supply it.
@@ -1039,7 +1136,7 @@ test still establishes position, still confirms or refutes an anomaly, and still
 exactly on the acceptance boundary with no tolerance — a keeper testing two minutes early
 would produce nothing for the trend.
 
-**Until closed.**
+**Until closed (superseded by F5-15; historical).**
 
 ```text
 minimumUsefulIntervalApplied = NOT_RUN
@@ -1828,22 +1925,20 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 
 | Status | Count | IDs |
 |---|---|---|
-| **OPENED by Freeze-5 review** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
+| **OPENED by Freeze-5 review, CLOSED by F5-13/14/15** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-43 distinct issue IDs (3 + 13 + 11 + 13 + 3). All eight items that carried
-`OWNER_DECISION_REQUIRED` before Freeze 5 were decided by it; three new ones were opened by
-its review.
+43 distinct issue IDs (3 + 13 + 11 + 13 + 3). **Sixteen are resolved by Freeze 5** — the
+thirteen its original decisions closed, plus the three its review opened and its amendments
+F5-13, F5-14 and F5-15 then closed.
 
-**Two of the three withhold a dependent output** — `OI-HIGHBREACHBAND-001` gates the
-high-breach zero-dose pause inside a band spanning `-1.28·sigma_S <= C < 0`, and
-`OI-CLUSTERTIE-001` withholds automatic maintenance when two clusters share a representative
-timestamp. Both are narrow and both fail safe. Everything the eleven originally blocking
-items gated is now emitted.
+All eleven `OWNER_DECISION_REQUIRED` items across both rounds were decided by the owner.
+None was resolved by derivation. **Nothing is blocking, and no output is withheld for want
+of a decision.**
 
 `OI-PIPELINE-001` remains open only for the composite rail's position; its liquid-guard
 limb is closed by F5-06. `OI-STABLE-001` is confirmed rather than closed: F5-04 explicitly
@@ -1860,8 +1955,8 @@ normative text still governs.
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 |
 | `NO_PROBLEM` | 3 |
 
-**What is buildable.** Everything except the two narrow refusals in section A2. After
-Freeze 5 the following are fully determined:
+**What is buildable.** Everything. After Freeze 5 and its three amendments, no open item
+withholds a dependent output:
 current position, outer-bound state, the whole `SAFETY_RETURN` path including the temporary
 high-breach rate, clustering and independent selection, segmentation, Theil-Sen trend,
 `sigma_S`, `S_supported`, consumption and its materiality classification, the ordinary

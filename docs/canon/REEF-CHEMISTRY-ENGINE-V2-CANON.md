@@ -5884,23 +5884,46 @@ never do is alter a **historical assessment record**, which stays immutable unde
 `ALK-065`. Implementations must not present the appended-data guarantee as covering
 backdated entries.
 
-**Identical representative timestamps are not resolved by this rule.** Two candidate
-clusters may share a representative time — Part II §5.3 groups automatically only within
-the same or a compatible test method, so two incompatible methods run at one instant yield
-two clusters at one timestamp, and Part II §5.2 explicit grouping can do the same. This
-rule orders by representative timestamp and states no tie-break, so which cluster is
-accepted is undetermined and the two can carry different values and therefore different
-doses. Freeze 5 does not decide it. Until it is decided, emit:
+### Same-timestamp coalescing, before selection
+
+`ALK-SAME-TIMESTAMP-COALESCE-001`
+
+Two candidate clusters may share a representative time. Part II §5.3 groups automatically
+only within the same or a compatible test method, so two incompatible methods run at one
+instant yield two clusters at one timestamp, and Part II §5.2 explicit grouping can do the
+same.
+
+**Clusters sharing an identical representative timestamp are not separate independent
+testing episodes.** One instant is one testing episode however many methods were used.
+
+Independent-cluster selection must therefore **never depend on arbitrary event order, ID
+order, insertion order, database ordering or implementation sorting.** Any of those would
+make the actuator command a property of how the rows happened to be stored.
+
+**Before** forward-greedy selection runs, coalesce same-timestamp clusters:
+
+1. group candidate clusters by identical representative timestamp;
+2. where a group holds more than one cluster, pool their **combined underlying
+   measurements** and build a single cluster from that pool using the existing canonical
+   cluster-construction and representative-value rules — Part II §5.4 representative value,
+   §5.5 representative timestamp, §5.6 internal spread, and `ALK-005`;
+3. run forward-greedy selection over the resulting **unique-time** cluster sequence.
+
+Coalescing applies the existing rules to a larger pool; it introduces no new arithmetic.
+Two consequences follow from those rules and must not be suppressed:
+
+- the coalesced cluster's representative value is the median of the **pooled raw readings**,
+  not the mean of the two cluster medians;
+- the coalesced cluster's spread is measured over the pooled readings, so `ALK-005` applies
+  to it. A pool spanning more than 0.20 dKH becomes `ANOMALOUS` and takes Part II §48's
+  path. **Coalescing never launders an internally inconsistent set into a clean one.**
 
 ```text
-independentSelection       = TIE_UNRESOLVED
-movementEvidence           = INSUFFICIENT
-automaticMaintenanceAction = WITHHELD
-reason                     = EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED
+reason = CLUSTER_SAME_TIMESTAMP_COALESCED
 ```
 
-together with Part II §2.4 item 4's ambiguity marking. Position, safety, history and retest
-are unaffected and continue normally. Recorded as `OI-CLUSTERTIE-001`.
+Selection then proceeds over distinct timestamps, so the ordering in step 1 of the
+forward-greedy algorithm is total and the tie cannot arise.
 
 Worked instance. Candidate clusters at t = 0.0, 0.5, 2.0, 4.0 days:
 
@@ -7254,38 +7277,54 @@ states: on either branch the estimate cannot by itself reduce an established mai
 dose, and the action is HOLD.
 
 `ALK-HIGH-BREACH-UNRESOLVED-001` asks a different question — whether \(C_{estimate}\) is
-"physically uninterpretable" — and Freeze 5 answers it only where the answer follows from
-the boundary:
+"physically uninterpretable" — and `ALK-HIGH-BREACH-NO-PAUSE-001` below answers it.
+
+### High breach and a negative estimate
+
+`ALK-HIGH-BREACH-NO-PAUSE-001`
+
+Above the outer bound, with \(C_{estimate}<0\):
 
 ```text
 materially negative   -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN
                       -> physically uninterpretable
-                      -> above OuterMax, ALK-HIGH-BREACH-UNRESOLVED-001 applies
-                         (0 mL/day temporary pause)
+                      -> ALK-HIGH-BREACH-UNRESOLVED-001 applies
+                         (temporary pause of Alk delivery to 0 mL/day)
+
+negative, NOT materially negative
+                      -> UNCERTAIN_NON_RESOLVABLE
+                      -> DO NOT recommend pausing established maintenance dosing
+                         to 0 mL/day
+                      -> HOLD the established maintenance dose
+                      -> reason = SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
 
 C_estimate >= 0       -> interpretable
                       -> High breach - interpretable consumption; D_safety,temp
-
-negative, but NOT materially negative
-                      -> UNDETERMINED for the high-breach fail-safe
-                      -> highBreachZeroDosePause = NOT_RUN
-                         reason = SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED
 ```
 
-The third row is a **deliberate non-answer**, not an omission.
+On the middle branch the estimate is **uncertainty-limited/uninterpretable for maintenance
+purposes**. It is not evidence that the tank needs no alkalinity, and it is not a reason to
+stop supplying it. Specifically, and all four hold together:
 
-Reading the non-material branch as "physically uninterpretable" would arm the fail-safe on
-*every* negative estimate, which contradicts the conservatism this rule's own
-\(\sigma_P=\sigma_D=0\) choice was made to deliver: that choice is justified above as
-*delaying* a dosing pause rather than triggering one spuriously, and it cannot both justify
-the boundary and be irrelevant to it. Reading it the other way — only the material branch
-is uninterpretable — is equally available from `ALK-031`'s two branch headings. The
-question decides whether the engine recommends **stopping alkalinity supply**, so it is not
-settled by derivation here. It is recorded as `OI-HIGHBREACHBAND-001`.
+- **HOLD** the established maintenance dose. `ALK-NEGATIVE-CONSUMPTION-001` already forbids
+  the negative arithmetic from changing it in either direction;
+- the **separate high-breach safety handling is preserved**: the outer-bound state, the
+  `SAFETY_RETURN` intervention, `ALK-003A`'s position and direction reporting and the
+  magnesium-gate surfacing all continue exactly as they would otherwise;
+- **retesting is shortened/reprioritised** as already defined — the ~24 h high-breach and
+  safety-return candidates of `ALK-RETEST-SCHEDULER-001` are unaffected by this rule;
+- **do not infer zero biological consumption** from an uncertainty-limited negative
+  estimate. `maintenanceEstimateStatus` stays `UNRESOLVED`; a held dose is not a claim that
+  the held value is the demand.
 
-The band is narrow by construction: with three clean clusters it spans
-\(-0.045255 \le C_{estimate} < 0\) dKH/day. Outside it the fail-safe is fully determined
-in both directions.
+Reason: pausing delivery to zero is a fail-safe against a *demonstrably* broken mass
+balance. An estimate that is merely negative inside its own uncertainty has not
+demonstrated one, and this rule's \(\sigma_P=\sigma_D=0\) choice is justified above as
+*delaying* a pause rather than triggering one spuriously. Arming the pause across the whole
+negative range would contradict the conservatism that justifies the boundary.
+
+The middle band is narrow by construction: with three clean clusters it spans
+\(-0.045255 \le C_{estimate} < 0\) dKH/day.
 
 ### Slight negative within uncertainty
 
@@ -8438,11 +8477,19 @@ floor** (`ALK-004`, `ALK-SLOPE-UNCERTAINTY-001`), and the slope is the supported
 \boxed{
 T_{signal,days}
 =
+\max\left(
+1\ \text{day},\;
 \frac{0.10}{|S_{supported}|}
+\right)
 \qquad
 S_{supported}\neq0
 }
 \]
+
+The 24-hour floor is part of this candidate's formula. **It applies only to the ordinary
+signal candidate.** It never delays a candidate that is already warranted on other grounds:
+the explicit rapid (`ALK-052`), outer-bound/forecast and safety candidates may schedule
+earlier than 24 hours, and `REPEAT_NOW` / earliest-practicable semantics are unaffected.
 
 If \(S_{supported}=0\), or movement evidence is `INSUFFICIENT` so no supported slope
 exists, the candidate is `NOT_RUN`: there is no supported movement whose accumulation could
@@ -8478,6 +8525,8 @@ action     = REPEAT_NOW
 reasonCode = RETEST_FORECAST_BOUNDARY_RISK
 ```
 
+This candidate is exempt from the \(T_{signal}\) floor.
+
 **This candidate runs only while the level is inside the bound.** It forecasts a crossing;
 once `ALK-003A` reports `BREACHED_LOW` or `BREACHED_HIGH` there is no crossing left to
 forecast, `ALK-OUTER-BOUND-ACTION-001` owns the response, and the `SAFETY_RETURN` and
@@ -8500,23 +8549,20 @@ Forecast timing never overrides an immediate safety rule (Part II §54).
   longer quiet-monitoring interval (`ALK-050`). This is Part II §66's "maximum observation
   interval" for alkalinity, and it reuses an interval the canon already states.
 
-- **No floor.** Part II §66's "minimum useful interval" is **not** supplied. Freeze 5
-  states a ceiling and forbids inventing constants to fill the previously absent generic
-  scheduler parameters, and a minimum useful interval was one of them. The clamp is
-  therefore `NOT_RUN`:
+- **Floor, on the ordinary signal candidate only.** \(T_{signal}\) carries a 24-hour floor
+  inside its own formula above. Part II §66's "minimum useful interval" is therefore
+  supplied where it was reachable: \(T_{signal}\) is the only ordinary candidate that can
+  fall below 24 hours, since routine cadence is 48 h and both post-change candidates are
+  ~48 h or later.
 
 ```text
-minimumUsefulIntervalApplied = NOT_RUN
-reason                       = RETEST_MINIMUM_INTERVAL_UNAVAILABLE
+|S_supported| > 0.10 dKH/day  ->  raw T_signal < 24 h  ->  floored to 24 h
+                                  reason = RETEST_SIGNAL_FLOOR_APPLIED
 ```
 
-  `ALK-008`'s 24 h is a **trend-independence** minimum, not a scheduling minimum, and this
-  rule does not repurpose it. A consequence must be stated plainly rather than clamped away:
-  where \(|S_{supported}| > 0.10\) dKH/day, \(T_{signal}\) is under 24 hours, so the
-  scheduler may recommend a test that `ALK-008` will not accept as a new full-strength trend
-  observation. The test still establishes position, still confirms or refutes an anomaly and
-  still feeds `ALK-RAPID-BASIS-001`. Whether the scheduler should carry a floor above that
-  acceptance boundary is an open question, recorded as `OI-RETESTFLOOR-001`.
+  The floor is **not** a general scheduling minimum and must not be applied as one. The
+  rapid, outer-bound/forecast, safety, high-breach and immediate-repeat candidates are
+  explicitly exempt and may schedule earlier when already warranted.
 
 ### Selection
 
@@ -15798,41 +15844,42 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | F5-10 only `MEASURED_SAME_BATCH` normalizes a water change | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` (new, in `ALK-033`) | `OI-WATERCHANGE-001` |
 | F5-11 temporary high-breach safety rate is advisory-emittable | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` (new, in `ALK-003A`) | `OI-SAFETYRATE-001` |
 | F5-12 `recommendationConfidence = UNSPECIFIED` | `ALK-CONFIDENCE-OUTPUT-001` amended (`ALK-071`) | `OI-CONFIDENCE-001` |
+| F5-13 no zero-dose pause on an uncertainty-limited negative estimate | `ALK-HIGH-BREACH-NO-PAUSE-001` (new, in `ALK-031`) | `OI-HIGHBREACHBAND-001` |
+| F5-14 coalesce same-timestamp clusters before selection | `ALK-SAME-TIMESTAMP-COALESCE-001` (new, under `ALK-008`) | `OI-CLUSTERTIE-001` |
+| F5-15 24 h floor on the ordinary signal candidate | `ALK-RETEST-SCHEDULER-001` amended (`ALK-053A`) | `OI-RETESTFLOOR-001` |
 
-All eleven blocking items are closed. Every withheld output they gated now has a determined
-value or a **canonised** `NOT_RUN`, with two narrow exceptions recorded below.
+All eleven blocking items are closed, and so are the three items independent review of the
+first encoding opened. Every withheld output they gated now has a determined value or a
+**canonised** `NOT_RUN`.
 
-### Deliberately not answered inside a closed item
+### The three amendments
 
-Independent review found three points where encoding a decision would have required a
-second decision the owner did not make. Each is left undetermined with an explicit refusal
-rather than resolved by derivation, and each is a **new** register item rather than a
-reopening of the closed one:
+Review of the first Freeze-5 encoding found three points where writing a decision into the
+canon required a **second** decision. Each was left undetermined with an explicit refusal
+rather than resolved by derivation, and each was then decided by the owner as F5-13, F5-14
+and F5-15. The register items they opened — `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001`
+and `OI-RETESTFLOOR-001` — are closed by those amendments.
 
-| Item | The question Freeze 5 does not answer |
-|---|---|
-| `OI-HIGHBREACHBAND-001` | Whether a negative `C_estimate` that is **not** materially negative counts as "physically uninterpretable" for `ALK-HIGH-BREACH-UNRESOLVED-001`. It decides whether alkalinity dosing is paused to 0 mL/day in a band spanning `-1.28·sigma_S <= C < 0`. Outside that band the fail-safe is fully determined. |
-| `OI-CLUSTERTIE-001` | Which of two candidate clusters sharing a representative timestamp is accepted. `ALK-INDEPENDENT-SELECTION-001` orders by timestamp and states no tie-break; the two can carry different values and therefore different doses. |
-| `OI-RETESTFLOOR-001` | Whether the retest scheduler should carry a minimum useful interval above `ALK-008`'s 24 h trend-acceptance boundary. Freeze 5 supplies no floor, so a fast-moving tank may be told to test before a test can count for trend. |
-
-The first two withhold the dependent output. The third does not withhold anything; it
-schedules an earlier test than `ALK-008` can use for trend, which costs a test strip and
-not tank safety.
+Nothing in Freeze 5 now withholds an output for want of an owner decision.
 
 ### Constants
 
 Freeze 5 introduces **no new numeric constant.** Every threshold it uses is already frozen:
 
 ```text
-ALK_SLOPE_SUPPORT_K = 1.28          # F5-03 materiality boundary
+ALK_SLOPE_SUPPORT_K = 1.28          # F5-03 materiality boundary, F5-13 branch test
 sigma_Alk_base      = 0.10 dKH      # F5-09 T_signal numerator
 24 h independence   = ALK-008       # F5-01 selection, F5-07 rapid pair
-24 h safety cadence = ALK-052       # F5-09 forecast safety lead
+24 h safety cadence = ALK-052       # F5-09 forecast safety lead, F5-15 signal floor
 48 h routine        = ALK-050       # F5-09 routine candidate
 ~Day 4              = ALK-053       # F5-09 ordinary-observation ceiling
 2% of net volume    = ALK-061       # F5-06 liquid guard
-0.20 dKH spread     = ALK-005       # F5-02 operative SUSPECT source
+0.20 dKH spread     = ALK-005       # F5-02 operative SUSPECT source,
+                                    # F5-14 spread of a coalesced pool
 ```
+
+F5-14 introduces no constant at all: it pools measurements and re-applies Part II §5.4-§5.6
+and `ALK-005` to the larger pool.
 
 `sigma_P`, `sigma_D`, `K_detect`, a generic `RequiredMovement`, a `boundarySafetyMargin`
 distinct from the 24 h lead, a `minimumExposure`, a scheduler minimum useful interval, an
@@ -15868,8 +15915,7 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
 - normalization uncertainty propagation (`OI-NORMUNCERT-001`);
 - minimum post-change exposure (`OI-EXPOSURE-001`);
 - `ALK-037`'s Day-4 wording (`OI-DAY4-001`) and `ALK-012`'s illustrative examples
-  (`OI-STABLE-001`), both documentation defects whose normative text already governs;
-- the three items in *Deliberately not answered inside a closed item* above.
+  (`OI-STABLE-001`), both documentation defects whose normative text already governs.
 
 ### Freeze status
 
@@ -16565,6 +16611,8 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-RETEST-SCHEDULER-001` | `AD-RET-001`, `AD-RET-002`, `AD-RET-003`, `AD-RET-004`, `WG-ALK-060` |
 | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` | `WG-ALK-011`, `AD-SEG-006`, `ALK-G022` |
 | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | `AD-SAF-002`, `AD-SAF-005` |
+| `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002`, `WG-ALK-051` |
+| `ALK-SAME-TIMESTAMP-COALESCE-001` | `AD-SEG-007`, `AD-SEG-008` |
 
 ---
 

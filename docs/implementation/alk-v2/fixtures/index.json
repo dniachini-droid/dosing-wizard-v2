@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 51,
+      "count": 52,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -196,7 +196,8 @@
         "AD-OUT-001",
         "AD-SAF-006",
         "AD-SEG-007",
-        "AD-RET-005"
+        "AD-RET-005",
+        "AD-SEG-008"
       ]
     },
     {
@@ -224,11 +225,11 @@
     }
   ],
   "totals": {
-    "fixtures": 177,
+    "fixtures": 178,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 47,
+    "CANON_DERIVED": 48,
     "CANON_QUALITATIVE": 28,
     "CANON_VERBATIM": 102
   },
@@ -394,6 +395,7 @@
     "AD-SAF-006",
     "AD-SEG-007",
     "AD-RET-005",
+    "AD-SEG-008",
     "INV-CANON-001",
     "INV-CORE-ADVISORY-001",
     "INV-NONADHERENCE-001",
@@ -416,7 +418,8 @@
       "AD-SEG-003"
     ],
     "OI-ANOMCLUSTER-001": [
-      "AD-SEG-004"
+      "AD-SEG-004",
+      "AD-SEG-008"
     ],
     "OI-BELOWRISING-001": [
       "AD-MNT-006",
@@ -424,7 +427,8 @@
       "AD-MNT-008"
     ],
     "OI-CLUSTERTIE-001": [
-      "AD-SEG-007"
+      "AD-SEG-007",
+      "AD-SEG-008"
     ],
     "OI-CONFIDENCE-001": [
       "AD-OUT-001"

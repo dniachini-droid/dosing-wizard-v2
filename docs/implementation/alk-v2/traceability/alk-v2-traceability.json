@@ -17,7 +17,7 @@
   "finding"
  ],
  "totals": {
-  "rules": 271,
+  "rules": 273,
   "byOwner": {
    "AUDIT": 12,
    "CAPABILITY": 20,
@@ -29,8 +29,8 @@
    "RESPONSE": 27,
    "RETEST": 14,
    "RETURN": 12,
-   "SAFETY": 14,
-   "SEGMENTATION": 35,
+   "SAFETY": 15,
+   "SEGMENTATION": 36,
    "SUPPORT": 2,
    "TREND": 19,
    "UNCERTAINTY": 11,
@@ -46,24 +46,26 @@
    "IMPLEMENTATION_DETAIL_ALREADY_DETERMINED": 8,
    "NO_PROBLEM": 214,
    "NO_PROBLEM (RESOLVED F5-01)": 2,
-   "NO_PROBLEM (RESOLVED F5-01); tie case OI-CLUSTERTIE-001 open": 1,
+   "NO_PROBLEM (RESOLVED F5-01, F5-14)": 1,
    "NO_PROBLEM (RESOLVED F5-02)": 6,
    "NO_PROBLEM (RESOLVED F5-03)": 3,
-   "NO_PROBLEM (RESOLVED F5-03); high-breach band OI-HIGHBREACHBAND-001 open": 1,
+   "NO_PROBLEM (RESOLVED F5-03, F5-13)": 1,
    "NO_PROBLEM (RESOLVED F5-04)": 2,
    "NO_PROBLEM (RESOLVED F5-05)": 4,
    "NO_PROBLEM (RESOLVED F5-06)": 1,
    "NO_PROBLEM (RESOLVED F5-07)": 2,
    "NO_PROBLEM (RESOLVED F5-08)": 2,
    "NO_PROBLEM (RESOLVED F5-09)": 5,
-   "NO_PROBLEM (RESOLVED F5-09); scheduler floor OI-RETESTFLOOR-001 open": 1,
+   "NO_PROBLEM (RESOLVED F5-09, F5-15)": 1,
    "NO_PROBLEM (RESOLVED F5-10)": 3,
    "NO_PROBLEM (RESOLVED F5-11)": 3,
    "NO_PROBLEM (RESOLVED F5-12)": 2,
+   "NO_PROBLEM (RESOLVED F5-13)": 1,
+   "NO_PROBLEM (RESOLVED F5-14)": 1,
    "NO_PROBLEM (accepted residual, F5-02)": 1
   },
   "byActivity": {
-   "ACTIVE": 256,
+   "ACTIVE": 258,
    "GATED": 13,
    "NOT_RUN": 2
   },
@@ -1168,7 +1170,7 @@
      "equation": "Alk: anomalous when max - min > 0.20 dKH",
      "reasonCodes": "CLUSTER_ANOMALOUS_SPREAD",
      "fixtures": "CLU-003, AD-SEG-004",
-     "boundaries": "historical anomalous cluster treatment undefined",
+     "boundaries": "a coalesced same-timestamp pool is measured over its pooled readings, so ALK-005 still applies to it",
      "dependencies": "OI-ANOMCLUSTER-001",
      "activeInAlkOnlyV2": "ACTIVE (degraded)",
      "finding": "CANON_DEFECT"
@@ -1181,8 +1183,8 @@
      "inputs": "clusters",
      "output": "independent subset",
      "equation": "Alk: forward-greedy from the earliest eligible cluster; accept the next candidate >= 24 h after the last ACCEPTED cluster",
-     "reasonCodes": "EVIDENCE_INDEPENDENT_SELECTION_APPLIED, EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED",
-     "fixtures": "AD-SEG-001, AD-SEG-005, AD-SEG-007, INV-C1",
+     "reasonCodes": "EVIDENCE_INDEPENDENT_SELECTION_APPLIED, CLUSTER_SAME_TIMESTAMP_COALESCED",
+     "fixtures": "AD-SEG-001, AD-SEG-005, AD-SEG-007, AD-SEG-008, INV-C1",
      "boundaries": "the anchor is the last accepted cluster, not the last candidate examined; inclusive at exactly 24 h",
      "dependencies": "ALK-INDEPENDENT-SELECTION-001",
      "activeInAlkOnlyV2": "ACTIVE",
@@ -1870,10 +1872,10 @@
      "owner": "RETEST",
      "inputs": "RequiredMovement, S",
      "output": "T_signal",
-     "equation": "T_signal = 0.10 / \\|S_supported\\| days; NOT_RUN when S_supported = 0",
-     "reasonCodes": "RETEST_SIGNAL_ACCUMULATION, RETEST_SIGNAL_ACCUMULATION_NOT_RUN",
+     "equation": "T_signal = max(1 day, 0.10 / |S_supported|) days; NOT_RUN when S_supported = 0",
+     "reasonCodes": "RETEST_SIGNAL_ACCUMULATION, RETEST_SIGNAL_FLOOR_APPLIED, RETEST_SIGNAL_ACCUMULATION_NOT_RUN",
      "fixtures": "AD-RET-001, AD-RET-002",
-     "boundaries": "clamped to <= 96 h; no floor; it is one candidate, never the answer",
+     "boundaries": "floored at 24 h and clamped to <= 96 h; it is one candidate, never the answer",
      "dependencies": "ALK-RETEST-SCHEDULER-001, ALK-SUPPORTED-SLOPE-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM (RESOLVED F5-09)"
@@ -2023,8 +2025,8 @@
      "equation": "never import global alkalinity constants into another parameter",
      "reasonCodes": "-",
      "fixtures": "module design section 6, AD-RET-001",
-     "boundaries": "ten policy groups; the maximum observation interval is supplied by ALK-053's Day-4 window; the minimum useful interval and minimumExposure remain absent",
-     "dependencies": "ALK-RETEST-SCHEDULER-001, OI-EXPOSURE-001, OI-RETESTFLOOR-001",
+     "boundaries": "ten policy groups; the maximum observation interval is ALK-053's Day-4 window; the minimum useful interval is supplied as the signal candidate's own 24 h floor; minimumExposure remains absent",
+     "dependencies": "ALK-RETEST-SCHEDULER-001, OI-EXPOSURE-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "CANON_DEFECT (OI-EXPOSURE-001 only; scheduler fields RESOLVED F5-09)"
     },
@@ -2178,7 +2180,7 @@
      "equation": "A_now > OuterMax and C_estimate materially negative -> safetyDose = 0; maintenanceEstimateStatus = UNRESOLVED; retest approx 24 h",
      "reasonCodes": "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
      "fixtures": "WG-ALK-051, AD-CON-002",
-     "boundaries": "a fail-safe for an invalid model, not a claim that consumption is zero; the non-material negative band is undetermined (OI-HIGHBREACHBAND-001)",
+     "boundaries": "a fail-safe for a demonstrably broken model, not a claim that consumption is zero; a negative estimate inside its own uncertainty does not arm it (ALK-HIGH-BREACH-NO-PAUSE-001)",
      "dependencies": "ALK-NEGATIVE-MATERIALITY-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM (RESOLVED F5-03)"
@@ -3570,13 +3572,13 @@
      "owner": "SEGMENTATION",
      "inputs": "candidate clusters in the segment",
      "output": "acceptedClusterIds[], notAcceptedClusterIds[]",
-     "equation": "accept the earliest eligible cluster; accept the next candidate >= 24 h after the LAST ACCEPTED cluster; a rejected candidate never becomes the anchor; identical representative timestamps are undetermined",
-     "reasonCodes": "EVIDENCE_INDEPENDENT_SELECTION_APPLIED, EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED",
-     "fixtures": "AD-SEG-001, AD-SEG-005, AD-SEG-007",
-     "boundaries": "inclusive at exactly 24 h; APPENDED data never changes an earlier acceptance, backdated-earlier data may; backward-greedy and keep-all-and-mark are forbidden",
-     "dependencies": "ALK-008, PII-64, ALK-065, OI-CLUSTERTIE-001",
+     "equation": "accept the earliest eligible cluster; accept the next candidate >= 24 h after the LAST ACCEPTED cluster; same-timestamp clusters are coalesced first (ALK-SAME-TIMESTAMP-COALESCE-001)",
+     "reasonCodes": "EVIDENCE_INDEPENDENT_SELECTION_APPLIED, CLUSTER_SAME_TIMESTAMP_COALESCED",
+     "fixtures": "AD-SEG-001, AD-SEG-005, AD-SEG-007, AD-SEG-008",
+     "boundaries": "inclusive at exactly 24 h; APPENDED data never changes an earlier acceptance, backdated-earlier data may; selection runs over unique timestamps so no tie can arise; backward-greedy and keep-all-and-mark are forbidden",
+     "dependencies": "ALK-008, ALK-SAME-TIMESTAMP-COALESCE-001, PII-64, ALK-065",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM (RESOLVED F5-01); tie case OI-CLUSTERTIE-001 open"
+     "finding": "NO_PROBLEM (RESOLVED F5-01, F5-14)"
     },
     {
      "id": "ALK-SUSPECT-DETECTION-001",
@@ -3603,10 +3605,10 @@
      "equation": "materiallyNegative iff C_estimate + 1.28 x sigma_S < 0 (strict)",
      "reasonCodes": "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED, CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
      "fixtures": "AD-CON-002, WG-ALK-013, ALK-G026",
-     "boundaries": "HOLD on both branches; the material branch arms the high-breach fail-safe, the non-material branch's high-breach status is undetermined (OI-HIGHBREACHBAND-001)",
-     "dependencies": "ALK-SUPPORTED-SLOPE-001, ALK-SLOPE-UNCERTAINTY-001, ALK-HIGH-BREACH-UNRESOLVED-001, OI-HIGHBREACHBAND-001",
+     "boundaries": "HOLD on both branches; the material branch arms the high-breach zero-dose pause, the non-material branch does not (ALK-HIGH-BREACH-NO-PAUSE-001)",
+     "dependencies": "ALK-SUPPORTED-SLOPE-001, ALK-SLOPE-UNCERTAINTY-001, ALK-HIGH-BREACH-NO-PAUSE-001",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM (RESOLVED F5-03); high-breach band OI-HIGHBREACHBAND-001 open"
+     "finding": "NO_PROBLEM (RESOLVED F5-03, F5-13)"
     },
     {
      "id": "ALK-RETURN-ELIGIBLE-TRAJECTORY-001",
@@ -3675,13 +3677,13 @@
      "owner": "RETEST",
      "inputs": "engine state, forecast, asOf",
      "output": "RetestRecommendation",
-     "equation": "earliest applicable candidate; T_signal = 0.10 / |S_supported|; T_boundary = T_outer - 1.0 d; ordinary observation clamped to <= 96 h; no floor",
-     "reasonCodes": "RETEST_SIGNAL_ACCUMULATION, RETEST_FORECAST_BOUNDARY_RISK, RETEST_OBSERVATION_CEILING_APPLIED, RETEST_MINIMUM_INTERVAL_UNAVAILABLE, RETEST_DETECTABILITY_POLICY_UNAVAILABLE, RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE",
+     "equation": "earliest applicable candidate; T_signal = max(1 day, 0.10 / |S_supported|); T_boundary = T_outer - 1.0 d; ordinary observation clamped to <= 96 h",
+     "reasonCodes": "RETEST_SIGNAL_ACCUMULATION, RETEST_SIGNAL_FLOOR_APPLIED, RETEST_FORECAST_BOUNDARY_RISK, RETEST_OBSERVATION_CEILING_APPLIED, RETEST_DETECTABILITY_POLICY_UNAVAILABLE, RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE",
      "fixtures": "AD-RET-001, AD-RET-002, AD-RET-003, AD-RET-004, AD-RET-005, WG-ALK-060",
-     "boundaries": "one scheduler only; no minimum useful interval; T_outer uses S_observed; the forecast candidate stands down once breached; tied candidates all emit their codes",
+     "boundaries": "one scheduler only; the 24 h floor binds the signal candidate ONLY - rapid, outer-bound, safety, high-breach and repeat-now are exempt; T_outer uses S_observed; the forecast candidate stands down once breached; tied candidates all emit their codes",
      "dependencies": "PII-51, PII-53, PII-54, PII-66, ALK-050, ALK-052, ALK-POSTCHANGE-RETEST-001, ALK-062, X-INV-004",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM (RESOLVED F5-09); scheduler floor OI-RETESTFLOOR-001 open"
+     "finding": "NO_PROBLEM (RESOLVED F5-09, F5-15)"
     },
     {
      "id": "ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001",
@@ -3712,6 +3714,36 @@
      "dependencies": "M-1, ALK-SAFETY-CORRECTION-RESOLUTION-001, ALK-ROUNDING-001, ALK-046, ALK-LIQUID-VOLUME-GUARD-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM (RESOLVED F5-11)"
+    },
+    {
+     "id": "ALK-HIGH-BREACH-NO-PAUSE-001",
+     "canon": "ALK-031",
+     "title": "Uncertainty-limited negative consumption does not pause delivery",
+     "owner": "SAFETY",
+     "inputs": "A_now, C_estimate, materiality verdict",
+     "output": "pause vs HOLD",
+     "equation": "above OuterMax and C_estimate < 0 but not materially negative -> do NOT pause to 0 mL/day; HOLD the established dose",
+     "reasonCodes": "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED",
+     "fixtures": "AD-CON-002, WG-ALK-051",
+     "boundaries": "outer-bound state, SAFETY_RETURN and the ~24 h cadence are preserved; zero biological consumption is never inferred; maintenanceEstimateStatus stays UNRESOLVED",
+     "dependencies": "ALK-NEGATIVE-MATERIALITY-001, ALK-HIGH-BREACH-UNRESOLVED-001, ALK-NEGATIVE-CONSUMPTION-001",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM (RESOLVED F5-13)"
+    },
+    {
+     "id": "ALK-SAME-TIMESTAMP-COALESCE-001",
+     "canon": "ALK-008",
+     "title": "Same-timestamp clusters are coalesced before independence selection",
+     "owner": "SEGMENTATION",
+     "inputs": "candidate clusters sharing a representative timestamp",
+     "output": "one pooled cluster per instant",
+     "equation": "pool the combined underlying measurements; rebuild with PII-5.4/5.5/5.6 and ALK-005; then run forward-greedy over unique times",
+     "reasonCodes": "CLUSTER_SAME_TIMESTAMP_COALESCED",
+     "fixtures": "AD-SEG-007, AD-SEG-008",
+     "boundaries": "never depend on event, ID, insertion, database or sort order; value is the median of the POOLED readings, not the mean of cluster medians; a pool spanning > 0.20 dKH stays ANOMALOUS",
+     "dependencies": "ALK-INDEPENDENT-SELECTION-001, PII-5.3, PII-5.4, PII-5.6, ALK-005",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM (RESOLVED F5-14)"
     }
    ]
   },

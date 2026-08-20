@@ -2,7 +2,7 @@
 
 Index and coverage analysis for the fixture corpus in `fixtures/`.
 
-**177 fixtures across 6 files, plus 64 invariants in `ALK-V2-INVARIANTS.md`.**
+**178 fixtures across 6 files, plus 66 invariants in `ALK-V2-INVARIANTS.md`.**
 
 `ALK_V2_FREEZE_5` added 17 fixtures and 4 invariants, and rewrote the expectations of the
 15 fixtures that previously asserted a refusal for an issue the freeze decided. Three of
@@ -19,7 +19,7 @@ review, which found defects the first gate could not see.
 | `canon-worked-goldens-round2.json` | 20 | `WG-ALK-021` … `WG-ALK-040` — interruption, corrections, potency, edits, expiry, mirrors |
 | `canon-worked-goldens-external.json` | 27 | `WG-ALK-041` … `WG-ALK-067` — external-review corrections, safety path, capability contract |
 | `canon-named-goldens.json` | 43 | `ALK-G001` … `ALK-G040` including `G004A`, `G039A`, `G039B` |
-| `adversarial.json` | 51 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
+| `adversarial.json` | 52 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
 | `invariants-and-governance.json` | 16 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
 | `index.json` | — | Generated index; ids, counts, provenance split, open-issue coverage |
 | `config-defaults.json` | — | The canon's default worked-suite configuration plus once-derived constants |
@@ -33,7 +33,7 @@ behaviour** (`DEC-013`, canon §52).
 | Class | Count | Meaning |
 |---|---|---|
 | `CANON_VERBATIM` | 102 | Every asserted number or state appears in the canon |
-| `CANON_DERIVED` | 47 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
+| `CANON_DERIVED` | 48 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
 | `CANON_QUALITATIVE` | 28 | The canon states states and prohibitions but no arithmetic |
 
 The derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
@@ -151,11 +151,15 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | F5-10 water-change confidence tier | `WG-ALK-011`, `ALK-G022` | `AD-SEG-006` — same arithmetic, lower tier, opposite outcome |
 | F5-11 temporary safety rate | `AD-SAF-002` | `AD-SAF-005` three capability cases |
 | F5-12 recommendation confidence | `AD-OUT-001` | same fixture: the three-valued label and any arithmetic path forbidden |
+| F5-13 no pause on an uncertainty-limited negative | `AD-CON-002` variant 1.6, `WG-ALK-051` | `AD-CON-002` variant 1.5 — one increment apart, opposite delivery action |
+| F5-14 same-timestamp coalescing | `AD-SEG-007` | `AD-SEG-008` (a 0.30 dKH pool stays `ANOMALOUS`); both forbid order-dependent selection |
+| F5-15 ordinary signal floor | `AD-RET-001` | `AD-RET-004` (the floor must not reach an outer-bound candidate) |
 
 ## 5A. Still-open-issue coverage
 
-Twelve of the 30 remaining open issues — 27 carried forward, 3 opened by Freeze-5 review —
-are exercised by a fixture that asserts the **refusal** rather than a guessed value. These are the tests that fail if an implementer
+Nine of the 27 remaining open issues are exercised by a fixture that asserts the **refusal**
+rather than a guessed value. The three Freeze-5 review opened are closed by F5-13/14/15 and
+now assert a determined outcome instead. These are the tests that fail if an implementer
 silently picks a default.
 
 | Open issue | Fixture(s) asserting the refusal |
@@ -172,6 +176,8 @@ silently picks a default.
 | `OI-HIGHBREACHBAND-001` | `AD-CON-002` |
 | `OI-CLUSTERTIE-001` | `AD-SEG-007` |
 | `OI-RETESTFLOOR-001` | `AD-RET-001` |
+
+All three were closed by amendments F5-13, F5-14 and F5-15; the rows are kept so the fixture that pins each decision is findable from its issue id.
 
 The remaining open issues (`OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
 `OI-POTENCYSNAP-001`, `OI-PLANTARGETEDIT-001`, and the pinned conventions) are covered by
@@ -302,6 +308,6 @@ Recorded so their absence is a known choice, not an oversight.
 - **A committed fixture runner.** Executing a fixture needs an engine, which does not exist
   yet. What *is* committed is `validate-freeze-5.py`, the structural gate over rule IDs,
   traceability, the fixture index, the reason-code closed set, invariant counts and canon
-  consistency, plus independent recomputation of every series fixture — 99 assertions, shown
+  consistency, plus independent recomputation of every series fixture — 112 assertions, shown
   to fail on nine deliberate mutations before being trusted (`docs/process/runs/2026-08-20-alk-v2-freeze-5.md`). It checks that the corpus is
   coherent, not that an engine reproduces it.

@@ -192,6 +192,7 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `sigmaClusterDkh` | dKH | `max(SIGMA_ALK_BASE, 1.4826 · madDkh)`. **Never** divided by `√n` (Part II §5.6). |
 | `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`). |
 | `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
+| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling same-timestamp clusters (`ALK-SAME-TIMESTAMP-COALESCE-001`). The source clusters are retained for audit; the pooled cluster is what selection sees. |
 
 Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
 member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention
@@ -689,7 +690,7 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `safetyCorrectionVolumeMl` | mL | `ΔA_safety / P_selected`. Low breach only. **A volume.** |
 | `temporarySafetyRateAdvisoryMlPerDay` | mL/day | High breach with interpretable consumption. **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the actuator increment is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). |
 | `temporarySafetyPumpCommandMlPerDay` | mL/day | The executable rounded pump command for the same rate. `NOT_RUN` while `actuatorIncrementMlPerDay` is unavailable. **Never merged with the field above** — that merge is what `M-1` and F5-11 exist to prevent. |
-| `safetyDoseRecommendationMlPerDay` | mL/day | `0` under `ALK-HIGH-BREACH-UNRESOLVED-001`. |
+| `safetyDoseRecommendationMlPerDay` | mL/day | `0` under `ALK-HIGH-BREACH-UNRESOLVED-001`. `NOT_RUN` where `C_estimate` is negative but not materially negative — delivery is not paused and the established dose is held (`ALK-HIGH-BREACH-NO-PAUSE-001`). |
 | `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |
 | `interventionLockOwner` | — | `NONE` \| `SAFETY_RETURN` \| `ORDINARY_INTERVENTION`. |

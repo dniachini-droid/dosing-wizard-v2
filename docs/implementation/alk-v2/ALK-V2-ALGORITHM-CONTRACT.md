@@ -161,15 +161,27 @@ required by `ALK-065` / `WG-ALK-029` — a backdated valid measurement changes t
 analysis — and the historical assessment record stays immutable regardless.
 
 ```text
-PRECONDITION, checked before selection runs:
-    no two candidate clusters share a representativeAt          [OI-CLUSTERTIE-001]
-    violated -> independentSelection = TIE_UNRESOLVED
-                movementEvidence     = INSUFFICIENT
-                automaticMaintenanceAction = WITHHELD
-                EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED
-                + PII-2.4 item 4 ambiguity marking
+STEP 0, before selection      [ALK-SAME-TIMESTAMP-COALESCE-001]
+    group candidates by identical representativeAt
+    for each group of size > 1:
+        pool the COMBINED underlying measurements of its clusters
+        rebuild ONE cluster from the pool using the existing rules:
+            PII-5.4 representative value   = median(pooled raw readings)
+            PII-5.5 representative timestamp
+            PII-5.6 internal spread, and ALK-005
+        CLUSTER_SAME_TIMESTAMP_COALESCED
+    selection then runs over a UNIQUE-TIME sequence, so ordering is total
+
     Reachable: PII-5.3 groups automatically only within the same or a compatible method,
     so two incompatible methods at one instant yield two clusters at one timestamp.
+
+    NEVER: choose between them by event order, ID order, insertion order, database
+    ordering or implementation sorting - that makes the actuator command a property of
+    how the rows were stored.
+    NEVER: average the two cluster medians - the value is the median of the POOLED raw
+    readings.
+    NEVER: let coalescing hide an inconsistency - a pool spanning > 0.20 dKH is
+    ANOMALOUS under ALK-005 and takes PII-48's path.
 ```
 
 A cluster that is not accepted is **not excluded, invalidated or hidden**. It MAY still:
@@ -196,8 +208,9 @@ cluster; any selection whose result depends on the newest reading.
 
 **TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (appended
 cluster does not change selection; backdated-earlier case asserted separately);
-`AD-SEG-007` (identical representative timestamps ⇒ refusal); `EVD-002` all spacings ≥ 24 h
-proceeds normally.
+`AD-SEG-007` (identical representative timestamps ⇒ coalesced, not chosen between);
+`AD-SEG-008` (a coalesced pool spanning > 0.20 dKH stays `ANOMALOUS`);
+`EVD-002` all spacings ≥ 24 h proceeds normally.
 
 ## A5 — Segment construction
 
@@ -631,12 +644,16 @@ C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY
         -> maintenanceAction = HOLD
         -> CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED
 
-    high-breach consequence above OuterMax:      [ALK-NEGATIVE-MATERIALITY-001 Scope]
+    high-breach consequence above OuterMax:        [ALK-HIGH-BREACH-NO-PAUSE-001]
         materially negative      -> ALK-HIGH-BREACH-UNRESOLVED-001, 0 mL/day pause
-        NOT materially negative  -> UNDETERMINED       [OI-HIGHBREACHBAND-001]
-                                    highBreachZeroDosePause = NOT_RUN
-                                    SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED
-    maintenance is HOLD on both branches either way
+        NOT materially negative  -> DO NOT pause to 0 mL/day
+                                    HOLD the established maintenance dose
+                                    outer-bound state, SAFETY_RETURN and the ~24 h
+                                      cadence all continue unchanged
+                                    maintenanceEstimateStatus = UNRESOLVED
+                                    SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
+    maintenance is HOLD on both branches either way; a held dose is NOT a claim that
+    biological consumption is zero
 ```
 
 At exactly `C_estimate + 1.28 * sigma_S = 0` the result is **not** materially negative.
@@ -1499,6 +1516,13 @@ consumption INTERPRETABLE:
         ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
         P_selected invalid -> neither field; state the required dKH movement only
 
+consumption NEGATIVE but NOT materially negative:      [ALK-HIGH-BREACH-NO-PAUSE-001]
+    safetyDoseRecommendationMlPerDay = NOT_RUN   (no pause to 0 mL/day)
+    recommendedDoseMlPerDay          = D_current (HOLD the established dose)
+    outerBoundState / SAFETY_RETURN / ~24 h retest continue unchanged
+    maintenanceEstimateStatus        = UNRESOLVED
+    SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED
+
 consumption MATERIALLY NEGATIVE (ALK-NEGATIVE-MATERIALITY-001):
                                                        [ALK-HIGH-BREACH-UNRESOLVED-001]
     stop any separately temporary upward correction/return component
@@ -1510,12 +1534,11 @@ consumption MATERIALLY NEGATIVE (ALK-NEGATIVE-MATERIALITY-001):
     retest ~24 h, or sooner if a rapid/suspicious rule requires it
 ```
 
-`C_estimate >= 0` is `INTERPRETABLE` and takes the first branch. A **materially negative**
-`C_estimate` takes the second. A negative `C_estimate` that is **not** materially negative
-takes neither: whether it counts as "physically uninterpretable" is undetermined
-(`OI-HIGHBREACHBAND-001`), so the zero-dose pause is `NOT_RUN` with
-`SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` while position, outer-bound state and the
-24 h cadence continue.
+`C_estimate >= 0` is `INTERPRETABLE`. A **materially negative** `C_estimate` arms the
+zero-dose pause. A negative `C_estimate` that is **not** materially negative does **not**:
+pausing delivery is a fail-safe against a demonstrably broken mass balance, and an estimate
+negative only inside its own uncertainty has not demonstrated one. All three branches HOLD
+maintenance, and none of them infers zero biological consumption.
 
 The zero-dose pause is a fail-safe response to an invalid model, not a claim that
 biological consumption is zero. It is **not** pushed through the ordinary rail
@@ -1523,9 +1546,10 @@ calculation, because there is no modelled trajectory to rail (`ALK-046` high-bre
 clause). If the app cannot control the pump it says pausing is *recommended* and does not
 mark dosing as actually paused until implementation is confirmed.
 
-**TESTS** `WG-ALK-051`, `AD-SAF-002` (advisory rate emitted, pump command `NOT_RUN`),
-`AD-SAF-005` (negative control: the two fields must not be merged and no increment is
-invented), `AD-CON-002` (materiality straddle above `outerMax`).
+**TESTS** `WG-ALK-051` (materially negative ⇒ pause), `AD-SAF-002` (advisory rate emitted,
+pump command `NOT_RUN`), `AD-SAF-005` (negative control: the two fields must not be merged
+and no increment is invented), `AD-CON-002` (materiality straddle above `outerMax`: one
+actuator increment decides whether delivery is paused or held).
 
 ## A41 — Safety-return completion and integration
 
@@ -1817,7 +1841,9 @@ FORECAST_BOUNDARY_RISK    T_boundary = T_outer - 1.0 days      (24 h safety lead
                           unreachable in the state it was written for
 POST_CHANGE_FIRST         ~48 h after the actual dose change
 POST_CHANGE_SECOND        ~48 h after the first  (~Day 4)
-SIGNAL_ACCUMULATION       T_signal = 0.10 / |S_supported|   days
+SIGNAL_ACCUMULATION       T_signal = max(1 day, 0.10 / |S_supported|)   days
+                          the 24 h floor is INSIDE this candidate's formula and applies
+                          to NO other candidate
                           NOT_RUN when S_supported = 0 or evidence is INSUFFICIENT,
                           which includes a post-change regime that has not yet reached
                           ordinary sufficiency
@@ -1830,18 +1856,22 @@ ROUTINE_CADENCE           48 h
 in `candidatesNotRun[]` with `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
 `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`. This is a decided state, not a gap.
 
-**CLAMP on ordinary observation candidates only**
+**CLAMPS**
 
 ```text
-ceiling  96 h   the existing ~Day-4 window         RETEST_OBSERVATION_CEILING_APPLIED
+ceiling  96 h   ordinary observation candidates    RETEST_OBSERVATION_CEILING_APPLIED
+                the existing ~Day-4 window
 
-NO FLOOR. PII-66's minimum useful interval is NOT supplied  [OI-RETESTFLOOR-001]
-          minimumUsefulIntervalApplied = NOT_RUN
-          RETEST_MINIMUM_INTERVAL_UNAVAILABLE
-ALK-008's 24 h is a TREND-INDEPENDENCE minimum and is not repurposed as a scheduling
-floor. Where |S_supported| > 0.10 dKH/day, T_signal is under 24 h and the scheduler may
-recommend a test ALK-008 will not accept as a new full-strength trend observation. That
-test still serves position, anomaly confirmation and ALK-RAPID-BASIS-001.
+floor    24 h   the SIGNAL_ACCUMULATION candidate ONLY, inside its own formula
+                RETEST_SIGNAL_FLOOR_APPLIED
+                |S_supported| > 0.10 dKH/day -> raw T_signal < 24 h -> floored
+
+EXEMPT from the floor, and may schedule earlier or return TEST_NOW when warranted:
+    REPEAT_NOW, RAPID_MOVEMENT, SAFETY_RETURN_ACTIVE, HIGH_BREACH_FAILSAFE,
+    FORECAST_BOUNDARY_RISK
+PRESERVED unchanged: POST_CHANGE_FIRST ~48 h, POST_CHANGE_SECOND ~Day 4,
+    ROUTINE_CADENCE 48 h, the ~Day-4 ordinary ceiling, and one authoritative
+    scheduler choosing the earliest applicable candidate.
 ```
 
 **SELECTION**
@@ -1861,7 +1891,7 @@ is exact
 and the not-run list.
 
 **TESTS** `WG-ALK-060`, `WG-ALK-001` (post-change first, 48 h), `WG-ALK-006` (rapid, 24 h),
-`ALK-G010`, `ALK-G011`, `AD-RET-001` (`T_signal` under 24 h is selected unclamped),
+`ALK-G010`, `ALK-G011`, `AD-RET-001` (raw `T_signal` 22.913 h floored to 24 h and selected),
 `AD-RET-002` (`T_signal` above the ceiling; routine cadence still earlier),
 `AD-RET-003` (forecast boundary lead selects 40 h),
 `AD-RET-004` (crossing inside the lead ⇒ test now),

@@ -25,9 +25,10 @@ ALK_V2_FREEZE_5
 `ALK_V2_FREEZE_5` closed the eleven blocking items of `ALK-V2-OPEN-ISSUES.md`, plus
 `OI-RAPIDBASIS-001` and `OI-CONFIDENCE-001`, with twelve owner decisions written into the
 canon. Its independent review then **opened three new items** where encoding a decision
-would have required a second decision the owner did not make: `OI-HIGHBREACHBAND-001`,
-`OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001`, in section A2 of the register. Two of them
-withhold a narrow output; everything the originally blocking items gated is now emitted.
+would have required a second decision the owner had not made — `OI-HIGHBREACHBAND-001`,
+`OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001` — and the owner decided all three as
+amendments **F5-13, F5-14 and F5-15**. All sixteen are closed, and nothing in this package
+withholds an output for want of a decision.
 
 Read the Freeze-5 declaration in the canon, then the *Status after `ALK_V2_FREEZE_5`* and
 *A2* sections of `ALK-V2-OPEN-ISSUES.md`, before anything else.
@@ -57,20 +58,20 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 99 assertions over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| `validate-freeze-5.py` | Mechanical gate: 112 assertions over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
 | `fixtures/*.json` | Machine-readable golden corpus — 174 fixtures plus schema, config defaults and index. |
 | `traceability/alk-v2-traceability.json` | Machine-readable copy of the 271-rule traceability inventory. |
 
 ## At a glance
 
 ```text
-271  normative canon rules inventoried, each with exactly one implementation owner
-177  fixtures  (102 canon-verbatim, 47 canon-derived, 28 canon-qualitative)
-241  reason codes across 23 owner groups  (15 retired by Freeze 5)
- 64  machine-testable invariants
- 43  open issues  (13 resolved by Freeze 5, 3 opened by its review,
+273  normative canon rules inventoried, each with exactly one implementation owner
+178  fixtures  (102 canon-verbatim, 48 canon-derived, 28 canon-qualitative)
+241  reason codes across 23 owner groups  (18 retired by Freeze 5)
+ 66  machine-testable invariants
+ 43  open issues  (16 resolved by Freeze 5 and its amendments,
                   11 canon defects carried forward, 13 pinned, 3 no-problem)
-  2  narrow refusals remain: OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001
+  0  outputs withheld for want of an owner decision
   0  rules without a fixture
   0  rules with more than one owner
 ```

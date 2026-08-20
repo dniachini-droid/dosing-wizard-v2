@@ -1986,7 +1986,7 @@
     },
     {
       "fixtureId": "AD-RET-001",
-      "title": "Retest scheduler: T_signal below 24 h is selected, unclamped",
+      "title": "Retest scheduler: the ordinary signal candidate is floored at 24 h",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
@@ -1997,7 +1997,7 @@
           "ALK-050",
           "ALK-008"
         ],
-        "note": "Freeze 5 F5-09. Same state as AD-MNT-006, so no intervention exists and the ordinary observation candidates govern. T_signal = 0.10 / 0.104745166004 = 0.954698 d = 22.912752 h. Freeze 5 supplies no scheduler floor, so it is emitted as computed."
+        "note": "Freeze 5 F5-09 and F5-15. Same state as AD-MNT-006. Raw T_signal = 0.10 / 0.104745166004 = 0.954698 d = 22.912752 h; the max(1 day, .) floor in the candidate's own formula lifts it to 24 h."
       },
       "rulesExercised": [
         "ALK-RETEST-SCHEDULER-001",
@@ -2033,9 +2033,10 @@
           },
           {
             "candidateClass": "SIGNAL_ACCUMULATION",
-            "approxHours": 22.912751887,
+            "rawHours": 22.912751887,
+            "flooredHours": 24.0,
             "included": true,
-            "note": "T_signal = 0.10 / |S_supported| = 0.10 / 0.104745166004 days"
+            "note": "T_signal = max(1 day, 0.10 / |S_supported|); the floor applies to this candidate only"
           },
           {
             "candidateClass": "FORECAST_BOUNDARY_RISK",
@@ -2049,25 +2050,26 @@
           "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
           "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
         ],
-        "minimumUsefulIntervalApplied": "NOT_RUN",
+        "minimumUsefulIntervalApplied": "24 h, on the signal candidate only",
         "observationCeilingHours": 96.0,
-        "selectedApproxHours": 22.912751887,
+        "selectedApproxHours": 24.0,
         "selectedReasonCode": "RETEST_SIGNAL_ACCUMULATION"
       },
       "expectedReasonCodes": [
         "RETEST_SIGNAL_ACCUMULATION",
-        "RETEST_MINIMUM_INTERVAL_UNAVAILABLE",
+        "RETEST_SIGNAL_FLOOR_APPLIED",
         "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
         "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
       ],
       "openIssues": [
         "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)",
-        "OI-RETESTFLOOR-001 - OPEN: whether the scheduler should carry a minimum useful interval above ALK-008's 24 h trend-acceptance boundary"
+        "OI-RETESTFLOOR-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-15)"
       ],
       "forbidden": {
-        "note": "No K_detect and no return-plan arrival cadence may be supplied; both are canonically NOT_RUN. No scheduler floor may be invented from ALK-008's 24 h, which is a trend-independence minimum and not a scheduling minimum. The forecast-boundary candidate must appear in the audit list rather than being dropped on an unstated horizon.",
-        "selectedApproxHours": 24.0,
+        "note": "The floor belongs to the signal candidate alone. It must not be applied to the rapid, outer-bound/forecast, safety, high-breach or repeat-now candidates, which may schedule earlier when already warranted. No K_detect and no return-plan arrival cadence may be supplied; both are canonically NOT_RUN. The forecast-boundary candidate must appear in the audit list rather than being dropped on an unstated horizon.",
+        "selectedApproxHours": 22.912751887,
         "reasonCodes": [
+          "RETEST_MINIMUM_INTERVAL_UNAVAILABLE",
           "RETEST_OBSERVATION_FLOOR_APPLIED",
           "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
           "RETEST_BOUNDARY_MARGIN_UNAVAILABLE"
@@ -2313,7 +2315,7 @@
     },
     {
       "fixtureId": "AD-CON-002",
-      "title": "Negative-consumption materiality straddle - one actuator increment changes the safety action",
+      "title": "Negative-consumption materiality straddle - one actuator increment decides whether delivery is paused",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
@@ -2327,7 +2329,8 @@
         "ALK-CONSUMPTION-ESTIMATE-001",
         "ALK-NEGATIVE-MATERIALITY-001",
         "ALK-NEGATIVE-CONSUMPTION-001",
-        "ALK-HIGH-BREACH-UNRESOLVED-001"
+        "ALK-HIGH-BREACH-UNRESOLVED-001",
+        "ALK-HIGH-BREACH-NO-PAUSE-001"
       ],
       "input": {
         "timesDays": [
@@ -2375,21 +2378,25 @@
         "variant_1_5": {
           "consumptionPhysicality": "NON_PHYSICAL_OR_UNEXPLAINED_GAIN",
           "maintenanceAction": "HOLD",
-          "highBreachZeroDosePause": "APPLIED",
           "safetyDoseRecommendationMlPerDay": 0,
+          "deliveryPaused": true,
           "maintenanceEstimateStatus": "UNRESOLVED",
+          "outerBoundState": "BREACHED_HIGH",
           "nextTestApproxHours": 24
         },
         "variant_1_6": {
           "consumptionPhysicality": "UNCERTAIN_NON_RESOLVABLE",
           "maintenanceAction": "HOLD",
-          "highBreachZeroDosePause": "NOT_RUN",
+          "recommendedDoseMlPerDay": 1.6,
           "safetyDoseRecommendationMlPerDay": "NOT_RUN",
+          "deliveryPaused": false,
           "maintenanceEstimateStatus": "UNRESOLVED",
+          "outerBoundState": "BREACHED_HIGH",
           "nextTestApproxHours": 24,
-          "note": "Whether a negative but not materially negative estimate is physically uninterpretable is undetermined (OI-HIGHBREACHBAND-001), so the zero-dose pause is withheld rather than guessed."
+          "highBreachSafetyHandlingPreserved": true,
+          "note": "F5-13. An estimate negative only inside its own uncertainty has not demonstrated a broken mass balance, so delivery is not paused. The established 1.6 mL/day is HELD; the outer-bound state, SAFETY_RETURN and the ~24 h cadence continue unchanged; zero biological consumption is not inferred."
         },
-        "note": "Maintenance is HOLD on both sides. The boundary decides the recorded classification AND, above OuterMax, whether the zero-dose fail-safe fires - which is the safety consequence the open-issue register said this boundary carries."
+        "note": "Maintenance is HOLD on both sides and neither infers zero consumption. What the boundary decides is the recorded classification AND whether alkalinity delivery is paused to 0 mL/day."
       },
       "expectedReasonCodes": [
         "SAFETY_OUTER_BOUND_BREACHED_HIGH",
@@ -2397,25 +2404,27 @@
         "RETEST_HIGH_BREACH_FAILSAFE"
       ],
       "openIssues": [
-        "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03) for the materiality boundary and the maintenance consequence",
-        "OI-HIGHBREACHBAND-001 - OPEN: the high-breach status of the non-material negative branch"
+        "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03)",
+        "OI-HIGHBREACHBAND-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-13)"
       ],
       "forbidden": {
-        "note": "No sigma_P and no sigma_D may be introduced. The comparison is strict: at exactly C + 1.28*sigma_S = 0 the result is NOT materially negative. Neither variant may size a maintenance change or clamp C to zero. Variant 1.6 must NOT arm the zero-dose pause: that would make the boundary irrelevant to the fail-safe and contradict the conservatism the sigma_P = sigma_D = 0 choice was justified by.",
+        "note": "No sigma_P and no sigma_D. The comparison is strict: at exactly C + 1.28*sigma_S = 0 the result is NOT materially negative. Neither variant may size a maintenance change or clamp C to zero. Variant 1.6 must NOT pause delivery to 0 mL/day, and must NOT drop the outer-bound state or the 24 h cadence in exchange.",
         "reasonCodes": [
           "CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED",
-          "SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED"
+          "SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED",
+          "SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED"
         ],
         "variantSpecific": {
           "variant_1_5_reasonCodes": [
             "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED",
-            "SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED"
+            "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
           ],
           "variant_1_6_reasonCodes": [
             "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
             "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE"
           ],
-          "variant_1_6_safetyDoseRecommendationMlPerDay": 0
+          "variant_1_6_safetyDoseRecommendationMlPerDay": 0,
+          "variant_1_6_maintenanceEstimateMlPerDay": "any value inferred from C - a held dose is not a demand estimate"
         }
       },
       "variantReasonCodes": {
@@ -2425,7 +2434,7 @@
         ],
         "variant_1_6": [
           "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED",
-          "SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED"
+          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
         ]
       }
     },
@@ -2931,12 +2940,11 @@
         "observationCeilingHours": 96.0,
         "selectedApproxHours": 48.0,
         "selectedReasonCode": "RETEST_ROUTINE_CADENCE",
-        "minimumUsefulIntervalApplied": "NOT_RUN"
+        "minimumUsefulIntervalApplied": "not binding: raw T_signal is 162.765 h"
       },
       "expectedReasonCodes": [
         "RETEST_ROUTINE_CADENCE",
-        "RETEST_OBSERVATION_CEILING_APPLIED",
-        "RETEST_MINIMUM_INTERVAL_UNAVAILABLE"
+        "RETEST_OBSERVATION_CEILING_APPLIED"
       ],
       "openIssues": [
         "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)"
@@ -3080,7 +3088,7 @@
         "selectedAction": "REPEAT_NOW",
         "selectedReasonCode": "RETEST_FORECAST_BOUNDARY_RISK",
         "observationFloorApplied": false,
-        "note": "The forecast-boundary candidate is not subject to the 24 h ordinary-observation floor."
+        "note": "The forecast-boundary candidate is exempt from the signal candidate's 24 h floor; TEST_NOW semantics are preserved."
       },
       "expectedReasonCodes": [
         "RETEST_FORECAST_BOUNDARY_RISK"
@@ -3090,7 +3098,10 @@
       ],
       "forbidden": {
         "selectedApproxHours": 24.0,
-        "note": "Clamping the negative T_boundary up to the 24 h observation floor, or to zero-plus-floor, would schedule the test after the projected outer-bound crossing. The level is not yet BREACHED, so the safety-return cadence does not apply and only this candidate protects the crossing."
+        "note": "Clamping the negative T_boundary up to the 24 h observation floor, or to zero-plus-floor, would schedule the test after the projected outer-bound crossing. The level is not yet BREACHED, so the safety-return cadence does not apply and only this candidate protects the crossing. The 24 h signal floor must not be applied here: F5-15 confines it to the ordinary signal candidate and explicitly preserves earliest-practicable semantics for outer-bound risk.",
+        "reasonCodes": [
+          "RETEST_SIGNAL_FLOOR_APPLIED"
+        ]
       }
     },
     {
@@ -3216,21 +3227,24 @@
     },
     {
       "fixtureId": "AD-SEG-007",
-      "title": "Two candidate clusters sharing a representative timestamp - selection is undetermined",
+      "title": "Two clusters sharing a representative timestamp are coalesced, not chosen between",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
+          "ALK-SAME-TIMESTAMP-COALESCE-001",
           "ALK-INDEPENDENT-SELECTION-001",
           "Part II §5.3",
-          "Part II §2.4"
+          "Part II §5.4",
+          "ALK-005"
         ],
-        "note": "Freeze 5 F5-01 boundary. Part II §5.3 groups automatically only within the same or a compatible method, so two incompatible methods at one instant yield two clusters at one representative time. ALK-INDEPENDENT-SELECTION-001 orders by that timestamp and states no tie-break."
+        "note": "Freeze 5 F5-14. Part II §5.3 groups automatically only within the same or a compatible method, so two incompatible methods at one instant yield two clusters at one representative time. They are pooled before selection. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the coalesced cluster OK."
       },
       "rulesExercised": [
+        "ALK-SAME-TIMESTAMP-COALESCE-001",
         "ALK-INDEPENDENT-SELECTION-001",
-        "Part II §5.3",
-        "Part II §2.4",
-        "CORE-INFORM-PROCEED-001"
+        "Part II §5.4",
+        "Part II §5.6",
+        "ALK-005"
       ],
       "input": {
         "clusters": [
@@ -3241,7 +3255,7 @@
           },
           {
             "atDay": 0.0,
-            "alkDkh": 8.8,
+            "alkDkh": 8.74,
             "method": "SALIFERT_TITRATION"
           },
           {
@@ -3258,9 +3272,60 @@
         "actuatorIncrementMlPerDay": 0.1
       },
       "expectedIntermediateEvidence": {
-        "tiedRepresentativeAtDay": 0.0,
-        "tiedClusterCount": 2,
-        "divergentBranches": [
+        "coalescedAtDay": 0.0,
+        "pooledReadingsDkh": [
+          8.6,
+          8.74
+        ],
+        "coalescedValueDkh": 8.67,
+        "coalescedSpreadDkh": 0.14,
+        "coalescedClusterStatus": "OK",
+        "seriesAfterCoalescing": {
+          "timesDays": [
+            0,
+            2,
+            4
+          ],
+          "alkDkh": [
+            8.67,
+            8.3,
+            8.0
+          ]
+        },
+        "acceptedClusterTimesDays": [
+          0.0,
+          2.0,
+          4.0
+        ],
+        "observedSlopeDkhPerDay": -0.175,
+        "sigmaResidDkh": 0.0,
+        "sigmaPointDkh": 0.1,
+        "sxxDay2": 8.0,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportedSlopeDkhPerDay": -0.122245166004
+      },
+      "expectedAction": {
+        "independentSelection": "APPLIED_OVER_UNIQUE_TIMES",
+        "movementEvidence": "SUFFICIENT",
+        "continuousActionCandidateMlPerDay": 10.763999509,
+        "recommendedDoseMlPerDay": 10.8,
+        "note": "One instant is one testing episode however many methods were used. Selection never depends on which cluster the store happened to return first."
+      },
+      "expectedReasonCodes": [
+        "CLUSTER_SAME_TIMESTAMP_COALESCED",
+        "EVIDENCE_SUFFICIENT",
+        "TRAJECTORY_FALLING",
+        "MAINTENANCE_INCREASE_RECOMMENDED"
+      ],
+      "openIssues": [
+        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14)"
+      ],
+      "forbidden": {
+        "recommendedDoseMlPerDay": [
+          10.5,
+          11.0
+        ],
+        "branchesThatMustNotBeSelected": [
           {
             "accepted": [
               8.6,
@@ -3268,45 +3333,24 @@
               8.0
             ],
             "observedSlopeDkhPerDay": -0.15,
-            "sigmaSDkhPerDay": 0.035355339059,
             "supportedSlopeDkhPerDay": -0.104745166004,
-            "continuousCandidateMlPerDay": 10.511474257,
             "roundedMlPerDay": 10.5
           },
           {
             "accepted": [
-              8.8,
+              8.74,
               8.3,
               8.0
             ],
-            "observedSlopeDkhPerDay": -0.2,
-            "sigmaSDkhPerDay": 0.035355339059,
-            "supportedSlopeDkhPerDay": -0.154745166004,
-            "continuousCandidateMlPerDay": 11.232974978,
-            "roundedMlPerDay": 11.2
+            "observedSlopeDkhPerDay": -0.185,
+            "supportedSlopeDkhPerDay": -0.139745166004,
+            "roundedMlPerDay": 11.0
           }
         ],
-        "note": "0.7 mL/day of divergence from one identical ledger. Both are inside the 25% step cap (11.25) and inside the 0.50 dKH/day rail, so nothing downstream reconciles them."
-      },
-      "expectedAction": {
-        "independentSelection": "TIE_UNRESOLVED",
-        "movementEvidence": "INSUFFICIENT",
-        "automaticMaintenanceAction": "WITHHELD",
-        "positionSafetyRetestHistory": "unaffected"
-      },
-      "expectedReasonCodes": [
-        "EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED",
-        "TIME_EVENT_ORDER_AMBIGUOUS"
-      ],
-      "openIssues": [
-        "OI-CLUSTERTIE-001 - OPEN: which of two clusters sharing a representative timestamp is accepted"
-      ],
-      "forbidden": {
-        "roundedMlPerDay": [
-          10.5,
-          11.2
+        "reasonCodes": [
+          "EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED"
         ],
-        "note": "Picking either branch - by insertion order, by method precedence, by value, or by any other rule the canon does not state - is forbidden. So is averaging them into a third cluster: Part II §5.3 kept them separate deliberately."
+        "note": "Choosing either cluster by event order, ID order, insertion order, database ordering or implementation sorting is forbidden - the two branches differ by 0.5 mL/day. Averaging the two cluster MEDIANS is also forbidden: the coalesced value is the median of the POOLED raw readings. The two coincide for this two-reading pool and do not in general, so an implementation must pool rather than average."
       }
     },
     {
@@ -3380,6 +3424,80 @@
         "selectedAction": "REPEAT_NOW",
         "selectedReasonCode": "RETEST_FORECAST_BOUNDARY_RISK",
         "note": "Submitting the forecast candidate on a breached level yields T_boundary = -1.0 d and REPEAT_NOW at every assessment, an instruction that never clears while the condition persists and that suppresses the canon's own ~24 h safety cadence."
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-008",
+      "title": "Coalescing does not launder an internally inconsistent same-timestamp pool",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SAME-TIMESTAMP-COALESCE-001",
+          "ALK-005",
+          "Part II §5.6",
+          "Part II §48"
+        ],
+        "note": "Freeze 5 F5-14 negative control. Same shape as AD-SEG-007 with a wider disagreement between the two methods: pooled spread 0.30 > 0.20, so ALK-005 marks the coalesced cluster ANOMALOUS."
+      },
+      "rulesExercised": [
+        "ALK-SAME-TIMESTAMP-COALESCE-001",
+        "ALK-005",
+        "Part II §5.6",
+        "Part II §48"
+      ],
+      "input": {
+        "clusters": [
+          {
+            "atDay": 0.0,
+            "alkDkh": 8.6,
+            "method": "HANNA_CHECKER"
+          },
+          {
+            "atDay": 0.0,
+            "alkDkh": 8.9,
+            "method": "SALIFERT_TITRATION"
+          },
+          {
+            "atDay": 2.0,
+            "alkDkh": 8.3
+          },
+          {
+            "atDay": 4.0,
+            "alkDkh": 8.0
+          }
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "coalescedAtDay": 0.0,
+        "pooledReadingsDkh": [
+          8.6,
+          8.9
+        ],
+        "coalescedValueDkh": 8.75,
+        "coalescedSpreadDkh": 0.3,
+        "alk005ThresholdDkh": 0.2,
+        "coalescedClusterStatus": "ANOMALOUS",
+        "note": "0.30 > 0.20, so the pooled cluster is ANOMALOUS under ALK-005. It is a historical cluster here, not the latest, so Part II §49 retention and the OI-ANOMCLUSTER-001 handling apply."
+      },
+      "expectedAction": {
+        "movementEvidence": "ANOMALOUS",
+        "automaticMaintenanceAction": "WITHHELD",
+        "allRawReadingsPreserved": true,
+        "medianConclusionManufactured": false
+      },
+      "expectedReasonCodes": [
+        "CLUSTER_SAME_TIMESTAMP_COALESCED",
+        "CLUSTER_ANOMALOUS_SPREAD",
+        "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER"
+      ],
+      "openIssues": [
+        "OI-CLUSTERTIE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-14)",
+        "OI-ANOMCLUSTER-001 - OPEN, unchanged: what a historical anomalous cluster contributes"
+      ],
+      "forbidden": {
+        "coalescedClusterStatus": "OK",
+        "note": "Coalescing pools measurements and re-applies the existing rules; it must not suppress ALK-005. Reporting a clean 8.75 dKH from two methods that disagree by 0.30 dKH is exactly the laundering this control exists to catch."
       }
     }
   ]

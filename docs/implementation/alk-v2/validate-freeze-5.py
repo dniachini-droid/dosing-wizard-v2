@@ -64,7 +64,8 @@ check('no ALK_V2_FREEZE_4 left in the package',
 NEW_RULES=['ALK-INDEPENDENT-SELECTION-001','ALK-SUSPECT-DETECTION-001','ALK-NEGATIVE-MATERIALITY-001',
  'ALK-RETURN-ELIGIBLE-TRAJECTORY-001','ALK-TOWARD-RANGE-HOLD-001','ALK-RAPID-BASIS-001',
  'ALK-RETURN-TERMINATED-BY-SAFETY-001','ALK-RETEST-SCHEDULER-001',
- 'ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001','ALK-SAFETY-TEMP-RATE-RESOLUTION-001']
+ 'ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001','ALK-SAFETY-TEMP-RATE-RESOLUTION-001',
+ 'ALK-HIGH-BREACH-NO-PAUSE-001','ALK-SAME-TIMESTAMP-COALESCE-001']
 for rid in NEW_RULES:
     # a body = the id on its own line as a backticked marker in the canon
     body = re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M) is not None
@@ -123,7 +124,8 @@ DEC={'F5-01':['OI-INDEPENDENCE-001'],'F5-02':['OI-SUSPECT-001','OI-MADFLOOR-001'
  'F5-03':['OI-NEGCONS-001'],'F5-04':['OI-RETURNOFFER-001'],'F5-05':['OI-BELOWRISING-001'],
  'F5-06':['OI-LIQUIDGUARD-001'],'F5-07':['OI-RAPIDBASIS-001'],'F5-08':['OI-RETURNDURINGSAFETY-001'],
  'F5-09':['OI-RETEST-001'],'F5-10':['OI-WATERCHANGE-001'],'F5-11':['OI-SAFETYRATE-001'],
- 'F5-12':['OI-CONFIDENCE-001']}
+ 'F5-12':['OI-CONFIDENCE-001'],'F5-13':['OI-HIGHBREACHBAND-001'],'F5-14':['OI-CLUSTERTIE-001'],
+ 'F5-15':['OI-RETESTFLOOR-001']}
 for dec,ois in DEC.items():
     pos=[fid for fid,(fn,f) in fixtures.items()
          if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
@@ -135,7 +137,8 @@ for dec,ois in DEC.items():
 OI=open(R+'docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md',encoding='utf-8').read()
 RESOLVED=['OI-INDEPENDENCE-001','OI-SUSPECT-001','OI-MADFLOOR-001','OI-NEGCONS-001','OI-RETEST-001',
  'OI-RETURNOFFER-001','OI-BELOWRISING-001','OI-WATERCHANGE-001','OI-LIQUIDGUARD-001','OI-SAFETYRATE-001',
- 'OI-RETURNDURINGSAFETY-001','OI-RAPIDBASIS-001','OI-CONFIDENCE-001']
+ 'OI-RETURNDURINGSAFETY-001','OI-RAPIDBASIS-001','OI-CONFIDENCE-001',
+ 'OI-HIGHBREACHBAND-001','OI-CLUSTERTIE-001','OI-RETESTFLOOR-001']
 for oi in RESOLVED:
     m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
     if not m: check('register section for '+oi, False); continue
@@ -145,7 +148,7 @@ for oi in RESOLVED:
 check('register keeps the original analysis (history not deleted)',
       'Failure scenario' in OI and 'Until closed (superseded by Freeze 5; historical)' in OI)
 n_res=OI.count('> **RESOLVED by `ALK_V2_FREEZE_5`')
-check('exactly 13 resolution boxes', n_res==13, str(n_res))
+check('exactly 16 resolution boxes', n_res==16, str(n_res))
 
 # ---------- 9. no new numeric constant introduced by Freeze 5 ----------
 # The Freeze-5 declaration claims no new constant. Compare against the PINNED BASE, not
@@ -162,7 +165,7 @@ for c in ['1.28','0.10 dKH','0.20 dKH','0.02','24','48','0.50']:
 # ---------- 10. invariant count ----------
 INV=open(R+'docs/implementation/alk-v2/ALK-V2-INVARIANTS.md',encoding='utf-8').read()
 n=len(re.findall(r'^### INV-', INV, re.M))
-check('invariant bodies match the coverage total', n==64 and '| **Total** | **64** |' in INV, str(n))
+check('invariant bodies match the coverage total', n==66 and '| **Total** | **66** |' in INV, str(n))
 
 # ---------- 11. canon internal consistency for the amended rules ----------
 pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
@@ -174,7 +177,9 @@ pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
        ('ALK-RETURN-TERMINATED-BY-SAFETY-001','TERMINATED_BY_SAFETY_RETURN'),
        ('ALK-RETEST-SCHEDULER-001','T_{signal,days}'),
        ('ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001','MEASURED\\\\_SAME\\\\_BATCH'),
-       ('ALK-SAFETY-TEMP-RATE-RESOLUTION-001','temporarySafetyRateAdvisoryMlPerDay')]
+       ('ALK-SAFETY-TEMP-RATE-RESOLUTION-001','temporarySafetyRateAdvisoryMlPerDay'),
+       ('ALK-HIGH-BREACH-NO-PAUSE-001','DO NOT recommend pausing'),
+       ('ALK-SAME-TIMESTAMP-COALESCE-001','coalesce same-timestamp clusters')]
 for rid,token in pairs:
     m=re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M)
     seg=CANON[m.start():m.start()+9000] if m else ''
