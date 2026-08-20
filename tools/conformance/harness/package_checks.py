@@ -81,6 +81,22 @@ from .results import FAIL, PASS, CheckOutcome
 _ALK = paths.ALK + os.sep
 _CANON = paths.CANON_DIR + os.sep
 
+#: How many assertions a complete run of this module makes.
+#:
+#: A floor, not a decoration. Several of the checks below are guarded --
+#: `if f:` on a fixture that may not exist, `if len(man)==2:` on a canon
+#: section -- so a document edit can delete assertions rather than failing
+#: them, and a gate that quietly examines less than it did reports a smaller,
+#: cleaner pass. `test-engineer` demonstrated exactly that: a consistent
+#: rename of `AD-EPI-005` removed an assertion, took the count from 423 to
+#: 422, and turned the negative control that depended on it green, with no
+#: violation anywhere.
+#:
+#: Raise this deliberately when checks are added, and never lower it to make a
+#: run pass -- lowering it is the defect it exists to catch. It counts this
+#: module's own assertions, not anything canon owns.
+EXPECTED_ASSERTIONS = 430
+
 #: One title and one description per bucket. The description is what the run
 #: report prints as "checked:", so it must say what was actually examined.
 _BUCKETS: Dict[str, Tuple[str, str]] = {
@@ -193,6 +209,11 @@ class _Recorder:
         self.examined: Dict[str, int] = collections.defaultdict(int)
         self.notes: Dict[str, List[str]] = collections.defaultdict(list)
         self.total = 0
+        #: Set when the run stops early. Every bucket is then suspect, because
+        #: the buckets are interleaved -- `CHK-CANON-RULE-BODIES` is entered
+        #: twice and `CHK-LIVE-TEXT-ABSENCE` four times -- so "already passed"
+        #: cannot be inferred from position. See `outcomes()`.
+        self.aborted_in: str = ""
 
     def sec(self, check_id: str) -> None:
         assert check_id in _BUCKETS, check_id
@@ -211,10 +232,36 @@ class _Recorder:
             )
 
     def outcomes(self) -> List[CheckOutcome]:
+        """One `CheckOutcome` per bucket.
+
+        **A bucket that did not run does not report PASS.** This is the
+        harness's own rule, stated at `report.py`: *"an unrun fixture must
+        never read as a passing one."* It applies with more force here,
+        because one exception anywhere in the absorbed body ends the whole
+        run: without the guard below, a `KeyError` in an early bucket left
+        fourteen later ones reporting PASS over zero assertions, including
+        `CHK-LIVE-TEXT-ABSENCE` while a reverted canon decision sat in the
+        tree. That is the exact false green this gate exists to prevent, and
+        it was found by `test-engineer` rather than by the gate.
+
+        The rule is deliberately blunt: once the run has aborted, **no** bucket
+        may report PASS, not merely the ones that had not started. The buckets
+        are interleaved, so a bucket entered early may still have had
+        assertions pending when the run stopped, and there is no cheap way to
+        tell which. A gate that stopped early is entirely red until the reason
+        it stopped is fixed.
+        """
         out: List[CheckOutcome] = []
         for cid, (title, what) in _BUCKETS.items():
-            v = self.violations.get(cid, [])
+            v = list(self.violations.get(cid, []))
             n = self.examined.get(cid, 0)
+            if self.aborted_in and not v:
+                v = [
+                    "NOT EVALUATED: the absorbed checks stopped early, in "
+                    "%s. This check reports neither pass nor failure -- its "
+                    "%d assertion(s) may not all have run, and a PASS here "
+                    "would be a false green." % (self.aborted_in, n)
+                ]
             out.append(
                 CheckOutcome(
                     check_id=cid,
@@ -259,13 +306,13 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
             0,
         )
     FIXDIR = paths.FIXTURES + os.sep
-    DOCS = glob.glob(_ALK + "*.md")
+    DOCS = sorted(glob.glob(_ALK + "*.md"))
 
     try:
         _sec('CHK-PKG-JSON')
         # ---------- 1. JSON well-formedness ----------
         jsons={}
-        for fn in glob.glob(_ALK+'**/*.json', recursive=True):
+        for fn in sorted(glob.glob(_ALK+'**/*.json', recursive=True)):
             try: jsons[fn]=json.load(open(fn,encoding='utf-8'))
             except Exception as e: check('json parse '+os.path.basename(fn), False, str(e))
         check('all package JSON parses', len(jsons)==len(glob.glob(_ALK+'**/*.json',recursive=True)),
@@ -283,11 +330,11 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
 
         _sec('CHK-FREEZE-STAMP')
         # ---------- 3. canon authority stamped everywhere ----------
-        bad=[fn for fn in glob.glob(FIXDIR+'*.json')
+        bad=[fn for fn in sorted(glob.glob(FIXDIR+'*.json'))
              if 'ALK_V2_FREEZE_5' not in open(fn,encoding='utf-8').read()]
         check('every fixture file stamps ALK_V2_FREEZE_5', not bad, str([os.path.basename(b) for b in bad]))
         check('no ALK_V2_FREEZE_4 left in the package',
-              not [fn for fn in glob.glob(_ALK+'**/*',recursive=True)
+              not [fn for fn in sorted(glob.glob(_ALK+'**/*',recursive=True))
                    if os.path.isfile(fn) and not fn.endswith('.py')
                    and 'ALK_V2_FREEZE_4' in open(fn,encoding='utf-8',errors='ignore').read()
                    and os.path.basename(fn) not in ('ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md',
@@ -322,7 +369,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
         # ---------- 5. traceability integrity ----------
         rules=[r for g in trace['groups'] for r in g['rules']]
         check('traceability totals match rows', trace['totals']['rules']==len(rules), '%d'%len(rules))
-        check('one owner per rule (single-valued, in vocabulary)',
+        check('one owner per rule (single-valued; the vocabulary itself is NOT checked - OI-GATEVOCABULARY-001)',
               all(isinstance(r['owner'],str) and ',' not in r['owner'] for r in rules))
         dupids=[k for k,v in collections.Counter(r['id'] for r in rules).items() if v>1]
         check('no duplicate rule ids', not dupids, str(dupids))
@@ -393,7 +440,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                  if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
             neg=[fid for fid in pos if fixtures[fid][1].get('forbidden') or fixtures[fid][1].get('variant')]
             check('%s has a positive fixture'%dec, bool(pos), ','.join(sorted(pos)))
-            check('%s has a negative control'%dec, bool(neg), ','.join(sorted(neg)))
+            check('%s has a fixture carrying a forbidden or variant block (presence only; that it forbids the REVERTED answer is not checked)'%dec, bool(neg), ','.join(sorted(neg)))
 
         _sec('CHK-OPEN-ISSUES')
         # ---------- 8. every resolved OI is marked RESOLVED in the register ----------
@@ -780,6 +827,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
 
         # 15c. AD-CON-002 no longer canonizes the 1.5 -> pause / 1.6 -> hold discontinuity
         f=_fx('AD-CON-002')
+        check('AD-CON-002 exists', f is not None)
         if f:
             a=f['expectedAction']
             r5=a['variant_1_5'].get('temporarySafetyRateContinuousMlPerDay')
@@ -906,6 +954,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
         # 16a. the ISO-timestamp fixture shape INV-I10's generator does not read
         import datetime
         f=_fx('AD-EPI-001')
+        check('AD-EPI-001 exists', f is not None)
         if f:
             eps=f['input']['episodes']; ev=f['expectedIntermediateEvidence']
             r1=[x['alkDkh'] for x in eps[0]['readings']]
@@ -2195,6 +2244,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
             return (_med(v) if v else None), (round(max(v)-min(v),12) if v else None), len(v)
 
         f=_fx('AD-EPI-005')
+        check('AD-EPI-005 exists', f is not None)
         if f:
             ev=f['expectedIntermediateEvidence']; val,spr,n=_pool(f['input']['readings'])
             t=[datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
@@ -2205,6 +2255,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                   and mins<=30, 'value=%r sep=%r'%(val,mins))
 
         f=_fx('AD-EPI-006')
+        check('AD-EPI-006 exists', f is not None)
         if f:
             ev=f['expectedIntermediateEvidence']
             t=[datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
@@ -2216,6 +2267,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                   f['expectedAction']['acceptedCount']==1 and len(f['expectedAction']['notAcceptedForTrend'])==1)
 
         f=_fx('AD-EPI-007')
+        check('AD-EPI-007 exists', f is not None)
         if f:
             bad=[]; ev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
             for c in f['input']['cases']:
@@ -2228,6 +2280,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
             check('AD-EPI-007 pins the 30-minute boundary inclusively', not bad, str(bad))
 
         f=_fx('AD-EPI-001')
+        check('AD-EPI-001 exists', f is not None)
         if f:
             eps=f['input']['episodes']; ev=f['expectedIntermediateEvidence']
             val,spr,n=_pool(eps[0]['readings'])
@@ -2243,6 +2296,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                   (max(t1)-min(t1)).total_seconds()/60.0<=30)
 
         f=_fx('AD-VAL-002')
+        check('AD-VAL-002 exists (episode recomputation)', f is not None)
         if f:
             cases=[c['case'] for c in f['input']['cases']]
             check('AD-VAL-002 drops the cross-method case and adds the unqualified one',
@@ -2369,6 +2423,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
               set(re.findall(r'(\d+) minutes', A3.replace('30 minutes','45 minutes')))!={'30'})
 
     except Exception as exc:  # noqa: BLE001 - a gate must not crash
+        _rec.aborted_in = _rec.current
         _rec.violations[_rec.current].append(
             "the absorbed checks stopped on %s: %s. Everything after this point "
             "in this run was not evaluated." % (type(exc).__name__, exc)

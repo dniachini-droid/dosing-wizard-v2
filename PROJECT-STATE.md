@@ -60,9 +60,13 @@ Phase 0 — Preserve and found V2
   (`tools/conformance/run-conformance.py`, with `run-mutations.py` as its
   negative-control set) is a required check under `DEC-016`. The alk-v2 package's own
   `validate-freeze-5.py` was a second gate checking overlapping properties; it is
-  **retired and deleted** under `DEC-019`, but only after its 422 unique assertions were
-  moved into the harness and each was demonstrated red under a mutation (42 mutations
-  defined, 40 caught, 2 blocked with their unblocking conditions stated).
+  **retired and deleted** under `DEC-019`, but only after its unique assertions were
+  moved into the harness and each was demonstrated red under a mutation (47 mutations
+  defined, 45 caught, 2 blocked with their unblocking conditions stated).
+  Independent review of the absorption found six defects, three of them introduced by
+  it — including an aborted run reporting PASS on checks that had not run. All six are
+  fixed and each carries a control; the two false rows this produced in the gate
+  inventory are corrected in place rather than quietly edited.
   `docs/process/GATE-CHECK-INVENTORY.md` is the before-and-after record, including the
   eight checks deliberately not carried across and what each dropped.
   `recompute-goldens.py` remains in the package and is unaffected: it is a recorder, not

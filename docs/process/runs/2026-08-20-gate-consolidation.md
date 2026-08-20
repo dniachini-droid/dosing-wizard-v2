@@ -94,7 +94,7 @@ accumulates into a `CheckOutcome` bucket — and the paths, which all go through
 these checks exactly as they reach the rest of the harness. That is what lets a
 document mutation corrupt a throwaway copy and require the check to go red.
 
-Fifteen buckets, 423 assertions:
+Fifteen buckets, 430 assertions (423 as first absorbed, plus 7 from the fix pass below):
 
 | Check | Assertions | What it owns |
 |---|---|---|
@@ -141,7 +141,8 @@ absorbed them. No invariant was unowned for a single commit.
 
 ### Negative controls
 
-Seventeen new document mutations, `D-5` … `D-21`, one per absorbed check.
+Seventeen new document mutations, `D-5` … `D-21`, one per absorbed check. Five
+more, `D-22` … `D-26`, arrived with the fix pass below.
 Document mutations now copy a throwaway tree of the canon as well as the
 package.
 
@@ -215,7 +216,7 @@ mark it.
 corpus size      : 204 fixtures (index declares 204)
 reason-code set  : 242 codes, closed
 invariants       : 76 documented
-package checks   : 423 assertions over the canon, the register and the corpus
+package checks   : 430 assertions over the canon, the register and the corpus
 
 fixture failures   : 6      (all ENGINE_ABSENT — correct with no engine)
 check failures     : 5      (all pre-existing; the same 5 as at base)
@@ -251,8 +252,8 @@ red for the same reasons it was before this work.
 **Mutation set** — `python3 tools/conformance/run-mutations.py`
 
 ```
-mutations defined : 42
-  caught (red)    : 40
+mutations defined : 47
+  caught (red)    : 45
   NOT caught      : 0
   blocked         : 2   M-8, D-13
 
@@ -287,13 +288,17 @@ a summary.
 | `no retired reason code is emitted by a fixture` | MOVED to `CHK-RC-CLOSURE-DOC` (control `D-20`) |
 | `every by-case reason code is catalogued` | MOVED to `CHK-RC-CLOSURE-DOC` |
 | `no by-case reason code is retired` | MOVED to `CHK-RC-CLOSURE-DOC` (control `D-20`) |
-| `the by-case reason-code shapes are actually read by this gate` | MOVED to `CHK-RC-CLOSURE-DOC` as its `sites` count |
+| `the by-case reason-code shapes are actually read by this gate` | **DROPPED as an assertion, not moved.** The validator's version carried a floor (`len(_extra_sites) >= 40`); `CHK-RC-CLOSURE-DOC`'s `sites` count is printed in `what_was_checked` and nothing asserts it. The row first said "moved as its `sites` count", which was not true. Nothing was lost in substance: the inline probe at `checks.py` protects the 56 by-case instances that matter and was demonstrated to fire, and the 6 `variantReasonCodes` instances would not have breached the old floor either. The general form — a floor on how much of itself the gate examined — is now `EXPECTED_ASSERTIONS`, which covers the whole module rather than this one shape |
 | `^ negative control: the by-case harvester sees a planted code` | MOVED to `CHK-RC-CLOSURE-DOC` as an inline probe |
 | `no fixture expects a code it also forbids` | MOVED to `CHK-RC-CLOSURE-DOC` (control `D-21`) |
 
 Fifteen assertions, all accounted for. `437 − 15 = 422`, plus **one new**
 assertion — the inline negative control `CHK-CANON-CONSTANTS` needed in order to
-be absorbable at all — gives the 423 the harness reports.
+be absorbable at all — gave the 423 the harness first reported. The fix pass
+below added seven more (six fixture-existence guards and one further probe),
+for the **430** it reports now. `EXPECTED_ASSERTIONS` in `package_checks.py`
+pins that figure so a future silent drop is a failure rather than a smaller,
+cleaner pass.
 
 Nothing vanished. The diff was produced mechanically, by capturing every
 assertion name the absorbed module runs and differencing it against the 437 the
@@ -330,7 +335,19 @@ The validator's canon coverage is now the harness's. Run against
   live canon line, and no retired rule id is cited as live governing authority.
 - **`CHK-CANON-CONSTANTS`** — every constant the freeze relies on pre-existed in
   the canon at the pinned base commit, read through `git show` rather than from
-  the working tree, so the comparison is not vacuous at the freeze commit.
+  the working tree.
+  **Correction.** This paragraph first said reading the base "rather than from
+  the working tree" made the comparison "not vacuous at the freeze commit".
+  That is wrong, and `test-engineer` showed why: the check reads *only* the
+  base, which is an immutable git object, so eight of its nine assertions
+  cannot change value in any tree, ever. Reading the base does not make the
+  comparison non-vacuous — it makes it constant. The already-recorded
+  limitation ("cannot see a constant introduced under a name not on its list")
+  understates it too: the check never opens the current canon, so it cannot see
+  **any** new constant. `D-13` is `BLOCKED` for exactly this reason and the
+  inline probe is the whole control. Left open, not fixed: the real fix is a
+  numeric-literal extractor diffed against the base, which is a new and much
+  stronger check.
 
 `CHK-INDEX-INTEGRITY`'s docstring still says the harness does not read the
 canon. That is now true of that one check and not of the harness; the sentence
@@ -339,9 +356,139 @@ statement.
 
 ---
 
+## Part 5 — independent review, and the fix pass it forced
+
+`test-engineer` in a fresh context, then `jake` over its findings, as the task
+specified. `breaker` and `canon-conformance-auditor` were not run, also as
+specified.
+
+The review confirmed the accounting was exactly right at the assertion-name
+level, that `D-5` … `D-21` are all real controls reddening their declared check
+with their declared mechanism, and that the `variant` scoping loses nothing.
+It also found six defects that had to be fixed before this could be offered,
+three of them introduced by this change. They are recorded here because the
+failure they represent is the one this task exists to prevent.
+
+### F1 — an aborted run reported PASS on the buckets that had not run
+
+One `try/except` wraps all fifteen buckets. `outcomes()` built a `CheckOutcome`
+for every bucket regardless, `FAIL if violations else PASS` — so a bucket that
+never executed reported **PASS over zero assertions**, and `INV-I8`, `INV-I9`
+and `INV-I10` reported "executed in full" on that basis.
+
+The demonstration is the part that matters. Renaming the catalogue's
+`Retired by` headings — an ordinary reorganisation — raises in an early bucket.
+Combine it with `D-17`'s exact sabotage, the decision-24 reversion sentence in
+live canon, and the harness reported `CHK-LIVE-TEXT-ABSENCE: PASS` with the
+reverted sentence sitting in the tree. That is a false green on the single
+check this whole absorption was built to provide, and it is the same shape as
+the failure the project has hit before: four owner decisions reverted in canon
+while a 192-check gate stayed green.
+
+Fixed: once a run aborts, **no** bucket reports PASS. Bluntly, not cleverly —
+the buckets interleave, so "already passed" cannot be inferred from position.
+Control: `D-26`, demonstrated red.
+
+Introduced by this change. The retired validator crashed to `exit 1`, which is
+unmissable; the bucketed reporting adapter is what made silence possible.
+
+### F2 — a correct refactor deleted assertions in silence
+
+Twenty-six of thirty-one fixture lookups were guarded by
+`check('<FID> exists', ...)`. Five were not. A **consistent** rename of
+`AD-EPI-005` across the index, the corpus and the traceability JSON — a correct
+refactor, not a mistake — removed its assertions with no violation anywhere and
+took `D-15` green. Deleting `AD-EPI-005/006/007` outright cost four assertions
+silently, one of them the only boundary assertion for owner decision 28.
+
+Fixed: all five guarded the way the other twenty-six already were, plus
+`EXPECTED_ASSERTIONS` as a floor on the total. Control: `D-22`.
+
+Inherited shape; what was new is that a declared control depended on it.
+
+### F3 — two rows of the inventory were false, and five real holes sat behind them
+
+Five defect classes made the retired validator exit 1 and produced **zero**
+violations here:
+
+| Defect | validator | harness, before the fix |
+|---|---|---|
+| repeat one id in `index.json.fixtureIds` | FAIL | silent |
+| delete the invariant coverage `Total` row | FAIL | silent |
+| delete `index.json.byProvenance` | crash | silent |
+| delete `index.json.totals.fixtures` | crash | silent |
+| delete `index.json.duplicateFixtureIds` | crash | silent |
+
+The first two sat behind rows the inventory had marked `DUPLICATE` and
+`SUPERSEDED`. `CHK-INDEX-INTEGRITY` reproduced the set-equality half of
+`index ids resolve 1:1` and not the cardinality half; `invariants_doc` compared
+the declared total *when one was declared* and skipped otherwise. The other
+three were pre-existing `if declared is not None` skip-guards — survivable
+while a second gate crashed on the same inputs, and the only line once it was
+retired.
+
+Fixed in `checks.py` and `invariants_doc.py`: the cardinality conjunct is
+reproduced, and a missing declaration is a violation rather than a skip. An
+index that declares nothing must not be an index that passes everything.
+Controls: `D-23`, `D-24`, `D-25`.
+
+`GATE-CHECK-INVENTORY.md` carries the correction in full. The lesson is stated
+there and is worth repeating: `DUPLICATE` in that table is not a description,
+it is a **licence to delete the validator's copy**. Reading one implementation
+and inferring the other is how a licence gets issued on a false premise — in
+the one document whose entire purpose was to prove nothing was dropped.
+
+### F4, F5, F7, F11 — four false sentences, corrected in place
+
+- `DEC-019` claimed no absorbed check carries a value of its own. Roughly twenty
+  transcribed literals say otherwise. Corrected, with the distinction the first
+  draft flattened, and the underlying question raised as `OD-005`.
+- This record claimed reading the base canon through `git show` made the
+  constant check "not vacuous". It makes it **constant**. Corrected above.
+- This record's accounting row said the by-case floor assertion "moved as its
+  `sites` count". A printed number is not an assertion. Corrected.
+- `invariant_checks.py` cited `DEC-017` where it meant `DEC-019`.
+
+### F9 — nondeterministic failure evidence
+
+Two set iterations and four unsorted globs fed truncated violation lists, so
+the same tree produced different evidence text across processes. Only visible
+when something is already failing, which is when the report matters. `sorted()`
+throughout. The harness enforces `INV-A3` on engines; it should hold itself to
+it.
+
+### F10 — two assertion names claimed more than they tested
+
+`one owner per rule (single-valued, in vocabulary)` consults no vocabulary, and
+`<decision> has a negative control` tests only that a `forbidden` or `variant`
+key is present. Both renamed to what they actually test, with pointers to
+`OI-GATEVOCABULARY-001`. Strengthening them would be inventing checks and is
+left open.
+
+### What the review found and this pass deliberately did **not** fix
+
+- **F4's code.** `CHK-CANON-CONSTANTS` still cannot see any new constant. The
+  fix is a numeric-literal extractor over the current canon — a new, stronger
+  check. `D-13` stays `BLOCKED` and says so.
+- **F5's twenty literals.** Inherited verbatim; de-literalising 400 absorbed
+  assertions by hand is how coverage gets lost quietly. Raised as `OD-005`.
+- **F6.** The absorbed module parses the reason-code catalogue with its own
+  regexes while `reason_codes.Catalogue` parses the same document for the same
+  sets — they agree exactly today, which is `MASTER RULE 1`'s definition of a
+  defect, inside the gate consolidated in that rule's name. It also hardcodes a
+  six-file fixture list where `corpus.load()` enumerates `index.json`. Whether
+  removing duplication the absorption itself created counts as absorption or as
+  the scope creep the task forbade is a genuine question. Raised as `OD-006`.
+- **F8.** Document mutations are scored absolutely where oracle mutations are
+  scored against a baseline. Every declared mechanism substring was measured
+  absent at baseline, so all controls discriminate correctly today; nothing
+  asserts that they will.
+
+---
+
 ## Recorded and left open
 
-Neither is fixed here. Both are outside the scope this task set.
+None of these is fixed here. All are outside the scope this task set.
 
 1. **`INV-I8`'s stated negative control is stale.**
    `ALK-V2-INVARIANTS.md` says *"delete the `forbidden` block from
@@ -354,8 +501,8 @@ Neither is fixed here. Both are outside the scope this task set.
    The class question is worth the owner's attention: a stated control that
    names a specific fixture goes quietly stale every time coverage is added.
 
-2. **`CHK-CANON-CONSTANTS` cannot see a constant introduced under a name not on
-   its list.** Not new — `ALK-V2-OPEN-ISSUES.md` already carries it as "The
+2. **`CHK-CANON-CONSTANTS` cannot see a new constant at all** — it never opens
+   the current canon. Not new — `ALK-V2-OPEN-ISSUES.md` already carries it as "The
    new-constant scan" — but it now has a second consequence: the check cannot be
    given a document mutation, and `D-13` is `BLOCKED` because of it. Closing it
    means a numeric-literal extractor over the canon diffed against the base,
@@ -383,3 +530,24 @@ Neither is fixed here. Both are outside the scope this task set.
 
 `test-engineer` once, and `jake` over its output, as the task specified.
 `breaker` and `canon-conformance-auditor` were **not** run, also as specified.
+
+3. **`OD-005` — is "no transcribed number inside a gate" a rule or a
+   preference?** The inventory dropped the `76` invariant-count pin calling it
+   "the defect `CLAUDE.md` forbids", and the same change kept roughly twenty
+   numeric literals inside the absorbed checks. Both are transcriptions; only
+   the first goes stale at a canon reissue. Whether `CLAUDE.md`'s chemistry
+   clause reaches a gate assertion at all, or only runtime behaviour, is
+   unsettled by any authority in the repository.
+
+4. **`OD-006` — does "absorption only" permit removing duplication the
+   absorption itself created?** `package_checks.py` and `reason_codes.py` parse
+   the same document for the same two sets and agree exactly. That is canon
+   `MASTER RULE 1`'s defect, inside the gate consolidated in that rule's name.
+   Deduplicating it is the obvious repair and is also exactly the kind of
+   change the task's "invent no new checks" rule was there to prevent.
+
+5. **A negative control stated in prose against a named fixture goes stale.**
+   `INV-I8` is the worked example and `F2` is the same disease in code. Both
+   were only discoverable by running the control. Whether stated controls
+   should name a property rather than a fixture id is a process question for
+   the owner.

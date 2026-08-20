@@ -463,6 +463,129 @@ def _d21_fixture_requires_what_it_forbids(pkg: str, canon: str) -> None:
     raise RuntimeError("no fixture carries both forbidden.reasonCodes and expectedReasonCodes")
 
 
+
+# ---------------------------------------------------------------------------
+# Controls for the defects `test-engineer` demonstrated after the absorption.
+#
+# Each of these was a real hole: a defect the retired validator caught and the
+# harness, as first written, did not. They are here because a fix without a
+# control is the same claim the absorption was built to stop making.
+# ---------------------------------------------------------------------------
+
+
+def _d22_renamed_fixture_deletes_assertions(pkg: str, canon: str) -> None:
+    """Rename a fixture CONSISTENTLY, then break the arithmetic it pinned.
+
+    The rename is not a mistake -- done across `index.json`, the fixture file
+    and the traceability JSON it is a correct refactor. That is the point: the
+    absorbed checks reach fixtures by hardcoded id, so a legitimate rename used
+    to delete their assertions in silence and take `D-15` green with them.
+    `AD-EPI-007` carries the only boundary assertion for owner decision 28.
+    """
+    old_id, new_id = "AD-EPI-007", "AD-EPI-007A"
+    path, doc, body = _find_fixture(pkg, old_id)
+    body["fixtureId"] = new_id
+    for case in body.get("input", {}).get("cases", []):
+        for reading in case.get("readings", []):
+            if "at" in reading:
+                reading["at"] = reading["at"]
+    _write_json(path, doc)
+
+    idx_path = os.path.join(pkg, "fixtures", "index.json")
+    with open(idx_path, encoding="utf-8") as fh:
+        idx = json.load(fh)
+    idx["fixtureIds"] = [new_id if x == old_id else x for x in idx.get("fixtureIds", [])]
+    for entry in idx.get("files") or []:
+        entry["fixtureIds"] = [
+            new_id if x == old_id else x for x in entry.get("fixtureIds") or []
+        ]
+    for oi, fids in (idx.get("openIssueCoverage") or {}).items():
+        idx["openIssueCoverage"][oi] = [new_id if x == old_id else x for x in fids]
+    _write_json(idx_path, idx)
+
+    tr_path = os.path.join(pkg, "traceability", "alk-v2-traceability.json")
+    with open(tr_path, encoding="utf-8") as fh:
+        raw = fh.read()
+    with open(tr_path, "w", encoding="utf-8") as fh:
+        fh.write(raw.replace(old_id, new_id))
+
+
+def _d23_duplicate_index_entry(pkg: str, canon: str) -> None:
+    """Repeat one id in `index.json.fixtureIds`.
+
+    The two SETS stay identical, so a set-equality check cannot see it. This is
+    the half of the retired validator's `index ids resolve 1:1` that had no
+    equivalent here, and that the gate inventory wrongly called a duplicate.
+    """
+    idx_path = os.path.join(pkg, "fixtures", "index.json")
+    with open(idx_path, encoding="utf-8") as fh:
+        idx = json.load(fh)
+    ids = idx.get("fixtureIds") or []
+    if not ids:
+        raise RuntimeError("index.json lists no fixtureIds to duplicate")
+    ids.insert(1, ids[0])
+    _write_json(idx_path, idx)
+
+
+def _d24_index_declares_nothing(pkg: str, canon: str) -> None:
+    """Delete the index's own declarations.
+
+    `totals.fixtures`, `byProvenance` and `duplicateFixtureIds` are what the
+    index claims about itself. Deleting a claim used to delete the check that
+    read it, so an index that declared nothing passed everything.
+    """
+    idx_path = os.path.join(pkg, "fixtures", "index.json")
+    with open(idx_path, encoding="utf-8") as fh:
+        idx = json.load(fh)
+    (idx.get("totals") or {}).pop("fixtures", None)
+    idx.pop("byProvenance", None)
+    idx.pop("duplicateFixtureIds", None)
+    _write_json(idx_path, idx)
+
+
+def _d25_invariant_total_row_deleted(pkg: str, canon: str) -> None:
+    """Delete the invariant coverage table's `Total` row.
+
+    The bodies then have nothing to be checked against. The retired validator
+    failed on this; the harness skipped, which is how the inventory came to
+    record its version as strictly stronger when it was stronger only while
+    the row exists.
+    """
+    path = os.path.join(pkg, "ALK-V2-INVARIANTS.md")
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.readlines()
+    kept = [l for l in lines if not l.startswith("| **Total** |")]
+    if len(kept) == len(lines):
+        raise RuntimeError("could not find the invariant coverage Total row")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.writelines(kept)
+
+
+def _d26_abort_must_not_green_the_rest(pkg: str, canon: str) -> None:
+    """Crash the absorbed run early, AND revert an owner decision in the canon.
+
+    Two sabotages in one, deliberately. Renaming the `Retired by` headings is
+    an ordinary catalogue reorganisation and raises inside an early bucket; the
+    canon reversion is `D-17`'s exact sabotage, whose bucket runs later. Before
+    the fix this produced `CHK-LIVE-TEXT-ABSENCE: PASS` over zero assertions
+    with the reverted sentence sitting in the tree -- a false green on the
+    single check this whole absorption was built to provide.
+    """
+    _edit_text(
+        os.path.join(pkg, "ALK-V2-REASON-CODES.md"),
+        "## Retired by",
+        "## Withdrawn by",
+        count=-1,
+    )
+    _edit_text(
+        os.path.join(canon, "REEF-CHEMISTRY-ENGINE-V2-CANON.md"),
+        "\n# CANON RULE COVERAGE MANIFEST",
+        "\nWhere the warning attaches, the ordinary maintenance recommendation\n"
+        "recommendedDoseMlPerDay is WITHHELD and only the safety rate is stated.\n"
+        "\n# CANON RULE COVERAGE MANIFEST",
+    )
+
+
 DOCUMENT_MUTATIONS: List[DocumentMutation] = [
     DocumentMutation(
         mid="D-1",
@@ -613,7 +736,11 @@ DOCUMENT_MUTATIONS: List[DocumentMutation] = [
             "a finding, not fixed: the invariant document was out of scope here."
         ),
         expect_check="CHK-DECISION-COVERAGE",
-        expect_mechanism="has a negative control",
+        # Tracks the assertion's text. It was renamed in the fix pass -- the
+        # old name promised more than the code tested -- and this control went
+        # NOT CAUGHT immediately, which is the mechanism rule doing its job:
+        # a control that no longer names anything real fails loudly.
+        expect_mechanism="carrying a forbidden or variant block",
         apply=_d11_decision_loses_its_negative_control,
     ),
     DocumentMutation(
@@ -768,6 +895,81 @@ DOCUMENT_MUTATIONS: List[DocumentMutation] = [
         expect_check="CHK-RC-CLOSURE-DOC",
         expect_mechanism="both requires and forbids",
         apply=_d21_fixture_requires_what_it_forbids,
+    ),
+    # ---- controls for the post-absorption fix pass -------------------------
+    DocumentMutation(
+        mid="D-22",
+        title="Rename a fixture consistently, then break what it pinned",
+        sabotage="`AD-EPI-007` becomes `AD-EPI-007A` across index, corpus and traceability",
+        guards=(
+            "the fixture-existence guards. A correct refactor used to delete "
+            "the assertions that named the old id, silently, taking `D-15` "
+            "green with them. `AD-EPI-007` carries the only boundary assertion "
+            "for owner decision 28."
+        ),
+        expect_check="CHK-DECISION-FIXTURES",
+        expect_mechanism="AD-EPI-007 exists",
+        apply=_d22_renamed_fixture_deletes_assertions,
+    ),
+    DocumentMutation(
+        mid="D-23",
+        title="Repeat one id in the fixture index",
+        sabotage="`index.json.fixtureIds` lists one fixture twice",
+        guards=(
+            "CHK-INDEX-INTEGRITY's cardinality clause. The two sets stay "
+            "identical, so set equality cannot see it -- this is the half of "
+            "the retired validator's check that had no equivalent here, and "
+            "that the gate inventory wrongly recorded as a duplicate."
+        ),
+        expect_check="CHK-INDEX-INTEGRITY",
+        expect_mechanism="are distinct",
+        apply=_d23_duplicate_index_entry,
+    ),
+    DocumentMutation(
+        mid="D-24",
+        title="Make the index declare nothing about itself",
+        sabotage="`totals.fixtures`, `byProvenance` and `duplicateFixtureIds` are deleted",
+        guards=(
+            "CHK-INDEX-INTEGRITY. Deleting a declaration used to delete the "
+            "check that read it, so an index declaring nothing passed "
+            "everything. The retired validator crashed on these, which is at "
+            "least loud."
+        ),
+        expect_check="CHK-INDEX-INTEGRITY",
+        expect_mechanism="declares no",
+        apply=_d24_index_declares_nothing,
+    ),
+    DocumentMutation(
+        mid="D-25",
+        title="Delete the invariant coverage table's Total row",
+        sabotage="the `| **Total** | **76** |` row is removed",
+        guards=(
+            "the invariant document's self-consistency check. The bodies then "
+            "have nothing to be checked against. The gate inventory recorded "
+            "this as superseding the retired validator's version; it did so "
+            "only while the row exists."
+        ),
+        expect_check="corpus-problem",
+        expect_mechanism="declares no `Total` row",
+        apply=_d25_invariant_total_row_deleted,
+    ),
+    DocumentMutation(
+        mid="D-26",
+        title="Crash an early check while a decision is reverted in the canon",
+        sabotage=(
+            "the catalogue's `Retired by` headings are renamed, and D-17's "
+            "reversion sentence is added to live canon"
+        ),
+        guards=(
+            "the rule that a bucket which did not run does not report PASS. "
+            "Before the fix this produced CHK-LIVE-TEXT-ABSENCE: PASS over "
+            "zero assertions with the reverted sentence in the tree -- a false "
+            "green on the single check this absorption was built to provide, "
+            "and the failure mode the whole task exists to prevent."
+        ),
+        expect_check="CHK-LIVE-TEXT-ABSENCE",
+        expect_mechanism="NOT EVALUATED",
+        apply=_d26_abort_must_not_green_the_rest,
     ),
 ]
 

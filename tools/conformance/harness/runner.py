@@ -165,6 +165,21 @@ def run(
     pkg_checks, pkg_assertions = pkg_mod.run_package_checks()
     report.checks.extend(pkg_checks)
     report.package_assertions = pkg_assertions
+    # A floor on how much of itself the gate examined. Several absorbed checks
+    # are guarded on a fixture or a document section existing, so an edit can
+    # delete assertions instead of failing them -- and a gate that quietly
+    # examines less reports a smaller, cleaner pass. Reported here, with the
+    # unaccounted-invariant assertion, because both answer the same question:
+    # can this harness account for itself?
+    if pkg_assertions < pkg_mod.EXPECTED_ASSERTIONS:
+        report.corpus_problems.append(
+            f"the package checks made {pkg_assertions} assertions; "
+            f"{pkg_mod.EXPECTED_ASSERTIONS} were expected. "
+            f"{pkg_mod.EXPECTED_ASSERTIONS - pkg_assertions} assertion(s) did "
+            f"not run. A guarded check whose subject was renamed or removed "
+            f"disappears rather than failing, so this is a coverage loss even "
+            f"though nothing above went red."
+        )
 
     schema_tolerance = c.schema
     replies: List[Tuple[str, Dict[str, Any]]] = []

@@ -175,7 +175,17 @@ def load(path: Optional[str] = None) -> InvariantDoc:
                 f"coverage table says group {grp} has {declared} invariants; "
                 f"{counted.get(grp, 0)} parsed"
             )
-    if doc.declared_total is not None and doc.declared_total != len(doc.invariants):
+    if doc.declared_total is None:
+        # Skipping when the declaration is absent means deleting the `Total`
+        # row deletes the check. The retired validator failed on that; nothing
+        # here did, and the gate inventory recorded this check as superseding
+        # the validator's when it did so only while the row exists.
+        doc.parse_problems.append(
+            f"{doc.source}: the coverage table declares no `Total` row, so the "
+            f"{len(doc.invariants)} parsed invariant bodies have nothing to be "
+            f"checked against"
+        )
+    elif doc.declared_total != len(doc.invariants):
         doc.parse_problems.append(
             f"coverage table total is {doc.declared_total}; "
             f"{len(doc.invariants)} invariants parsed"

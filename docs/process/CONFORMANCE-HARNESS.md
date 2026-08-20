@@ -25,7 +25,7 @@ Python 3 standard library.
 | Stage | Subject | Needs an engine? |
 |---|---|---|
 | Mechanical document checks | the reason-code catalogue, the fixture index, the rule-traceability table, the data contract, and every field name the corpus asserts | no |
-| Package checks (absorbed) | the canon, its rule coverage manifest, the open-issues register, the algorithm contract, and every owner decision recomputed from the fixtures' own declared inputs — 423 assertions in fifteen `CHK-*` buckets, absorbed from the retired `validate-freeze-5.py` under `DEC-019` | no |
+| Package checks (absorbed) | the canon, its rule coverage manifest, the open-issues register, the algorithm contract, and every owner decision recomputed from the fixtures' own declared inputs — 430 assertions in fifteen `CHK-*` buckets, absorbed from the retired `validate-freeze-5.py` under `DEC-019` | no |
 | Fixture corpus | every fixture that carries a replayable event ledger and an `asOf` | yes |
 | Engine-facing mechanical checks | output shape against `EngineResult`; emitted reason codes against the closed set, with their catalogued severity, owner and a non-empty payload; every withheld output — at any depth — named in the `affectedOutputs` of a `GATING` or `REFUSAL` code; engine and canon version declared and current | yes |
 | Executable invariants | `INV-A1` replay determinism, `INV-A2` no clock read, `INV-A3` no iteration-order dependence | yes |
@@ -176,14 +176,17 @@ exactly that.
 checker is not trusted as a gate until a deliberate mutation of the defect class
 it targets has been shown to fail it.
 
-Forty-two named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
-**reference oracle** that is emphatically not an engine, and twenty-one
-(`D-1`..`D-21`) corrupt a throwaway copy of the alk-v2 documents **and of the
+Forty-seven named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
+**reference oracle** that is emphatically not an engine, and twenty-six
+(`D-1`..`D-26`) corrupt a throwaway copy of the alk-v2 documents **and of the
 canon**, because a hook on an oracle can never reach a check whose subject is a
 document. The repository is never modified by either arm.
 
 Seventeen of the document mutations (`D-5`..`D-21`) arrived with the absorption
-and there is one for each absorbed check. Two of them are the invariant
+and there is one for each absorbed check. Five more (`D-22`..`D-26`) arrived
+with the fix pass that independent review forced; `D-26` is the one to read
+first, because it pins the rule that a check which did not run does not report
+PASS. Two of them are the invariant
 document's own stated negative controls, ported: `INV-I8`'s "delete the
 `forbidden` block from `AD-MNT-006`" and `INV-I10`'s "change one `alkDkh` value
 without changing the expectations". Running `INV-I8`'s showed it had gone
@@ -276,7 +279,7 @@ section by saying the overlap between it and this harness was "not resolved
 here, and it should be".
 
 It is resolved. The owner decided one gate; `DEC-019` records it. The validator
-is retired and deleted, and its unique coverage — 423 assertions — is in
+is retired and deleted, and its unique coverage — 430 assertions — is in
 `tools/conformance/harness/package_checks.py`. `docs/process/GATE-CHECK-INVENTORY.md`
 is the inventory that was produced **before** anything moved, classifying every
 one of the validator's 437 checks as duplicate, unique, or superseded, and

@@ -42,13 +42,13 @@ them is listed here with what the harness does instead.
 | Freeze check | Defect class | Harness equivalent | Agree? | Neg. control | Class |
 |---|---|---|---|---|---|
 | `index fixture count matches bodies` | index totals diverge from the corpus | `CHK-INDEX-INTEGRITY` | harness catches strictly more | harness: none yet | DUPLICATE |
-| `index ids resolve 1:1` | index names a fixture that has no body, or vice versa | `CHK-INDEX-INTEGRITY` | same defect; harness also checks per-file counts and id lists | harness: none yet | DUPLICATE |
+| `index ids resolve 1:1` | index names a fixture that has no body, or vice versa, **or lists one twice** | `CHK-INDEX-INTEGRITY` | **CORRECTED — see below.** Only the membership half was a duplicate | harness: `D-23` | DUPLICATE (membership) + **UNIQUE_TO_FREEZE (cardinality)** |
 | `index reports no duplicates` | two bodies share a fixture id | `CHK-INDEX-INTEGRITY` | same; harness also verifies the *declared* `duplicateFixtureIds` against the actual | harness: none yet | DUPLICATE |
 | `index provenance split matches bodies` | `byProvenance` census drifts | `CHK-INDEX-INTEGRITY` | same | harness: none yet | DUPLICATE |
 | `catalogue and retired sets are disjoint` | a code is both live and retired | `CHK-RC-CATALOGUE` (`rc.self_consistency`) | same | harness: `D-1` (adjacent mechanism) | DUPLICATE |
 | `no rule without a fixture` | an ACTIVE rule has no covering fixture | `CHK-TRACE-COVERAGE` | **no** — the freeze version only reads `totals.rulesWithoutFixture` and trusts it; the harness walks every ACTIVE rule itself *and* flags the declaration as stale if it disagrees | harness: `D-2` | SUPERSEDED |
 | `traceability fixture refs resolve (goldens)` | traceability claims coverage by a fixture that does not exist | `CHK-INDEX-INTEGRITY` | **no** — the freeze version excludes `INV-*`, `CLU-\d`, `VAL-\d`, `TIME-\d`, `INT-\d` and 13 further prefixes from resolution, so it passes over exactly the 20 dangling ids the harness reports | harness: none yet | SUPERSEDED |
-| `invariant bodies match the coverage total` | the invariant document's coverage table drifts from its bodies | `invariants_doc.load()` self-consistency, surfaced as a corpus problem | **no** — the freeze version transcribes the literal `76` twice, so it must be hand-edited at every canon reissue and cannot detect a table that was edited *consistently but wrongly*; the harness compares the document only to itself | harness: `D-4` | SUPERSEDED |
+| `invariant bodies match the coverage total` | the invariant document's coverage table drifts from its bodies | `invariants_doc.load()` self-consistency, surfaced as a corpus problem | **CORRECTED — see below.** Stronger while the `Total` row exists; it did not exist when the row did not | harness: `D-4`, `D-25` | SUPERSEDED (drift) + **UNIQUE_TO_FREEZE (absent declaration)** |
 
 **What is dropped by the three SUPERSEDED rows, explicitly:**
 
@@ -62,6 +62,46 @@ them is listed here with what the harness does instead.
    table consistently will pass the harness and would have failed the freeze
    validator. That is the intended behaviour: the count is canon's to set, and a
    transcribed number in a gate is the defect `CLAUDE.md` forbids.
+
+### CORRECTION — two rows in the table above were wrong when written
+
+Recorded here rather than quietly edited, because this document's whole purpose
+is to be the record that nothing was dropped without being named, and it was
+the instrument that failed.
+
+`test-engineer` reviewed the absorbed harness and demonstrated five defect
+classes that made the retired validator exit 1 and produced **zero** violations
+in the harness. Two of them sat behind rows above:
+
+1. **`index ids resolve 1:1` was not a duplicate.** The validator's assertion
+   was `set(idx['fixtureIds'])==set(fixtures) **and**
+   len(idx['fixtureIds'])==len(fixtures)`. `CHK-INDEX-INTEGRITY` reproduced the
+   set comparison and not the cardinality one, so duplicating a line in
+   `index.json.fixtureIds` — an everyday copy-paste slip when adding a fixture
+   — left both sets identical and passed. The row said "same defect" and named
+   nothing under "what is dropped". Half the assertion was dropped, unnamed.
+2. **`invariant bodies match the coverage total` was superseded only
+   conditionally.** `invariants_doc.load()` compared the declared total to the
+   parsed bodies *when a total was declared* and skipped when it was not, so
+   deleting the `| **Total** | **76** |` row deleted the check. The validator
+   failed on that. What the row said was dropped — the pin on the literal `76`
+   — was true; what it did not say was that detection went with it whenever the
+   row is absent.
+
+Three further defects of the same shape were found in `CHK-INDEX-INTEGRITY`,
+none of them claimed by a row above and all of them pre-existing harness
+behaviour: deleting `index.json`'s `duplicateFixtureIds`, `totals.fixtures` or
+`byProvenance` each deleted the check that read it, because each was guarded by
+`if declared is not None`. An index that declares nothing passed everything.
+The validator crashed on all three, which is at least loud.
+
+**All five are fixed, and each now carries a control** — `D-23`, `D-24`, `D-25`
+— demonstrated red. The lesson is not about these two rows: it is that
+`DUPLICATE` in this table is not a description, it is a **licence to delete the
+validator's copy**, and a licence issued on an unverified reading is how
+coverage disappears with a certificate saying it did not. Verify both
+implementations before writing `DUPLICATE`; reading one and inferring the other
+is what happened here.
 
 ---
 

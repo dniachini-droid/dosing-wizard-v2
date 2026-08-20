@@ -325,13 +325,34 @@ def check_index_integrity(
 
     index_ids: List[str] = list(c.index.get("fixtureIds") or [])
     index_set = set(index_ids)
+    # Cardinality, not just membership. A repeated entry in `fixtureIds` leaves
+    # the two SETS identical, so the set comparison below cannot see it -- and
+    # duplicating a line is what a copy-paste slip looks like when a fixture is
+    # added. The retired validator asserted `len(idx['fixtureIds'])==len(fixtures)`
+    # alongside the set equality; that conjunct had no equivalent here and the
+    # gate inventory wrongly recorded the pair as a duplicate.
+    if len(index_ids) != len(index_set):
+        repeated = sorted({fid for fid in index_ids if index_ids.count(fid) > 1})
+        violations.append(
+            f"index.json lists {len(index_ids)} fixture ids but only "
+            f"{len(index_set)} are distinct; repeated: {repeated}"
+        )
     for fid in sorted(index_set - body_set):
         violations.append(f"index.json lists `{fid}`, which resolves to no fixture body")
     for fid in sorted(body_set - index_set):
         violations.append(f"fixture body `{fid}` exists but index.json does not list it")
 
+    # An absent declaration used to skip the check that reads it, so deleting a
+    # key deleted the check. The retired validator crashed on these, which is
+    # loud; silence is not. An index that declares nothing must not be an index
+    # that passes everything.
     declared_dupes = c.index.get("duplicateFixtureIds")
-    if declared_dupes is not None and sorted(declared_dupes) != dupes:
+    if declared_dupes is None:
+        violations.append(
+            "index.json declares no `duplicateFixtureIds`; the declaration is "
+            "what this check holds the corpus to, and its absence is not a pass"
+        )
+    elif sorted(declared_dupes) != dupes:
         violations.append(
             f"index.json declares duplicateFixtureIds={declared_dupes!r}; "
             f"actual duplicates are {dupes!r}"
@@ -355,12 +376,23 @@ def check_index_integrity(
                 violations.append(f"{name}: file holds but index omits {extra}")
 
     total = c.declared_total
-    if total is not None and total != len(c.fixtures):
+    if total is None:
+        violations.append(
+            "index.json declares no `totals.fixtures`; the corpus size is then "
+            "whatever parsing happened to find, which is not a checkable claim"
+        )
+    elif total != len(c.fixtures):
         violations.append(
             f"index.json totals.fixtures = {total}; {len(c.fixtures)} fixture bodies parsed"
         )
 
     prov_declared = c.index.get("byProvenance") or {}
+    if not prov_declared:
+        violations.append(
+            "index.json declares no `byProvenance` census; provenance is how "
+            "a canon-derived fixture is told from a salvaged one, and an "
+            "undeclared census cannot be checked against the bodies"
+        )
     if prov_declared:
         actual_prov: Dict[str, int] = {}
         for f in c.fixtures:

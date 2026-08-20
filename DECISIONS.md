@@ -636,6 +636,29 @@ the record in `docs/process/GATE-CHECK-INVENTORY.md`:
   the canon at a pinned git commit, which no mutation of the working tree can reach. It
   carries an inline negative control instead and `D-13` is recorded `BLOCKED` with its
   unblocking condition, rather than a control being faked for it.
-- This decision is about which tool runs. It sets no chemistry behaviour, and none of
-  the absorbed checks introduces a threshold, rail or equation of its own — every value
-  they assert is read at run time from the canon or the corpus.
+- This decision is about which tool runs. It sets no chemistry behaviour: nothing here
+  changes what the engine must do, and no absorbed check is cited by a runtime.
+
+  **A claim made here in the first draft was false and is corrected rather than
+  deleted.** It said that "none of the absorbed checks introduces a threshold, rail or
+  equation of its own — every value they assert is read at run time from the canon or
+  the corpus." `test-engineer` measured roughly twenty transcribed numeric literals in
+  `package_checks.py`: `0.50` (the R_down rail), `1.28` (the slope-support k), `1.0`
+  (the advisory offset), `30` (the testing-episode window), and `11.2`, `10.8`, `0.0693`
+  inside one recomputation. Every one arrived verbatim with the absorbed logic; none was
+  introduced by this decision. The claim was still wrong.
+
+  Two classes are worth telling apart, and the first draft flattened them:
+  a gate that **asserts** a number canon owns goes stale at every reissue and must be
+  hand-edited — that is why the inventory dropped the `76` invariant-count pin. A gate
+  that **recomputes** a fixture's stated intermediates from the inputs that same fixture
+  declares is doing self-consistency arithmetic, and the constants in it are the
+  arithmetic, not an expectation. Most of the twenty are the second kind. That does not
+  make them harmless: they will still need editing if canon reissues the rail or the
+  window, and they are unmarked.
+
+  Whether "no transcribed number inside a gate" is a rule or a preference — and whether
+  `CLAUDE.md`'s chemistry clause reaches a gate assertion at all or only runtime
+  behaviour — is **not settled by this entry**. It is raised for the owner as `OD-005`
+  and the literals are left as they are, because de-literalising 400 absorbed assertions
+  by hand is precisely how coverage gets lost quietly.

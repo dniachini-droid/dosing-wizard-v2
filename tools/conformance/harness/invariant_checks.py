@@ -63,7 +63,7 @@ NO_EXECUTABLE_FORM = (
 # since decided one gate: the validator is retired and its checks were absorbed
 # into `package_checks.py`. All three are now delegated below, to the buckets
 # that execute them, and none of them is unowned for a single commit --
-# `docs/process/GATE-CHECK-INVENTORY.md` and `DECISIONS.md` `DEC-017` are the
+# `docs/process/GATE-CHECK-INVENTORY.md` and `DECISIONS.md` `DEC-019` are the
 # record.
 
 NOT_EXECUTABLE_REASONS: Dict[str, str] = {
