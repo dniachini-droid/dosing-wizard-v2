@@ -2712,6 +2712,102 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 
 ---
 
+# A6. Findings OUTSIDE owner decisions 23–26 — RECORDED, NOT DECIDED
+
+The owner's brief for the decisions 23–26 round said, of anything the reviewers found that
+the four decisions do not settle: **"RECORD AND LEAVE OPEN. Do not fix, do not decide, do not
+expand scope."** This section is that record.
+
+Each item below was raised by the `canon-conformance-auditor` or the `breaker` in review of
+the decisions 23–26 encoding, was judged to be **outside** what decisions 23, 24, 25 and 26
+decide, and was therefore **not** acted on in the fix pass. None is asserted to be harmless;
+none is asserted to be a defect. They are stated so the owner can see them and choose.
+
+**None of these withholds an output pending a decision.** Every path named below runs and
+produces a value today.
+
+## OI-DCURRENTZERO-001 — A doser configured to 0 mL/day is not distinguished from an unconfigured one
+
+- **Class:** `OWNER_DECISION_REQUIRED`
+- **Status:** **OPEN.**
+- **Canon:** `ALK-DELIVERY-RATE-BASIS-001` high-breach precondition (owner decisions 20
+  and 25); `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `INV-G14`.
+- **Raised by:** `breaker`, decisions 23–26 review, finding F14.
+
+The precondition reads "`D_current` unknown **or not configured**". A keeper who has turned
+their doser off has a doser that **is** configured, at a value of 0 mL/day. On that reading
+the precondition passes, a branch is selected, and B or B′ gives
+`max(0, 0 − R_down/P) = 0` with `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO`. On the other
+reading — "0 means nothing is set up" — the precondition refuses and the output is `NOT_RUN`
+with `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN`.
+
+The two outputs look near-identical on a card. They differ in the reason code and in whether
+the engine is claiming to know the delivery rate.
+
+`INV-G14` already pins the symmetric rule for the **other** quantity — "a `D_history` that
+integrates to **exactly zero** … is a value, not an absence" — and nothing states it for
+`D_current`. Corpus search: `currentDoseMlPerDay == 0` appears in exactly one fixture,
+`WG-ALK-004`, a maintenance golden. **No high-breach fixture covers it.**
+
+**Why it is not decided here.** Decisions 20 and 25 settle *where* the refusal is evaluated
+and *which branches* it reaches. Neither says what counts as "configured". Answering it sets
+behaviour, so it is the owner's.
+
+## OI-ADVISORYWARNSTATE-001 — `advisoryConfidenceWarning`'s third value has no stated trigger set
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.**
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 24); data contract
+  `advisoryConfidenceWarning`.
+- **Raised by:** `canon-conformance-auditor`, decisions 23–26 review, finding F-18.
+
+The field is `NONE | ATTACHED | NOT_RUN`. `ATTACHED` and `NONE` are fully specified by the
+boundary predicate. `NOT_RUN` is documented only as "where no episode value resolves" —
+which is the contested case — and the canon rule states the contested case in prose without
+naming the token. Whether `NOT_RUN` covers any other state (bounds unavailable, so the
+boundary is not computable) is stated in the algorithm contract's `FAILURE STATE` but not in
+the canon rule that owns the field.
+
+**Why it is not decided here.** It is a completeness gap in how decision 24 was written
+down, not a question decision 24 answers, and filling it would state behaviour the canon
+does not.
+
+## Consequences of the decision-23 sweep in rules that pre-date it
+
+Both of these were reached **because** decision 23 retired the actuator premise, and both
+sit in rules that are pre-existing authority. The fix pass encoded what decision 23 itself
+says and went no further.
+
+- **`ALK-STEP-CAP-001`'s symbol.** Decision 23 renames \(R_{pump}\) to \(R_{precision}\).
+  `ALK-STEP-CAP-001` uses the quantity in three live formulas, including
+  \(0.25\,D_{current}\ge R_{precision}\) and \(D_{current}\ge 4R_{precision}\). The
+  arithmetic and every threshold are **unchanged** — the fix pass verified this against the
+  golden record — but whether a *display convention* is the right quantity for a
+  **dose-step cap** is a question decision 23 does not ask. `breaker` F5. **Recorded.**
+- **`ALK-ROUNDING-001` step 6 on the no-precision path.** The fix pass states, per decision
+  23 item 5, that the hard-constraint recheck against `ALK-046` and
+  `ALK-LIQUID-VOLUME-GUARD-001` still runs where no precision is configured. That much is
+  decision 23's own words. What the *rest* of the rounding pipeline means with no increment
+  — steps 1–4 and 7 have nothing to round to — is stated as "they do not apply", which is
+  the only reading available, but the canon does not independently say so. `breaker` F13.
+  **Recorded.**
+
+## Pre-existing conditions, restated so they are not lost
+
+None of these was introduced by decisions 20–22 or 23–26, and none is fixed here.
+
+| Item | What it is | Where |
+|---|---|---|
+| Six recorder discrepancies | `continuousActionCandidateMlPerDay` on `WG-ALK-001/003/004/033` differs from the recomputation by ≤ 7.0e-5 mL/day, a rounding-order artefact; `AD-MNT-002/004` differ materially because the field name carries a **different quantity** in those two fixtures (a capped value, not the pre-cap candidate) | Step 0 baseline `golden-baseline-65c6030.json`, unchanged in every record since |
+| `variantReasonCodes` | The shape is now read by the gate, but only two fixtures use it and neither round added one | `AD-SAF-007`, `AD-CON-002` |
+| The new-constant scan | Gate check 9 is a fixed literal list of seven strings, not a delta against the frozen constant set; it cannot see a constant introduced under a name not on that list | `validate-freeze-5.py` |
+| `ALK-SAFETY-RETURN-INTEGRATION-001` at the boundary | **No fixture anywhere states numbers** for an active return plan or a `SAFETY_RETURN` crossing the advisory boundary. `AD-REC-002` covers `IN_FLIGHT_RETURN_PLAN_TERMINATED` qualitatively only — no rate, no volume, no retest | coverage gap, `breaker` "not examined" |
+| The intervention lock and `ALK-PREDICTION-SNAPSHOT-001` at the boundary | No fixture; unattacked | coverage gap |
+| Time, timezone, DST, backdating, migration, schema versions | Out of scope for the four decisions, and entirely unattacked in this round | coverage gap |
+
+
+---
+
 # D. Summary
 
 ### Status at `ALK_V2_FREEZE_5`
@@ -2722,14 +2818,15 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 | **RESOLVED by owner decisions 16–19** | 5 | OI-HIGHBREACHSIZING-001, OI-EPISODE-001, OI-CROSSMETHOD-001, OI-DECIMALTHRESHOLD-001, OI-EPISODECONSUMER-001 |
 | **OPENED by decisions 16–19 review, RESOLVED by owner decisions 20 and 22** | 2 | OI-DELIVERYRATEBASIS-001, OI-UNCOMPUTABLEC-001 |
 | **OPENED by decisions 16–19 review, LEFT OPEN** | 2 | OI-SIZINGFLAT-001 (narrowed by decision 21, then NO LONGER NARROWED by decision 24, and not closed), OI-CZERODISCONT-001 (not addressed) |
-| **OPENED by decisions 20–22 review, LEFT OPEN — reported to the owner, not decided** | 5 | OI-BRANCHAREFUSAL-001, OI-ADVISORYEXCEPTION-001, OI-ADVISORYMEMBERS-001, OI-ADVISORYRETEST-001, OI-ADVISORYRETURN-001 |
+| **OPENED by decisions 20–22 review, RESOLVED by owner decisions 24, 25 and 26** | 5 | OI-BRANCHAREFUSAL-001 (25), OI-ADVISORYEXCEPTION-001 (24), OI-ADVISORYMEMBERS-001 (24), OI-ADVISORYRETURN-001 (24), OI-ADVISORYRETEST-001 (26) |
+| **OPENED by decisions 23–26 review, RECORDED AND LEFT OPEN — section A6, not decided** | 2 | OI-DCURRENTZERO-001, OI-ADVISORYWARNSTATE-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-52 distinct issue IDs (3 + 13 + 11 + 13 + 3 + 4 + 5). **Sixteen are resolved by Freeze 5** — the
+54 distinct issue IDs (3 + 13 + 11 + 13 + 3 + 4 + 5 + 2). **Sixteen are resolved by Freeze 5** — the
 thirteen its original decisions closed, plus the three its review opened and its amendments
 F5-13, F5-14 and F5-15 then closed. Seven more are resolved by owner decisions 16–22.
 

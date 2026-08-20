@@ -220,7 +220,7 @@
     {
       "file": "invariants-and-governance.json",
       "corpusId": "alk-v2-invariants-and-governance",
-      "count": 17,
+      "count": 21,
       "fixtureIds": [
         "INV-CANON-001",
         "INV-CORE-ADVISORY-001",
@@ -238,16 +238,20 @@
         "X-GOV-002",
         "X-GOV-003",
         "X-GOV-004",
-        "INV-G12"
+        "INV-G12",
+        "INV-G13",
+        "INV-G14",
+        "INV-G15",
+        "INV-G16"
       ]
     }
   ],
   "totals": {
-    "fixtures": 196,
+    "fixtures": 200,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 65,
+    "CANON_DERIVED": 69,
     "CANON_QUALITATIVE": 29,
     "CANON_VERBATIM": 102
   },
@@ -447,7 +451,11 @@
     "X-GOV-002",
     "X-GOV-003",
     "X-GOV-004",
-    "INV-G12"
+    "INV-G12",
+    "INV-G13",
+    "INV-G14",
+    "INV-G15",
+    "INV-G16"
   ],
   "openIssueCoverage": {
     "OI-ADVISORYEXCEPTION-001": [
