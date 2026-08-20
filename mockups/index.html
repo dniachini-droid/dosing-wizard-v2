@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Build one — screen mockups · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen" style="padding-bottom:var(--sp-8)">
+
+  <header class="topbar">
+    <p class="eyebrow">Dosing Wizard V2</p>
+    <h1>Build one &mdash; screen mockups</h1>
+    <p class="sub">
+      Eleven screens with hand-written sample data. No engine, no storage, no framework &mdash;
+      plain HTML and CSS, so the interface can be judged before anything is implemented, and so
+      the implementation has something to aim at.
+    </p>
+  </header>
+
+  <div class="callout quiet">
+    <strong>Sample tank throughout:</strong> a 77-litre mixed reef, alkalinity around
+    8.7&nbsp;dKH, target range 8.6&ndash;9.2&nbsp;dKH, dosing about 9&nbsp;mL/day of a
+    100&nbsp;g/L sodium carbonate solution through a pump that steps in 0.1&nbsp;mL/day.
+    Every reason code and every payload number is real: the codes come from the catalogue and
+    the numbers follow from the sample data.
+  </div>
+
+  <p class="seclabel">Start here</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="01-setup.html">
+        <span class="pmark p-alk">1</span>
+        <span><span class="t">First-run setup</span>
+        <span class="d">Volume, target range and outer bounds, solution chemistry, pump step and schedule &mdash; and what happens if you skip each one. Ends with a plain statement of what the app can and cannot do yet.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <p class="seclabel">Today &mdash; five states</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="02-today-a-dose-change.html">
+        <span class="pmark p-alk">2a</span>
+        <span><span class="t">A dose change</span>
+        <span class="d">The happy path. Position, both slopes, evidence, the recommendation, next test, sixteen reason codes, and the confirmation loop asking whether you actually made the change.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-b-hold.html">
+        <span class="pmark p-alk">2b</span>
+        <span><span class="t">Hold</span>
+        <span class="d">A downward lean smaller than its own uncertainty. Hold is a full recommendation with an action verb, given the same weight as a dose change.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-c-insufficient.html">
+        <span class="pmark p-alk">2c</span>
+        <span><span class="t">Not enough evidence</span>
+        <span class="d">Two readings and one discarded. What is missing, which single test fixes it, and what can still be concluded right now.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-d-refusal.html">
+        <span class="pmark p-alk">2d</span>
+        <span><span class="t">A capability refusal</span>
+        <span class="d">The pump&rsquo;s step size was never recorded, so the dose figure is withheld. Which datum, where to fix it, and everything that is still known regardless.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-e-safety.html">
+        <span class="pmark p-alk">2e</span>
+        <span><span class="t">A safety return</span>
+        <span class="d">Below the outer operating range. A different register entirely, with the maintenance conclusion held separately and stated separately.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <p class="seclabel">The rest</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="03-assessment-detail.html">
+        <span class="pmark p-alk">3</span>
+        <span><span class="t">The working</span>
+        <span class="d">Which readings were used and why the others were not, the trend, the support subtraction, consumption, all seven dose quantities with every limit in order, the retest candidates including four that could not run, all twenty-five codes, and the version stamps.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-alk">4</span>
+        <span><span class="t">Log something</span>
+        <span class="d">All nine kinds of entry. Time precision on every form, an &ldquo;I&rsquo;m not sure when&rdquo; option for dose changes with earliest and latest, and three-state fields so absent, unknown and known stay distinct.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-alk">5</span>
+        <span><span class="t">One reading</span>
+        <span class="d">View, correct, supersede, mark suspect, mark invalid &mdash; each with what it will actually do to the record. Nothing is ever deleted.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="06-history.html">
+        <span class="pmark p-alk">6</span>
+        <span><span class="t">History</span>
+        <span class="d">One chart per parameter. Target range shaded on alkalinity, events marked, repeats shown as one observation with their spread, and marks on the points that could not be used.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="07-settings.html">
+        <span class="pmark p-alk">7</span>
+        <span><span class="t">Settings</span>
+        <span class="d">Settings as versions with a change history, and a read-only panel showing which solution strength is in use, where it came from, and why learning is switched off.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <p class="seclabel">Behind the screens</p>
+  <section class="card">
+    <div class="card-head"><h2>Three things these are built to prove</h2></div>
+
+    <p class="body"><strong>1 &middot; Refusing is normal.</strong> The frozen specification has
+    twenty-four recorded defects and eight open owner decisions. Most real assessments will
+    decline part of the answer. Every refusal here is a designed output: it names what is
+    missing, what would fix it, and what is still known. None of them is a blank.</p>
+
+    <p class="body"><strong>2 &middot; Notices are a list, not a strip.</strong> Reason codes add
+    up. A realistic assessment emits somewhere between eight and twenty-five, graded from
+    explanatory to safety, each carrying mandatory numbers. Every screen shows them as an
+    expandable list, ordered by severity, with the payloads visible.</p>
+
+    <p class="body"><strong>3 &middot; Status is six things, not one.</strong> Position,
+    trajectory, evidence, intervention phase, response and overshoot are independent. A change
+    can be going exactly as predicted and have overshot at the same time. One badge would drop
+    whichever mattered, so there is no single badge anywhere in these screens.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>How this is put together</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k"><span class="code">tokens.css</span></span><span class="kv-v">Every colour, radius, shadow, type size, weight and spacing step<span class="sub">the only place appearance is set</span></span></div>
+      <div class="kv-row"><span class="kv-k"><span class="code">app.css</span></span><span class="kv-v">Shared components<span class="sub">structure only &mdash; no literal colour or size, every value a token</span></span></div>
+      <div class="kv-row"><span class="kv-k">Each screen</span><span class="kv-v">One HTML file<span class="sub">no script of any kind</span></span></div>
+      <div class="kv-row"><span class="kv-k">Expandable sections</span><span class="kv-v">Native, no JavaScript</span></div>
+      <div class="kv-row"><span class="kv-k">Chart animation</span><span class="kv-v">CSS only<span class="sub">switched off under reduced-motion</span></span></div>
+      <div class="kv-row"><span class="kv-k">Fonts</span><span class="kv-v">System stack<span class="sub">nothing downloaded</span></span></div>
+    </div>
+    <p class="inert-note">
+      Open <span class="code">index.html</span> in any browser, or serve the folder and open it
+      on a phone. These are laid out for a phone first.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Eleven things the screens could not express</h2></div>
+    <p class="body">
+      Places where building the interface and reading the specification disagreed. Each one is a
+      real question for the owner rather than something to be decided by whoever draws the
+      screen. They are listed in full, with what breaks and what the options are, in
+      <span class="code">CONTRACT-GAPS.md</span>, and each is flagged in a dashed box on the
+      screen where it shows up.
+    </p>
+    <p class="inert-note">
+      Nothing in these mockups resolves any of them. Where a screen had to show something, it
+      shows the honest version and says what is missing.
+    </p>
+  </section>
+
+</main>
+</body>
+</html>

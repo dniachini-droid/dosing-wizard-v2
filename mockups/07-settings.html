@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Settings · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="02-today-a-dose-change.html">Today</a>
+    <p class="eyebrow">Mixed reef</p>
+    <h1>Settings</h1>
+    <p class="sub">Settings are versioned. Changing one starts a new version from the moment you
+    change it, and never reaches backwards into what the app already said.</p>
+  </header>
+
+  <section class="card">
+    <div class="card-head"><h2>Current settings</h2><span class="aside">CFG-0004</span></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Net water volume</span><span class="kv-v">77 L</span></div>
+      <div class="kv-row"><span class="kv-k">Target range</span><span class="kv-v">8.6 &ndash; 9.2 dKH</span></div>
+      <div class="kv-row"><span class="kv-k">Outer bounds</span><span class="kv-v">7.0 &ndash; 11.0 dKH</span></div>
+      <div class="kv-row"><span class="kv-k">Pump&rsquo;s smallest step</span><span class="kv-v">0.1 mL/day</span></div>
+      <div class="kv-row"><span class="kv-k">Delivery schedule</span><span class="kv-v">Hourly<span class="sub">24 doses per day</span></span></div>
+      <div class="kv-row"><span class="kv-k">Parameters with a controller</span><span class="kv-v">Alkalinity only</span></div>
+      <div class="kv-row"><span class="kv-k">In force since</span><span class="kv-v">9 Aug 2026, 19:12</span></div>
+    </div>
+
+    <div class="callout quiet">
+      <strong>Worked out from the above, never stored:</strong> aim point 8.90&nbsp;dKH (middle
+      of the target range) &middot; safety destinations 7.20 and 10.80&nbsp;dKH (outer bounds plus
+      a fixed 0.20 buffer) &middot; solution strength 0.0686&nbsp;dKH per mL.
+      Edit a range and all of these move with it.
+    </div>
+
+    <a class="btn" href="01-setup.html">Change settings</a>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What changing something does</h2></div>
+    <p class="body">
+      A settings change makes a new version, stamped with the moment it takes effect. Every
+      assessment records which version it ran under. Assessments made before your change keep
+      running on the version that was in force then &mdash; what the app told you in the past
+      stays true to what it knew at the time.
+    </p>
+    <p class="body">
+      Editing your target range reclassifies where you sit relative to it, and nothing else.
+      Your trend, what your tank consumes and your solution&rsquo;s strength are properties of
+      the tank, not of your preferences, and they do not move.
+    </p>
+    <div class="callout attention">
+      <strong>The one thing this cannot do:</strong> replay an assessment from before your very
+      first settings version. There is nothing to replay it against, so the app refuses rather
+      than assuming today&rsquo;s settings applied back then.
+      <span class="code">CONFIG_HISTORICAL_UNAVAILABLE</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Change history</h2><span class="aside">4 versions</span></div>
+    <div class="scroll-x">
+      <table class="data">
+        <thead><tr><th>Version</th><th>In force from</th><th>What changed</th></tr></thead>
+        <tbody>
+          <tr><td class="n">CFG-0004</td><td>9 Aug 19:12</td><td>New batch of solution<br><span class="off">solutionContextId, deliveryContextId</span></td></tr>
+          <tr><td class="n">CFG-0003</td><td>5 Aug 08:30</td><td>Target range 8.2&ndash;8.8 &rarr; 8.6&ndash;9.2<br><span class="off">targetRangeMinDkh, targetRangeMaxDkh</span></td></tr>
+          <tr><td class="n">CFG-0002</td><td>1 Aug 12:00</td><td>Volume 80 &rarr; 77&nbsp;L<br><span class="off">netVolumeL</span></td></tr>
+          <tr><td class="n">CFG-0001</td><td>28 Jul 18:40</td><td>First setup<br><span class="off">all fields</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="inert-note">
+      Each row is what the app was working from at that time, not a note about what you meant to
+      do. Versions are never backdated and never edited.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Your solution</h2><span class="pill pill-neutral">Read only</span></div>
+
+    <div><span class="value">0.0686</span><span class="unit">dKH per mL</span></div>
+    <p class="caption">This is the single strength figure the dosing engine uses. Nothing else
+    keeps a second opinion about it.</p>
+
+    <div class="kv" style="margin-top:var(--sp-4)">
+      <div class="kv-row"><span class="kv-k">Where it comes from</span><span class="kv-v">Your recipe<span class="sub">0.05284 &times; 100&nbsp;g/L &divide; 77&nbsp;L</span></span></div>
+      <div class="kv-row"><span class="kv-k">Chemical</span><span class="kv-v">Sodium carbonate<span class="sub">NA2CO3</span></span></div>
+      <div class="kv-row"><span class="kv-k">Concentration</span><span class="kv-v">100 g/L</span></div>
+      <div class="kv-row"><span class="kv-k">Confidence</span><span class="kv-v">From the recipe only<span class="sub">THEORETICAL_ONLY</span></span></div>
+      <div class="kv-row"><span class="kv-k">Measured strength</span><span class="kv-v is-absent">Not available</span></div>
+      <div class="kv-row"><span class="kv-k">Solution context</span><span class="kv-v">SOL-0002<span class="sub">opened 9 Aug 19:12 &mdash; new batch</span></span></div>
+      <div class="kv-row"><span class="kv-k">Delivery context</span><span class="kv-v">DLV-0001<span class="sub">opened 9 Aug 19:12 &mdash; recalibrated</span></span></div>
+    </div>
+
+    <div class="refusal">
+      <span class="state">NOT_RUN &middot; learning your solution&rsquo;s real strength</span>
+      <h3>Learning is switched off in this build</h3>
+      <p>
+        The app could, in principle, watch what actually happens when you change the dose and
+        work out how strong your solution really is. That is deliberately disabled here, and it
+        ships disabled &mdash; the recipe figure above is used for every calculation.
+      </p>
+      <p><strong>Why:</strong> learning needs three facts recorded reliably before it can be
+      trusted, and the app is not yet capturing them.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">M-2 &middot; which batch of solution was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">M-3 &middot; which pump setup was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">M-9 &middot; the confirmed rate before and after each change</span><span class="kv-v is-absent">Not captured</span></div>
+      </div>
+      <p style="margin-top:var(--sp-3)"><strong>What this costs you:</strong> nothing about the
+      core advice. Position, trend, consumption, dose recommendations and safety returns all run
+      normally on the recipe figure. What you lose is the app noticing that your actual solution
+      is, say, 15% weaker than the recipe says.</p>
+      <p class="inert-note">
+        <span class="code">CAPABILITY_POTENCY_LEARNER_GATED</span> &nbsp;
+        <span class="code">missingCapabilities [M-2, M-3, M-9]</span>
+      </p>
+    </div>
+
+    <div class="kv" style="margin-top:var(--sp-4)">
+      <div class="kv-row"><span class="kv-k">Observations recorded so far</span><span class="kv-v">0</span></div>
+      <div class="kv-row"><span class="kv-k">Kept if learning is switched on later</span><span class="kv-v">Yes, all of them<span class="sub">including ineligible ones, attached to the context they came from</span></span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Tools</h2><span class="pill pill-neutral">Coming later</span></div>
+    <p class="body">
+      Calculators &mdash; work out a dose by hand, convert units, plan a water change &mdash;
+      will live in their own tab. They are not here yet, and the tab is deliberately in place
+      and disabled rather than absent.
+    </p>
+    <p class="body">
+      The reason is that a calculator answering a question you asked and a recommendation the
+      engine decided to make are different kinds of statement, and they must never be mistaken
+      for one another. Deciding that now means it does not have to be untangled later.
+    </p>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open question for the owner.</b> There is a reason code for the target range changing and
+    one for the volume changing, but none for the outer bounds changing &mdash; even though
+    editing them moves the safety destinations and can turn a breach into a non-breach. The
+    change history row above is honest, but the assessment that follows it has no code to
+    explain itself with. Recorded as gap&nbsp;11.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

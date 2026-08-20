@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Log something · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <p class="eyebrow">Add to the record</p>
+    <h1>Log something</h1>
+    <p class="sub">Nine kinds of thing can be recorded. Everything the engine knows comes from
+    here, and nothing is ever inferred to fill a gap.</p>
+  </header>
+
+  <section class="card">
+    <ul class="picker">
+      <li><a href="#reading">
+        <span class="pmark p-alk">&#9673;</span>
+        <span><span class="t">Test result</span><span class="d">Alkalinity, calcium, magnesium and the rest</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#dose">
+        <span class="pmark p-alk">&#8646;</span>
+        <span><span class="t">Dose change</span><span class="d">You changed the pump&rsquo;s daily rate</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#water">
+        <span class="pmark p-sal">&#8776;</span>
+        <span><span class="t">Water change</span><span class="d">How much, and what was in the new water</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#correction">
+        <span class="pmark p-alk">&#43;</span>
+        <span><span class="t">One-off correction</span><span class="d">A deliberate addition by hand, outside the daily dose</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#anomaly">
+        <span class="pmark p-ca">&#9888;</span>
+        <span><span class="t">Delivery problem</span><span class="d">Missed dose, extra dose, pump stopped or failed</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#batch">
+        <span class="pmark p-mg">&#9634;</span>
+        <span><span class="t">New batch of solution</span><span class="d">New mix, new bottle, or a different concentration</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#calibration">
+        <span class="pmark p-mg">&#9881;</span>
+        <span><span class="t">Pump calibration or change</span><span class="d">Recalibrated, replaced, retubed, or moved channel</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#context">
+        <span class="pmark p-no3">&#9788;</span>
+        <span><span class="t">Something changed in the tank</span><span class="d">New corals, lighting, flow, temperature, tissue loss</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="#quality">
+        <span class="pmark p-po4">&#10007;</span>
+        <span><span class="t">Mark a reading suspect or invalid</span><span class="d">Bad reagent, wrong sample, a result you do not trust</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================ TIME PRECISION EXPLAINER ================ -->
+  <section class="card">
+    <div class="card-head"><h2>About times</h2></div>
+    <p class="body">
+      Every form below asks how well you know the time, and none of them fills it in for you.
+      There are four honest answers and they are not equally useful &mdash; but a weaker one is
+      always better than a made-up strong one.
+    </p>
+
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k"><strong>Exact time</strong><br><span class="code">EXACT_ABSOLUTE</span></span><span class="kv-v">Everything works<span class="sub">rates, position, response, learning</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Worked out, with proof</strong><br><span class="code">RECONSTRUCTED_WITH_PROVENANCE</span></span><span class="kv-v">Everything works<span class="sub">you must record how you proved it</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Clock time, unsure of zone</strong><br><span class="code">LOCAL_TIME_ZONE_UNKNOWN</span></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Date only</strong><br><span class="code">DATE_ONLY</span></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
+    </div>
+
+    <div class="callout attention">
+      <strong>Date-only stays date-only.</strong> Nothing in the app will ever upgrade it later,
+      and no time within the day is assumed &mdash; not noon, not midnight, not your usual
+      testing hour. If you later find the real time, that is a new record with proof, not an
+      edit to this one.
+    </div>
+  </section>
+
+  <!-- ================ READING FORM ================ -->
+  <section class="card" id="reading">
+    <div class="card-head"><span class="pmark p-alk">&#9673;</span><h2>Test result</h2></div>
+
+    <div class="field">
+      <span class="flabel">Parameter</span>
+      <div class="seg">
+        <span class="opt on">Alkalinity</span>
+        <span class="opt">Calcium</span>
+        <span class="opt">Magnesium</span>
+        <span class="opt">Other</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="val">Result</label>
+      <div class="inline">
+        <input class="input" id="val" value="8.70" inputmode="decimal">
+        <span class="suffix">dKH</span>
+      </div>
+      <p class="hint">Entering meq/L instead is fine &mdash; both your entry and the converted
+      value are kept, and the conversion is recorded as a note on the reading.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">When was this measured?</span>
+      <div class="btn-row" style="margin-bottom:var(--sp-2)">
+        <span class="btn">Just now</span>
+        <span class="btn">Pick a time</span>
+      </div>
+      <div class="inline">
+        <input class="input" value="20 Aug 2026" aria-label="Date">
+        <input class="input" value="07:40" aria-label="Time">
+      </div>
+      <p class="hint">This is when you took the sample, not when you are typing. Both are
+      stored, and the one you are typing at is never substituted for this one.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">How well do you know that time?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">Exactly<span class="oz">I was there and this is the real time</span></span>
+        <span class="opt">Roughly, but I know the clock time<span class="oz">not sure which time zone applied &mdash; excluded from rate calculations</span></span>
+        <span class="opt">Only the date<span class="oz">kept in history and can set your current position; excluded from rate calculations, permanently</span></span>
+        <span class="opt">I worked it out from something else<span class="oz">you will be asked to record how</span></span>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Is this a repeat of a test you just did?</span>
+      <div class="tri">
+        <span class="opt">Yes</span>
+        <span class="opt on">No</span>
+        <span class="opt">Not sure</span>
+      </div>
+      <p class="hint">Saying yes explicitly links them. Otherwise, two tests within 30 minutes
+      are grouped automatically and counted as one observation &mdash; testing twice does not
+      double your evidence.</p>
+    </div>
+
+    <div class="btn-row">
+      <span class="btn btn-primary">Save reading</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <!-- ================ DOSE CHANGE FORM ================ -->
+  <section class="card" id="dose">
+    <div class="card-head"><span class="pmark p-alk">&#8646;</span><h2>Dose change</h2></div>
+    <p class="body">You changed the pump&rsquo;s daily rate. When it changed matters as much as
+    what it changed to.</p>
+
+    <div class="field">
+      <label for="newdose">New daily rate</label>
+      <div class="inline">
+        <input class="input" id="newdose" value="9.3" inputmode="decimal">
+        <span class="suffix">mL/day</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Previous rate</span>
+      <div class="inline">
+        <input class="input" value="9.0" inputmode="decimal" aria-label="Previous rate">
+        <span class="suffix">mL/day</span>
+      </div>
+      <p class="hint">Pre-filled from your last confirmed rate. Correct it if that was wrong.
+      Your actual previous rate and what the app had recommended are stored as two different
+      facts.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">When did the new rate start?</span>
+      <div class="seg stack-opts">
+        <span class="opt">I know exactly when
+          <span class="oz">Best case. The engine can watch for a response and time it properly.</span></span>
+        <span class="opt on">I&rsquo;m not sure exactly when
+          <span class="oz">Give the earliest and latest it could have been. Honest and usable.</span></span>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Earliest it could have been</span>
+      <div class="inline">
+        <input class="input" value="18 Aug 2026" aria-label="Earliest date">
+        <input class="input" value="19:00" aria-label="Earliest time">
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">Latest it could have been</span>
+      <div class="inline">
+        <input class="input" value="19 Aug 2026" aria-label="Latest date">
+        <input class="input" value="09:00" aria-label="Latest time">
+      </div>
+      <p class="hint">The 14 hours in between are treated as confounded. Readings from that
+      window are not used for trends or for judging the response &mdash; a clean stretch starts
+      again after the latest possible time. That is the cost of the uncertainty, and it is
+      preferable to the app inventing a moment.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Was this the change the app recommended?</span>
+      <div class="tri">
+        <span class="opt on">Yes</span>
+        <span class="opt">No, my own</span>
+        <span class="opt">Not sure</span>
+      </div>
+      <p class="hint">Recorded either way. A recommendation the app made and a change you
+      actually made are separate records with separate times &mdash; neither is ever inferred
+      from the other.</p>
+    </div>
+
+    <div class="btn-row">
+      <span class="btn btn-primary">Save dose change</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <!-- ================ WATER CHANGE FORM ================ -->
+  <section class="card" id="water">
+    <div class="card-head"><span class="pmark p-sal">&#8776;</span><h2>Water change</h2></div>
+
+    <div class="callout attention">
+      <strong>Empty is not zero.</strong> If you do not know a number, say so. A blank field is
+      never treated as nought, never carried over from last time, and never guessed. Not
+      recorded, not known and known are three different things and the app keeps them apart.
+    </div>
+
+    <div class="field">
+      <label for="frac">How much did you change?</label>
+      <div class="inline">
+        <input class="input" id="frac" value="10" inputmode="decimal">
+        <span class="suffix">% of system volume</span>
+      </div>
+      <p class="hint">10% of 77&nbsp;L is about 7.7&nbsp;L.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Alkalinity of the new water</span>
+      <div class="tri" style="margin-bottom:var(--sp-2)">
+        <span class="opt on">I measured it</span>
+        <span class="opt">I don&rsquo;t know</span>
+        <span class="opt">Not recorded</span>
+      </div>
+      <div class="inline">
+        <input class="input" value="8.90" inputmode="decimal" aria-label="Replacement alkalinity">
+        <span class="suffix">dKH</span>
+      </div>
+      <p class="hint">If you do not know, the engine uses a deliberately blunt rule instead of
+      guessing, and a large enough unknown change will simply end the current stretch of
+      history rather than have a made-up step subtracted from it.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">How do you know that figure?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">I tested this batch<span class="oz">strongest</span></span>
+        <span class="opt">From the salt profile I set up<span class="oz">weaker</span></span>
+        <span class="opt">The manufacturer&rsquo;s stated figure<span class="oz">weakest</span></span>
+      </div>
+      <p class="hint">Recorded but currently not acted on: which of these three is strong enough
+      to justify adjusting your readings has never been decided, so the engine records the tier
+      and says so rather than choosing for you.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">When?</span>
+      <div class="inline">
+        <input class="input" value="16 Aug 2026" aria-label="Date">
+        <input class="input is-empty" placeholder="time not given" aria-label="Time">
+      </div>
+      <div class="seg" style="margin-top:var(--sp-2)">
+        <span class="opt">Exact</span>
+        <span class="opt">Clock only</span>
+        <span class="opt on">Date only</span>
+        <span class="opt">Worked out</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <span class="btn btn-primary">Save water change</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <!-- ================ REMAINING FAMILIES ================ -->
+  <section class="card" id="correction">
+    <div class="card-head"><span class="pmark p-alk">&#43;</span><h2>One-off correction</h2></div>
+    <div class="field">
+      <span class="flabel">How much did you intend to add?</span>
+      <div class="inline"><input class="input" value="5.5" inputmode="decimal" aria-label="Intended volume"><span class="suffix">mL</span></div>
+    </div>
+    <div class="field">
+      <span class="flabel">How much did you actually add?</span>
+      <div class="tri" style="margin-bottom:var(--sp-2)">
+        <span class="opt on">This much</span><span class="opt">I don&rsquo;t know</span><span class="opt">Not recorded</span>
+      </div>
+      <div class="inline"><input class="input" value="5.5" inputmode="decimal" aria-label="Actual volume"><span class="suffix">mL</span></div>
+      <p class="hint">Intended and actual are two fields because they are two facts. Only the
+      actual one is used to work out the effect, and only when it is known.</p>
+    </div>
+    <div class="field">
+      <span class="flabel">When was it delivered?</span>
+      <div class="tri" style="margin-bottom:var(--sp-2)">
+        <span class="opt on">At this time</span><span class="opt">I don&rsquo;t know</span><span class="opt">Spread over several times</span>
+      </div>
+      <div class="inline"><input class="input" value="20 Aug 2026" aria-label="Date"><input class="input" value="09:10" aria-label="Time"></div>
+      <p class="hint">If the time is unknown, the surrounding stretch of history is marked
+      confounded and no effect is invented for it. The addition is still recorded.</p>
+    </div>
+    <span class="btn btn-primary">Save correction</span>
+  </section>
+
+  <section class="card" id="anomaly">
+    <div class="card-head"><span class="pmark p-ca">&#9888;</span><h2>Delivery problem</h2></div>
+    <div class="field">
+      <span class="flabel">What happened?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">A dose was missed</span>
+        <span class="opt">An extra dose went in</span>
+        <span class="opt">The pump was interrupted</span>
+        <span class="opt">The pump failed</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">Over what window?</span>
+      <div class="inline"><input class="input" value="17 Aug 2026" aria-label="From date"><input class="input is-empty" placeholder="from, time unknown" aria-label="From time"></div>
+      <div class="inline" style="margin-top:var(--sp-2)"><input class="input" value="18 Aug 2026" aria-label="To date"><input class="input is-empty" placeholder="to, time unknown" aria-label="To time"></div>
+      <p class="hint">If you are unsure of the edges, give the widest window you are confident
+      about. Unknown edges are treated generously, never narrowly.</p>
+    </div>
+    <div class="field">
+      <span class="flabel">Do you know how much was missed or added?</span>
+      <div class="tri"><span class="opt">Yes, this much</span><span class="opt on">No</span><span class="opt">Not recorded</span></div>
+      <p class="hint">The engine will not estimate this. Unknown means the window is confounded,
+      which is a correct answer rather than a worse one.</p>
+    </div>
+    <span class="btn btn-primary">Save delivery problem</span>
+  </section>
+
+  <section class="card" id="batch">
+    <div class="card-head"><span class="pmark p-mg">&#9634;</span><h2>New batch of solution</h2></div>
+    <p class="body">This starts a new solution context. Everything the app has learned about the
+    old batch stays attached to the old batch and is not carried across.</p>
+    <div class="field">
+      <span class="flabel">What changed?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">Same recipe, new mix</span>
+        <span class="opt">Different concentration</span>
+        <span class="opt">Different product entirely</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">Concentration</span>
+      <div class="inline"><input class="input" value="100" inputmode="decimal" aria-label="Concentration"><span class="suffix">g/L</span></div>
+    </div>
+    <div class="field">
+      <span class="flabel">When did you start using it?</span>
+      <div class="inline"><input class="input" value="9 Aug 2026" aria-label="Date"><input class="input" value="19:12" aria-label="Time"></div>
+      <div class="seg" style="margin-top:var(--sp-2)">
+        <span class="opt on">Exact</span><span class="opt">Clock only</span><span class="opt">Date only</span><span class="opt">Worked out</span></div>
+    </div>
+    <span class="btn btn-primary">Save batch change</span>
+  </section>
+
+  <section class="card" id="calibration">
+    <div class="card-head"><span class="pmark p-mg">&#9881;</span><h2>Pump calibration or change</h2></div>
+    <p class="body">This starts a new delivery context, for the same reason as a new batch: what
+    the app learned about the old setup does not transfer.</p>
+    <div class="field">
+      <span class="flabel">What did you do?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">Recalibrated it</span>
+        <span class="opt">Replaced the pump</span>
+        <span class="opt">Changed the tubing</span>
+        <span class="opt">Moved to a different channel</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">Did the smallest step change?</span>
+      <div class="tri" style="margin-bottom:var(--sp-2)"><span class="opt">Yes</span><span class="opt on">No</span><span class="opt">Not sure</span></div>
+      <div class="inline"><input class="input" value="0.1" inputmode="decimal" aria-label="Smallest step"><span class="suffix">mL/day</span></div>
+    </div>
+    <div class="field">
+      <span class="flabel">When?</span>
+      <div class="inline"><input class="input" value="20 Aug 2026" aria-label="Date"><input class="input" value="10:30" aria-label="Time"></div>
+    </div>
+    <span class="btn btn-primary">Save calibration</span>
+  </section>
+
+  <section class="card" id="context">
+    <div class="card-head"><span class="pmark p-no3">&#9788;</span><h2>Something changed in the tank</h2></div>
+    <p class="body">
+      Anything that plausibly changes how fast the tank consumes alkalinity. Recording it lets
+      the engine stop trusting comparisons across the change. It will never infer one of these
+      from an unexpected slope, and not recording one does not prove nothing happened.
+    </p>
+    <div class="field">
+      <span class="flabel">What kind of change?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">Corals added, removed or grown noticeably</span>
+        <span class="opt">Lighting changed</span>
+        <span class="opt">Flow changed</span>
+        <span class="opt">Temperature regime changed</span>
+        <span class="opt">Major tissue loss or recovery</span>
+        <span class="opt">Something else I am confident about</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">Which parameters could it affect?</span>
+      <div class="tri"><span class="opt on">Alkalinity</span><span class="opt">Calcium</span><span class="opt">Magnesium</span></div>
+    </div>
+    <div class="field">
+      <span class="flabel">When did it take effect?</span>
+      <div class="inline"><input class="input" value="11 Aug 2026" aria-label="Date"><input class="input is-empty" placeholder="time not given" aria-label="Time"></div>
+      <div class="seg" style="margin-top:var(--sp-2)">
+        <span class="opt">Exact</span><span class="opt">Clock only</span><span class="opt on">Date only</span><span class="opt">Worked out</span></div>
+    </div>
+    <span class="btn btn-primary">Save change of context</span>
+  </section>
+
+  <section class="card" id="quality">
+    <div class="card-head"><span class="pmark p-po4">&#10007;</span><h2>Mark a reading suspect or invalid</h2></div>
+    <p class="body">
+      The app cannot decide by itself that a reading looks wrong &mdash; there is no rule for
+      that in this build. Only you, or a fault you record, can do it.
+    </p>
+    <div class="field">
+      <span class="flabel">Which reading?</span>
+      <div class="seg stack-opts">
+        <span class="opt on">19 Aug 2026, 07:40 &mdash; 8.55 dKH</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="flabel">What are you saying about it?</span>
+      <div class="seg stack-opts">
+        <span class="opt">Suspect
+          <span class="oz">Plausible but odd. Stays in your history and in view. May hold back a dose change until it is settled.</span></span>
+        <span class="opt on">Invalid
+          <span class="oz">Not a usable measurement. Kept forever, shown in your history, excluded from every calculation.</span></span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="why">Why?</label>
+      <input class="input" id="why" value="Reagent past expiry">
+      <p class="hint">Required for invalid. It appears wherever the exclusion is explained.</p>
+    </div>
+    <div class="callout quiet">
+      Nothing is deleted. The original value, the original time and everything you first
+      entered stay exactly as they were.
+    </div>
+    <span class="btn btn-primary">Save</span>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open questions for the owner.</b> (1) &ldquo;Suspect&rdquo; can hold back a dose change,
+    but nothing defines what settles it or which screen does the settling &mdash; gap&nbsp;9.
+    (2) Water changes, corrections and delivery problems have no correction path at all: only
+    readings can be superseded or marked invalid, so a mistyped water change cannot be fixed
+    without rewriting history &mdash; gap&nbsp;8.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

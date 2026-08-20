@@ -1,0 +1,182 @@
+/* ============================================================================
+   DOSING WIZARD V2 — DESIGN TOKENS
+   ----------------------------------------------------------------------------
+   This is the single source of appearance for every build-one mockup screen.
+   Every colour, radius, shadow, type size, weight, letter-spacing and spacing
+   step used anywhere in these screens is declared here and nowhere else.
+
+   Two rules hold this together:
+
+     1. No other file may contain a literal colour, radius, shadow or type
+        size. `app.css` and the screens reference these variables only.
+     2. Parameter colour is IDENTITY. State colour is amber and red. A
+        parameter's own colour never signals a state, and a state colour is
+        never used as a parameter's identity.
+
+   Changing how the app looks is editing this file.
+   ========================================================================= */
+
+:root {
+
+  /* --- Ground and surfaces ------------------------------------------------
+     Cards sit on a pale warm-green ground and carry a subtle top-to-bottom
+     gradient rather than a flat white fill. */
+
+  --ground:            #EDF2F1;
+  --card-top:          #FFFFFF;
+  --card-bottom:       #F5F9F7;
+  --card-gradient:     linear-gradient(180deg, var(--card-top) 0%, var(--card-bottom) 100%);
+
+  --border:            #DFE8E5;   /* card and control edges */
+  --hairline:          #EBF1EF;   /* internal dividers, gridlines */
+
+  --inset:             #F2F7F5;   /* recessed panels inside a card */
+  --inset-deep:        #E8EFEC;   /* recessed panel, one step deeper */
+
+  /* --- Ink ---------------------------------------------------------------- */
+
+  --ink:               #0C1D1A;   /* values, headings */
+  --grey:              #566966;   /* body copy, secondary labels */
+  --faint:             #8DA09B;   /* metadata, units in small type, captions */
+
+  /* --- Parameter identity -------------------------------------------------
+     Icon tint and header tint only. Never a state signal. */
+
+  --alk:               #0D8078;
+  --alk-bg:            #E1F2EF;
+
+  --ca:                #B45F35;
+  --ca-bg:             #FAEBE1;
+
+  --mg:                #6B57AC;
+  --mg-bg:             #EEEAF9;
+
+  --no3:               #43804B;
+  --no3-bg:            #E6F3E7;
+
+  --po4:               #AB4180;
+  --po4-bg:            #FAE8F3;
+
+  --sal:               #2A6CAE;
+  --sal-bg:            #E4EFFA;
+
+  /* --- State ---------------------------------------------------------------
+     Pills, markers and notices only. Amber is attention; red is safety and
+     outer-bound breach. There is no third state colour: a refusal is rendered
+     with structure and neutral ink, not with alarm. */
+
+  --attention:         #B4761E;
+  --attention-bg:      #FCF2E0;
+
+  --safety:            #C2432E;
+  --safety-bg:         #FCE9E5;
+
+  /* Neutral state chip — used for NOT_RUN / WITHHELD / NONE, which are
+     designed outputs and must not read as errors. */
+  --neutral-chip:      #566966;
+  --neutral-chip-bg:   #E8EFEC;
+
+  /* --- Radii ------------------------------------------------------------- */
+
+  --r-card:            22px;
+  --r-panel:           17px;
+  --r-inner:           12px;
+  --r-field:           14px;
+  --r-chip:            999px;
+  --r-swatch:          3px;    /* legend swatches */
+
+  /* --- Shadow layers -------------------------------------------------------
+     Depth is four layers: a tight edge shadow, a mid lift, a wide soft shadow
+     beneath, and a white inner highlight along the top edge. */
+
+  --sh-edge:           0 0 0 1px rgba(12, 29, 26, 0.045);
+  --sh-lift:           0 2px 5px rgba(12, 29, 26, 0.055);
+  --sh-soft:           0 18px 36px -20px rgba(12, 29, 26, 0.32);
+  --sh-highlight:      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+  --shadow-card:       var(--sh-edge), var(--sh-lift), var(--sh-soft), var(--sh-highlight);
+  --shadow-raised:     var(--sh-edge), 0 1px 3px rgba(12, 29, 26, 0.05), var(--sh-highlight);
+  --shadow-inset:      inset 0 1px 2px rgba(12, 29, 26, 0.05);
+  --shadow-bar:        0 -10px 24px -14px rgba(12, 29, 26, 0.30);
+
+  /* --- Type ---------------------------------------------------------------
+     System stack only. Nothing is downloaded. */
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, "Noto Sans", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+
+  --t-hero:            44px;   /* the one big number on a screen */
+  --t-value:           30px;   /* card values */
+  --t-tile:            25px;   /* inert tile values */
+  --t-h1:              23px;   /* screen title */
+  --t-h2:              17px;   /* card heading */
+  --t-h3:              14px;   /* section heading, uppercase */
+  --t-body:            15px;
+  --t-small:           13px;
+  --t-micro:           11px;
+  --t-code:            11.5px;
+  --t-nano:            8px;    /* the "Later" flag on the disabled Tools tab */
+  --t-axis:            9px;    /* chart axis labels */
+
+  --lh-tight:          1.15;
+  --lh-body:           1.5;
+
+  --ls-hero:           -0.05em;
+  --ls-value:          -0.04em;
+  --ls-head:           -0.02em;
+  --ls-caps:           0.08em;   /* uppercase section labels */
+
+  --w-regular:         400;
+  --w-medium:          500;
+  --w-semi:            600;
+  --w-bold:            700;
+  --w-heavy:           800;
+
+  /* --- Spacing ------------------------------------------------------------ */
+
+  --sp-1:              4px;
+  --sp-2:              8px;
+  --sp-3:              12px;
+  --sp-4:              16px;
+  --sp-5:              20px;
+  --sp-6:              28px;
+  --sp-7:              36px;
+  --sp-8:              48px;
+
+  --gutter:            16px;   /* screen side padding */
+  --card-pad:          18px;
+  --stack:             14px;   /* gap between cards */
+
+  /* --- Layout ------------------------------------------------------------- */
+
+  --screen-max:        460px;  /* mobile first; caps on a wide window */
+  --tabbar-h:          62px;
+
+  /* Fixed component dimensions */
+  --sz-mark:           30px;   /* parameter identity mark, picker icon column */
+  --sz-rank:           22px;   /* attention-list rank chip */
+  --sz-ord:            24px;   /* constraint ordinal column */
+  --sz-swatch:         10px;   /* legend swatch */
+  --sz-steprail:       4px;    /* setup progress rail */
+  --sz-dot:            8px;    /* inert tile dot */
+  --sz-spark:          30px;   /* tile sparkline height */
+
+  /* --- Motion --------------------------------------------------------------
+     The trace animates left to right on load and event markers appear as the
+     line reaches them. Every one of these collapses to 0 under
+     prefers-reduced-motion (see app.css). */
+
+  --motion-trace:      1100ms;
+  --motion-ease:       cubic-bezier(0.35, 0, 0.15, 1);
+  --motion-fade:       260ms;
+
+  /* --- Chart geometry ----------------------------------------------------- */
+
+  --chart-trace-w:     2.25px;
+  --chart-point-r:     3.4px;
+  --chart-grid-dash:   1 4;
+  --chart-event-dash:  3 4;
+  --chart-range-alpha: 0.55;
+}

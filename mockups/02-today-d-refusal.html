@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today — capability refusal · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <p class="eyebrow">Thursday 20 August</p>
+    <h1>Today</h1>
+    <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Variant D &mdash; a capability refusal.</b> Identical readings to variant A. One setup
+    datum is missing, so the final dose figure is withheld. Everything the missing datum does
+    not touch is still reported at full strength. A refusal is a designed output with a
+    reason code, not an error screen.
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Needs you</h2><span class="aside">2 items</span></div>
+    <ul class="attention-list">
+      <li><a class="attention-item" href="01-setup.html#step4">
+        <span class="rank">1</span>
+        <span><span class="t">Tell the app your pump&rsquo;s smallest step</span>
+        <span class="d">Without it, no dose figure can be given. Takes about ten seconds.</span></span>
+      </a></li>
+      <li><a class="attention-item" href="#alk">
+        <span class="rank">2</span>
+        <span><span class="t">Test alkalinity again on Saturday 22 Aug</span>
+        <span class="d">Routine rhythm. Unaffected by the missing setting.</span></span>
+      </a></li>
+    </ul>
+    <p class="inert-note">Order supplied by the engine. This list does not rank anything itself.</p>
+  </section>
+
+  <section class="card" id="alk">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>Alkalinity</h2>
+      <span class="aside">20 Aug 07:40</span>
+    </div>
+
+    <div><span class="hero">8.70</span><span class="unit">dKH</span></div>
+    <p class="caption">Latest valid measurement. Position is read from this value alone, and it is not affected by the missing setting.</p>
+
+    <svg class="chart c-alk" viewBox="0 0 296 116" role="img"
+         aria-label="Alkalinity fell from 9.02 to 8.70 dKH over eight days, inside the target range.">
+      <defs>
+        <linearGradient id="g-alk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--alk)" stop-opacity="0.20"/>
+          <stop offset="100%" stop-color="var(--alk)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect class="range-fill" x="20" y="23.3" width="270" height="56"/>
+      <line class="range-edge" x1="20" y1="23.3" x2="290" y2="23.3"/>
+      <line class="range-edge" x1="20" y1="79.3" x2="290" y2="79.3"/>
+      <line class="grid" x1="20" y1="51.3" x2="290" y2="51.3"/>
+      <text class="axis" x="1" y="26.5">9.2</text>
+      <text class="axis" x="1" y="82.5">8.6</text>
+      <text class="axis" x="20" y="112">12 Aug</text>
+      <text class="axis" x="290" y="112" text-anchor="end">20 Aug</text>
+      <path class="area" d="M20,40.1 C42.5,42.6 65,45.1 87.5,47.6 C110,50.1 132.5,52.6 155,55.1
+                            C177.5,57.3 200,59.4 222.5,61.6 C245,64.4 267.5,67.2 290,70 L290,98 L20,98 Z"/>
+      <g class="reveal d4"><line class="evline" x1="155" y1="14" x2="155" y2="98"/>
+        <polygon class="evmark" points="151,7 159,7 155,13"/></g>
+      <path class="trace" d="M20,40.1 C42.5,42.6 65,45.1 87.5,47.6 C110,50.1 132.5,52.6 155,55.1
+                             C177.5,57.3 200,59.4 222.5,61.6 C245,64.4 267.5,67.2 290,70"/>
+      <g class="reveal d3"><circle class="pt-excluded" cx="121.3" cy="51.3" r="4"/></g>
+      <circle class="pt reveal d0" cx="20"    cy="40.1" r="3.4"/>
+      <circle class="pt reveal d2" cx="87.5"  cy="47.6" r="3.4"/>
+      <circle class="pt reveal d4" cx="155"   cy="55.1" r="3.4"/>
+      <circle class="pt reveal d6" cx="222.5" cy="61.6" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="70" r="4"/>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--alk-bg)"></span>Target range 8.6&ndash;9.2&nbsp;dKH</span>
+      <span><span class="swatch" style="background:var(--faint)"></span>Water change, 16 Aug</span>
+      <span><span class="swatch" style="background:var(--card-top);border:1px dashed var(--faint)"></span>Not eligible for the trend</span>
+    </div>
+
+    <p class="seclabel">Where this stands</p>
+    <dl class="dims">
+      <div class="dim">
+        <dt>Position</dt>
+        <dd>In range<span class="why">8.70&nbsp;dKH, inside 8.6&ndash;9.2. Still fully known.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Trajectory</dt>
+        <dd>Falling<span class="why">Still fully known. The missing setting does not affect the slope.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Evidence</dt>
+        <dd>Sufficient<span class="why">5 independent tests over 8.00 days.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Intervention</dt>
+        <dd>None open<span class="why">No dose change is currently being watched.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Response</dt>
+        <dd>Not applicable<span class="why">Nothing to attribute a response to yet.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Overshoot</dt>
+        <dd>None<span class="why">No target boundary has been crossed in the unwanted direction.</span></dd>
+      </div>
+    </dl>
+
+    <div class="slopepair">
+      <div class="slopebox">
+        <span class="lbl">What your tests show</span>
+        <span class="n">&minus;0.0400</span>
+        <span class="sub">dKH/day &middot; observed</span>
+      </div>
+      <div class="slopebox">
+        <span class="lbl">What&rsquo;s certain enough to act on</span>
+        <span class="n">&minus;0.0198</span>
+        <span class="sub">dKH/day &middot; supported</span>
+      </div>
+    </div>
+
+    <div class="refusal">
+      <span class="state">WITHHELD &middot; dose recommendation</span>
+      <h3>The dose figure is being held back</h3>
+      <p><strong>What is missing:</strong> your pump&rsquo;s smallest step &mdash; the smallest
+      change in mL/day it can actually be set to. It has never been recorded for this tank.</p>
+      <p><strong>Why that stops the number:</strong> the engine can work out the dose it wants,
+      but it cannot turn that into a setting your pump can make without knowing the step size.
+      It will not pick a step size for you, and there is no assumed default.</p>
+      <p><a class="fix" href="01-setup.html#step4">Add your pump&rsquo;s smallest step &rarr;</a></p>
+      <div class="stillknown">
+        <p style="margin-bottom:var(--sp-2)"><strong>What is known anyway:</strong></p>
+        <div class="kv">
+          <div class="kv-row"><span class="kv-k">Alkalinity</span><span class="kv-v">8.70 dKH<span class="sub">in the target range</span></span></div>
+          <div class="kv-row"><span class="kv-k">Trajectory</span><span class="kv-v">Falling<span class="sub">&minus;0.0400 dKH/day observed</span></span></div>
+          <div class="kv-row"><span class="kv-k">Your tank uses</span><span class="kv-v">0.6576 dKH/day</span></div>
+          <div class="kv-row"><span class="kv-k">The dose the engine wants</span><span class="kv-v">9.288 mL/day<span class="sub">before rounding to your pump</span></span></div>
+          <div class="kv-row"><span class="kv-k">Which is a change of</span><span class="kv-v">+0.288 mL/day<span class="sub">from 9.0</span></span></div>
+          <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v is-absent">Withheld</span></div>
+        </div>
+        <p class="inert-note" style="margin-top:var(--sp-3)">
+          The 9.288 figure is shown because it is real and calculable. It is not a setting:
+          it is the answer before your pump&rsquo;s limits are applied.
+        </p>
+      </div>
+    </div>
+
+    <p class="seclabel">Next test</p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Sat 22 Aug, 07:40</span></div>
+      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Routine 48-hour cadence<span class="sub">RETEST_ROUTINE_CADENCE</span></span></div>
+    </div>
+
+    <details class="notices">
+      <summary>
+        <span class="lbl">Why the engine said this</span>
+        <span class="sevcount">
+          <span class="pill sev-REFUSAL">1 refusal</span>
+          <span class="pill pill-attention">2 gating</span>
+          <span class="pill pill-neutral">13 info</span>
+        </span>
+        <span class="chev"></span>
+      </summary>
+      <ul class="notice-list">
+
+        <li class="notice">
+          <span class="pill sev-REFUSAL sev">Refusal</span>
+          <span class="code">CAPABILITY_ACTUATOR_INCREMENT_REQUIRED</span>
+          <span class="say">No final maintenance dose in mL/day without the pump&rsquo;s smallest step. Slopes and the unrounded candidate are still emitted. There is no 0.1 default.</span>
+          <span class="payload"><span class="k">capability</span> <b>M-1</b> &nbsp; <span class="k">continuousActionCandidate</span> <b>9.288</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">TIME_PROVENANCE_DATE_ONLY</span>
+          <span class="say">The 15 Aug reading has a date but no time, so it cannot enter the trend.</span>
+          <span class="payload"><span class="k">readingId</span> <b>R-0138</b> &nbsp; <span class="k">date</span> <b>2026-08-15</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">RETEST_BOUNDARY_MARGIN_UNAVAILABLE</span>
+          <span class="say">Boundary risk cannot bring a test forward: the margin that would trigger it has no value for alkalinity.</span>
+          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">PRESENTATION_INFORM_AND_PROCEED</span>
+          <span class="say">Name the unresolved issue, give the advice that is still valid, and do not lock the keeper out.</span>
+          <span class="payload"><span class="k">unresolvedIssue</span> <b>ACTUATOR_INCREMENT_ABSENT</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_SELECTED</span>
+          <span class="say">The stretch of history used for this assessment.</span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0812</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_SUFFICIENT</span>
+          <span class="say">Enough independent tests over enough days for an ordinary dose decision.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>5</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_ESTIMATOR_THEIL_SEN</span>
+          <span class="say">The slope is the middle of every pair of readings.</span>
+          <span class="payload"><span class="k">n</span> <b>5</b> &nbsp; <span class="k">pairwiseSlopeCount</span> <b>10</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">UNCERTAINTY_FLOOR_APPLIED</span>
+          <span class="say">Scatter came out below the working floor for an alkalinity test, so the floor was used.</span>
+          <span class="payload"><span class="k">sigmaResid</span> <b>0.0000</b> &nbsp; <span class="k">sigmaPoint</span> <b>0.10</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_FALLING</span>
+          <span class="say">Alkalinity is falling, by more than uncertainty alone can explain.</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0400</b> &nbsp; <span class="k">supportedSlope</span> <b>&minus;0.0198</b> &nbsp; <span class="k">sigmaS</span> <b>0.0158</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_WC_NEGLIGIBLE</span>
+          <span class="say">The 16 Aug water change would have moved alkalinity by less than the 0.10&nbsp;dKH floor, so nothing was subtracted.</span>
+          <span class="payload"><span class="k">waterChangeId</span> <b>WC-0816</b> &nbsp; <span class="k">expectedStepDkh</span> <b>0.004</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">DELIVERY_BASIS_PROGRAMMED_SCHEDULE</span>
+          <span class="say">Your confirmed pump schedule was used as the delivery record.</span>
+          <span class="payload"><span class="k">programmedDoseMlPerDay</span> <b>9.0</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="say">Strength per millilitre comes from your recipe and tank volume.</span>
+          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CONSUMPTION_ESTIMATED</span>
+          <span class="say">What the tank uses per day. Unaffected by the missing pump setting.</span>
+          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6576</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0400</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CAPABILITY_POTENCY_LEARNER_GATED</span>
+          <span class="say">The app is not learning your solution&rsquo;s real strength from results. Off by design in this build.</span>
+          <span class="payload"><span class="k">missingCapabilities</span> <b>[M-2, M-3, M-9]</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">RETEST_ROUTINE_CADENCE</span>
+          <span class="say">Ordinary 48-hour testing rhythm.</span>
+          <span class="payload"><span class="k">recommendedAt</span> <b>2026-08-22T07:40Z</b></span>
+        </li>
+
+        <li class="notice">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
+          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+        </li>
+
+      </ul>
+    </details>
+  </section>
+
+  <p class="seclabel">Logged only</p>
+  <section class="card">
+    <div class="tilegrid">
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--ca)"><span class="dot" style="background:var(--ca)"></span>Calcium</span>
+        <span class="n">428<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-ca chart" aria-hidden="true">
+          <defs><linearGradient id="g-ca" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--ca)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--ca)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,17 C16,15 28,13 40,14 C52,15 64,20 76,19 C84,18.5 92,16 96,15 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,17 C16,15 28,13 40,14 C52,15 64,20 76,19 C84,18.5 92,16 96,15"/>
+          <circle class="pt-last reveal d8" cx="96" cy="15" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--mg)"><span class="dot" style="background:var(--mg)"></span>Magnesium</span>
+        <span class="n">1340<span class="unit">mg/L</span></span><span class="when">14 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-mg chart" aria-hidden="true">
+          <defs><linearGradient id="g-mg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--mg)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--mg)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,12 C16,13 28,16 40,17 C52,18 64,16 76,17 C84,17.6 92,19 96,20 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,12 C16,13 28,16 40,17 C52,18 64,16 76,17 C84,17.6 92,19 96,20"/>
+          <circle class="pt-last reveal d8" cx="96" cy="20" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--no3)"><span class="dot" style="background:var(--no3)"></span>Nitrate</span>
+        <span class="n">5.2<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-no3 chart" aria-hidden="true">
+          <defs><linearGradient id="g-no3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--no3)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--no3)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,20 C16,19 28,17 40,15 C52,13 64,14 76,13 C84,12.4 92,11 96,10 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,20 C16,19 28,17 40,15 C52,13 64,14 76,13 C84,12.4 92,11 96,10"/>
+          <circle class="pt-last reveal d8" cx="96" cy="10" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--po4)"><span class="dot" style="background:var(--po4)"></span>Phosphate</span>
+        <span class="n">0.06<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-po4 chart" aria-hidden="true">
+          <defs><linearGradient id="g-po4" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--po4)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--po4)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,13 C16,14 28,17 40,18 C52,19 64,17 76,16 C84,15.4 92,15 96,15 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,13 C16,14 28,17 40,18 C52,19 64,17 76,16 C84,15.4 92,15 96,15"/>
+          <circle class="pt-last reveal d8" cx="96" cy="15" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html" style="grid-column:1 / -1">
+        <span class="name" style="color:var(--sal)"><span class="dot" style="background:var(--sal)"></span>Salinity</span>
+        <span class="n">35.1<span class="unit">ppt</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 216 30" class="c-sal chart" aria-hidden="true">
+          <defs><linearGradient id="g-sal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--sal)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--sal)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,16 C30,15 56,14 82,15 C108,16 134,18 160,17 C180,16.2 200,15 212,14 L212,30 L4,30 Z"/>
+          <path class="trace" d="M4,16 C30,15 56,14 82,15 C108,16 134,18 160,17 C180,16.2 200,15 212,14"/>
+          <circle class="pt-last reveal d8" cx="212" cy="14" r="2.6"/></svg>
+      </a>
+    </div>
+    <p class="inert-note">Logged and charted only: no status, no range position, no trend, no advice, no reminders.</p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>
