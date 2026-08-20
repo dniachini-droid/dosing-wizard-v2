@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Task done · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="10-tasks.html">Tasks</a>
+    <p class="eyebrow">The moment after you tick something off</p>
+    <h1>The run, and the real intervals</h1>
+    <p class="sub">Reload the page to watch it again.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Exemplary restraint, and the reason it is ported whole.</b> This shows the run of past
+    completions <i>and the actual intervals between them</i>, which are often not the interval
+    that was set. It shows the fact and offers no judgement about it.
+  </div>
+
+  <!-- ===================== THE MOMENT ===================== -->
+  <div class="moment" data-moment="task">
+    <div class="mcard">
+      <div class="mcap done">
+        <p class="lead">Done</p>
+        <p class="figure"><span class="mval" style="color:var(--done-ink)">Water change</span></p>
+        <p class="who">Thursday 20 August &middot; 15&nbsp;L</p>
+        <p class="starrun">
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st">&#10022;</span>
+          <span class="st latest">&#9733;</span>
+        </p>
+      </div>
+
+      <div class="mbody stagger">
+        <p class="headline c1">9 times now</p>
+        <p class="line c2">
+          You do this about every <strong>9 days</strong>, against a schedule of every week.
+        </p>
+
+        <div class="facts c3">
+          <p class="meta" style="margin:0">The gaps between the last eight</p>
+          <div class="gaps">
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 7)"></i><b>7</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 10)"></i><b>10</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 7)"></i><b>7</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 12)"></i><b>12</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 8)"></i><b>8</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 7)"></i><b>7</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 11)"></i><b>11</b></span>
+            <span class="g"><i style="height:calc(var(--mc-gap-unit) * 7)"></i><b>7</b></span>
+          </div>
+          <div class="kv" style="margin-top:var(--sp-3)">
+            <div class="kv-row"><span class="kv-k">Next due</span><span class="kv-v">Thu 27 Aug<span class="sub">every week, counted from today</span></span></div>
+          </div>
+        </div>
+
+        <div class="c4"><span class="btn btn-primary">Done</span></div>
+        <p class="mclose c5" data-countdown="--mc-autoclose"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WHY ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>What it is telling you, and what it is not</h2></div>
+    <p class="body">
+      It is telling you that you do this every nine days and that you set it to every seven. That
+      is the one thing the app knows and you do not carry in your head.
+    </p>
+    <p class="body">
+      It is <strong>not</strong> telling you that nine is wrong, or that seven was right, or that
+      you should do better. There is no praise, no streak to break, no score. If nine days is what
+      actually happens, that is a fact about your week, and the useful response might be to change
+      the schedule to nine rather than to feel behind on seven.
+    </p>
+    <div class="callout quiet">
+      Worth showing without comment. The restraint is the design.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>The timing</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Stars light one at a time</span><span class="kv-v">from 380&nbsp;ms, 110&nbsp;ms apart<span class="sub">most recent last, so the run reads left to right</span></span></div>
+      <div class="kv-row"><span class="kv-k">Each star pops</span><span class="kv-v">420&nbsp;ms<span class="sub">with a 40&nbsp;ms offset between them</span></span></div>
+      <div class="kv-row"><span class="kv-k">Most it will ever show</span><span class="kv-v">12<span class="sub">so it stays a glance and not a list</span></span></div>
+      <div class="kv-row"><span class="kv-k">The text follows</span><span class="kv-v">260, 380, 500, 620, 740&nbsp;ms</span></div>
+      <div class="kv-row"><span class="kv-k">Closes itself after</span><span class="kv-v">10&nbsp;s<span class="sub">unless you touch it</span></span></div>
+    </div>
+    <p class="inert-note">
+      Ported from V1&rsquo;s <span class="code">TaskCompletion.jsx</span>; every figure is a token.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+<script src="moments.js"></script>
+</body>
+</html>

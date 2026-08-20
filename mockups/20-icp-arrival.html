@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The panel arrives · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="19-icp-entry.html">ICP panel</a>
+    <p class="eyebrow">The moment after you save it</p>
+    <h1>The panel gets a moment</h1>
+    <p class="sub">Reload the page to watch it again.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>The densest thing you will ever type into this app, and it used to arrive silently.</b>
+    The elements count in, the ones outside reference are named, and anything that has moved since
+    the last panel is shown with its direction.
+  </div>
+
+  <div class="moment" data-moment="icp">
+    <div class="mcard">
+      <div class="mcap alk">
+        <p class="lead">Panel saved</p>
+        <p class="figure">
+          <span class="mval"><span data-icp-count="34">0</span></span>
+          <span class="unit">elements</span>
+        </p>
+        <p class="who">ATI Labs &middot; 18 August 2026</p>
+      </div>
+
+      <div class="mbody stagger" data-icp-detail hidden>
+        <p class="headline c1">4 outside their reference range</p>
+
+        <div class="facts c2">
+          <p class="meta" style="margin:0 0 var(--sp-2)">Outside reference</p>
+          <div class="elgrid">
+            <span class="elcell is-off"><span class="e">Strontium</span><span class="v">6.1</span></span>
+            <span class="elcell is-off"><span class="e">Iodine</span><span class="v">0.02</span></span>
+            <span class="elcell is-off"><span class="e">Nickel</span><span class="v">1.4</span></span>
+            <span class="elcell is-off"><span class="e">Aluminium</span><span class="v">8.9</span></span>
+          </div>
+        </div>
+
+        <div class="facts c3">
+          <p class="meta" style="margin:0 0 var(--sp-2)">Moved most since 11 July</p>
+          <div class="elgrid">
+            <span class="elcell"><span class="e">Iodine</span><span class="v"><span class="arrow">&darr;</span> 64%</span></span>
+            <span class="elcell"><span class="e">Nickel</span><span class="v"><span class="arrow">&uarr;</span> 55%</span></span>
+            <span class="elcell"><span class="e">Strontium</span><span class="v"><span class="arrow">&darr;</span> 28%</span></span>
+          </div>
+          <p class="meta" style="margin-top:var(--sp-2)">Only moves of a quarter or more, and only
+          the largest three. A panel where everything wobbles a few per cent has not told you
+          anything.</p>
+        </div>
+
+        <p class="line c4">
+          Recorded. Nothing here changes a dose, and nothing here is a recommendation &mdash; it is
+          your panel, read back to you against the lab&rsquo;s own ranges.
+        </p>
+
+        <p class="mclose c5" data-countdown="--md-autoclose"></p>
+      </div>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>The timing</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Count begins</span><span class="kv-v">after 420&nbsp;ms</span></div>
+      <div class="kv-row"><span class="kv-k">Count runs</span><span class="kv-v">1400&nbsp;ms<span class="sub">eased, so the size of the panel registers before the detail does</span></span></div>
+      <div class="kv-row"><span class="kv-k">Detail follows</span><span class="kv-v">260&nbsp;ms after it lands</span></div>
+      <div class="kv-row"><span class="kv-k">Closes itself after</span><span class="kv-v">16&nbsp;s<span class="sub">longer than the others, because there is more to read</span></span></div>
+    </div>
+    <p class="inert-note">
+      Ported from V1&rsquo;s <span class="code">IcpConfirmation.jsx</span>; every figure is a token.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+<script src="moments.js"></script>
+</body>
+</html>

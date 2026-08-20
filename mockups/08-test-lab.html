@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test Lab · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Test Lab</h1>
+      <p class="sub">One sitting, one date, every parameter on this screen.</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <div class="mockup-note">
+    <b>Why this screen exists.</b> V1&rsquo;s entry form had a dropdown, so recording six tests
+    meant six round trips through a select. This is the fix and it is the whole idea: every
+    parameter is a row, you type the value and press Log, and you move down the page. It is a
+    checklist, not a form.
+  </div>
+
+  <!-- ===================== THE SITTING ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>This sitting</h2>
+      <span class="aside">3 of 6 logged</span>
+    </div>
+
+    <div class="field">
+      <span class="flabel">When you ran these tests</span>
+      <div class="inline">
+        <input class="input" value="20 Aug 2026" aria-label="Date">
+        <input class="input" value="07:40" aria-label="Time">
+      </div>
+      <p class="hint">One date and time for the whole sitting, because a testing session happens
+      at one sitting. Any single row can be given its own time if it genuinely differs.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">How well do you know that time?</span>
+      <div class="seg">
+        <span class="opt on">Exact time</span>
+        <span class="opt">Worked out<span class="oz">with proof</span></span>
+        <span class="opt">Clock time<span class="oz">zone unsure</span></span>
+        <span class="opt">Date only</span>
+      </div>
+      <p class="hint">Asked once for the sitting rather than once per reading. A weaker honest
+      answer is always better than a made-up strong one.</p>
+    </div>
+
+    <div class="progressrail"><i style="width:50%"></i></div>
+    <p class="meta">Three of the six due tests are recorded. The rail counts what is due, not
+    what exists &mdash; logging something that was not due does not move it.</p>
+  </section>
+
+  <!-- ===================== THE ROWS ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Due today</h2>
+      <span class="aside">6 tests</span>
+    </div>
+
+    <div class="labrow is-logged">
+      <span class="pmark p-alk">Alk</span>
+      <span class="who">
+        <span class="nm">Alkalinity</span>
+        <span class="last">Last 8.74&nbsp;dKH on Tuesday &middot; target 8.6&ndash;9.2</span>
+        <span class="logged">
+          <span class="n">8.70</span><span class="unit">dKH</span>
+          <a class="edit" href="09-edit-sheet.html">Change</a>
+        </span>
+      </span>
+    </div>
+
+    <div class="labrow is-logged">
+      <span class="pmark p-ca">Ca</span>
+      <span class="who">
+        <span class="nm">Calcium</span>
+        <span class="last">Last 428&nbsp;ppm on Tuesday &middot; recorded, not acted on</span>
+        <span class="logged">
+          <span class="n">431</span><span class="unit">ppm</span>
+          <a class="edit" href="09-edit-sheet.html">Change</a>
+        </span>
+      </span>
+    </div>
+
+    <div class="labrow is-logged">
+      <span class="pmark p-mg">Mg</span>
+      <span class="who">
+        <span class="nm">Magnesium</span>
+        <span class="last">Last 1340&nbsp;ppm on 13 Aug &middot; recorded, not acted on</span>
+        <span class="logged">
+          <span class="n">1355</span><span class="unit">ppm</span>
+          <a class="edit" href="09-edit-sheet.html">Change</a>
+        </span>
+      </span>
+    </div>
+
+    <div class="labrow">
+      <span class="pmark p-no3">NO3</span>
+      <span class="who">
+        <span class="nm">Nitrate</span>
+        <span class="last">Last 5.2&nbsp;ppm on 13 Aug</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="5.0" aria-label="Nitrate in ppm">
+          <span class="suffix">ppm</span>
+          <span class="btn btn-primary">Log</span>
+        </span>
+      </span>
+    </div>
+
+    <div class="labrow">
+      <span class="pmark p-po4">PO4</span>
+      <span class="who">
+        <span class="nm">Phosphate</span>
+        <span class="last">Last 0.06&nbsp;ppm on Monday</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="0.06" aria-label="Phosphate in ppm">
+          <span class="suffix">ppm</span>
+          <span class="btn btn-primary">Log</span>
+        </span>
+      </span>
+    </div>
+
+    <div class="labrow">
+      <span class="pmark p-sal">Sal</span>
+      <span class="who">
+        <span class="nm">Salinity</span>
+        <span class="last">Last 35.1&nbsp;ppt on Sunday &middot; overdue by one day</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="35.1" aria-label="Salinity in ppt">
+          <span class="suffix">ppt</span>
+          <span class="btn btn-primary">Log</span>
+        </span>
+      </span>
+    </div>
+
+    <p class="inert-note">
+      Logging a reading is what completes its scheduled test. There is no separate tick, because
+      the act of recording the reading <i>is</i> the completion.
+    </p>
+  </section>
+
+  <!-- ===================== NOT DUE ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Not due, but here anyway</h2>
+    </div>
+    <div class="labrow">
+      <span class="pmark p-alk">pH</span>
+      <span class="who">
+        <span class="nm">pH</span>
+        <span class="last">No schedule. Logged whenever you feel like it.</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="8.12" aria-label="pH">
+          <span class="suffix">pH</span>
+          <span class="btn">Log</span>
+        </span>
+      </span>
+    </div>
+    <p class="inert-note">
+      Nothing is hidden because it is not due. A parameter you happen to have tested should not
+      need a different screen to record.
+    </p>
+  </section>
+
+  <!-- ===================== EVERYTHING ELSE ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>Something other than a test</h2></div>
+    <ul class="picker">
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-alk">&#8593;</span>
+        <span><span class="t">A dose change</span>
+        <span class="d">With the date <i>and the time</i> it took effect, because that is the moment everything after it is measured from.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="19-icp-entry.html">
+        <span class="pmark p-mg">&#9707;</span>
+        <span><span class="t">An ICP panel</span>
+        <span class="d">Thirty-odd elements from a lab, entered together and checked against reference.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="13-custom-task.html">
+        <span class="pmark p-no3">&#9633;</span>
+        <span><span class="t">A water change, or a chore</span>
+        <span class="d">Including one that was never on the schedule.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">Something went wrong</span>
+        <span class="d">A doser that stopped, a spill, a correction you made by hand. The engine needs to know, and it will not guess.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <div class="mockup-note">
+    <b>Three routes to the same reading, on purpose.</b> A reading can be logged here, from a due
+    item on Today, or from a parameter&rsquo;s own detail after tapping its card. They write the
+    same record. Going to another tab to type one number was V1&rsquo;s most repeated friction
+    and it does not come back.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

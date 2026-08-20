@@ -10,11 +10,22 @@
 <body>
 <main class="screen">
 
-  <header class="topbar">
-    <p class="eyebrow">Thursday 20 August</p>
-    <h1>Today</h1>
-    <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:50</p>
+  <header class="topbar with-gear">
+    <div>
+      <h1>Today</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
   </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="02-today-h-day-past.html" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Thursday 20 August</span>
+      <span class="r">Today</span>
+    </span>
+    <a class="arrow" href="02-today-g-day-ahead.html" aria-label="The day after">&rsaquo;</a>
+  </nav>
 
   <div class="callout safety">
     <strong>Alkalinity is below the outer operating range.</strong>
@@ -22,25 +33,64 @@
   </div>
 
   <section class="card">
-    <div class="card-head"><h2>Needs you</h2><span class="aside">3 items</span></div>
+    <div class="card-head"><h2>Needs you</h2><span class="aside">4 items</span></div>
     <ul class="attention-list">
-      <li><a class="attention-item" href="#alk">
+      <li><a class="attention-item" href="03-assessment-detail.html">
         <span class="rank">1</span>
-        <span><span class="t">Add 5.5&nbsp;mL of alkalinity solution as a one-off, now</span>
-        <span class="d">Moves alkalinity 0.38&nbsp;dKH toward 7.20. This is separate from your daily dose.</span></span>
+        <span>
+          <span class="t">Add a one-off 46&nbsp;mL correction now</span>
+          <span class="d">Alkalinity is below the level this app will let it sit at. This is a return, not a dose change.</span>
+        </span>
       </a></li>
-      <li><a class="attention-item" href="#alk">
-        <span class="rank">2</span>
-        <span><span class="t">Keep the maintenance dose at 9.0&nbsp;mL/day for now</span>
-        <span class="d">A larger maintenance dose is indicated, but it is being held while the safety return runs.</span></span>
-      </a></li>
-      <li><a class="attention-item" href="#alk">
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">2</span>
+            <span>
+              <span class="t">Retest alkalinity in about 24 hours</span>
+              <span class="d">The correction is checked, not assumed. Log it here when you have it.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="7.4" aria-label="Alkalinity">
+              <span class="suffix">dKH</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">This is the arrival check on the correction. It is the engine&rsquo;s test, not one of yours &mdash; your own schedule is untouched.</p>
+          </div>
+        </details>
+      </li>
+      <li><a class="attention-item" href="#hold">
         <span class="rank">3</span>
-        <span><span class="t">Test alkalinity again tomorrow, 21 Aug 08:40</span>
-        <span class="d">Roughly 24 hours &mdash; the safety cadence, not the usual 48.</span></span>
+        <span>
+          <span class="t">The maintenance dose is unchanged at 9.0&nbsp;mL/day</span>
+          <span class="d">A safety return and a dose change are separate things. One does not quietly become the other.</span>
+        </span>
       </a></li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">4</span>
+            <span>
+              <span class="t">Test alkalinity</span>
+              <span class="d">Due today. This is your own scheduled test.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="7.4" aria-label="Alkalinity">
+              <span class="suffix">dKH</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">Logged here, at 08:12 today. Recording the reading is what completes the test &mdash; there is no separate tick to remember.</p>
+          </div>
+        </details>
+      </li>
     </ul>
-    <p class="inert-note">Order supplied by the engine. This list does not rank anything itself.</p>
+    <p class="inert-note">One list, ordered by what matters most &mdash; tests, chores and the assessment together rather than a section each. The order is supplied by the engine; this list does not rank anything itself. Anything due opens where it sits.</p>
   </section>
 
   <section class="card" id="alk">
@@ -98,27 +148,27 @@
     <p class="seclabel">Where this stands</p>
     <dl class="dims">
       <div class="dim is-safety">
-        <dt>Position</dt>
+        <dt>Where it sits</dt>
         <dd>Below outer range<span class="why">6.82&nbsp;dKH against an outer minimum of 7.00. Uncertainty does not widen that edge.</span></dd>
       </div>
       <div class="dim is-attention">
-        <dt>Trajectory</dt>
+        <dt>Which way it is going</dt>
         <dd>Falling<span class="why">&minus;0.1683&nbsp;dKH/day observed. Steady, not sudden &mdash; the rapid-movement test did not fire.</span></dd>
       </div>
       <div class="dim">
-        <dt>Evidence</dt>
+        <dt>How much is known</dt>
         <dd>Sufficient<span class="why">4 independent tests over 6.00 days.</span></dd>
       </div>
       <div class="dim is-safety">
-        <dt>Intervention</dt>
+        <dt>What is running</dt>
         <dd>Safety return &middot; not started<span class="why">Recommended at 08:50. The app has no record of the correction being made, and holds the lock on dose changes either way.</span></dd>
       </div>
       <div class="dim">
-        <dt>Response</dt>
+        <dt>Whether it responded</dt>
         <dd>Not run<span class="why">No ordinary dose change is being watched. A safety return is not classified for response.</span></dd>
       </div>
       <div class="dim">
-        <dt>Overshoot</dt>
+        <dt>Whether it overshot</dt>
         <dd>None<span class="why">No intervention is open to have overshot. This is separate from being out of range.</span></dd>
       </div>
     </dl>
@@ -164,7 +214,7 @@
     <p class="seclabel">Next test</p>
     <div class="kv">
       <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Fri 21 Aug, 08:40</span></div>
-      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Safety cadence, about 24 hours<span class="sub">RETEST_SAFETY_RETURN_ACTIVE</span></span></div>
+      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Safety cadence, about 24 hours<span class="sub">a safety return is running</span></span></div>
     </div>
 
     <details class="notices">
@@ -178,123 +228,102 @@
       </summary>
       <ul class="notice-list">
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">SAFETY_OUTER_BOUND_BREACHED_LOW</span>
           <span class="say">The latest measurement is below the outer operating minimum.</span>
-          <span class="payload"><span class="k">A_now</span> <b>6.82</b> &nbsp; <span class="k">outerMin</span> <b>7.00</b> &nbsp; <span class="k">safetyDestinationDkh</span> <b>7.20</b></span>
+          <span class="payload"><span class="k">latest reading</span> <b>6.82</b> &nbsp; <span class="k">lower outer bound</span> <b>7.00</b> &nbsp; <span class="k">where the safety return aims</span> <b>7.20</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">SAFETY_RETURN_ACTIVE</span>
           <span class="say">An urgent temporary return is in progress.</span>
-          <span class="payload"><span class="k">interventionId</span> <b>IV-0820-S</b> &nbsp; <span class="k">desiredMovementDkh</span> <b>0.38</b> &nbsp; <span class="k">correctionVolumeMl</span> <b>5.5</b></span>
+          <span class="payload"><span class="k">movement wanted</span> <b>0.38</b> &nbsp; <span class="k">correction volume</span> <b>5.5</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-1">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">SAFETY_INTERVENTION_LOCK_HELD</span>
           <span class="say">While the safety return runs, it is the only thing allowed to change the dose. This locks the app&rsquo;s recommendations, not your pump.</span>
-          <span class="payload"><span class="k">lockOwner</span> <b>SAFETY_RETURN</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">MAINTENANCE_DEFERRED_BY_SAFETY_RETURN</span>
           <span class="say">The maintenance estimate is shown but not implemented.</span>
-          <span class="payload"><span class="k">maintenanceEstimate</span> <b>11.45</b> &nbsp; <span class="k">safetyInterventionId</span> <b>IV-0820-S</b></span>
+          <span class="payload"><span class="k">what the current dose holds</span> <b>11.45</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">MAINTENANCE_DEFERRED_BY_SAFETY_RAIL</span>
           <span class="say">Doing both at once would move alkalinity more in 24 hours than the limit allows.</span>
-          <span class="payload"><span class="k">safetyMovementDkh</span> <b>0.38</b> &nbsp; <span class="k">maintenanceEffectDkh</span> <b>0.1397</b> &nbsp; <span class="k">railDkh</span> <b>0.50</b></span>
+          <span class="payload"><span class="k">movement the safety return needs</span> <b>0.38</b> &nbsp; <span class="k">what the current dose holds</span> <b>0.1397</b> &nbsp; <span class="k">most allowed in one step</span> <b>0.50</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="code">RETEST_SAFETY_RETURN_ACTIVE</span>
           <span class="say">Testing moves to roughly every 24 hours while the return is running.</span>
-          <span class="payload"><span class="k">anchorAt</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">recommendedAt</span> <b>2026-08-21T08:40Z</b></span>
+          <span class="payload"><span class="k">measured from</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">test again</span> <b>2026-08-21T08:40Z</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">PRESENTATION_OUTER_BOUND_REGISTER</span>
           <span class="say">This is worded in the outer-bound register, which is deliberately different from an ordinary out-of-target offer. The words &ldquo;safe&rdquo; and &ldquo;unsafe&rdquo; are not used.</span>
-          <span class="payload"><span class="k">outerBoundState</span> <b>BREACHED_LOW</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">SAFETY_MG_GATE_UNKNOWN</span>
           <span class="say">Magnesium is treated as unknown for safety purposes in this build, whatever value you have logged. The safety return proceeds, and no low-magnesium warning is invented.</span>
-          <span class="payload"><span class="k">magnesiumGateState</span> <b>UNKNOWN</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">SEGMENT_SELECTED</span>
           <span class="say">The stretch of history used for this assessment.</span>
-          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0814</b> &nbsp; <span class="k">startAt</span> <b>2026-08-14T08:40Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">spanDays</span> <b>6.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+          <span class="payload"><span class="k">from</span> <b>2026-08-14T08:40Z</b> &nbsp; <span class="k">to</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">days covered</span> <b>6.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">EVIDENCE_SUFFICIENT</span>
           <span class="say">Enough independent tests over enough days.</span>
-          <span class="payload"><span class="k">independentClusters</span> <b>4</b> &nbsp; <span class="k">spanDays</span> <b>6.00</b></span>
+          <span class="payload"><span class="k">separate tests</span> <b>4</b> &nbsp; <span class="k">days covered</span> <b>6.00</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_ESTIMATOR_THEIL_SEN</span>
           <span class="say">The slope is the middle of every pair of readings.</span>
-          <span class="payload"><span class="k">n</span> <b>4</b> &nbsp; <span class="k">pairwiseSlopeCount</span> <b>6</b></span>
+          <span class="payload"><span class="k">readings used</span> <b>4</b> &nbsp; <span class="k">pairs compared</span> <b>6</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">UNCERTAINTY_FLOOR_APPLIED</span>
           <span class="say">Scatter came out below the working floor for an alkalinity test, so the floor was used.</span>
-          <span class="payload"><span class="k">sigmaResid</span> <b>0.0099</b> &nbsp; <span class="k">sigmaPoint</span> <b>0.10</b></span>
+          <span class="payload"><span class="k">scatter around the line</span> <b>0.0099</b> &nbsp; <span class="k">working scatter for this test kit</span> <b>0.10</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_FALLING</span>
           <span class="say">Alkalinity is falling, by more than uncertainty alone can explain.</span>
-          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.1683</b> &nbsp; <span class="k">supportedSlope</span> <b>&minus;0.1397</b> &nbsp; <span class="k">sigmaS</span> <b>0.0224</b></span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.1683</b> &nbsp; <span class="k">drift we can stand behind</span> <b>&minus;0.1397</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0224</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_RAPID_NOT_CONFIRMED</span>
           <span class="say">The rapid-movement exception was checked. The fall is steady rather than sudden, so the larger emergency dose step stays locked.</span>
-          <span class="payload"><span class="k">failedConditions</span> <b>[PAIR_SLOPE_BELOW_THRESHOLD]</b></span>
+          <span class="payload"><span class="k">what did not hold</span> <b>no pair of readings moved fast enough</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">CONSUMPTION_ESTIMATED</span>
           <span class="say">What the tank uses per day, from the mass balance.</span>
-          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.7859</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.1683</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
+          <span class="payload"><span class="k">the tank uses</span> <b>0.7859</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.1683</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
           <span class="say">Strength per millilitre comes from your recipe and tank volume. The one-off volume above is calculated from it.</span>
-          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+          <span class="payload"><span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">solution strength</span> <b>100</b> &nbsp; <span class="k">net water volume</span> <b>77</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
           <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
         </li>
 
       </ul>
@@ -366,11 +395,130 @@
     </p>
   </section>
 
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; reason codes and payloads</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface. The engine emits an ordered, severity-graded
+      list of reason codes with a payload each, and this is that list verbatim, so the screen
+      above can be checked against the contract it renders. Nothing outside this block uses
+      this vocabulary.</p>
+      <ul class="notice-list">
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">SAFETY_OUTER_BOUND_BREACHED_LOW</span>
+          <span class="say">The latest measurement is below the outer operating minimum.</span>
+          <span class="payload"><span class="k">A_now</span> <b>6.82</b> &nbsp; <span class="k">outerMin</span> <b>7.00</b> &nbsp; <span class="k">safetyDestinationDkh</span> <b>7.20</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">SAFETY_RETURN_ACTIVE</span>
+          <span class="say">An urgent temporary return is in progress.</span>
+          <span class="payload"><span class="k">interventionId</span> <b>IV-0820-S</b> &nbsp; <span class="k">desiredMovementDkh</span> <b>0.38</b> &nbsp; <span class="k">correctionVolumeMl</span> <b>5.5</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">SAFETY_INTERVENTION_LOCK_HELD</span>
+          <span class="say">While the safety return runs, it is the only thing allowed to change the dose. This locks the app&rsquo;s recommendations, not your pump.</span>
+          <span class="payload"><span class="k">lockOwner</span> <b>SAFETY_RETURN</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">MAINTENANCE_DEFERRED_BY_SAFETY_RETURN</span>
+          <span class="say">The maintenance estimate is shown but not implemented.</span>
+          <span class="payload"><span class="k">maintenanceEstimate</span> <b>11.45</b> &nbsp; <span class="k">safetyInterventionId</span> <b>IV-0820-S</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">MAINTENANCE_DEFERRED_BY_SAFETY_RAIL</span>
+          <span class="say">Doing both at once would move alkalinity more in 24 hours than the limit allows.</span>
+          <span class="payload"><span class="k">safetyMovementDkh</span> <b>0.38</b> &nbsp; <span class="k">maintenanceEffectDkh</span> <b>0.1397</b> &nbsp; <span class="k">railDkh</span> <b>0.50</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-SAFETY sev">Safety</span>
+          <span class="code">RETEST_SAFETY_RETURN_ACTIVE</span>
+          <span class="say">Testing moves to roughly every 24 hours while the return is running.</span>
+          <span class="payload"><span class="k">anchorAt</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">recommendedAt</span> <b>2026-08-21T08:40Z</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">PRESENTATION_OUTER_BOUND_REGISTER</span>
+          <span class="say">This is worded in the outer-bound register, which is deliberately different from an ordinary out-of-target offer. The words &ldquo;safe&rdquo; and &ldquo;unsafe&rdquo; are not used.</span>
+          <span class="payload"><span class="k">outerBoundState</span> <b>BREACHED_LOW</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SAFETY_MG_GATE_UNKNOWN</span>
+          <span class="say">Magnesium is treated as unknown for safety purposes in this build, whatever value you have logged. The safety return proceeds, and no low-magnesium warning is invented.</span>
+          <span class="payload"><span class="k">magnesiumGateState</span> <b>UNKNOWN</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_SELECTED</span>
+          <span class="say">The stretch of history used for this assessment.</span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0814</b> &nbsp; <span class="k">startAt</span> <b>2026-08-14T08:40Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T08:40Z</b> &nbsp; <span class="k">spanDays</span> <b>6.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_SUFFICIENT</span>
+          <span class="say">Enough independent tests over enough days.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>4</b> &nbsp; <span class="k">spanDays</span> <b>6.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_ESTIMATOR_THEIL_SEN</span>
+          <span class="say">The slope is the middle of every pair of readings.</span>
+          <span class="payload"><span class="k">n</span> <b>4</b> &nbsp; <span class="k">pairwiseSlopeCount</span> <b>6</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">UNCERTAINTY_FLOOR_APPLIED</span>
+          <span class="say">Scatter came out below the working floor for an alkalinity test, so the floor was used.</span>
+          <span class="payload"><span class="k">sigmaResid</span> <b>0.0099</b> &nbsp; <span class="k">sigmaPoint</span> <b>0.10</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_FALLING</span>
+          <span class="say">Alkalinity is falling, by more than uncertainty alone can explain.</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.1683</b> &nbsp; <span class="k">supportedSlope</span> <b>&minus;0.1397</b> &nbsp; <span class="k">sigmaS</span> <b>0.0224</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_RAPID_NOT_CONFIRMED</span>
+          <span class="say">The rapid-movement exception was checked. The fall is steady rather than sudden, so the larger emergency dose step stays locked.</span>
+          <span class="payload"><span class="k">failedConditions</span> <b>[PAIR_SLOPE_BELOW_THRESHOLD]</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CONSUMPTION_ESTIMATED</span>
+          <span class="say">What the tank uses per day, from the mass balance.</span>
+          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.7859</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.1683</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="say">Strength per millilitre comes from your recipe and tank volume. The one-off volume above is calculated from it.</span>
+          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
+          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+        </li>
+      </ul>
+    </div>
+  </details>
+
 </main>
 
 <nav class="tabbar"><div class="inner">
   <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>

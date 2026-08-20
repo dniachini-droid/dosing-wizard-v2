@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wednesday 19 August — what was done · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Wednesday</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="#tue" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Wednesday 19 August</span>
+      <span class="r">Yesterday</span>
+    </span>
+    <a class="arrow" href="02-today-a-dose-change.html" aria-label="The day after">&rsaquo;</a>
+  </nav>
+
+  <div class="mockup-note">
+    <b>The stepper, back.</b> Same screen, same list, filtered to a day that has happened. A past
+    day shows what was <b>done</b>. Every row can be corrected or removed from here, using the
+    same sheet the Test Lab, the task list and the calendar use.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Done on Wednesday</h2>
+      <span class="aside">3 items</span>
+    </div>
+    <ul class="tasklist">
+      <li><a class="taskrow" href="09-edit-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span>
+          <span class="t">Alkalinity &mdash; 8.74&nbsp;dKH</span>
+          <span class="d">07:40, exact time. Completed the scheduled test at the same moment.</span>
+        </span>
+        <span class="when">07:40</span>
+      </a></li>
+      <li><a class="taskrow" href="09-edit-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span>
+          <span class="t">Calcium &mdash; 428&nbsp;ppm</span>
+          <span class="d">07:44, exact time. Recorded, not acted on &mdash; calcium is measurement-only in this build.</span>
+        </span>
+        <span class="when">07:44</span>
+      </a></li>
+      <li><a class="taskrow" href="09-edit-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span>
+          <span class="t">Replaced Purigen</span>
+          <span class="d">Logged in the evening, no time given. Next one counted from Wednesday.</span>
+        </span>
+        <span class="when">&mdash;</span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      Logging the alkalinity reading is what ticked the alkalinity test off. There was never a
+      second thing to remember.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Not done on Wednesday</h2>
+      <span class="aside">1 item</span>
+    </div>
+    <ul class="tasklist">
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span>
+          <span class="t">Test salinity</span>
+          <span class="d">Was due Wednesday. Still outstanding; it has not been rescheduled behind your back.</span>
+        </span>
+        <span class="when is-overdue">1 day late</span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      When you do it, the one after it is counted from the day you actually did it &mdash; so
+      being behind never compounds into a backlog you cannot clear.
+    </p>
+  </section>
+
+  <div class="callout quiet">
+    <strong>No assessment here either.</strong> The app kept what it said on Wednesday and can
+    show it &mdash; but it belongs with that day&rsquo;s reading, not on a card that reads as
+    though it were current. Open the reading to see the assessment it produced.
+  </div>
+
+  <div class="mockup-note">
+    <b>Owner decision 6, visible here.</b> Every row on this screen &mdash; test or chore, done or
+    missed &mdash; opens the same edit sheet. There is not an edit-a-reading flow and a separate
+    edit-a-task flow; there is one item and one sheet, reachable from wherever you found it.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

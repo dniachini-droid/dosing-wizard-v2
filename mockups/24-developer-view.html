@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Developer view · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="07-settings.html">Settings</a>
+    <h1>Developer view</h1>
+    <p class="sub">Off by default. Not part of the interface.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Owner decision 9, and the one exception to it.</b> No reason code, canon marker or internal
+    variable name appears in any visible string anywhere in this app. They appear here, and in the
+    collapsed block at the foot of each assessment screen, and nowhere else. Both places say on
+    their face what they are.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Show the working</h2>
+      <span class="pill pill-neutral">Off</span>
+    </div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Reason codes and payloads under each assessment</span><span class="kv-v">Off</span></div>
+      <div class="kv-row"><span class="kv-k">Version stamps on every result</span><span class="kv-v">Off</span></div>
+      <div class="kv-row"><span class="kv-k">Raw entry identifiers</span><span class="kv-v">Off</span></div>
+      <div class="kv-row"><span class="kv-k">The crash detail on a broken tab</span><span class="kv-v">Off</span></div>
+    </div>
+    <span class="btn" style="margin-top:var(--sp-3)">Turn it on</span>
+    <p class="inert-note">
+      Turning it on adds a collapsed block to the bottom of the screens that have one. It never
+      changes a sentence, a number or a recommendation anywhere else.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Why they are separated at all</h2></div>
+    <p class="body">
+      A reason code is a contract between the engine and whatever renders it. It is precise, it is
+      stable, and it is testable &mdash; which is exactly why it is useless to a reef keeper. It
+      names the rule that fired, not the thing that is true about their tank.
+    </p>
+    <p class="body">
+      The sentence a keeper reads and the code an engineer reads are two different jobs. Putting
+      them in one string does neither well: the code makes the sentence clinical, and the sentence
+      makes the code ambiguous.
+    </p>
+    <div class="callout quiet">
+      <strong>The check is a check, not a promise.</strong>
+      <span class="code">check-plain-english.py</span> fails the build if a reason code, a canon
+      marker or an internal variable name appears anywhere outside a block like this one.
+    </div>
+  </section>
+
+  <details class="devview" open>
+    <summary>
+      <span class="lbl">Developer view &mdash; a worked example</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">The same three notices, rendered both ways. On the left of each pair is
+      what the keeper sees; underneath is what this view adds.</p>
+
+      <ul class="notice-list">
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">TRAJECTORY_UNCERTAINTY_LIMITED</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0150</b> &nbsp; <span class="k">sigmaS</span> <b>0.0354</b> &nbsp; <span class="k">supportSubtraction</span> <b>0.0453</b> &nbsp; <span class="k">spanDays</span> <b>4.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_SUFFICIENT</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>3</b> &nbsp; <span class="k">spanDays</span> <b>4.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="payload"><span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b> &nbsp; <span class="k">theoreticalDkhPerMl</span> <b>0.0686</b></span>
+        </li>
+      </ul>
+
+      <p class="devnote" style="margin-top:var(--sp-4)">Version stamps, which are otherwise absent
+      from every screen.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Engine</span><span class="kv-v"><span class="code">alk-v2 0.1.0-mockup</span></span></div>
+        <div class="kv-row"><span class="kv-k">Canon</span><span class="kv-v"><span class="code">SHARED_V2_FREEZE_2 &middot; ALK_V2_FREEZE_5</span></span></div>
+        <div class="kv-row"><span class="kv-k">Settings</span><span class="kv-v"><span class="code">CFG-0004</span></span></div>
+        <div class="kv-row"><span class="kv-k">Audit trace</span><span class="kv-v"><span class="code">AUD-2026-0820-0805</span></span></div>
+      </div>
+    </div>
+  </details>
+
+  <div class="mockup-note">
+    <b>Not a settings screen for behaviour.</b> Nothing here changes what the engine does. It
+    changes what is printed beside the answer, which is the only kind of switch this view is
+    allowed to be.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

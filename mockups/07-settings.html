@@ -57,7 +57,7 @@
       <strong>The one thing this cannot do:</strong> replay an assessment from before your very
       first settings version. There is nothing to replay it against, so the app refuses rather
       than assuming today&rsquo;s settings applied back then.
-      <span class="code">CONFIG_HISTORICAL_UNAVAILABLE</span>
+      not recorded
     </div>
   </section>
 
@@ -67,9 +67,9 @@
       <table class="data">
         <thead><tr><th>Version</th><th>In force from</th><th>What changed</th></tr></thead>
         <tbody>
-          <tr><td class="n">CFG-0004</td><td>9 Aug 19:12</td><td>New batch of solution<br><span class="off">solutionContextId, deliveryContextId</span></td></tr>
-          <tr><td class="n">CFG-0003</td><td>5 Aug 08:30</td><td>Target range 8.2&ndash;8.8 &rarr; 8.6&ndash;9.2<br><span class="off">targetRangeMinDkh, targetRangeMaxDkh</span></td></tr>
-          <tr><td class="n">CFG-0002</td><td>1 Aug 12:00</td><td>Volume 80 &rarr; 77&nbsp;L<br><span class="off">netVolumeL</span></td></tr>
+          <tr><td class="n">CFG-0004</td><td>9 Aug 19:12</td><td>New batch of solution<br><span class="off">solution, pump setup</span></td></tr>
+          <tr><td class="n">CFG-0003</td><td>5 Aug 08:30</td><td>Target range 8.2&ndash;8.8 &rarr; 8.6&ndash;9.2<br><span class="off">target minimum, target maximum</span></td></tr>
+          <tr><td class="n">CFG-0002</td><td>1 Aug 12:00</td><td>Volume 80 &rarr; 77&nbsp;L<br><span class="off">net water volume</span></td></tr>
           <tr><td class="n">CFG-0001</td><td>28 Jul 18:40</td><td>First setup<br><span class="off">all fields</span></td></tr>
         </tbody>
       </table>
@@ -91,14 +91,14 @@
       <div class="kv-row"><span class="kv-k">Where it comes from</span><span class="kv-v">Your recipe<span class="sub">0.05284 &times; 100&nbsp;g/L &divide; 77&nbsp;L</span></span></div>
       <div class="kv-row"><span class="kv-k">Chemical</span><span class="kv-v">Sodium carbonate<span class="sub">NA2CO3</span></span></div>
       <div class="kv-row"><span class="kv-k">Concentration</span><span class="kv-v">100 g/L</span></div>
-      <div class="kv-row"><span class="kv-k">Confidence</span><span class="kv-v">From the recipe only<span class="sub">THEORETICAL_ONLY</span></span></div>
+      <div class="kv-row"><span class="kv-k">Confidence</span><span class="kv-v">From the recipe only<span class="sub">from the recipe only</span></span></div>
       <div class="kv-row"><span class="kv-k">Measured strength</span><span class="kv-v is-absent">Not available</span></div>
       <div class="kv-row"><span class="kv-k">Solution context</span><span class="kv-v">SOL-0002<span class="sub">opened 9 Aug 19:12 &mdash; new batch</span></span></div>
       <div class="kv-row"><span class="kv-k">Delivery context</span><span class="kv-v">DLV-0001<span class="sub">opened 9 Aug 19:12 &mdash; recalibrated</span></span></div>
     </div>
 
     <div class="refusal">
-      <span class="state">NOT_RUN &middot; learning your solution&rsquo;s real strength</span>
+      <span class="state">Not run &middot; learning your solution&rsquo;s real strength</span>
       <h3>Learning is switched off in this build</h3>
       <p>
         The app could, in principle, watch what actually happens when you change the dose and
@@ -108,18 +108,14 @@
       <p><strong>Why:</strong> learning needs three facts recorded reliably before it can be
       trusted, and the app is not yet capturing them.</p>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">M-2 &middot; which batch of solution was in use</span><span class="kv-v is-absent">Not captured</span></div>
-        <div class="kv-row"><span class="kv-k">M-3 &middot; which pump setup was in use</span><span class="kv-v is-absent">Not captured</span></div>
-        <div class="kv-row"><span class="kv-k">M-9 &middot; the confirmed rate before and after each change</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">Which batch of solution was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">Which pump setup was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">The confirmed rate before and after each change</span><span class="kv-v is-absent">Not captured</span></div>
       </div>
       <p style="margin-top:var(--sp-3)"><strong>What this costs you:</strong> nothing about the
       core advice. Position, trend, consumption, dose recommendations and safety returns all run
       normally on the recipe figure. What you lose is the app noticing that your actual solution
       is, say, 15% weaker than the recipe says.</p>
-      <p class="inert-note">
-        <span class="code">CAPABILITY_POTENCY_LEARNER_GATED</span> &nbsp;
-        <span class="code">missingCapabilities [M-2, M-3, M-9]</span>
-      </p>
     </div>
 
     <div class="kv" style="margin-top:var(--sp-4)">
@@ -127,6 +123,110 @@
       <div class="kv-row"><span class="kv-k">Kept if learning is switched on later</span><span class="kv-v">Yes, all of them<span class="sub">including ineligible ones, attached to the context they came from</span></span></div>
     </div>
   </section>
+
+
+  <!-- ================= SOLUTION STRENGTH PROVENANCE ================= -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Where each strength came from</h2>
+      <span class="pill pill-attention">2 to confirm</span>
+    </div>
+    <p class="body">
+      Some of these you typed. Some were written by a default when the app first ran, and a
+      default is a guess about a bottle it has never seen. The difference matters, because every
+      dose in millilitres is scaled by these figures.
+    </p>
+
+    <ul class="tasklist">
+      <li><span class="taskrow">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Alkalinity &mdash; 100&nbsp;g/L sodium carbonate</span>
+        <span class="d">You typed this on 2 August. Confirmed.</span></span>
+        <span class="when">Yours</span>
+      </span></li>
+      <li><a class="taskrow" href="#confirm-ca">
+        <span class="tick"></span>
+        <span><span class="t">Calcium &mdash; 100&nbsp;g/L calcium chloride</span>
+        <span class="d">Never typed. This is the figure the app shipped with. Is it your bottle?</span></span>
+        <span class="when is-overdue">A default</span>
+      </a></li>
+      <li><a class="taskrow" href="#confirm-mg">
+        <span class="tick"></span>
+        <span><span class="t">Magnesium &mdash; 200&nbsp;g/L mixed magnesium salts</span>
+        <span class="d">Never typed. Same figure as above, and the same question.</span></span>
+        <span class="when is-overdue">A default</span>
+      </a></li>
+    </ul>
+
+    <div class="callout attention">
+      <strong>Confirming is not the same as leaving it alone.</strong> A figure you have looked at
+      and agreed with is worth more than an identical figure nobody ever checked, and the app can
+      tell the two apart only if you say so.
+    </div>
+    <span class="btn btn-primary">Check the two defaults</span>
+
+    <p class="inert-note">
+      Nothing is refused for want of this. The two above are only used for parameters this build
+      measures and does not dose, so today the question is about honesty rather than about output.
+    </p>
+  </section>
+
+  <!-- ================= HIDDEN NOTICES ================= -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Things you have put away</h2>
+      <span class="aside">3 hidden</span>
+    </div>
+    <p class="body">
+      Anything you dismissed is listed here, with what would bring it back. Nothing is hidden
+      forever and nothing is hidden without a way to find it again.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Nitrate has been climbing for three weeks</span><span class="kv-v">Hidden 14 Aug<span class="sub">comes back if it climbs further</span></span></div>
+      <div class="kv-row"><span class="kv-k">One reading has a date but no time</span><span class="kv-v">Hidden 16 Aug<span class="sub">comes back if another one does</span></span></div>
+      <div class="kv-row"><span class="kv-k">You have never saved an export</span><span class="kv-v">Hidden 18 Aug<span class="sub">comes back in 30 days, or when you next add a lot of data</span></span></div>
+    </div>
+    <span class="btn" style="margin-top:var(--sp-3)">Show all of them again</span>
+    <p class="inert-note">
+      A dismissal is tied to the state that produced it. A worse number brings the same notice
+      straight back rather than staying quiet because you once said you had seen it.
+    </p>
+  </section>
+
+  <!-- ================= DATA AND PLATFORM ================= -->
+  <section class="card">
+    <div class="card-head"><h2>Your data and this device</h2></div>
+    <ul class="picker">
+      <li><a href="21-durability.html">
+        <span class="pmark p-alk">&#9673;</span>
+        <span><span class="t">Backup, export and restore</span>
+        <span class="d">Three tiers, each with what it is actually worth. One of them is not a backup and says so.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="22-offline-install.html">
+        <span class="pmark p-sal">&#9729;</span>
+        <span><span class="t">Offline and installing</span>
+        <span class="d">What works with no connection, and what putting it on your home screen changes.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="23-error-boundary.html">
+        <span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">When something breaks</span>
+        <span class="d">What a crashed tab looks like, and why navigation keeps working through it.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="24-developer-view.html">
+        <span class="pmark p-mg">&#9881;</span>
+        <span><span class="t">Developer view</span>
+        <span class="d">Reason codes, payloads and version stamps. Off by default; not part of the interface.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <div class="mockup-note">
+    <b>Setup asks for facts, not judgements.</b> Everything on this screen is something only you
+    know &mdash; your volume, your bottles, your pump. There is no band-width setting, no
+    tolerance, no notification threshold, because the app has better answers to those than a new
+    keeper does. If a default is not good enough to ship unattended, the defect is in the default
+    and not in the absence of a question.
+  </div>
 
   <section class="card">
     <div class="card-head"><h2>Tools</h2><span class="pill pill-neutral">Coming later</span></div>
@@ -154,7 +254,8 @@
 
 <nav class="tabbar"><div class="inner">
   <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>

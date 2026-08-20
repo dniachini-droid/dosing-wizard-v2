@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What to expect from this dose · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="02-today-a-dose-change.html">Today</a>
+    <p class="eyebrow">The moment after you record a dose change</p>
+    <h1>The expectation, stated up front</h1>
+    <p class="sub">Reload the page to watch it again.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>The strongest case in the gap list, because the object already exists.</b> A dose change is
+    a prediction as much as an action: it says the tank should move a certain way over a certain
+    time. The engine already produces that prediction as a fixed, unchangeable record at the
+    moment of the change. PR&nbsp;#6 had the object and no surface for it. This is the surface.
+  </div>
+
+  <!-- ===================== THE MOMENT ===================== -->
+  <div class="moment" data-moment="dose">
+    <div class="mcard">
+      <div class="mcap alk">
+        <p class="lead">Alkalinity dose recorded</p>
+        <p class="figure">
+          <span class="num" style="font-size:var(--t-h2);font-weight:var(--w-heavy);color:var(--grey)">9.0</span>
+          <span class="num" style="color:var(--faint);font-weight:var(--w-bold)">&rarr;</span>
+          <span class="mval"><span class="sheen">9.3</span></span>
+          <span class="unit">mL/day</span>
+        </p>
+        <p class="who">In effect from Thursday 20 August at 08:20</p>
+      </div>
+
+      <div class="mbody stagger">
+        <div class="b1">
+          <p class="headline">Recorded</p>
+          <p class="line">
+            If this is right, alkalinity should climb about <strong>0.02&nbsp;dKH a day</strong>
+            and read near <strong>8.72&nbsp;dKH</strong> when you next test.
+          </p>
+        </div>
+
+        <div class="facts b2">
+          <div class="kv">
+            <div class="kv-row"><span class="kv-k">Test again</span><span class="kv-v">Sat 22 Aug</span></div>
+            <div class="kv-row"><span class="kv-k">That is in</span><span class="kv-v">2 days</span></div>
+            <div class="kv-row"><span class="kv-k">Expect around</span><span class="kv-v">8.72&nbsp;dKH</span></div>
+            <div class="kv-row"><span class="kv-k">Heading for</span><span class="kv-v">the middle of 8.6&ndash;9.2</span></div>
+          </div>
+        </div>
+
+        <p class="line b3">
+          It is on your schedule, so it will appear when it is due. Do not change the dose again
+          before then &mdash; the reading is only worth anything if this dose has run undisturbed.
+        </p>
+
+        <div class="b4"><span class="btn btn-primary">Done</span></div>
+        <p class="mclose b5" data-countdown="--mb-autoclose"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WHY ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>Why state it before the reading arrives</h2></div>
+    <p class="body">
+      Because then the next test either confirms it or it does not, rather than being read from
+      scratch. Without this, a keeper looks at Saturday&rsquo;s number with no memory of what they
+      were expecting, and any number at all looks reasonable.
+    </p>
+    <p class="body">
+      The figure is fixed at the moment the change is recorded and is never revised afterwards.
+      If Saturday comes in at 8.60, the app does not quietly adjust what it said it expected.
+      That is the entire value of the object.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">First phase &mdash; the new figure lands</span><span class="kv-v">420&nbsp;ms<span class="sub">with the sweep of light across it</span></span></div>
+      <div class="kv-row"><span class="kv-k">Second phase &mdash; the expectation unfolds</span><span class="kv-v">900&nbsp;ms</span></div>
+      <div class="kv-row"><span class="kv-k">Then, in order</span><span class="kv-v">0, 150, 300, 450, 560&nbsp;ms<span class="sub">so the eye is led from the result to the reasoning</span></span></div>
+      <div class="kv-row"><span class="kv-k">Closes itself after</span><span class="kv-v">14&nbsp;s<span class="sub">unless you touch it, which stops the countdown</span></span></div>
+    </div>
+    <p class="inert-note">
+      All four ported from V1&rsquo;s <span class="code">DoseExpectation.jsx</span>. A card that
+      vanishes while you are still reading is worse than one that vanishes without warning, so the
+      countdown says what will happen and touching it stops it.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What this screen must never do</h2></div>
+    <p class="body">
+      Work any of it out. The expected value, the daily movement, the retest date and the
+      destination are all read from the record the engine wrote. This screen formats them.
+    </p>
+    <div class="callout quiet">
+      V1&rsquo;s version calculated its own expectation inside the popup. That is the part left
+      behind; the timing and the shape are the part carried across.
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+<script src="moments.js"></script>
+</body>
+</html>

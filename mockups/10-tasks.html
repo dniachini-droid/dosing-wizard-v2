@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tasks · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Tasks</h1>
+      <p class="sub">Everything the tank is on a schedule for, and everything it has had.</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <div class="mockup-note">
+    <b>The largest thing PR&nbsp;#6 was missing.</b> V1&rsquo;s reminder model has no chemistry in
+    it at all, and it is the strongest generic asset in the old application. Two properties do
+    most of the work and both are visible on this screen: an item is due a fixed interval after
+    it was last <b>completed</b>, and logging a reading <b>is</b> the completion of its test.
+  </div>
+
+  <!-- ===================== THE CALENDAR ===================== -->
+  <section class="card">
+    <div class="cal-head">
+      <a class="arrow" href="#jul" aria-label="July">&lsaquo;</a>
+      <span class="m">August 2026</span>
+      <a class="arrow" href="#sep" aria-label="September">&rsaquo;</a>
+    </div>
+    <p class="meta" style="margin:0 0 var(--sp-3)">23 completed &middot; 12 scheduled</p>
+
+    <div class="cal-dow">
+      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+      <span>Fri</span><span>Sat</span><span>Sun</span>
+    </div>
+    <div class="cal-grid">
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="1 August"><span class="dn">1</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="2 August"><span class="dn">2</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="3 August"><span class="dn">3</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="4 August"><span class="dn">4</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="5 August"><span class="dn">5</span><span class="dots"><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="6 August"><span class="dn">6</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="7 August"><span class="dn">7</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="8 August"><span class="dn">8</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="9 August"><span class="dn">9</span><span class="dots"><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="10 August"><span class="dn">10</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="11 August"><span class="dn">11</span><span class="dots"><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="12 August"><span class="dn">12</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="13 August"><span class="dn">13</span><span class="dots"><span class="dot done"></span><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="14 August"><span class="dn">14</span><span class="dots"></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="15 August"><span class="dn">15</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="16 August"><span class="dn">16</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="17 August"><span class="dn">17</span><span class="dots"><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="18 August"><span class="dn">18</span><span class="dots"><span class="dot done"></span></span></a>
+        <a class="cal-cell is-past" href="11-calendar-day.html" aria-label="19 August"><span class="dn">19</span><span class="dots"><span class="dot done"></span><span class="dot done"></span><span class="dot done"></span></span></a>
+        <a class="cal-cell is-today" href="11-calendar-day.html" aria-label="20 August"><span class="dn">20</span><span class="dots"><span class="dot done"></span><span class="dot done"></span><span class="dot done"></span><span class="dot attention"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="21 August"><span class="dn">21</span><span class="dots"><span class="dot suggest"></span><span class="dot sched"></span><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="22 August"><span class="dn">22</span><span class="dots"><span class="dot sched"></span><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="23 August"><span class="dn">23</span><span class="dots"><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="24 August"><span class="dn">24</span><span class="dots"><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="25 August"><span class="dn">25</span><span class="dots"></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="26 August"><span class="dn">26</span><span class="dots"><span class="dot sched"></span><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="27 August"><span class="dn">27</span><span class="dots"></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="28 August"><span class="dn">28</span><span class="dots"><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="29 August"><span class="dn">29</span><span class="dots"></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="30 August"><span class="dn">30</span><span class="dots"><span class="dot sched"></span></span></a>
+        <a class="cal-cell" href="11-calendar-day.html" aria-label="31 August"><span class="dn">31</span><span class="dots"><span class="dot sched"></span></span></a>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>
+        <span class="cal-cell blank"></span>    </div>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--done-ink)"></span>Done</span>
+      <span><span class="swatch" style="background:var(--card-top);border:1px solid var(--faint)"></span>Scheduled</span>
+      <span><span class="swatch" style="background:var(--suggest-edge)"></span>Suggested by the app</span>
+      <span><span class="swatch" style="background:var(--attention)"></span>Overdue</span>
+    </div>
+
+    <p class="inert-note">
+      Completed and scheduled are counted separately and shown separately, so the month reads as
+      a plan and not only as a record. Tap a day for what is on it.
+    </p>
+  </section>
+
+  <!-- ===================== TEST SCHEDULE ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Test schedule</h2>
+      <span class="aside">6 parameters</span>
+    </div>
+    <ul class="tasklist">
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Alkalinity</span><span class="d">Every two days &middot; done today at 07:40</span></span>
+        <span class="when">Sat</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Calcium</span><span class="d">Every week &middot; done today at 07:44</span></span>
+        <span class="when">27 Aug</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Magnesium</span><span class="d">Every week &middot; done today at 07:46</span></span>
+        <span class="when">27 Aug</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Nitrate</span><span class="d">Every week &middot; last done 13 Aug</span></span>
+        <span class="when is-overdue">Due today</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Phosphate</span><span class="d">Every three days &middot; last done Monday</span></span>
+        <span class="when is-overdue">Due today</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Salinity</span><span class="d">Every three days &middot; last done Sunday</span></span>
+        <span class="when is-overdue">1 day late</span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      Being a day late does not push everything behind it a day late. Salinity&rsquo;s next test
+      is counted from the day you actually do it, so a backlog never compounds.
+    </p>
+  </section>
+
+  <!-- ===================== THE SUGGESTION ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>Suggested by the app</h2></div>
+    <div class="suggested">
+      <span class="lbl">Not one of your tasks</span>
+      <span class="t">An alkalinity test on Friday 21 August</span>
+      <span class="d">
+        A dose change went in this morning. Friday is the earliest a reading can say anything
+        about whether it did what it should. Your own alkalinity test is set for Saturday.
+      </span>
+      <div class="btn-row" style="margin-top:var(--sp-3)">
+        <a class="btn btn-primary" href="14-suggested-test.html">See what accepting does</a>
+        <span class="btn">Decline</span>
+      </div>
+    </div>
+    <p class="inert-note">
+      You accept it or you decline it. You do not reschedule it, because it is not yours to move
+      &mdash; it is the app saying when a reading would be worth taking. Accepting may move your
+      own test; the next screen shows exactly how before you agree to it.
+    </p>
+  </section>
+
+  <!-- ===================== HUSBANDRY ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Husbandry &amp; maintenance</h2>
+      <span class="aside">4 items</span>
+    </div>
+    <ul class="tasklist">
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Water change</span><span class="d">15&nbsp;L, every week &middot; last done 13 Aug</span></span>
+        <span class="when is-overdue">Due today</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Replace carbon</span><span class="d">Every four weeks &middot; last done 24 Jul</span></span>
+        <span class="when">Fri</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Replace Purigen</span><span class="d">Every four weeks &middot; done yesterday</span></span>
+        <span class="when">16 Sep</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Send ICP sample</span><span class="d">Every six weeks &middot; last sent 11 Jul</span></span>
+        <span class="when">Sat</span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      Tests and chores are the same kind of thing here, so they share scheduling, nudging,
+      history and this calendar &mdash; rather than a second parallel system that drifts out of
+      step with the first.
+    </p>
+  </section>
+
+  <!-- ===================== ADDING ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>Add something</h2></div>
+    <ul class="picker">
+      <li><a href="13-custom-task.html">
+        <span class="pmark p-no3">&#43;</span>
+        <span><span class="t">A task of your own</span>
+        <span class="d">Anything on a rhythm &mdash; skimmer cup, glass, pump strip-down. Days or weeks.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="13-custom-task.html">
+        <span class="pmark p-sal">&#9748;</span>
+        <span><span class="t">A water change you have just done</span>
+        <span class="d">With the volume, so the record can say &ldquo;water change &middot; 15&nbsp;L&rdquo; rather than only naming it.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="13-custom-task.html">
+        <span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">A one-off that was never scheduled</span>
+        <span class="d">A dose change, a doser that failed, a correction by hand. The engine cannot infer any of these and will not try.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <div class="mockup-note">
+    <b>Still open.</b> V1 decided Tasks was the home for app-level notices and never decided the
+    design: how a notice becomes a task, whether it can be completed or only resolved by fixing
+    the thing underneath it, and how app-generated entries sit beside your own in one list. The
+    suggestion card above is one answer to a narrow slice of that question and is not offered as
+    the general one.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

@@ -10,17 +10,28 @@
 <body>
 <main class="screen">
 
-  <header class="topbar">
-    <p class="eyebrow">Thursday 20 August</p>
-    <h1>Today</h1>
-    <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+  <header class="topbar with-gear">
+    <div>
+      <h1>Today</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
   </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="02-today-h-day-past.html" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Thursday 20 August</span>
+      <span class="r">Today</span>
+    </span>
+    <a class="arrow" href="02-today-g-day-ahead.html" aria-label="The day after">&rsaquo;</a>
+  </nav>
 
   <!-- ===================== ATTENTION LIST ===================== -->
   <section class="card">
     <div class="card-head">
       <h2>Needs you</h2>
-      <span class="aside">3 items</span>
+      <span class="aside">5 items</span>
     </div>
     <ul class="attention-list">
       <li><a class="attention-item" href="03-assessment-detail.html">
@@ -30,28 +41,83 @@
           <span class="d">Up 0.3&nbsp;mL/day from 9.0. Recommended, not yet made.</span>
         </span>
       </a></li>
-      <li><a class="attention-item" href="#confirm">
-        <span class="rank">2</span>
-        <span>
-          <span class="t">Tell the app whether you made the change</span>
-          <span class="d">Until you do, the change is recorded as unknown &mdash; not as made and not as skipped.</span>
-        </span>
-      </a></li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">2</span>
+            <span>
+              <span class="t">Tell the app whether you made the change</span>
+              <span class="d">Until you do, the change is recorded as unknown &mdash; not as made and not as skipped.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="seg">
+              <span class="opt">Yes, I made it</span>
+              <span class="opt">No, I did not</span>
+              <span class="opt on">Not sure</span>
+            </div>
+            <p class="note">&ldquo;Not sure&rdquo; is a real answer and it is the one selected until you
+            say otherwise. The app will not treat silence as agreement.</p>
+          </div>
+        </details>
+      </li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">3</span>
+            <span>
+              <span class="t">Test alkalinity</span>
+              <span class="d">Due today. Last done Tuesday, 8.74&nbsp;dKH.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="8.70" aria-label="Alkalinity">
+              <span class="suffix">dKH</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">Logged here, at 08:12 today. Recording the reading is what completes the test &mdash; there is no separate tick to remember.</p>
+          </div>
+        </details>
+      </li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">4</span>
+            <span>
+              <span class="t">Water change</span>
+              <span class="d">Due today. Every week; last done 13 Aug.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="15" aria-label="Volume">
+              <span class="suffix">L</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">Logged against today. The next one is scheduled from today, not from when it was due &mdash; so being late never stacks up.</p>
+          </div>
+        </details>
+      </li>
       <li><a class="attention-item" href="05-entry-detail.html">
-        <span class="rank">3</span>
+        <span class="rank">5</span>
         <span>
           <span class="t">One reading has a date but no time</span>
           <span class="d">15 Aug, 8.90&nbsp;dKH. Kept in your history; it cannot be used for the trend.</span>
         </span>
       </a></li>
     </ul>
-    <p class="inert-note">Order supplied by the engine. This list does not rank anything itself.</p>
+    <p class="inert-note">One list, ordered by what matters most &mdash; tests, chores and the assessment together rather than a section each. The order is supplied by the engine; this list does not rank anything itself. Anything due opens where it sits.</p>
   </section>
 
   <div class="mockup-note">
     <b>Open question for the owner.</b> The engine result has no field that orders
     attention items. Presentation is forbidden from inventing an ordering
-    (<span class="code">X-INV-004</span>), so this list currently has no owner. Recorded in
+    &mdash; only one part of the system is allowed to reach an analytical conclusion, and it is
+    not this one &mdash; so this list currently has no owner. Recorded in
     <span class="code">CONTRACT-GAPS.md</span> as gap&nbsp;2.
   </div>
 
@@ -124,32 +190,32 @@
     <p class="seclabel">Where this stands</p>
     <dl class="dims">
       <div class="dim">
-        <dt>Position</dt>
+        <dt>Where it sits</dt>
         <dd>In range
           <span class="why">8.70&nbsp;dKH, inside 8.6&ndash;9.2. From the latest measurement only.</span></dd>
       </div>
       <div class="dim">
-        <dt>Trajectory</dt>
+        <dt>Which way it is going</dt>
         <dd>Falling
           <span class="why">Supported slope is below zero, so the fall is large enough to act on.</span></dd>
       </div>
       <div class="dim">
-        <dt>Evidence</dt>
+        <dt>How much is known</dt>
         <dd>Sufficient
           <span class="why">5 independent tests over 8.00 days. Minimum is 3 over 4 days.</span></dd>
       </div>
       <div class="dim">
-        <dt>Intervention</dt>
+        <dt>What is running</dt>
         <dd>None open
           <span class="why">No dose change is currently being watched.</span></dd>
       </div>
       <div class="dim">
-        <dt>Response</dt>
+        <dt>Whether it responded</dt>
         <dd>Not run
           <span class="why">No dose change is being watched, so there is nothing to attribute a response to.</span></dd>
       </div>
       <div class="dim">
-        <dt>Overshoot</dt>
+        <dt>Whether it overshot</dt>
         <dd>None
           <span class="why">No target boundary has been crossed in the unwanted direction.</span></dd>
       </div>
@@ -164,12 +230,12 @@
       <div class="slopebox">
         <span class="lbl">What your tests show</span>
         <span class="n">&minus;0.0400</span>
-        <span class="sub">dKH/day &middot; observed</span>
+        <span class="sub">dKH/day, straight from the readings</span>
       </div>
       <div class="slopebox">
         <span class="lbl">What&rsquo;s certain enough to act on</span>
         <span class="n">&minus;0.0198</span>
-        <span class="sub">dKH/day &middot; supported</span>
+        <span class="sub">dKH/day, after the uncertainty is taken off</span>
       </div>
     </div>
     <p class="inert-note">
@@ -194,7 +260,7 @@
     <div class="kv">
       <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Sat 22 Aug, 07:40</span></div>
       <div class="kv-row"><span class="kv-k">Earliest useful</span><span class="kv-v">Fri 21 Aug, 07:40</span></div>
-      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Routine 48-hour cadence<span class="sub">RETEST_ROUTINE_CADENCE</span></span></div>
+      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Routine cadence, nothing unusual in play</span></div>
       <div class="kv-row"><span class="kv-k">Latest safe</span><span class="kv-v is-absent">Not set &mdash; no rule</span></div>
     </div>
 
@@ -203,7 +269,7 @@
       <summary>
         <span class="lbl">Why the engine said this</span>
         <span class="sevcount">
-          <span class="pill pill-attention">2 gating</span>
+          <span class="pill pill-attention">2 limiting</span>
           <span class="pill pill-neutral">14 info</span>
         </span>
         <span class="chev"></span>
@@ -211,116 +277,99 @@
 
       <ul class="notice-list">
 
-        <li class="notice">
-          <span class="pill sev-GATING sev">Gating</span>
-          <span class="code">TIME_PROVENANCE_DATE_ONLY</span>
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
           <span class="say">The 15 Aug reading has a date but no time, so it cannot enter the trend. It stays in your history and can still set position if it is the latest.</span>
-          <span class="payload"><span class="k">readingId</span> <b>R-0138</b> &nbsp; <span class="k">date</span> <b>2026-08-15</b></span>
+          <span class="payload"><span class="k">date</span> <b>2026-08-15</b></span>
         </li>
 
-        <li class="notice">
-          <span class="pill sev-GATING sev">Gating</span>
-          <span class="code">RETEST_BOUNDARY_MARGIN_UNAVAILABLE</span>
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
           <span class="say">The scheduler cannot bring a test forward because alkalinity is heading toward a boundary: the margin that would trigger it has no value for alkalinity.</span>
-          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+          <span class="payload"><span class="k">days to the outer bound at this drift</span> <b>42.5</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">SEGMENT_SELECTED</span>
           <span class="say">The stretch of history used for this assessment.</span>
-          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0812</b> &nbsp; <span class="k">startAt</span> <b>2026-08-12T07:40Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+          <span class="payload"><span class="k">from</span> <b>2026-08-12T07:40Z</b> &nbsp; <span class="k">to</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">days covered</span> <b>8.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">CLUSTER_FORMED_AUTOMATIC</span>
           <span class="say">Two tests on 18 Aug fell inside the 30-minute repeat window and count as one observation.</span>
-          <span class="payload"><span class="k">clusterId</span> <b>CL-0818</b> &nbsp; <span class="k">readingIds</span> <b>[R-0146, R-0147]</b> &nbsp; <span class="k">windowMinutes</span> <b>30</b></span>
+          <span class="payload"><span class="k">readings this close count as one sitting (minutes)</span> <b>30</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">CLUSTER_REPEAT_NOT_INDEPENDENT</span>
           <span class="say">Testing twice in a row does not count as two pieces of evidence.</span>
-          <span class="payload"><span class="k">clusterId</span> <b>CL-0818</b> &nbsp; <span class="k">memberCount</span> <b>2</b></span>
+          <span class="payload"><span class="k">readings in that sitting</span> <b>2</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">SEGMENT_WC_NEGLIGIBLE</span>
           <span class="say">The 16 Aug water change would have moved alkalinity by less than the 0.10&nbsp;dKH floor, so nothing was subtracted from the readings.</span>
-          <span class="payload"><span class="k">waterChangeId</span> <b>WC-0816</b> &nbsp; <span class="k">expectedStepDkh</span> <b>0.004</b></span>
+          <span class="payload"><span class="k">expected step</span> <b>0.004</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">EVIDENCE_SUFFICIENT</span>
           <span class="say">Enough independent tests over enough days for an ordinary dose decision.</span>
-          <span class="payload"><span class="k">independentClusters</span> <b>5</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b></span>
+          <span class="payload"><span class="k">separate tests</span> <b>5</b> &nbsp; <span class="k">days covered</span> <b>8.00</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_ESTIMATOR_THEIL_SEN</span>
           <span class="say">The slope is the middle of every pair of readings, so one odd result cannot drag it.</span>
-          <span class="payload"><span class="k">n</span> <b>5</b> &nbsp; <span class="k">pairwiseSlopeCount</span> <b>10</b></span>
+          <span class="payload"><span class="k">readings used</span> <b>5</b> &nbsp; <span class="k">pairs compared</span> <b>10</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">UNCERTAINTY_FLOOR_APPLIED</span>
           <span class="say">Your readings scattered less than the working floor for an alkalinity test, so the floor was used instead.</span>
-          <span class="payload"><span class="k">sigmaResid</span> <b>0.0000</b> &nbsp; <span class="k">sigmaPoint</span> <b>0.10</b></span>
+          <span class="payload"><span class="k">scatter around the line</span> <b>0.0000</b> &nbsp; <span class="k">working scatter for this test kit</span> <b>0.10</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_FALLING</span>
           <span class="say">Alkalinity is falling, by more than uncertainty alone can explain.</span>
-          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0400</b> &nbsp; <span class="k">supportedSlope</span> <b>&minus;0.0198</b> &nbsp; <span class="k">sigmaS</span> <b>0.0158</b></span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0400</b> &nbsp; <span class="k">drift we can stand behind</span> <b>&minus;0.0198</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0158</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">DELIVERY_BASIS_PROGRAMMED_SCHEDULE</span>
           <span class="say">Your confirmed pump schedule was used as the delivery record. No pump telemetry is needed.</span>
-          <span class="payload"><span class="k">programmedDoseMlPerDay</span> <b>9.0</b></span>
+          <span class="payload"><span class="k">dose set on the pump</span> <b>9.0</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
           <span class="say">Strength per millilitre comes from your recipe and tank volume, not from measurement.</span>
-          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+          <span class="payload"><span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">solution strength</span> <b>100</b> &nbsp; <span class="k">net water volume</span> <b>77</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">CONSUMPTION_ESTIMATED</span>
           <span class="say">What the tank uses per day, from the mass balance. Uses the observed slope, never the supported one.</span>
-          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6576</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0400</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
+          <span class="payload"><span class="k">the tank uses</span> <b>0.6576</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0400</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">MAINTENANCE_INCREASE_RECOMMENDED</span>
           <span class="say">The dose change that the supported shortfall justifies.</span>
-          <span class="payload"><span class="k">currentDose</span> <b>9.0</b> &nbsp; <span class="k">recommendedDose</span> <b>9.3</b> &nbsp; <span class="k">deltaDose</span> <b>+0.3</b> &nbsp; <span class="k">S_supported</span> <b>&minus;0.0198</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">predictedPostSlope</span> <b>&minus;0.0194</b></span>
+          <span class="payload"><span class="k">current dose</span> <b>9.0</b> &nbsp; <span class="k">recommended dose</span> <b>9.3</b> &nbsp; <span class="k">change</span> <b>+0.3</b> &nbsp; <span class="k">drift we can stand behind</span> <b>&minus;0.0198</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">drift expected after the change</span> <b>&minus;0.0194</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">CAPABILITY_POTENCY_LEARNER_GATED</span>
           <span class="say">The app is not learning your solution&rsquo;s real strength from results. That is off by design in this build.</span>
-          <span class="payload"><span class="k">missingCapabilities</span> <b>[M-2, M-3, M-9]</b></span>
+          <span class="payload"><span class="k">what the app still needs</span> <b>which batch of solution, which pump setup, and the confirmed rate before and after each change</b></span>
         </li>
 
-        <li class="notice">
+        <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
           <span class="say">No overall confidence label is shown, because there is no rule for calculating one. The evidence facts above are shown instead.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
         </li>
 
       </ul>
@@ -445,11 +494,124 @@
     from data the contract cannot currently hold. Recorded as gap&nbsp;1.
   </div>
 
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; reason codes and payloads</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface. The engine emits an ordered, severity-graded
+      list of reason codes with a payload each, and this is that list verbatim, so the screen
+      above can be checked against the contract it renders. Nothing outside this block uses
+      this vocabulary.</p>
+      <ul class="notice-list">
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">TIME_PROVENANCE_DATE_ONLY</span>
+          <span class="say">The 15 Aug reading has a date but no time, so it cannot enter the trend. It stays in your history and can still set position if it is the latest.</span>
+          <span class="payload"><span class="k">readingId</span> <b>R-0138</b> &nbsp; <span class="k">date</span> <b>2026-08-15</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">RETEST_BOUNDARY_MARGIN_UNAVAILABLE</span>
+          <span class="say">The scheduler cannot bring a test forward because alkalinity is heading toward a boundary: the margin that would trigger it has no value for alkalinity.</span>
+          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_SELECTED</span>
+          <span class="say">The stretch of history used for this assessment.</span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0812</b> &nbsp; <span class="k">startAt</span> <b>2026-08-12T07:40Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CLUSTER_FORMED_AUTOMATIC</span>
+          <span class="say">Two tests on 18 Aug fell inside the 30-minute repeat window and count as one observation.</span>
+          <span class="payload"><span class="k">clusterId</span> <b>CL-0818</b> &nbsp; <span class="k">readingIds</span> <b>[R-0146, R-0147]</b> &nbsp; <span class="k">windowMinutes</span> <b>30</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CLUSTER_REPEAT_NOT_INDEPENDENT</span>
+          <span class="say">Testing twice in a row does not count as two pieces of evidence.</span>
+          <span class="payload"><span class="k">clusterId</span> <b>CL-0818</b> &nbsp; <span class="k">memberCount</span> <b>2</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_WC_NEGLIGIBLE</span>
+          <span class="say">The 16 Aug water change would have moved alkalinity by less than the 0.10&nbsp;dKH floor, so nothing was subtracted from the readings.</span>
+          <span class="payload"><span class="k">waterChangeId</span> <b>WC-0816</b> &nbsp; <span class="k">expectedStepDkh</span> <b>0.004</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_SUFFICIENT</span>
+          <span class="say">Enough independent tests over enough days for an ordinary dose decision.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>5</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_ESTIMATOR_THEIL_SEN</span>
+          <span class="say">The slope is the middle of every pair of readings, so one odd result cannot drag it.</span>
+          <span class="payload"><span class="k">n</span> <b>5</b> &nbsp; <span class="k">pairwiseSlopeCount</span> <b>10</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">UNCERTAINTY_FLOOR_APPLIED</span>
+          <span class="say">Your readings scattered less than the working floor for an alkalinity test, so the floor was used instead.</span>
+          <span class="payload"><span class="k">sigmaResid</span> <b>0.0000</b> &nbsp; <span class="k">sigmaPoint</span> <b>0.10</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_FALLING</span>
+          <span class="say">Alkalinity is falling, by more than uncertainty alone can explain.</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0400</b> &nbsp; <span class="k">supportedSlope</span> <b>&minus;0.0198</b> &nbsp; <span class="k">sigmaS</span> <b>0.0158</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">DELIVERY_BASIS_PROGRAMMED_SCHEDULE</span>
+          <span class="say">Your confirmed pump schedule was used as the delivery record. No pump telemetry is needed.</span>
+          <span class="payload"><span class="k">programmedDoseMlPerDay</span> <b>9.0</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="say">Strength per millilitre comes from your recipe and tank volume, not from measurement.</span>
+          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CONSUMPTION_ESTIMATED</span>
+          <span class="say">What the tank uses per day, from the mass balance. Uses the observed slope, never the supported one.</span>
+          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6576</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0400</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">MAINTENANCE_INCREASE_RECOMMENDED</span>
+          <span class="say">The dose change that the supported shortfall justifies.</span>
+          <span class="payload"><span class="k">currentDose</span> <b>9.0</b> &nbsp; <span class="k">recommendedDose</span> <b>9.3</b> &nbsp; <span class="k">deltaDose</span> <b>+0.3</b> &nbsp; <span class="k">S_supported</span> <b>&minus;0.0198</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">predictedPostSlope</span> <b>&minus;0.0194</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CAPABILITY_POTENCY_LEARNER_GATED</span>
+          <span class="say">The app is not learning your solution&rsquo;s real strength from results. That is off by design in this build.</span>
+          <span class="payload"><span class="k">missingCapabilities</span> <b>[M-2, M-3, M-9]</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
+          <span class="say">No overall confidence label is shown, because there is no rule for calculating one. The evidence facts above are shown instead.</span>
+          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+        </li>
+      </ul>
+    </div>
+  </details>
+
 </main>
 
 <nav class="tabbar"><div class="inner">
   <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>

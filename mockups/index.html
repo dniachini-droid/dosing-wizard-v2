@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Build one — screen mockups · Dosing Wizard V2</title>
+<title>Screen mockups · Dosing Wizard V2</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -11,147 +11,211 @@
 <main class="screen" style="padding-bottom:var(--sp-8)">
 
   <header class="topbar">
-    <p class="eyebrow">Dosing Wizard V2</p>
-    <h1>Build one &mdash; screen mockups</h1>
+    <p class="eyebrow">Static mockups &middot; no engine, no persistence</p>
+    <h1>Dosing Wizard V2</h1>
     <p class="sub">
-      Eleven screens with hand-written sample data. No engine, no storage, no framework &mdash;
-      plain HTML and CSS, so the interface can be judged before anything is implemented, and so
-      the implementation has something to aim at.
+      Thirty-one screens. Hand-written sample data throughout. They exist so the interface can be
+      judged before implementation, and so the implementation has a target.
     </p>
   </header>
 
-  <div class="callout quiet">
-    <strong>Sample tank throughout:</strong> a 77-litre mixed reef, alkalinity around
-    8.7&nbsp;dKH, target range 8.6&ndash;9.2&nbsp;dKH, dosing about 9&nbsp;mL/day of a
-    100&nbsp;g/L sodium carbonate solution through a pump that steps in 0.1&nbsp;mL/day.
-    Every reason code and every payload number is real: the codes come from the catalogue and
-    the numbers follow from the sample data.
+  <div class="mockup-note">
+    <b>What this set is.</b> PR&nbsp;#6 built eleven screens and the visual language they are drawn
+    in. That language and its substance carry across unchanged. What is added is the
+    <b>surfaces</b> the V1 application had and PR&nbsp;#6 did not &mdash; taken from
+    <span class="code">docs/migration/V1-APPLICATION-SALVAGE.md</span> &sect;12 &mdash; dressed in
+    the new look rather than the old one.
   </div>
 
-  <p class="seclabel">Start here</p>
+  <!-- ================= THE TANK ================= -->
   <section class="card">
-    <ul class="picker">
-      <li><a href="01-setup.html">
-        <span class="pmark p-alk">1</span>
-        <span><span class="t">First-run setup</span>
-        <span class="d">Volume, target range and outer bounds, solution chemistry, pump step and schedule &mdash; and what happens if you skip each one. Ends with a plain statement of what the app can and cannot do yet.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-    </ul>
-  </section>
-
-  <p class="seclabel">Today &mdash; five states</p>
-  <section class="card">
-    <ul class="picker">
-      <li><a href="02-today-a-dose-change.html">
-        <span class="pmark p-alk">2a</span>
-        <span><span class="t">A dose change</span>
-        <span class="d">The happy path. Position, both slopes, evidence, the recommendation, next test, sixteen reason codes, and the confirmation loop asking whether you actually made the change.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="02-today-b-hold.html">
-        <span class="pmark p-alk">2b</span>
-        <span><span class="t">Hold</span>
-        <span class="d">A downward lean smaller than its own uncertainty. Hold is a full recommendation with an action verb, given the same weight as a dose change.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="02-today-c-insufficient.html">
-        <span class="pmark p-alk">2c</span>
-        <span><span class="t">Not enough evidence</span>
-        <span class="d">Two readings and one discarded. What is missing, which single test fixes it, and what can still be concluded right now.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="02-today-d-refusal.html">
-        <span class="pmark p-alk">2d</span>
-        <span><span class="t">A capability refusal</span>
-        <span class="d">The pump&rsquo;s step size was never recorded, so the dose figure is withheld. Which datum, where to fix it, and everything that is still known regardless.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="02-today-e-safety.html">
-        <span class="pmark p-alk">2e</span>
-        <span><span class="t">A safety return</span>
-        <span class="d">Below the outer operating range. A different register entirely, with the maintenance conclusion held separately and stated separately.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-    </ul>
-  </section>
-
-  <p class="seclabel">The rest</p>
-  <section class="card">
-    <ul class="picker">
-      <li><a href="03-assessment-detail.html">
-        <span class="pmark p-alk">3</span>
-        <span><span class="t">The working</span>
-        <span class="d">Which readings were used and why the others were not, the trend, the support subtraction, consumption, all seven dose quantities with every limit in order, the retest candidates including four that could not run, all twenty-five codes, and the version stamps.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="04-log-entry.html">
-        <span class="pmark p-alk">4</span>
-        <span><span class="t">Log something</span>
-        <span class="d">All nine kinds of entry. Time precision on every form, an &ldquo;I&rsquo;m not sure when&rdquo; option for dose changes with earliest and latest, and three-state fields so absent, unknown and known stay distinct.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="05-entry-detail.html">
-        <span class="pmark p-alk">5</span>
-        <span><span class="t">One reading</span>
-        <span class="d">View, correct, supersede, mark suspect, mark invalid &mdash; each with what it will actually do to the record. Nothing is ever deleted.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="06-history.html">
-        <span class="pmark p-alk">6</span>
-        <span><span class="t">History</span>
-        <span class="d">One chart per parameter. Target range shaded on alkalinity, events marked, repeats shown as one observation with their spread, and marks on the points that could not be used.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-      <li><a href="07-settings.html">
-        <span class="pmark p-alk">7</span>
-        <span><span class="t">Settings</span>
-        <span class="d">Settings as versions with a change history, and a read-only panel showing which solution strength is in use, where it came from, and why learning is switched off.</span></span>
-        <span class="go">&rsaquo;</span></a></li>
-    </ul>
-  </section>
-
-  <p class="seclabel">Behind the screens</p>
-  <section class="card">
-    <div class="card-head"><h2>Three things these are built to prove</h2></div>
-
-    <p class="body"><strong>1 &middot; Refusing is normal.</strong> The frozen specification has
-    twenty-four recorded defects and eight open owner decisions. Most real assessments will
-    decline part of the answer. Every refusal here is a designed output: it names what is
-    missing, what would fix it, and what is still known. None of them is a blank.</p>
-
-    <p class="body"><strong>2 &middot; Notices are a list, not a strip.</strong> Reason codes add
-    up. A realistic assessment emits somewhere between eight and twenty-five, graded from
-    explanatory to safety, each carrying mandatory numbers. Every screen shows them as an
-    expandable list, ordered by severity, with the payloads visible.</p>
-
-    <p class="body"><strong>3 &middot; Status is six things, not one.</strong> Position,
-    trajectory, evidence, intervention phase, response and overshoot are independent. A change
-    can be going exactly as predicted and have overshot at the same time. One badge would drop
-    whichever mattered, so there is no single badge anywhere in these screens.</p>
-  </section>
-
-  <section class="card">
-    <div class="card-head"><h2>How this is put together</h2></div>
+    <div class="card-head"><h2>The sample tank</h2></div>
     <div class="kv">
-      <div class="kv-row"><span class="kv-k"><span class="code">tokens.css</span></span><span class="kv-v">Every colour, radius, shadow, type size, weight and spacing step<span class="sub">the only place appearance is set</span></span></div>
-      <div class="kv-row"><span class="kv-k"><span class="code">app.css</span></span><span class="kv-v">Shared components<span class="sub">structure only &mdash; no literal colour or size, every value a token</span></span></div>
-      <div class="kv-row"><span class="kv-k">Each screen</span><span class="kv-v">One HTML file<span class="sub">no script of any kind</span></span></div>
-      <div class="kv-row"><span class="kv-k">Expandable sections</span><span class="kv-v">Native, no JavaScript</span></div>
-      <div class="kv-row"><span class="kv-k">Chart animation</span><span class="kv-v">CSS only<span class="sub">switched off under reduced-motion</span></span></div>
-      <div class="kv-row"><span class="kv-k">Fonts</span><span class="kv-v">System stack<span class="sub">nothing downloaded</span></span></div>
+      <div class="kv-row"><span class="kv-k">Net water volume</span><span class="kv-v">77&nbsp;L<span class="sub">mixed reef</span></span></div>
+      <div class="kv-row"><span class="kv-k">Alkalinity now</span><span class="kv-v">8.70&nbsp;dKH<span class="sub">20 Aug, 07:40</span></span></div>
+      <div class="kv-row"><span class="kv-k">Target range</span><span class="kv-v">8.6 &ndash; 9.2&nbsp;dKH<span class="sub">outer bounds 7.0 &ndash; 11.0</span></span></div>
+      <div class="kv-row"><span class="kv-k">Dose running</span><span class="kv-v">9.0&nbsp;mL/day<span class="sub">100&nbsp;g/L sodium carbonate</span></span></div>
+      <div class="kv-row"><span class="kv-k">Pump step</span><span class="kv-v">0.1&nbsp;mL/day<span class="sub">0.0686&nbsp;dKH per mL</span></span></div>
+      <div class="kv-row"><span class="kv-k">Today</span><span class="kv-v">Thursday 20 August 2026</span></div>
     </div>
     <p class="inert-note">
-      Open <span class="code">index.html</span> in any browser, or serve the folder and open it
-      on a phone. These are laid out for a phone first.
+      Every figure on every screen follows arithmetically from these, so the working can be checked
+      by hand. None of it is authority for anything.
     </p>
   </section>
 
+  <!-- ================= THE FIVE TABS ================= -->
   <section class="card">
-    <div class="card-head"><h2>Twelve things the screens could not express</h2></div>
+    <div class="card-head"><h2>The five tabs</h2></div>
     <p class="body">
-      Places where building the interface and reading the specification disagreed. Each one is a
-      real question for the owner rather than something to be decided by whoever draws the
-      screen. They are listed in full, with what breaks and what the options are, in
-      <span class="code">CONTRACT-GAPS.md</span>, and each is flagged in a dashed box on the
-      screen where it shows up. Eleven came out of drawing the screens; the twelfth came out
-      of the review.
+      Today &middot; Test Lab &middot; Tasks &middot; History &middot; Tools. Settings sits behind a
+      gear rather than taking a fifth of the bar. Tools is present, disabled and labelled
+      &ldquo;later&rdquo; &mdash; a calculator must never look like advice, so the destination is
+      reserved now rather than retrofitted.
     </p>
     <p class="inert-note">
-      Nothing in these mockups resolves any of them. Where a screen had to show something, it
-      shows the honest version and says what is missing.
+      PR&nbsp;#6&rsquo;s <i>Log</i> tab is dissolved: readings go to Test Lab, maintenance goes to
+      Tasks. Nothing lost a home; the entry form is still there, reached from both.
     </p>
   </section>
+
+  <!-- ================= TODAY ================= -->
+  <p class="seclabel">Today &mdash; one ranked list, and a day stepper over it</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="02-today-a-dose-change.html"><span class="pmark p-alk">A</span>
+        <span><span class="t">A dose change</span><span class="d">Five items in one list: the recommendation, the confirmation it is waiting on, two due items that open where they sit, and a reading with no time.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-b-hold.html"><span class="pmark p-alk">B</span>
+        <span><span class="t">Hold</span><span class="d">A complete answer with an action verb, rendered at the same weight as a change.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-c-insufficient.html"><span class="pmark p-alk">C</span>
+        <span><span class="t">Not enough evidence</span><span class="d">Says what is missing and when the next useful test is. Never a dead end.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-d-refusal.html"><span class="pmark p-alk">D</span>
+        <span><span class="t">A refusal</span><span class="d">No pump step, so no dose in millilitres &mdash; and everything else still runs.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-e-safety.html"><span class="pmark p-alk">E</span>
+        <span><span class="t">A safety return</span><span class="d">Its own register. A one-off correction, and the maintenance dose left alone.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-f-settled.html"><span class="pmark p-no3">F</span>
+        <span><span class="t">Settled &mdash; new</span><span class="d">Nothing due, nothing wrong. On a tank that is behaving this is most days, and it was the only state with no screen.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-g-day-ahead.html"><span class="pmark p-mg">&rsaquo;</span>
+        <span><span class="t">Tomorrow &mdash; new</span><span class="d">The stepper forward. What is <i>due</i>, as a clean checklist. No assessment, because the app cannot know what tomorrow&rsquo;s reading will say.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="02-today-h-day-past.html"><span class="pmark p-mg">&lsaquo;</span>
+        <span><span class="t">Yesterday &mdash; new</span><span class="d">The stepper back. What was <i>done</i>, and what was not. Every row opens the shared edit sheet.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="03-assessment-detail.html"><span class="pmark p-alk">&#8942;</span>
+        <span><span class="t">The working</span><span class="d">Readings, trend, support, consumption, the dose chain, the limits checked in order, the retest candidates.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= TEST LAB ================= -->
+  <p class="seclabel">Test Lab &mdash; a checklist, not a form</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="08-test-lab.html"><span class="pmark p-alk">&#9707;</span>
+        <span><span class="t">Test Lab &mdash; new</span><span class="d">Every parameter as a row, one date for the sitting, type-and-log down the page, with a rail that fills as the due ones are done.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html"><span class="pmark p-ca">&#43;</span>
+        <span><span class="t">Everything that is not a test</span><span class="d">Nine event families, with time precision asked on every one.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="19-icp-entry.html"><span class="pmark p-mg">&#9633;</span>
+        <span><span class="t">ICP panel entry &mdash; new</span><span class="d">Thirty-odd elements, a lab, a date, a photo. And what the app refuses to do with them.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html"><span class="pmark p-po4">&#9998;</span>
+        <span><span class="t">One reading</span><span class="d">Correct, supersede, mark suspect, mark invalid. There is no delete.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="09-edit-sheet.html"><span class="pmark p-po4">&#9881;</span>
+        <span><span class="t">The shared edit sheet &mdash; new</span><span class="d">One item, one sheet, reachable from Today&rsquo;s stepper, the Test Lab, Tasks or the calendar.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= TASKS ================= -->
+  <p class="seclabel">Tasks &mdash; the calendar holds everything</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="10-tasks.html"><span class="pmark p-no3">&#9635;</span>
+        <span><span class="t">Tasks and the month &mdash; new</span><span class="d">Month grid with completed and scheduled counted separately, the test schedule, husbandry, and the app&rsquo;s own suggestion.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="11-calendar-day.html"><span class="pmark p-no3">&#9634;</span>
+        <span><span class="t">One day &mdash; new</span><span class="d">Done, still due, dose changes recorded, and the recurring rhythms behind it. One timeline.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="12-reschedule-sheet.html"><span class="pmark p-sal">&#8635;</span>
+        <span><span class="t">The shared reschedule sheet &mdash; new</span><span class="d">Move it, change how often, mark done, skip. Identical from the calendar and from the list.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="13-custom-task.html"><span class="pmark p-sal">&#43;</span>
+        <span><span class="t">Adding things &mdash; new</span><span class="d">A task of your own, a water change you have just done, and one-offs nobody planned.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="14-suggested-test.html"><span class="pmark p-mg">&#9678;</span>
+        <span><span class="t">The app&rsquo;s suggested test &mdash; new</span><span class="d">Not one of your tasks. Accept or decline, with what accepting would do to your week shown first.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= HISTORY ================= -->
+  <p class="seclabel">History</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="06-history.html"><span class="pmark p-alk">&#8767;</span>
+        <span><span class="t">History, thickened</span><span class="d">The whole record with one boundary where dose history starts, a window that names itself, zoom, and tap-through to an entry.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="15-history-all-graphs.html"><span class="pmark p-ca">&#9776;</span>
+        <span><span class="t">Every graph &mdash; new</span><span class="d">Six parameters, one window, one scroll.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= THE MOMENTS ================= -->
+  <p class="seclabel">The moments &mdash; ported from V1, not rebuilt</p>
+  <section class="card">
+    <p class="body">
+      These four run. Their timing constants, easing curves, delays and progress-driven geometry
+      are transcribed from V1 source and live in <span class="code">tokens.css</span>; the driver
+      reads them from there at run time. What changed is only what they are drawn with.
+    </p>
+    <ul class="picker">
+      <li><a href="16-moment-reading-arrival.html"><span class="pmark p-alk">&#9673;</span>
+        <span><span class="t">The reading arrives on its own history</span><span class="d">Chart draw, travelling dot and counting number all read from one progress value &mdash; the fix that stopped the dot running ahead of its own line.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="17-moment-dose-expectation.html"><span class="pmark p-alk">&#8593;</span>
+        <span><span class="t">The dose expectation</span><span class="d">A dose change is a prediction as much as an action. Stated before the next reading arrives, and never revised afterwards.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="18-moment-task-completion.html"><span class="pmark p-no3">&#10003;</span>
+        <span><span class="t">Task completion</span><span class="d">The run of completions and the <i>actual</i> intervals between them, which are often not the interval that was set. Shown without comment.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="20-icp-arrival.html"><span class="pmark p-mg">&#9678;</span>
+        <span><span class="t">The panel arrives</span><span class="d">Elements count in, the ones outside reference are named, and what moved since the last panel is shown with its direction.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= SETUP AND PLATFORM ================= -->
+  <p class="seclabel">Setup, settings and the platform</p>
+  <section class="card">
+    <ul class="picker">
+      <li><a href="01-setup.html"><span class="pmark p-alk">1</span>
+        <span><span class="t">First-run setup</span><span class="d">Four steps, each naming exactly what it refuses if you skip it.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="07-settings.html"><span class="pmark p-ca">&#9881;</span>
+        <span><span class="t">Settings, thickened</span><span class="d">Versioned settings and change history, plus which solution strengths you typed and which are old defaults, and everything you have put away.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="21-durability.html"><span class="pmark p-sal">&#9673;</span>
+        <span><span class="t">Your data &mdash; new</span><span class="d">Three tiers of backup, each with its real limits. One of them is not a backup and says so.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="22-offline-install.html"><span class="pmark p-sal">&#9729;</span>
+        <span><span class="t">Offline and installed &mdash; new</span><span class="d">What works with no connection, what installing changes, and an update that waits rather than swapping itself in.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="23-error-boundary.html"><span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">A crashed tab &mdash; new</span><span class="d">It names itself, leaves navigation working, and puts export in front of you.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="24-developer-view.html"><span class="pmark p-mg">&#9881;</span>
+        <span><span class="t">Developer view &mdash; new</span><span class="d">The one place a reason code is allowed on screen, and why it is kept out of everywhere else.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <!-- ================= HOW IT IS BUILT ================= -->
+  <section class="card">
+    <div class="card-head"><h2>How it is built</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k"><span class="code">tokens.css</span></span><span class="kv-v">Every colour, radius, shadow, size &mdash; and every timing value<span class="sub">including all four moments, ported</span></span></div>
+      <div class="kv-row"><span class="kv-k"><span class="code">app.css</span></span><span class="kv-v">Shared components<span class="sub">structure only; no literal appearance value</span></span></div>
+      <div class="kv-row"><span class="kv-k"><span class="code">moments.js</span></span><span class="kv-v">The four moments<span class="sub">the only script; reads its timing from tokens.css</span></span></div>
+      <div class="kv-row"><span class="kv-k"><span class="code">check-plain-english.py</span></span><span class="kv-v">Fails if contract vocabulary is visible<span class="sub">owner decision 9, pinned rather than promised</span></span></div>
+      <div class="kv-row"><span class="kv-k"><span class="code">CONTRACT-GAPS.md</span></span><span class="kv-v">Things the screens cannot express<span class="sub">recorded, none resolved</span></span></div>
+    </div>
+  </section>
+
+  <div class="mockup-note">
+    <b>Nothing here is authority for anything.</b> No engine, no persistence, no framework beyond
+    one small script for the moments. Every number is hand-written sample data, and no threshold,
+    band edge, cadence or dosing figure on any of these screens governs behaviour anywhere.
+  </div>
 
 </main>
 </body>

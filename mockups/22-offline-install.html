@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="07-settings.html">Settings</a>
+    <h1>Offline and installed</h1>
+    <p class="sub">This app is used one-handed, wet-handed, standing at a tank.</p>
+  </header>
+
+  <div class="callout quiet">
+    <strong>You are offline.</strong> Everything on this screen works anyway. Nothing is queued and
+    nothing is waiting for a connection.
+  </div>
+
+  <div class="mockup-note">
+    <b>Why this has a screen.</b> The offline contract was inherited from V1 and had nowhere to be
+    seen. A promise the user cannot check is not a promise.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>What works with no connection</h2>
+      <span class="pill pill-alk">Everything</span>
+    </div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Logging a reading</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">The assessment and the dose recommendation</span><span class="kv-v">Yes<span class="sub">it runs on your device; nothing is sent anywhere</span></span></div>
+      <div class="kv-row"><span class="kv-k">Charts, history and the calendar</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">Exporting your data</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">A reading logged offline surviving a hard reload</span><span class="kv-v">Yes<span class="sub">written before the screen says it is done</span></span></div>
+    </div>
+    <p class="inert-note">
+      There is no read-only mode and no reduced mode. If the app opens, it works.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Installed on this device</h2>
+      <span class="pill pill-attention">Not yet</span>
+    </div>
+    <p class="body">
+      Installing it puts it on your home screen and lets it open with no connection at all,
+      including the very first time after you install it.
+    </p>
+    <span class="btn btn-primary">Add to home screen</span>
+    <div class="kv" style="margin-top:var(--sp-3)">
+      <div class="kv-row"><span class="kv-k">Running from the browser</span><span class="kv-v">Yes, currently</span></div>
+      <div class="kv-row"><span class="kv-k">First open after install works offline</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">Your data if you install now</span><span class="kv-v">Carried over<span class="sub">same browser, same storage</span></span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>An update is ready</h2>
+      <span class="pill pill-neutral">Waiting</span>
+    </div>
+    <p class="body">
+      A newer version has downloaded completely and will be used next time you open the app.
+    </p>
+    <span class="btn">Use it now</span>
+    <p class="inert-note">
+      It waits rather than swapping itself in underneath you. Half of one version and half of
+      another is the failure that is worth engineering against: the app would appear to work and
+      would be wrong in ways nobody could reproduce.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What is never sent anywhere</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Your readings</span><span class="kv-v">Nothing leaves this device</span></div>
+      <div class="kv-row"><span class="kv-k">Analytics or usage tracking</span><span class="kv-v is-absent">None</span></div>
+      <div class="kv-row"><span class="kv-k">Crash reports</span><span class="kv-v is-absent">None sent automatically</span></div>
+    </div>
+    <p class="inert-note">
+      This describes the app as it is built today. Accounts and sync are planned, and when they
+      arrive this screen is where the change has to be visible.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

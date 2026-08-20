@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Something broke · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>History</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <div class="crash">
+    <h2>This tab could not draw</h2>
+    <p>
+      Something went wrong building your history charts. The rest of the app is unaffected and
+      your data has not been touched.
+    </p>
+    <div class="btn-row">
+      <span class="btn btn-primary">Try again</span>
+      <a class="btn" href="21-durability.html">Export my data</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>What still works</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Today, Test Lab and Tasks</span><span class="kv-v">Normally<span class="sub">the tab bar below is live</span></span></div>
+      <div class="kv-row"><span class="kv-k">Logging a reading</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">Your data</span><span class="kv-v">Untouched<span class="sub">a drawing failure never writes anything</span></span></div>
+      <div class="kv-row"><span class="kv-k">Exporting it</span><span class="kv-v">Yes<span class="sub">and worth doing before you try again</span></span></div>
+    </div>
+    <p class="inert-note">
+      Only this tab is down. The crash is caught where it happened rather than taking the whole
+      app with it.
+    </p>
+  </section>
+
+  <div class="mockup-note">
+    <b>Why this screen exists at all.</b> V1 shipped a per-tab boundary after a crash rendered a
+    blank page with working navigation and no clue what had happened. Three properties make it
+    worth having: it <b>names itself</b>, it leaves <b>navigation working</b>, and it puts
+    <b>export</b> in front of you before you try anything that might make it worse.
+  </div>
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; what actually failed</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface, and not shown to a keeper by default. It is
+      here so a fault can be reported usefully rather than as &ldquo;the charts broke&rdquo;.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Tab</span><span class="kv-v"><span class="code">HistoryTab</span></span></div>
+        <div class="kv-row"><span class="kv-k">Thrown by</span><span class="kv-v"><span class="code">ZoomableLineChart</span></span></div>
+        <div class="kv-row"><span class="kv-k">Message</span><span class="kv-v"><span class="code">Cannot read properties of undefined (reading 'value')</span></span></div>
+        <div class="kv-row"><span class="kv-k">Build</span><span class="kv-v"><span class="code">0.1.0-mockup</span></span></div>
+      </div>
+      <span class="btn" style="margin-top:var(--sp-3)">Copy this</span>
+    </div>
+  </details>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

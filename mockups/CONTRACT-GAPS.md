@@ -1,6 +1,9 @@
-# Build-one mockups — what the screens could not express
+# Mockups — what the screens could not express
 
-Eleven places where drawing the interface and reading the specification disagreed.
+Twenty-three places where drawing the interface and reading the specification
+disagreed. Gaps 1–12 came from PR #6's eleven screens. Gaps 13–23 were added when the
+V1 application salvage inventory was carried across and the screen set grew to
+thirty-one; none of the first twelve is resolved by that work.
 
 **Nothing here is decided.** None of these is resolved anywhere in the mockups; where a
 screen had to render something it renders the honest version and says what is missing.
@@ -282,3 +285,214 @@ uses for four other fields. A schema gap, not a chemistry one.
 **Note.** This is distinct from gap 3. Gap 3 is that there is no object representing a
 recommendation awaiting confirmation. This one is that even when the keeper answers, one
 of the three honest answers cannot be stored.
+
+---
+
+# Gaps 13–23 — added by the V1 surface rebuild
+
+Everything from here down was found while drawing the surfaces
+`docs/migration/V1-APPLICATION-SALVAGE.md` §12 lists as missing. The same rule holds:
+**nothing here is decided**, and where a screen had to render something it renders the
+honest version and says what is absent.
+
+Two further authorities are referred to below:
+
+- `docs/migration/V1-APPLICATION-SALVAGE.md` §2, §12
+- `docs/migration/V1-OPEN-OWNER-QUESTIONS.md`
+
+---
+
+## Gap 13 — An ICP panel is not a reading, and there is no object for one
+
+**Where it shows.** ICP panel entry, ICP arrival.
+
+**What the contract provides.** A `Reading` holds one parameter from a closed vocabulary.
+An ICP panel is thirty-odd elements measured by a third party, arriving as one document
+on one date, most of them parameters the vocabulary does not contain at all.
+
+**What breaks.** There is nowhere to put the panel, nowhere to put the lab's identity,
+and no way to express that thirty-four values share one date and one source. Splitting it
+into thirty-four readings would also assert that a lab figure and a test-kit figure are
+the same kind of measurement, which is the claim the screens are careful not to make.
+
+**What would close it.** A distinct panel record with its own elements, its own reference
+ranges attributed to the lab, and no path into the parameter engines. A schema question.
+
+**Note.** Related to but separate from gap 1. Gap 1 is that four *dosed or measured*
+parameters have no home. This is that a *lab panel* is a different shape of thing from a
+reading, whatever the vocabulary contains.
+
+---
+
+## Gap 14 — Nothing owns a task, a schedule or a completion
+
+**Where it shows.** Tasks, the calendar, the day view, the reschedule sheet, custom
+tasks, and every inline log on Today.
+
+**What the contract provides.** Nothing. The data contract has readings, events,
+assessments and settings. It has no reminder, no interval, no completion and no schedule.
+
+**What breaks.** Every one of these screens is drawn against an object that does not
+exist. Completion-anchored scheduling, auto-completion, skip-versus-done and the whole
+calendar rest on it.
+
+**What would close it.** A task record with an interval, a completion log keyed to it,
+and a projection rule. V1's `reminders.js` is a working reference implementation with the
+reasoning written into it, and none of it is chemistry. Its **intervals** are a separate
+matter — see gap 16.
+
+---
+
+## Gap 15 — The engine's suggested test and the keeper's scheduled test have no defined relationship
+
+**Where it shows.** The suggested-test screen, the Tasks tab, the calendar day.
+
+**What the contract provides.** The retest scheduler produces a recommendation with an
+action, an earliest useful time and a recommended time. It says nothing about a schedule
+the keeper set for themselves, because as far as canon is concerned there isn't one.
+
+**What breaks.** Owner decision 7 says accepting a suggestion "may move their own
+scheduled test". Nothing states whether the two are one thing or two, what accepting
+does to the keeper's interval, or what happens if they decline and then test anyway. The
+screen offers three answers — accept, keep both, decline — precisely because the question
+has no owner.
+
+**Note.** This is not a chemistry gap. *When* a retest is useful is canon's and is
+answered. Whether a keeper's own rhythm exists alongside it is a product question.
+
+---
+
+## Gap 16 — Who owns a test cadence when the keeper has set one
+
+**Where it shows.** Tasks, the test schedule list; the calendar day's "recurring
+schedules" panel.
+
+**What the contract provides.** Retest timing has one owner and it is the engine
+(canon Part II). A keeper-set "test alkalinity every two days" is a second source for the
+same thing.
+
+**What breaks.** The screens show both, and label the keeper's as theirs and the
+engine's as a suggestion, which is the most honest rendering available — but it does not
+resolve which governs when they disagree. **The intervals shown on those screens are
+sample data and are not adopted from anywhere.** A V1 cadence is not carried across.
+
+**What would close it.** A statement of whether a keeper-set test rhythm is permitted at
+all for a parameter the engine schedules, and if so what it means. Partly product,
+partly canon: if the answer touches how often alkalinity is tested, it is canon's.
+
+---
+
+## Gap 17 — Nothing orders the ranked list, and now it holds three kinds of thing
+
+**Where it shows.** Today, all six state variants.
+
+**What the contract provides.** Still nothing — this is gap 2, unresolved.
+
+**What is new.** Owner decision 2 puts due tests, due tasks and the assessment into *one*
+list ordered by what matters most. Gap 2 was that nothing orders assessment items. This
+adds that nothing can order an assessment item *against* a due water change, because the
+two come from different places and share no scale.
+
+**Note.** Recorded as a distinct gap rather than folded into gap 2, because closing gap 2
+would not close this.
+
+---
+
+## Gap 18 — A completion has no defined relationship to the reading that caused it
+
+**Where it shows.** Test Lab, Today's inline logs, the calendar day, the shared edit sheet.
+
+**What the contract provides.** Nothing, because tasks do not exist (gap 14).
+
+**What breaks.** Auto-completion — logging a reading *is* the completion of its test — is
+the single best interaction V1 had, and it creates a link with consequences. Correcting
+the reading, marking it invalid, or detaching it from the day all have to do something to
+the completion, and the reschedule that followed it. The edit sheet warns about this in
+plain English and cannot say what actually happens.
+
+---
+
+## Gap 19 — There is no record of a durability state to render
+
+**Where it shows.** Your data; offline and installed.
+
+**What the contract provides.** Nothing. Backup tier availability, the wipe-detector
+verdicts, storage headroom, install state and update-waiting are all real states with real
+consequences, and none of them is in any contract.
+
+**What breaks.** Every figure on those two screens is invented. The *shapes* are taken
+from V1, whose modules state their own limits honestly; the values have no source.
+
+**Note.** V1's own honest limit is carried across as prose: on a full clear, both wipe
+detectors go too, and the app can then tell neither that data was lost nor that it is
+fine. That is a property worth keeping and it needs somewhere to be recorded.
+
+---
+
+## Gap 20 — A chart point has no identity to tap through to
+
+**Where it shows.** History, every graph.
+
+**What the contract provides.** This is PR #6's gap 7, restated because the screens now
+*offer* the interaction rather than noting its absence.
+
+**What is new.** Owner decision 8's boundary marker needs the same thing from the other
+direction: the marker sits at the point where dose history begins, and nothing in the
+contract identifies that instant. The screens place it from sample data.
+
+---
+
+## Gap 21 — Nothing says which readings fall inside the excluded period
+
+**Where it shows.** History, the whole record.
+
+**What the contract provides.** Analytical eligibility is a property of a reading in the
+data contract. Owner decision 8 makes the exclusion a property of the **period** instead:
+one marker, no per-reading dimming, no per-reading mark.
+
+**What breaks.** The two do not describe the same thing. A reading can be ineligible for
+its own reasons — no time recorded, marked invalid — and separately fall in a period with
+no dose history. The screens render both, and there is nothing that says a period-level
+exclusion exists or where it starts and ends.
+
+**Note.** `docs/migration/V1-DATA-PROVENANCE.md` establishes that the owner's imported
+readings are real measurements and that what is missing is the dose history beside them.
+That is the evidence for the decision; it is not a contract for rendering it.
+
+---
+
+## Gap 22 — The prediction object has no retest date and no destination in it
+
+**Where it shows.** The dose-expectation moment.
+
+**What the contract provides.** An immutable prediction snapshot taken at the moment of a
+dose change (canon M-7).
+
+**What breaks.** The moment states four things: the expected value, the daily movement,
+when to test again, and what the dose is heading for. The first two are the prediction's.
+The third comes from the retest scheduler, which runs separately and can change its mind
+afterwards — so a snapshot that is supposed to be unrevisable is rendered beside a figure
+that is not. The fourth has no source at all.
+
+**What would close it.** Either stamping the retest time into the snapshot, or the screen
+saying plainly that one of those four figures is live and three are frozen. The screens
+currently do neither, because either would be a decision.
+
+---
+
+## Gap 23 — No one owns the plain-English sentence, and now every screen needs one
+
+**Where it shows.** Everywhere.
+
+**What the contract provides.** This is gap 4 — the reason-code catalogue names codes and
+payload fields and no sentence — and it is unresolved.
+
+**What is new.** Owner decision 9 makes it structural rather than cosmetic. Every reason
+code, every payload field name, every state name and every canon marker now needs a
+plain-English rendering, and this set wrote all of them. **They are drafts written for the
+mockups and they are not authority.** `check-plain-english.py` enforces that none of the
+identifiers is visible; it cannot check that a replacement sentence is faithful to the
+code it replaced.
+
+**What would close it.** An owner for the user-facing wording, with the same discipline
+the codes have: one sentence per code, versioned with it, checked against it.

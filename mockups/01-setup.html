@@ -43,9 +43,9 @@
       <p>Alkalinity is still measured, stored and charted. Everything downstream of the mass
       balance stops:</p>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">What your tank uses</span><span class="kv-v is-absent">Refused<span class="sub">CONSUMPTION_NOT_RUN_NET_VOLUME_UNAVAILABLE</span></span></div>
-        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">POTENCY_THEORETICAL_INPUTS_UNAVAILABLE</span></span></div>
-        <div class="kv-row"><span class="kv-k">Any dose in mL</span><span class="kv-v is-absent">Refused<span class="sub">POTENCY_REQUIRED</span></span></div>
+        <div class="kv-row"><span class="kv-k">What your tank uses</span><span class="kv-v is-absent">Refused<span class="sub">it needs the net water volume</span></span></div>
+        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">it needs the solution strength</span></span></div>
+        <div class="kv-row"><span class="kv-k">Any dose in mL</span><span class="kv-v is-absent">Refused<span class="sub">nothing can be sized in millilitres without it</span></span></div>
       </div>
     </div>
   </section>
@@ -94,9 +94,9 @@
     <div class="refusal">
       <span class="state">Rules the app will not bend</span>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">Minimum must be below maximum</span><span class="kv-v is-absent">VALIDATION_TARGET_RANGE_INVERTED</span></div>
-        <div class="kv-row"><span class="kv-k">Target range must sit inside the outer bounds</span><span class="kv-v is-absent">VALIDATION_TARGET_OUTSIDE_OUTER_BOUNDS</span></div>
-        <div class="kv-row"><span class="kv-k">Outer minimum must be below outer maximum</span><span class="kv-v is-absent">VALIDATION_OUTER_BOUNDS_INVERTED</span></div>
+        <div class="kv-row"><span class="kv-k">Minimum must be below maximum</span><span class="kv-v is-absent">Will not save</span></div>
+        <div class="kv-row"><span class="kv-k">Target range must sit inside the outer bounds</span><span class="kv-v is-absent">Will not save</span></div>
+        <div class="kv-row"><span class="kv-k">Outer minimum must be below outer maximum</span><span class="kv-v is-absent">Will not save</span></div>
       </div>
       <p style="margin-top:var(--sp-3)">Without a target range there is no position at all &mdash;
       not &ldquo;in range&rdquo;, not &ldquo;out of range&rdquo;, nothing. Readings are still stored.</p>
@@ -143,8 +143,8 @@
       <p>The app switches to stating movements in dKH and refuses to convert them to
       millilitres. It will not assume a product.</p>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">POTENCY_THEORETICAL_INPUTS_UNAVAILABLE</span></span></div>
-        <div class="kv-row"><span class="kv-k">Any dose or correction in mL</span><span class="kv-v is-absent">Refused<span class="sub">POTENCY_REQUIRED</span></span></div>
+        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">it needs the solution strength</span></span></div>
+        <div class="kv-row"><span class="kv-k">Any dose or correction in mL</span><span class="kv-v is-absent">Refused<span class="sub">nothing can be sized in millilitres without it</span></span></div>
         <div class="kv-row"><span class="kv-k">Required movement in dKH</span><span class="kv-v">Still given</span></div>
       </div>
     </div>
@@ -188,7 +188,7 @@
       wants; it will not turn that into a number to set, and it will not pick a step size for
       you. There is no assumed default.</p>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">Final dose in mL/day</span><span class="kv-v is-absent">Withheld<span class="sub">CAPABILITY_ACTUATOR_INCREMENT_REQUIRED &middot; M-1</span></span></div>
+        <div class="kv-row"><span class="kv-k">Final dose in mL/day</span><span class="kv-v is-absent">Withheld<span class="sub">the app will not guess what your pump can actually do</span></span></div>
         <div class="kv-row"><span class="kv-k">The unrounded figure</span><span class="kv-v">Still shown</span></div>
         <div class="kv-row"><span class="kv-k">One-off safety corrections</span><span class="kv-v">Still given<span class="sub">a one-off volume does not need the step size</span></span></div>
       </div>
@@ -233,7 +233,8 @@
 
 <nav class="tabbar"><div class="inner">
   <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>

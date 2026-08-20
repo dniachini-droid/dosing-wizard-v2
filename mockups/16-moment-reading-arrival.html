@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The reading arrives · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="08-test-lab.html">Test Lab</a>
+    <p class="eyebrow">The moment after you press Log</p>
+    <h1>The reading arrives on its own history</h1>
+    <p class="sub">Reload the page to watch it again.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Ported, not rebuilt.</b> The geometry and the progress loop are transcribed from V1&rsquo;s
+    <span class="code">ReadingContext.jsx</span> and <span class="code">ReadingConfirmation.jsx</span>.
+    Every duration, delay and easing exponent lives in <span class="code">tokens.css</span> and is
+    read from there at run time &mdash; retune one by editing one number.
+  </div>
+
+  <!-- ===================== THE MOMENT ===================== -->
+  <div class="moment" data-moment="reading" data-uid="alk"
+       data-def='{"min":8.6,"max":9.2,"decimals":2,"tone":"alk"}'
+       data-counter="rc-count"
+       data-rows='[{"value":9.05},{"value":8.98},{"value":9.00},{"value":8.92},{"value":8.88},{"value":8.90},{"value":8.82},{"value":8.79},{"value":8.76},{"value":8.74},{"value":8.70},{"value":8.68}]'>
+    <div class="mcard">
+      <div class="mcap alk">
+        <p class="lead">Alkalinity logged</p>
+        <p class="figure">
+          <span class="mval"><span class="sheen" id="rc-count">8.68</span></span>
+          <span class="unit">dKH</span>
+        </p>
+        <p class="move">&darr; 0.02 from 8.70</p>
+        <div class="rc-host"></div>
+      </div>
+      <div class="mbody stagger">
+        <p class="headline s1">Still inside your range</p>
+        <p class="line s2">
+          Eleven readings back, this is the lowest of them &mdash; but every one of them has been
+          inside 8.6 to 9.2, and the run has been drifting gently down all month rather than
+          moving.
+        </p>
+        <p class="mclose" data-countdown="--ma-autoclose"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WHAT IT IS DOING ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>Why it is built this way</h2></div>
+    <p class="body">
+      A number alone does not say whether 8.68 is the lowest in a fortnight or the middle of a
+      steady run. The new value is drawn onto its own recent history, and the value counts up as
+      the line draws to it, so the reading arrives with its background already there.
+    </p>
+    <p class="body">
+      <strong>One progress value drives all three.</strong> The chart draw, the travelling dot and
+      the counting number are read from a single number between 0 and 1. That is the fix, and it
+      is the reason the moment is worth porting rather than describing: three separate animations
+      &mdash; a stroke dash, a motion path and a timer &mdash; could never stay in step, which is
+      why the dot used to run ahead of its own line.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Chart lands</span><span class="kv-v">460&nbsp;ms<span class="sub">a short bounce, so it reads as a thing appearing</span></span></div>
+      <div class="kv-row"><span class="kv-k">Scale fades in</span><span class="kv-v">340&nbsp;ms, after 300<span class="sub">band edges, plus the peak and trough plotted</span></span></div>
+      <div class="kv-row"><span class="kv-k">Dot falls onto the first point</span><span class="kv-v">440&nbsp;ms, after 900</span></div>
+      <div class="kv-row"><span class="kv-k">Travel begins</span><span class="kv-v">at 1340&nbsp;ms<span class="sub">as the dot settles &mdash; nothing moves along the line until there is a line to move along</span></span></div>
+      <div class="kv-row"><span class="kv-k">Travel lasts</span><span class="kv-v">4600&nbsp;ms<span class="sub">eased so it sets off briskly and settles onto the final reading</span></span></div>
+      <div class="kv-row"><span class="kv-k">Landing</span><span class="kv-v">Two rings and a sweep of light<span class="sub">plus one quiet flash of the band, because the reading landed inside it</span></span></div>
+    </div>
+    <p class="inert-note">
+      Every one of those figures is a token. None of them was chosen here.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>The register it is written in</h2></div>
+    <p class="body">
+      Deliberately calm. A reading outside its band gets a useful line rather than an alarm, and
+      one inside gets acknowledgement rather than confetti. The band pulses once, at nine per cent
+      opacity rising to twenty-six and back &mdash; confirmation, not celebration.
+    </p>
+    <div class="callout quiet">
+      V1&rsquo;s splash burst is not carried across. The arrival is the part worth keeping; the
+      confetti is decoration without function.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Where the chemistry is</h2></div>
+    <p class="body">
+      Nowhere in it. The component is given a list of values, a range and a colour, and it draws a
+      line through them and moves a dot along it. The sentence underneath &mdash; &ldquo;still
+      inside your range&rdquo; &mdash; is the engine&rsquo;s, rendered here, not worked out here.
+    </p>
+    <p class="inert-note">
+      V1&rsquo;s version of this moment computed its own verdict inside the presentation component.
+      That part is deliberately left behind.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+<script src="moments.js"></script>
+</body>
+</html>

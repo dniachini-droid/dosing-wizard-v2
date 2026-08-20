@@ -17,6 +17,135 @@
     to open it.</p>
   </header>
 
+
+  <div class="mockup-note">
+    <b>Thickened here.</b> PR&nbsp;#6 gave every parameter a chart with its events and exclusions
+    marked. Added below: a zoomable window that <i>names itself</i>, the whole record with the one
+    boundary marker on it, tap-through from a point to its entry, and every graph on one surface.
+  </div>
+
+  <!-- ================= THE WHOLE RECORD ================= -->
+  <section class="card">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>The whole record</h2>
+      <span class="aside">19 readings</span>
+    </div>
+
+    <svg class="chart c-alk" viewBox="0 0 296 132" role="img"
+         aria-label="Alkalinity from 8.52 dKH in March 2026 to 8.70 dKH on 20 August, nineteen readings, with a marker on 9 August where dose history begins.">
+      <defs>
+        <linearGradient id="g-alk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--alk)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--alk)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      <rect class="range-fill" x="30" y="38.7" width="258" height="53.5"/>
+      <line class="range-edge" x1="30" x2="288" y1="38.7" y2="38.7"/>
+      <line class="range-edge" x1="30" x2="288" y1="92.2" y2="92.2"/>
+
+      <line class="grid" x1="30" x2="288" y1="110.0" y2="110.0"/>
+      <text class="axis" x="25" y="113.0" text-anchor="end">8.4</text>
+      <line class="grid" x1="30" x2="288" y1="92.2" y2="92.2"/>
+      <text class="axis" x="25" y="95.2" text-anchor="end">8.6</text>
+      <line class="grid" x1="30" x2="288" y1="56.5" y2="56.5"/>
+      <text class="axis" x="25" y="59.5" text-anchor="end">9.0</text>
+      <line class="grid" x1="30" x2="288" y1="38.7" y2="38.7"/>
+      <text class="axis" x="25" y="41.7" text-anchor="end">9.2</text>
+      <line class="grid" x1="30" x2="288" y1="20.9" y2="20.9"/>
+      <text class="axis" x="25" y="23.9" text-anchor="end">9.4</text>
+
+      <path class="area" d="M30.0,99.3 L44.3,91.3 L58.7,79.7 L73.0,65.5 L87.3,52.1 L101.7,40.5 L116.0,28.9 L130.3,36.9 L144.7,47.6 L159.0,53.0 L173.3,31.6 L187.7,20.9 L202.0,24.5 L216.3,36.9 L230.7,54.8 L245.0,61.9 L259.3,69.0 L273.7,75.3 L288.0,83.3 L288.0,110.0 L30.0,110.0 Z"/>
+      <path class="trace" d="M30.0,99.3 L44.3,91.3 L58.7,79.7 L73.0,65.5 L87.3,52.1 L101.7,40.5 L116.0,28.9 L130.3,36.9 L144.7,47.6 L159.0,53.0 L173.3,31.6 L187.7,20.9 L202.0,24.5 L216.3,36.9 L230.7,54.8 L245.0,61.9 L259.3,69.0 L273.7,75.3 L288.0,83.3"/>
+
+      <!-- One marker. Not one per reading. -->
+      <line class="boundary" x1="216.3" x2="216.3" y1="12" y2="110.0"/>
+      <text class="boundary-label" x="216.3" y="9" text-anchor="middle">dose history starts</text>
+
+      <circle class="pt" cx="30.0" cy="99.3" r="3.4"/>
+      <circle class="pt" cx="44.3" cy="91.3" r="3.4"/>
+      <circle class="pt" cx="58.7" cy="79.7" r="3.4"/>
+      <circle class="pt" cx="73.0" cy="65.5" r="3.4"/>
+      <circle class="pt" cx="87.3" cy="52.1" r="3.4"/>
+      <circle class="pt" cx="101.7" cy="40.5" r="3.4"/>
+      <circle class="pt" cx="116.0" cy="28.9" r="3.4"/>
+      <circle class="pt" cx="130.3" cy="36.9" r="3.4"/>
+      <circle class="pt" cx="144.7" cy="47.6" r="3.4"/>
+      <circle class="pt" cx="159.0" cy="53.0" r="3.4"/>
+      <circle class="pt" cx="173.3" cy="31.6" r="3.4"/>
+      <circle class="pt" cx="187.7" cy="20.9" r="3.4"/>
+      <circle class="pt" cx="202.0" cy="24.5" r="3.4"/>
+      <circle class="pt" cx="216.3" cy="36.9" r="3.4"/>
+      <circle class="pt" cx="230.7" cy="54.8" r="3.4"/>
+      <circle class="pt" cx="245.0" cy="61.9" r="3.4"/>
+      <circle class="pt" cx="259.3" cy="69.0" r="3.4"/>
+      <circle class="pt" cx="273.7" cy="75.3" r="3.4"/>
+      <circle class="pt-last" cx="288.0" cy="83.3" r="3.4"/>
+
+      <text class="axis" x="30.0" y="126">Mar</text>
+      <text class="axis" x="144.7" y="126" text-anchor="middle">Jun</text>
+      <text class="axis" x="288.0" y="126" text-anchor="end">20 Aug</text>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--alk)"></span>Your readings</span>
+      <span><span class="rule" style="color:var(--attention)"></span>Dose history starts</span>
+      <span><span class="swatch" style="background:var(--alk-bg)"></span>Target range</span>
+    </div>
+
+    <div class="callout attention">
+      <strong>Analysis starts on 9 August.</strong> Everything before that line is a real
+      measurement you took, and it is shown as one. What is missing from that period is the
+      <i>dosing</i> record that would have to sit beside it &mdash; so the app can chart those
+      readings and cannot work out consumption, response or potency across them.
+    </div>
+
+    <p class="inert-note">
+      One marker, on the period. Not a mark on each reading, and no dimming: the readings are not
+      individually suspect, and treating them as though they were would misrepresent your own
+      history back to you.
+    </p>
+  </section>
+
+  <!-- ================= THE WINDOW ================= -->
+  <section class="card">
+    <div class="card-head"><h2>The window you are looking at</h2></div>
+
+    <div class="windowbar">
+      <span class="name">7 &ndash; 20 August &middot; 14 days</span>
+      <span class="zoom">
+        <a href="#out" aria-label="Zoom out">&minus;</a>
+        <a href="#in" aria-label="Zoom in">&plus;</a>
+        <a href="#reset" aria-label="Reset">&#8635;</a>
+      </span>
+    </div>
+
+    <div class="seg">
+      <span class="opt">14 days</span>
+      <span class="opt on">Since the last dose change</span>
+      <span class="opt">3 months</span>
+      <span class="opt">All</span>
+    </div>
+
+    <p class="body" style="margin-top:var(--sp-3)">
+      Pinch or drag the charts below to move this window. Everything on this screen &mdash; the
+      readings table, the events list, the steadiness figure &mdash; describes <strong>this
+      window</strong> and says so.
+    </p>
+
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Steadiest stretch in this window</span><span class="kv-v">16 &ndash; 20 Aug<span class="sub">spread 0.16&nbsp;dKH over 4 days</span></span></div>
+      <div class="kv-row"><span class="kv-k">Readings in this window</span><span class="kv-v">8<span class="sub">7 usable for a rate</span></span></div>
+      <div class="kv-row"><span class="kv-k">Events in this window</span><span class="kv-v">5</span></div>
+    </div>
+
+    <p class="inert-note">
+      The window is named because an unnamed one lets a panel quietly grade a different stretch
+      from the one on screen. If you move it, this figure moves with it and the name changes.
+    </p>
+  </section>
+
   <!-- ================= ALKALINITY ================= -->
   <section class="card">
     <div class="card-head">
@@ -269,9 +398,26 @@
 
 </main>
 
+  <section class="card">
+    <div class="card-head"><h2>All of them at once</h2></div>
+    <p class="body">
+      Six parameters, six charts, one scrollable surface, same window. Useful when you are looking
+      for something that happened rather than checking something you already suspect.
+    </p>
+    <a class="btn btn-primary" href="15-history-all-graphs.html">Open every graph</a>
+  </section>
+
+  <div class="mockup-note">
+    <b>Tap a point, open its entry.</b> Every reading on every chart on this screen is a target,
+    and every one of them opens the same entry sheet the Test Lab and the calendar open. PR&nbsp;#6
+    recorded the absence of that as its own gap&nbsp;7; the route now exists on the screens even
+    though nothing in the contract yet says a chart point carries an identity.
+  </div>
+
 <nav class="tabbar"><div class="inner">
   <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab on" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>

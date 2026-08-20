@@ -68,10 +68,10 @@
     </p>
 
     <div class="kv">
-      <div class="kv-row"><span class="kv-k"><strong>Exact time</strong><br><span class="code">EXACT_ABSOLUTE</span></span><span class="kv-v">Everything works<span class="sub">rates, position, response, learning</span></span></div>
-      <div class="kv-row"><span class="kv-k"><strong>Worked out, with proof</strong><br><span class="code">RECONSTRUCTED_WITH_PROVENANCE</span></span><span class="kv-v">Everything works<span class="sub">you must record how you proved it</span></span></div>
-      <div class="kv-row"><span class="kv-k"><strong>Clock time, unsure of zone</strong><br><span class="code">LOCAL_TIME_ZONE_UNKNOWN</span></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
-      <div class="kv-row"><span class="kv-k"><strong>Date only</strong><br><span class="code">DATE_ONLY</span></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Exact time</strong></span><span class="kv-v">Everything works<span class="sub">rates, position, response, learning</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Worked out, with proof</strong></span><span class="kv-v">Everything works<span class="sub">you must record how you proved it</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Clock time, unsure of zone</strong></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
+      <div class="kv-row"><span class="kv-k"><strong>Date only</strong></span><span class="kv-v">No rates<span class="sub">still counts for position and history</span></span></div>
     </div>
 
     <div class="callout attention">
@@ -466,11 +466,31 @@
     choice of two, with no way to say it is not established &mdash; gap&nbsp;12.
   </div>
 
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; how the four answers are stored</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface. Each of the four answers above is stored as a
+      named time-precision value, and this is the mapping. The screen itself never shows these
+      names.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Exact time</span><span class="kv-v"><span class="code">EXACT_ABSOLUTE</span></span></div>
+        <div class="kv-row"><span class="kv-k">Worked out, with proof</span><span class="kv-v"><span class="code">RECONSTRUCTED_WITH_PROVENANCE</span></span></div>
+        <div class="kv-row"><span class="kv-k">Clock time, unsure of zone</span><span class="kv-v"><span class="code">LOCAL_TIME_ZONE_UNKNOWN</span></span></div>
+        <div class="kv-row"><span class="kv-k">Date only</span><span class="kv-v"><span class="code">DATE_ONLY</span></span></div>
+      </div>
+    </div>
+  </details>
+
 </main>
 
 <nav class="tabbar"><div class="inner">
   <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
-  <a class="tab on" href="04-log-entry.html"><span class="ic">&#43;</span>Log</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
   <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
   <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
 </div></nav>
