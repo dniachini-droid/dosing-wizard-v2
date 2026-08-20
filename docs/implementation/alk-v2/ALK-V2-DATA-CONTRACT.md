@@ -712,11 +712,14 @@ RetestDecision {
   earliestUsefulAt    Instant
   recommendedAt       Instant
   latestSafeAt        Instant   OPT
-  reasonCode          RetestReason
+  reasonCode          RetestReason      the selected candidate's code
+  tiedReasonCodes[]   RetestReason[]    every OTHER candidate tying on the selected
+                                        time; reason codes are additive, so a tie is
+                                        recorded rather than broken (ALK-053A)
   candidateTimes[]    { candidateClass, at, included|excluded, reason }
   candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
                       (T_detect, return-plan arrival cadence)
-  clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED
+  clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED | RETEST_SIGNAL_FLOOR_APPLIED
   assumptions[]
 }
 ```

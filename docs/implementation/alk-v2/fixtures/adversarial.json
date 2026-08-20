@@ -2394,14 +2394,12 @@
           "outerBoundState": "BREACHED_HIGH",
           "nextTestApproxHours": 24,
           "highBreachSafetyHandlingPreserved": true,
-          "note": "F5-13. An estimate negative only inside its own uncertainty has not demonstrated a broken mass balance, so delivery is not paused. The established 1.6 mL/day is HELD; the outer-bound state, SAFETY_RETURN and the ~24 h cadence continue unchanged; zero biological consumption is not inferred."
+          "note": "Whether a negative but not materially negative estimate is physically uninterpretable is answered by ALK-HIGH-BREACH-NO-PAUSE-001: it is not, so delivery is not paused. The ~24 h cadence on this branch comes from the active SAFETY_RETURN (integration section 9), NOT from the high-breach fail-safe, which is not invoked here. MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE is likewise not emitted: canon says this branch has not demonstrated a broken mass balance."
         },
         "note": "Maintenance is HOLD on both sides and neither infers zero consumption. What the boundary decides is the recorded classification AND whether alkalinity delivery is paused to 0 mL/day."
       },
       "expectedReasonCodes": [
-        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
-        "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE",
-        "RETEST_HIGH_BREACH_FAILSAFE"
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH"
       ],
       "openIssues": [
         "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03)",
@@ -2421,7 +2419,9 @@
           ],
           "variant_1_6_reasonCodes": [
             "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
-            "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE"
+            "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+            "RETEST_HIGH_BREACH_FAILSAFE",
+            "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE"
           ],
           "variant_1_6_safetyDoseRecommendationMlPerDay": 0,
           "variant_1_6_maintenanceEstimateMlPerDay": "any value inferred from C - a held dose is not a demand estimate"
@@ -2430,11 +2430,15 @@
       "variantReasonCodes": {
         "variant_1_5": [
           "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN",
-          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE"
+          "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE",
+          "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+          "RETEST_HIGH_BREACH_FAILSAFE"
         ],
         "variant_1_6": [
           "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED",
-          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED"
+          "SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
         ]
       }
     },
@@ -3297,12 +3301,18 @@
           2.0,
           4.0
         ],
-        "observedSlopeDkhPerDay": -0.175,
+        "observedSlopeDkhPerDay": -0.1675,
         "sigmaResidDkh": 0.0,
         "sigmaPointDkh": 0.1,
         "sxxDay2": 8.0,
         "sigmaSDkhPerDay": 0.035355339059,
-        "supportedSlopeDkhPerDay": -0.122245166004
+        "supportedSlopeDkhPerDay": -0.122245166004,
+        "pairwiseSlopesDkhPerDay": [
+          -0.185,
+          -0.1675,
+          -0.15
+        ],
+        "note": "Theil-Sen over the coalesced series: median(-0.185, -0.1675, -0.15) = -0.1675. Intercept 8.67, residuals (0, -0.035, 0), MAD 0, so sigma_point falls to the 0.10 floor."
       },
       "expectedAction": {
         "independentSelection": "APPLIED_OVER_UNIQUE_TIMES",

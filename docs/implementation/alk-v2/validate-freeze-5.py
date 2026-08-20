@@ -267,11 +267,63 @@ def _full(t,a):
     sr=1.4826*_med(sorted(abs(x) for x in r)); sp=max(0.10,sr)
     tb=sum(t)/len(t); sxx=sum((x-tb)**2 for x in t); ss=sp/sxx**0.5
     return S,sr,sp,sxx,ss,(1 if S>0 else -1 if S<0 else 0)*max(0.0,abs(S)-1.28*ss)
-mismatch=[]; recomputed=0
-for fid,(fn,f) in fixtures.items():
+def _series(f):
+    """Every shape a fixture states a t/value series in. The clusters[] shape was added by
+    F5-14 and was originally skipped, which let a wrong Theil-Sen slope ship in AD-SEG-007."""
     inp=f.get('input') or {}
     t=inp.get('timesDays') or inp.get('clusterTimesDays'); a=inp.get('alkDkh')
-    if not (isinstance(t,list) and isinstance(a,list) and len(t)==len(a)>=2): continue
+    if isinstance(t,list) and isinstance(a,list) and len(t)==len(a)>=2:
+        return t,a
+    ev=f.get('expectedIntermediateEvidence') or {}
+    sac=ev.get('seriesAfterCoalescing')
+    if isinstance(sac,dict):
+        t=sac.get('timesDays'); a=sac.get('alkDkh')
+        if isinstance(t,list) and isinstance(a,list) and len(t)==len(a)>=2:
+            return t,a
+    tp=inp.get('twoPointReadings')
+    if isinstance(tp,dict) and 'day0Dkh' in tp and 'day1Dkh' in tp:
+        # Two-point basis. ALK-011A's sqrt(0.10^2+0.10^2)/dt equals 0.10/sqrt(Sxx) for n=2,
+        # so the Sxx form below reproduces it exactly.
+        return [0.0,1.0],[tp['day0Dkh'],tp['day1Dkh']]
+    cl=inp.get('clusters')
+    if isinstance(cl,list) and all(isinstance(c,dict) and 'atDay' in c and 'alkDkh' in c for c in cl):
+        by=collections.OrderedDict()
+        for c in cl: by.setdefault(c['atDay'],[]).append(c['alkDkh'])
+        t=sorted(by); a=[_med(sorted(by[x])) for x in t]      # PII-5.4 over the pooled readings
+        if len(t)>=2: return t,a
+    # READING / READING_SERIES event ledgers, the canon worked goldens' own shape
+    evs=inp.get('events')
+    if isinstance(evs,list):
+        import datetime
+        pts=[]
+        for e in evs:
+            if not isinstance(e,dict): continue
+            if e.get('kind')=='READING' and 'measuredAt' in e and 'rawValueDkh' in e:
+                pts.append((e['measuredAt'],e['rawValueDkh']))
+            elif e.get('kind')=='READING_SERIES' and 'startAt' in e and 'valuesDkh' in e:
+                try: t0=datetime.datetime.fromisoformat(e['startAt'])
+                except Exception: return None,None
+                h=e.get('everyHours',48)
+                for i,v in enumerate(e['valuesDkh']):
+                    pts.append(((t0+datetime.timedelta(hours=h*i)).isoformat(),v))
+        if len(pts)>=2:
+            try: inst=[datetime.datetime.fromisoformat(x) for x,_ in pts]
+            except Exception: return None,None
+            t0=min(inst)
+            days=[(x-t0).total_seconds()/86400.0 for x in inst]
+            by=collections.OrderedDict()
+            for dd,(_,v) in zip(days,pts): by.setdefault(round(dd,9),[]).append(v)
+            t=sorted(by); a=[_med(sorted(by[x])) for x in t]
+            if len(t)>=2: return t,a
+    return None,None
+
+mismatch=[]; recomputed=0; skipped=[]
+for fid,(fn,f) in fixtures.items():
+    t,a=_series(f)
+    if t is None:
+        if (f.get('expectedIntermediateEvidence') or {}).get('observedSlopeDkhPerDay') is not None:
+            skipped.append(fid)
+        continue
     acc=[]; anchor=None
     for i,x in enumerate(t):
         if anchor is None or x-anchor>=1.0-1e-12: acc.append(i); anchor=x
@@ -288,6 +340,8 @@ for fid,(fn,f) in fixtures.items():
         mismatch.append((fid,'acceptedClusterTimesDays',ev['acceptedClusterTimesDays'],tt))
 check('every series fixture reproduces its stated intermediates',
       not mismatch, '%d recomputed; %s'%(recomputed,mismatch[:4]))
+check('no fixture states a slope the checker cannot recompute',
+      not skipped, str(skipped))
 
 print()
 print('%d checks failed' % len(fails))

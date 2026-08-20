@@ -129,10 +129,39 @@ window.
 
 **PRECONDITIONS** clusters built; segment bounds known.
 
-**ALGORITHM** forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`).
+**ALGORITHM** — step 0 first: same-timestamp clusters are coalesced *before* any of the
+selection below runs.
 
 ```text
-candidates = clusters in the selected segment, sorted ascending by representativeAt
+STEP 0, before selection      [ALK-SAME-TIMESTAMP-COALESCE-001]
+    group candidates by identical representativeAt
+    for each group of size > 1:
+        pool the COMBINED underlying measurements of its clusters
+        rebuild ONE cluster from the pool using the existing rules:
+            PII-5.4 representative value   = median(pooled raw readings)
+            PII-5.5 representative timestamp
+            PII-5.6 internal spread, and ALK-005
+        CLUSTER_SAME_TIMESTAMP_COALESCED
+    selection then runs over a UNIQUE-TIME sequence, so ordering is total
+
+    Reachable: PII-5.3 groups automatically only within the same or a compatible method,
+    so two incompatible methods at one instant yield two clusters at one timestamp.
+
+    NEVER: choose between them by event order, ID order, insertion order, database
+    ordering or implementation sorting - that makes the actuator command a property of
+    how the rows were stored.
+    NEVER: average the two cluster medians - the value is the median of the POOLED raw
+    readings.
+    NEVER: let coalescing hide an inconsistency - a pool spanning > 0.20 dKH is
+    ANOMALOUS under ALK-005 and takes PII-48's path.
+```
+
+Then forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`) over the
+resulting unique-time sequence.
+
+```text
+candidates = coalesced clusters in the selected segment, ascending by representativeAt
+             (unique timestamps by construction after step 0)
 accepted   = []
 anchor     = null
 
@@ -160,29 +189,6 @@ candidate re-runs selection from the new earliest and may accept a different set
 required by `ALK-065` / `WG-ALK-029` — a backdated valid measurement changes the present
 analysis — and the historical assessment record stays immutable regardless.
 
-```text
-STEP 0, before selection      [ALK-SAME-TIMESTAMP-COALESCE-001]
-    group candidates by identical representativeAt
-    for each group of size > 1:
-        pool the COMBINED underlying measurements of its clusters
-        rebuild ONE cluster from the pool using the existing rules:
-            PII-5.4 representative value   = median(pooled raw readings)
-            PII-5.5 representative timestamp
-            PII-5.6 internal spread, and ALK-005
-        CLUSTER_SAME_TIMESTAMP_COALESCED
-    selection then runs over a UNIQUE-TIME sequence, so ordering is total
-
-    Reachable: PII-5.3 groups automatically only within the same or a compatible method,
-    so two incompatible methods at one instant yield two clusters at one timestamp.
-
-    NEVER: choose between them by event order, ID order, insertion order, database
-    ordering or implementation sorting - that makes the actuator command a property of
-    how the rows were stored.
-    NEVER: average the two cluster medians - the value is the median of the POOLED raw
-    readings.
-    NEVER: let coalescing hide an inconsistency - a pool spanning > 0.20 dKH is
-    ANOMALOUS under ALK-005 and takes PII-48's path.
-```
 
 A cluster that is not accepted is **not excluded, invalidated or hidden**. It MAY still:
 

@@ -321,7 +321,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `RETEST_ROUTINE_CADENCE` | `INFO` | 48-hour ordinary cadence. | `recommendedAt` |
 | `RETEST_EVIDENCE_BUILDING` | `INFO` | Next test needed to reach the ordinary minimum. | `clustersNeeded`, `spanNeededDays`, `recommendedAt` |
 | `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` | `INFO` | `T_detect` candidate canonically `NOT_RUN`; Freeze 5 declined to invent `K_detect`. | `ruleId: ALK-RETEST-SCHEDULER-001` |
-| `RETEST_SIGNAL_ACCUMULATION` | `INFO` | Confidence-building candidate selected: `T_signal = 0.10 / |S_supported|`. | `sSupportedDkhPerDay`, `tSignalDays`, `recommendedAt` |
+| `RETEST_SIGNAL_ACCUMULATION` | `INFO` | Confidence-building candidate selected: `T_signal = max(1 day, 0.10 / \|S_supported\|)`. The floor is part of this candidate's formula, not a separate clamp. | `sSupportedDkhPerDay`, `rawTSignalDays`, `tSignalDays`, `recommendedAt` |
 | `RETEST_SIGNAL_ACCUMULATION_NOT_RUN` | `INFO` | `T_signal` candidate `NOT_RUN` because `S_supported = 0` or movement evidence is `INSUFFICIENT`. | `sSupportedDkhPerDay`, `movementEvidence` |
 | `RETEST_FORECAST_BOUNDARY_RISK` | `SAFETY` | Testing scheduled before a projected outer-bound crossing, targeting the 24 h safety lead. `T_boundary <= 0` returns test-now semantics. Not submitted once the level is already breached. | `T_outerDays`, `T_boundaryDays`, `boundSide`, `recommendedAt` |
 | `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE` | `INFO` | The return-plan arrival-check candidate is canonically `NOT_RUN`; ordinary, rapid, safety and expiry candidates continue. | `returnPlanId`, `ruleId: ALK-RETEST-SCHEDULER-001` |

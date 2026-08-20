@@ -59,8 +59,8 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
 | `validate-freeze-5.py` | Mechanical gate: 112 assertions over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
-| `fixtures/*.json` | Machine-readable golden corpus — 174 fixtures plus schema, config defaults and index. |
-| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 271-rule traceability inventory. |
+| `fixtures/*.json` | Machine-readable golden corpus — 178 fixtures plus schema, config defaults and index. |
+| `traceability/alk-v2-traceability.json` | Machine-readable copy of the 273-rule traceability inventory. |
 
 ## At a glance
 

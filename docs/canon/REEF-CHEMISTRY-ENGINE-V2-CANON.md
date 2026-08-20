@@ -7323,8 +7323,13 @@ demonstrated one, and this rule's \(\sigma_P=\sigma_D=0\) choice is justified ab
 *delaying* a pause rather than triggering one spuriously. Arming the pause across the whole
 negative range would contradict the conservatism that justifies the boundary.
 
-The middle band is narrow by construction: with three clean clusters it spans
-\(-0.045255 \le C_{estimate} < 0\) dKH/day.
+The middle band's width is \(1.28\sigma_S\), so it scales with \(\sigma_S\) and has **no
+fixed size**. For three clusters on a clean line over four days it is
+\(-0.045255 \le C_{estimate} < 0\) dKH/day; with a longer span it narrows, and with
+residual scatter above the 0.10 floor it widens without bound. A noisy series therefore
+tolerates a larger unexplained gain on this branch than a clean one does, which is the
+direct consequence of using \(\sigma_S\) as the boundary and is recorded here rather than
+implied.
 
 ### Slight negative within uncertainty
 
@@ -8550,10 +8555,14 @@ Forecast timing never overrides an immediate safety rule (Part II §54).
   interval" for alkalinity, and it reuses an interval the canon already states.
 
 - **Floor, on the ordinary signal candidate only.** \(T_{signal}\) carries a 24-hour floor
-  inside its own formula above. Part II §66's "minimum useful interval" is therefore
-  supplied where it was reachable: \(T_{signal}\) is the only ordinary candidate that can
-  fall below 24 hours, since routine cadence is 48 h and both post-change candidates are
-  ~48 h or later.
+  inside its own formula above.
+
+  This is **not** Part II §66's "minimum useful interval", and must not be implemented as
+  one. §51 gives that term scheduler-wide force — "the earliest relevant candidate that does
+  not violate a minimum useful interval" — and no such scheduler-wide clamp is introduced
+  here. The floor is a property of one candidate's formula. In practice no other ordinary
+  candidate reaches below 24 hours anyway, since routine cadence is 48 h and both
+  post-change candidates are ~48 h or later.
 
 ```text
 |S_supported| > 0.10 dKH/day  ->  raw T_signal < 24 h  ->  floored to 24 h
@@ -16611,7 +16620,7 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-RETEST-SCHEDULER-001` | `AD-RET-001`, `AD-RET-002`, `AD-RET-003`, `AD-RET-004`, `WG-ALK-060` |
 | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` | `WG-ALK-011`, `AD-SEG-006`, `ALK-G022` |
 | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | `AD-SAF-002`, `AD-SAF-005` |
-| `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002`, `WG-ALK-051` |
+| `ALK-HIGH-BREACH-NO-PAUSE-001` | `AD-CON-002` |
 | `ALK-SAME-TIMESTAMP-COALESCE-001` | `AD-SEG-007`, `AD-SEG-008` |
 
 ---
