@@ -2,10 +2,12 @@
 
 Index and coverage analysis for the fixture corpus in `fixtures/`.
 
-**174 fixtures across 6 files, plus 62 invariants in `ALK-V2-INVARIANTS.md`.**
+**177 fixtures across 6 files, plus 64 invariants in `ALK-V2-INVARIANTS.md`.**
 
-`ALK_V2_FREEZE_5` added 14 fixtures and 2 invariants, and rewrote the expectations of the
-15 fixtures that previously asserted a refusal for an issue the freeze decided.
+`ALK_V2_FREEZE_5` added 17 fixtures and 4 invariants, and rewrote the expectations of the
+15 fixtures that previously asserted a refusal for an issue the freeze decided. Three of
+those fixtures and two of those invariants were added by the freeze's own independent
+review, which found defects the first gate could not see.
 
 ---
 
@@ -17,7 +19,7 @@ Index and coverage analysis for the fixture corpus in `fixtures/`.
 | `canon-worked-goldens-round2.json` | 20 | `WG-ALK-021` … `WG-ALK-040` — interruption, corrections, potency, edits, expiry, mirrors |
 | `canon-worked-goldens-external.json` | 27 | `WG-ALK-041` … `WG-ALK-067` — external-review corrections, safety path, capability contract |
 | `canon-named-goldens.json` | 43 | `ALK-G001` … `ALK-G040` including `G004A`, `G039A`, `G039B` |
-| `adversarial.json` | 48 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
+| `adversarial.json` | 51 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
 | `invariants-and-governance.json` | 16 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
 | `index.json` | — | Generated index; ids, counts, provenance split, open-issue coverage |
 | `config-defaults.json` | — | The canon's default worked-suite configuration plus once-derived constants |
@@ -31,7 +33,7 @@ behaviour** (`DEC-013`, canon §52).
 | Class | Count | Meaning |
 |---|---|---|
 | `CANON_VERBATIM` | 102 | Every asserted number or state appears in the canon |
-| `CANON_DERIVED` | 44 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
+| `CANON_DERIVED` | 47 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
 | `CANON_QUALITATIVE` | 28 | The canon states states and prohibitions but no arithmetic |
 
 The derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
@@ -137,23 +139,23 @@ rejected. `INV-I8` is the mechanical check that this holds.
 
 | Decision | Positive control | Negative control |
 |---|---|---|
-| F5-01 independent-cluster selection | `AD-SEG-001` | `AD-SEG-005`; backward-greedy and keep-all asserted forbidden in both |
+| F5-01 independent-cluster selection | `AD-SEG-001` | `AD-SEG-005` (appended vs backdated-earlier), `AD-SEG-007` (identical timestamps ⇒ refusal); backward-greedy and keep-all asserted forbidden |
 | F5-02 suspicious-reading basis | `AD-VAL-001`, `ALK-G024`, `ALK-G025` | `AD-VAL-001` statistically-unusual-only case; `AD-TRD-004` forbids a compensating term |
-| F5-03 negative-consumption materiality | `WG-ALK-013`, `ALK-G026`, `WG-ALK-051` | `AD-CON-002` straddle: each variant forbids the other's classification |
+| F5-03 negative-consumption materiality | `WG-ALK-013`, `ALK-G026`, `WG-ALK-051` | `AD-CON-002` straddle: each variant forbids the other's classification **and** the other's high-breach action |
 | F5-04 return-plan eligibility | `WG-ALK-014`, `WG-ALK-028`, `ALK-G006` | `AD-RTN-003`; `AD-MNT-008` |
 | F5-05 toward-range hold | `AD-MNT-006`, `AD-MNT-007` | `AD-MNT-008`; the strict-stabilise-first doses 7.5 / 10.5 asserted forbidden |
-| F5-06 liquid-volume guard | `AD-SAF-003`, `AD-SAF-004`, `WG-ALK-067` | `AD-SAF-004` variant and its forbidden 2050 mL/day pre-rounding result |
+| F5-06 liquid-volume guard | `AD-SAF-003`, `AD-SAF-004`, `WG-ALK-067` | `AD-SAF-004` (guard off the actuator grid, so a pre-rounding-only check genuinely fails it), `AD-SAF-006` (continuous candidate already over ⇒ withheld) |
 | F5-07 rapid basis | `AD-RAP-001` | same fixture: both wrong readings forbidden |
 | F5-08 return plan under safety | `AD-RTN-004` | `AD-RTN-005`; `SUSPENDED_PENDING_SAFETY` asserted forbidden |
-| F5-09 retest scheduler | `AD-RET-001`, `AD-RET-003` | `AD-RET-002`, `AD-RET-004` |
+| F5-09 retest scheduler | `AD-RET-001`, `AD-RET-003` | `AD-RET-002`, `AD-RET-004`, `AD-RET-005` (breached ⇒ the forecast candidate stands down) |
 | F5-10 water-change confidence tier | `WG-ALK-011`, `ALK-G022` | `AD-SEG-006` — same arithmetic, lower tier, opposite outcome |
 | F5-11 temporary safety rate | `AD-SAF-002` | `AD-SAF-005` three capability cases |
 | F5-12 recommendation confidence | `AD-OUT-001` | same fixture: the three-valued label and any arithmetic path forbidden |
 
 ## 5A. Still-open-issue coverage
 
-Nine of the 27 remaining open issues are exercised by a fixture that asserts the
-**refusal** rather than a guessed value. These are the tests that fail if an implementer
+Twelve of the 30 remaining open issues — 27 carried forward, 3 opened by Freeze-5 review —
+are exercised by a fixture that asserts the **refusal** rather than a guessed value. These are the tests that fail if an implementer
 silently picks a default.
 
 | Open issue | Fixture(s) asserting the refusal |
@@ -167,6 +169,9 @@ silently picks a default.
 | `OI-ANCHOR-001` | `AD-SEG-003` |
 | `OI-STABLE-001` | `AD-TRD-001`, `AD-RTN-003` |
 | `OI-PIPELINE-001` | `WG-ALK-052`, `AD-SAF-004` |
+| `OI-HIGHBREACHBAND-001` | `AD-CON-002` |
+| `OI-CLUSTERTIE-001` | `AD-SEG-007` |
+| `OI-RETESTFLOOR-001` | `AD-RET-001` |
 
 The remaining open issues (`OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
 `OI-POTENCYSNAP-001`, `OI-PLANTARGETEDIT-001`, and the pinned conventions) are covered by
@@ -199,12 +204,15 @@ therefore carries a **pair** that straddles it.
 | safety-return completion | `WG-ALK-053` (7.05 → recovering) | `WG-ALK-053` (7.21 → complete) |
 | negative-consumption materiality | `AD-CON-002` `D = 1.6` (`C + 1.28σ_S` = +0.006135 → uncertainty-limited) | `AD-CON-002` `D = 1.5` (−0.000795 → materially negative) |
 | independence spacing at 24 h | `AD-SEG-001` (12 h → not accepted) | `WG-ALK-003` (48 h → accepted) |
-| `T_signal` against the observation floor | `AD-RET-001` (22.913 h → clamped to 24 h) | `AD-RET-003` (80.685 h, loses to the 40 h boundary candidate) |
-| `T_signal` against the observation ceiling | `AD-RET-002` (162.765 h → clamped to 96 h) | `AD-RET-001` (22.913 h, floor side) |
+| `T_signal` under vs over the routine cadence | `AD-RET-001` (22.913 h, selected unclamped) | `AD-RET-003` (80.685 h, loses to the 40 h boundary candidate) |
+| `T_signal` against the observation ceiling | `AD-RET-002` (162.765 h → clamped to 96 h) | `AD-RET-001` (22.913 h, no floor applied) |
+| forecast candidate, inside vs outside the bound | `AD-RET-003` (7.20 dKH, projected crossing ⇒ 40 h) | `AD-RET-005` (6.85 dKH, breached ⇒ candidate not submitted) |
+| liquid guard on vs off the actuator grid | `AD-SAF-006` (guard 2000 = 40×50; caught pre-rounding) | `AD-SAF-004` (guard 1980; only the post-rounding recheck catches it) |
+| negative consumption, high-breach action | `AD-CON-002` `D = 1.5` (material ⇒ 0 mL/day pause) | `AD-CON-002` `D = 1.6` (non-material ⇒ pause `NOT_RUN`) |
 | forecast boundary safety lead | `AD-RET-003` (`T_boundary` +1.667 d → 40 h) | `AD-RET-004` (`T_boundary` −0.333 d → test now) |
 | supported vs uncertainty-limited toward range | `AD-MNT-008` (`S_supported = 0` → not this rule) | `AD-MNT-006` (`S_supported = 0.104745` → toward-range hold) |
 | water-change confidence tier | `AD-SEG-006` (`MANUFACTURER_NOMINAL` → boundary) | `WG-ALK-011` (`MEASURED_SAME_BATCH` → normalize) |
-| liquid guard across actuator rounding | `AD-SAF-004` (2050 → recheck → 2000, issued) | `AD-SAF-004` variant (`D_current` 2100 already over → withheld) |
+| liquid guard across actuator rounding | `AD-SAF-004` (1978 compliant → rounds to 2000 → recheck → 1950 issued) | `AD-SAF-006` (2040 already over → withheld at step 8) |
 
 ## 7. Acceptance rule
 
@@ -294,6 +302,6 @@ Recorded so their absence is a known choice, not an oversight.
 - **A committed fixture runner.** Executing a fixture needs an engine, which does not exist
   yet. What *is* committed is `validate-freeze-5.py`, the structural gate over rule IDs,
   traceability, the fixture index, the reason-code closed set, invariant counts and canon
-  consistency — 88 assertions, shown to fail on five deliberate mutations before being
-  trusted (`docs/process/runs/2026-08-20-alk-v2-freeze-5.md`). It checks that the corpus is
+  consistency, plus independent recomputation of every series fixture — 99 assertions, shown
+  to fail on nine deliberate mutations before being trusted (`docs/process/runs/2026-08-20-alk-v2-freeze-5.md`). It checks that the corpus is
   coherent, not that an engine reproduces it.

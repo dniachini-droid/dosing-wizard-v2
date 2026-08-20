@@ -443,7 +443,8 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** this package's conformance gate item 8; `CORE-INFORM-PROCEED-001`.
 - **Generator:** construct the trigger condition for each still-open issue whose "Until
   closed" behaviour withholds or degrades an output — `OI-EXPOSURE-001`,
-  `OI-NORMUNCERT-001`, `OI-ANOMCLUSTER-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`.
+  `OI-NORMUNCERT-001`, `OI-ANOMCLUSTER-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`,
+  and the two opened by Freeze-5 review, `OI-HIGHBREACHBAND-001` and `OI-CLUSTERTIE-001`.
 - **Assert:** the dependent output is `NOT_RUN` / `WITHHELD` with the stated reason code
   and open-issue id; no numeric default appears.
 - **Negative control:** supply a `minimumExposure` value for `OI-EXPOSURE-001` and let the
@@ -469,6 +470,32 @@ Fixture bodies for the canon-named invariants are in
   asserts a `forbidden` entry naming the alternative the owner rejected.
 - **Negative control:** delete the `forbidden` block from `AD-MNT-006`; the check must fail.
 
+### INV-I9 — The canon's coverage manifest covers every stable rule body
+- **Canon:** `CORE-CANON-COVERAGE-001` items 1–5 and 8.
+- **Generator:** scan the canon for stable rule IDs in all three marker forms — a standalone
+  backticked line, `## \`ID\` — Title`, and `## ID — Title` — and compare against the
+  `CANON RULE COVERAGE MANIFEST`.
+- **Assert:** zero dangling manifest IDs, zero duplicate authoritative bodies, zero
+  uncovered bodies, zero missing fixture IDs. The substantiveness threshold (item 2) is
+  recorded by the checker and enforced on rule bodies the current freeze added; bodies that
+  predate it are reported rather than failed.
+- **Negative control:** remove one Freeze-5 rule from the manifest; the check must fail.
+- **Why it exists:** the Freeze-5 gate initially never read the canon, so the manifest went
+  stale for ten new rules and nothing caught it.
+
+### INV-I10 — Every fixture's stated intermediates recompute from its own inputs
+- **Canon:** `_schema.json` `acceptanceRule` — "a numerical result differs beyond the
+  declared tolerance", "the wrong rule path produces the same final number".
+- **Generator:** every fixture carrying `timesDays` (or `clusterTimesDays`) and `alkDkh`.
+  Apply forward-greedy selection, then Theil–Sen, the Theil–Sen intercept, residual MAD,
+  `sigma_resid`, `sigma_point`, `Sxx`, `sigma_S` and `S_supported` independently.
+- **Assert:** every stated intermediate matches to 1e-8 relative, and any stated accepted
+  cluster set matches the selection.
+- **Negative control:** change one `alkDkh` value without changing the expectations; the
+  check must fail.
+- **Why it exists:** two fixtures shipped with expectations their own inputs did not
+  produce, and one canonical quantity was stated three different ways.
+
 ---
 
 ## Coverage
@@ -483,11 +510,14 @@ Fixture bodies for the canon-named invariants are in
 | F — Potency | 4 |
 | G — Safety | 9 |
 | H — History and provenance | 5 |
-| I — Ownership and output contract | 8 |
-| **Total** | **62** |
+| I — Ownership and output contract | 10 |
+| **Total** | **64** |
 
-`INV-I7` and `INV-I8` were added by `ALK_V2_FREEZE_5`: one mechanical check that the
-retired reason codes are gone, one that every owner decision is pinned in both directions.
+Four invariants were added by `ALK_V2_FREEZE_5` and its review. `INV-I7` checks that the
+retired reason codes are gone. `INV-I8` checks that every owner decision is pinned in both
+directions. `INV-I9` and `INV-I10` exist because the first Freeze-5 gate could not have
+caught the defects review found: it never read the canon, and it never recomputed a
+fixture.
 
 All twelve invariants named in the preparation brief are covered:
 

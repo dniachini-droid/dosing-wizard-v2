@@ -4871,7 +4871,7 @@ A future shared behavioural or load-bearing completeness change requires:
 # PART III — ALKALINITY ENGINE
 
 **Status:** **FROZEN — ALK V2 FREEZE 5 — 2026-08-19.**  
-Freeze 1 was superseded after external adversarial review. Freeze 2 incorporated the capability contract, outer-bound safety path, advisory-responsibility integration, and final focused-review closures. Freeze 3 added the explicit `ALK-011A/ALK-011B` uncertainty rules and aligned the shared evidence engine to the same `Sxx` formula family. Freeze 4 closed implementation-discovered canon-completeness/capability gaps without changing the intended stabilise-first controller policy. Freeze 5 closes the twelve implementation-preparation blocking items with explicit owner decisions; it determines behaviour that was previously undetermined and does not redesign the controller.
+Freeze 1 was superseded after external adversarial review. Freeze 2 incorporated the capability contract, outer-bound safety path, advisory-responsibility integration, and final focused-review closures. Freeze 3 added the explicit `ALK-011A/ALK-011B` uncertainty rules and aligned the shared evidence engine to the same `Sxx` formula family. Freeze 4 closed implementation-discovered canon-completeness/capability gaps without changing the intended stabilise-first controller policy. Freeze 5 closes the eleven implementation-preparation blocking items, and two non-blocking items, with twelve explicit owner decisions; it determines behaviour that was previously undetermined and does not redesign the controller.
 
 
 ### Freeze 3 reason
@@ -5706,7 +5706,7 @@ must not be imported from another parameter, from V1, or from statistical conven
 (Part II §7.4, Part I §56).
 
 This is a canonised state, not an undefined one. The `SUSPECT` sources the canon **does**
-define remain fully operative, and they are the complete set:
+define remain fully operative. They include:
 
 1. **explicit user marking** — Part II §4.2, §4.3, §49;
 2. **a recorded test/device fault**, carried as an event — Part II §49;
@@ -5722,8 +5722,8 @@ Consequences that follow, and must be implemented:
   Nothing in this rule permits dropping, down-weighting, hiding or excluding a reading
   because it looks unlikely. Part II §49's prohibition on excluding a historical point
   without documented basis is unaffected;
-- `ALK-MOVEMENT-001`'s "no unresolved latest anomaly" precondition is evaluated against
-  those three sources;
+- `ALK-MOVEMENT-001`'s "no unresolved latest anomaly" precondition is evaluated against the
+  canon-defined `SUSPECT` and anomaly sources, never against a statistical test;
 - `ALK-G024` and `ALK-G025` are driven from an explicit mark or an anomalous repeat
   cluster;
 - `ALK-SLOPE-UNCERTAINTY-001` is unchanged. A lone aberrant point that the residual MAD
@@ -5869,11 +5869,38 @@ current position, anomaly confirmation, the rapid-change rule, and explicitly ti
 intervention calculation. It is never deleted, hidden, marked invalid or treated as
 suspect.
 
-Selection is **anchored in the past and is not revised by later data.** Accepting a new
-cluster at the end of the series never changes which earlier clusters were accepted.
-Backward-greedy selection — or any selection whose result depends on the newest reading —
-is forbidden: it makes historical evidence a function of the present and breaks the
-deterministic-replay expectation of Part II §64.
+**Stability, stated exactly.** A cluster **appended after the latest accepted cluster**
+never changes which earlier clusters were accepted. Backward-greedy selection — or any
+selection whose result depends on the newest reading — is forbidden: it makes historical
+evidence a function of the present and breaks the deterministic-replay expectation of
+Part II §64.
+
+The guarantee does **not** extend to a cluster backdated to *before* the current earliest
+candidate. Selection then re-runs from the new earliest cluster and may accept a different
+set, because the anchor chain starts earlier. That is correct and required: `ALK-065` and
+`WG-ALK-029` state that a backdated valid measurement changes the **present** analysis, and
+`ALK-V2` recomputes from the ledger rather than caching a verdict. What such an entry must
+never do is alter a **historical assessment record**, which stays immutable under
+`ALK-065`. Implementations must not present the appended-data guarantee as covering
+backdated entries.
+
+**Identical representative timestamps are not resolved by this rule.** Two candidate
+clusters may share a representative time — Part II §5.3 groups automatically only within
+the same or a compatible test method, so two incompatible methods run at one instant yield
+two clusters at one timestamp, and Part II §5.2 explicit grouping can do the same. This
+rule orders by representative timestamp and states no tie-break, so which cluster is
+accepted is undetermined and the two can carry different values and therefore different
+doses. Freeze 5 does not decide it. Until it is decided, emit:
+
+```text
+independentSelection       = TIE_UNRESOLVED
+movementEvidence           = INSUFFICIENT
+automaticMaintenanceAction = WITHHELD
+reason                     = EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED
+```
+
+together with Part II §2.4 item 4's ambiguity marking. Position, safety, history and retest
+are unaffected and continue normally. Recorded as `OI-CLUSTERTIE-001`.
 
 Worked instance. Candidate clusters at t = 0.0, 0.5, 2.0, 4.0 days:
 
@@ -6329,11 +6356,20 @@ S_{rapid}
 }
 \]
 
-where the two clusters are the last two clusters **accepted** under
-`ALK-INDEPENDENT-SELECTION-001`, and \(\Delta t \ge 24\) hours. This is exactly what this
-rule's own requirements describe — "two independent testing episodes; at least 24 hours
-elapsed between their representative times" — stated explicitly so it is not re-derived
-differently by two implementations.
+where \(A_{latest}\) is the **latest candidate cluster in the segment** and
+\(A_{previous\ independent}\) is the most recent candidate cluster whose representative time
+is at least 24 hours before it. This is exactly what this rule's own requirements describe
+— "two independent testing episodes; at least 24 hours elapsed between their representative
+times" — stated explicitly so it is not re-derived differently by two implementations.
+
+The pair is drawn from **candidate** clusters, not only from those accepted under
+`ALK-INDEPENDENT-SELECTION-001`. `ALK-008` grants a cluster that is not accepted for
+ordinary trend the right to "contribute to a rapid-change rule", and that grant is
+unchanged. Restricting the pair to accepted clusters would revoke it and would exclude the
+newest reading from rapid detection in exactly the case that matters: candidates at
+t = 0.0, 1.5, 2.0 d accept {0.0, 1.5} and reject 2.0, yet 2.0 against 0.0 is a 2-day
+interval that satisfies every condition this rule states. The rapid pair there is
+(0.0, 2.0).
 
 Record the basis:
 
@@ -7042,7 +7078,8 @@ with the applicable slopes positive, so the actuator candidate lies below curren
 
 The recommendation seeks stability, not a deliberate fall back into range.
 
-Once stable above range, a downward return plan may be offered.
+Once `returnPlanEligibleTrajectory` holds above range, a downward return plan may be
+offered (`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`).
 
 The special case where inferred consumption becomes negative is handled separately.
 
@@ -7104,11 +7141,15 @@ This rule determines the two `ALK-070` cells that previously named only a prohib
 \[
 \boxed{
 \begin{aligned}
-&\text{below preferred range}\ \wedge\ \text{supported } RISING &&\Rightarrow\ \text{HOLD maintenance}\\
-&\text{above preferred range}\ \wedge\ \text{supported } FALLING &&\Rightarrow\ \text{HOLD maintenance}
+&\text{below range}\ \wedge\ \text{supported } RISING\ \wedge\ \neg\text{activePlan} &&\Rightarrow\ \text{HOLD maintenance}\\
+&\text{above range}\ \wedge\ \text{supported } FALLING\ \wedge\ \neg\text{activePlan} &&\Rightarrow\ \text{HOLD maintenance}
 \end{aligned}
 }
 \]
+
+`activePlan` means a known deliberate level-movement intervention, exactly as in `ALK-029`
+and `ALK-030`. Where one is active, those rules' own active-plan branches govern and this
+rule does not apply.
 
 "Supported" means the `ALK-MOVEMENT-001` trajectory: \(S_{supported}\neq0\) with the
 ordinary minimum evidence satisfied. An observed lean that uncertainty has already reduced
@@ -7206,16 +7247,45 @@ Both branches are uninterpretable for the purpose of **sizing maintenance**, so 
 maintenance action is identical — HOLD — on either side of the boundary. What the boundary
 decides is the recorded classification, the wording and the follow-up.
 
-Where `ALK-HIGH-BREACH-UNRESOLVED-001` asks whether \(C_{estimate}\) is "physically
-uninterpretable", a **negative** \(C_{estimate}\) satisfies that condition on **both**
-branches, because both are uninterpretable for maintenance sizing. A non-negative
-\(C_{estimate}\) is interpretable and takes the *High breach — interpretable consumption*
-path instead. The high-breach fail-safe is therefore fully determined and no longer gated:
+### Scope of this boundary
+
+This rule determines the **maintenance** consequence, which is the consequence Freeze 5
+states: on either branch the estimate cannot by itself reduce an established maintenance
+dose, and the action is HOLD.
+
+`ALK-HIGH-BREACH-UNRESOLVED-001` asks a different question — whether \(C_{estimate}\) is
+"physically uninterpretable" — and Freeze 5 answers it only where the answer follows from
+the boundary:
 
 ```text
-C_estimate <  0   -> uninterpretable -> ALK-HIGH-BREACH-UNRESOLVED-001 (0 mL/day pause)
-C_estimate >= 0   -> interpretable   -> D_safety,temp per ALK-003A
+materially negative   -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN
+                      -> physically uninterpretable
+                      -> above OuterMax, ALK-HIGH-BREACH-UNRESOLVED-001 applies
+                         (0 mL/day temporary pause)
+
+C_estimate >= 0       -> interpretable
+                      -> High breach - interpretable consumption; D_safety,temp
+
+negative, but NOT materially negative
+                      -> UNDETERMINED for the high-breach fail-safe
+                      -> highBreachZeroDosePause = NOT_RUN
+                         reason = SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED
 ```
+
+The third row is a **deliberate non-answer**, not an omission.
+
+Reading the non-material branch as "physically uninterpretable" would arm the fail-safe on
+*every* negative estimate, which contradicts the conservatism this rule's own
+\(\sigma_P=\sigma_D=0\) choice was made to deliver: that choice is justified above as
+*delaying* a dosing pause rather than triggering one spuriously, and it cannot both justify
+the boundary and be irrelevant to it. Reading it the other way — only the material branch
+is uninterpretable — is equally available from `ALK-031`'s two branch headings. The
+question decides whether the engine recommends **stopping alkalinity supply**, so it is not
+settled by derivation here. It is recorded as `OI-HIGHBREACHBAND-001`.
+
+The band is narrow by construction: with three clean clusters it spans
+\(-0.045255 \le C_{estimate} < 0\) dKH/day. Outside it the fail-safe is fully determined
+in both directions.
 
 ### Slight negative within uncertainty
 
@@ -8249,12 +8319,21 @@ V2 calculation order:
 5. apply dose-step cap;
 6. evaluate empirical bracket conflict;
 7. clamp to non-negative dose;
-8. apply actuator rounding under `ALK-ROUNDING-001`, whose step 6 rechecks the physical
+8. apply `ALK-LIQUID-VOLUME-GUARD-001` to the continuous candidate. If the candidate
+   exceeds \(V_{alk,max,24h}\), **withhold the executable command** and stop: the rounding
+   step below is not entered, and the guard value itself is never emitted as the
+   recommendation;
+9. apply actuator rounding under `ALK-ROUNDING-001`, whose step 6 rechecks the physical
    rate rail and `ALK-LIQUID-VOLUME-GUARD-001` against the discretised command;
-9. recalculate expected physical response from the rounded dose;
-10. assert `ALK-COMPOSITE-RAIL-001` over all simultaneously recommended intentional
+10. recalculate expected physical response from the rounded dose;
+11. assert `ALK-COMPOSITE-RAIL-001` over all simultaneously recommended intentional
    movement components;
-11. produce recommendation.
+12. produce recommendation.
+
+Step 8 is a hard constraint with a stated consequent, not a note. Step 9's recheck catches
+only the case where rounding alone crossed the guard; without step 8 a candidate that
+already exceeded the guard would reach `ALK-ROUNDING-001` step 7, whose "only because
+rounding moved the command" precondition is false, and no rule would refuse it.
 
 This replaces V1's “round first among the constraints” rule.
 
@@ -8391,39 +8470,68 @@ T_{outer}-1.0
 The forecast uses \(S_{observed}\), not \(S_{supported}\) — `ALK-011B` and audit finding
 R3 forbid sizing risk from the uncertainty-shrunk action slope.
 
-If \(T_{boundary}\le0\) — the crossing is already inside the safety lead — the candidate
-is test-now / earliest-practicable:
+If \(T_{boundary}\le0\) — the projected crossing is already inside the safety lead — the
+candidate is test-now / earliest-practicable:
 
 ```text
 action     = REPEAT_NOW
 reasonCode = RETEST_FORECAST_BOUNDARY_RISK
 ```
 
-Forecast timing never overrides an immediate safety rule (Part II §54). This candidate is
-not subject to the ordinary-observation floor below.
+**This candidate runs only while the level is inside the bound.** It forecasts a crossing;
+once `ALK-003A` reports `BREACHED_LOW` or `BREACHED_HIGH` there is no crossing left to
+forecast, `ALK-OUTER-BOUND-ACTION-001` owns the response, and the `SAFETY_RETURN` and
+high-breach candidates own the cadence:
+
+```text
+outerBoundState in { BREACHED_LOW, BREACHED_HIGH }  -> FORECAST_BOUNDARY_RISK not submitted
+```
+
+Without that condition `ALK-062`'s clamp of \(T_{outer}\) to zero on a breached level
+would hold the scheduler at `REPEAT_NOW` indefinitely and make the ~24 h safety cadence
+this canon states unreachable in exactly the state it was written for.
+
+Forecast timing never overrides an immediate safety rule (Part II §54).
 
 ### Bounds on ordinary observation
 
 - **Ceiling.** An ordinary observation candidate is clamped to the existing ~Day-4 window:
   **no ordinary observation candidate exceeds 96 hours.** The chemistry layer defines no
-  longer quiet-monitoring interval (`ALK-050`).
-- **Floor.** An ordinary observation candidate is clamped up to the existing **24-hour**
-  independence minimum (`ALK-008`, `ALK-INDEPENDENT-SELECTION-001`), because a test taken
-  sooner cannot produce a new full-strength maintenance-trend observation. This floor binds
-  ordinary observation only. It never delays `REPEAT_NOW`, a rapid candidate, a safety
-  candidate, a high-breach candidate or a forecast-boundary candidate.
+  longer quiet-monitoring interval (`ALK-050`). This is Part II §66's "maximum observation
+  interval" for alkalinity, and it reuses an interval the canon already states.
 
-Both bounds reuse constants the canon already states. Part II §66's generic "minimum useful
-interval" and "maximum observation interval" are supplied by those two existing values and
-by nothing new.
+- **No floor.** Part II §66's "minimum useful interval" is **not** supplied. Freeze 5
+  states a ceiling and forbids inventing constants to fill the previously absent generic
+  scheduler parameters, and a minimum useful interval was one of them. The clamp is
+  therefore `NOT_RUN`:
+
+```text
+minimumUsefulIntervalApplied = NOT_RUN
+reason                       = RETEST_MINIMUM_INTERVAL_UNAVAILABLE
+```
+
+  `ALK-008`'s 24 h is a **trend-independence** minimum, not a scheduling minimum, and this
+  rule does not repurpose it. A consequence must be stated plainly rather than clamped away:
+  where \(|S_{supported}| > 0.10\) dKH/day, \(T_{signal}\) is under 24 hours, so the
+  scheduler may recommend a test that `ALK-008` will not accept as a new full-strength trend
+  observation. The test still establishes position, still confirms or refutes an anomaly and
+  still feeds `ALK-RAPID-BASIS-001`. Whether the scheduler should carry a floor above that
+  acceptance boundary is an open question, recorded as `OI-RETESTFLOOR-001`.
 
 ### Selection
 
-The single scheduler returns the **earliest applicable candidate** after the clamps above.
+The single scheduler returns the **earliest applicable candidate** after the clamp above.
 `REPEAT_NOW` outranks ordinary scheduling (Part II §55). The output is
 Part II §57's `RetestRecommendation`, carrying every evaluated candidate and every
 `NOT_RUN` candidate class so the choice is auditable. Cards render that output and must not
 invent a separate cadence (`ALK-052`, `ALK-SAFETY-RETURN-INTEGRATION-001` §9).
+
+Freeze 5's candidates can land on the same instant as an existing one — \(T_{signal}\) at
+24.0 h against `ALK-052`'s rapid candidate, or at 48.0 h against `ALK-050`'s routine
+cadence. **Where candidates tie on time, the recommended time is that time and every tied
+candidate's reason code is emitted**, all of them recorded in `candidateTimes[]`. Reason
+codes are additive, so no precedence between tied candidates is invented and the audit
+record does not depend on evaluation order.
 
 Under ordinary conditions the scheduler preserves the understandable ~48-hour human rhythm
 rather than presenting spurious precision; that presentation rule (`ALK-053`) applies to
@@ -8490,9 +8598,16 @@ where a Theil–Sen slope over a resting tank is almost never exactly zero.
 evidence that nothing is already moving, not an absence of evidence. A supported non-zero
 trajectory is not eligible either.
 
-Where `ALK-024` and this rule say "stable", they mean `returnPlanEligibleTrajectory`.
+Every canon site that gates a **return-plan offer** on the word "stable" means
+`returnPlanEligibleTrajectory`, not `ALK-STABLE-001`'s `STABLE`. Those sites are `ALK-024`,
+`ALK-027`, this rule, and the `Below | Stable` and `Above | Stable` cells of `ALK-070`.
 Where `ALK-STABLE-001` says `STABLE`, it means `STABLE`. The two are deliberately different
 and must not be collapsed. `WG-ALK-014` is executable under this predicate.
+
+`ALK-070`'s `Any | Uncertain` row holds maintenance and gathers evidence; it does **not**
+suppress the offer. `UNCERTAINTY_LIMITED` with the ordinary evidence minimum satisfied is
+eligible, and it is the ordinary state of a resting out-of-range tank, so the offer is
+reachable there and must not be withheld by reading that row as covering it.
 
 The offer remains opt-in (`CORE-STABILISE-001`, Part I §36.2), remains outside automatic
 maintenance, and does not change the maintenance recommendation, which is HOLD on both
@@ -8796,12 +8911,23 @@ The guard is a **hard constraint**. It is evaluated on the continuous candidate 
 alongside the physical rate rail — because rounding away from the current command can move
 a command across the guard exactly as `WG-ALK-063` demonstrates for the rail.
 
-A rounded command that violates the guard is handled by `ALK-ROUNDING-001` steps 7 and 8:
-step toward the current command by actuator increments until feasible. If no changed
-representable command is feasible, the outcome is the withheld state above rather than a
-guard-edge command. If the **current** command itself exceeds the guard, the engine
-withholds an executable maintenance command and reports the exceedance rather than
-affirming the current dose.
+The guard binds at **both** positions, and the pre-rounding evaluation is not advisory:
+
+1. **On the continuous candidate**, before rounding. A continuous candidate that exceeds
+   the guard is withheld under Enforcement above. `ALK-ROUNDING-001` is not entered, and its
+   step 7 — which fires only where rounding *alone* caused the violation — is not reached.
+2. **On the rounded command**, in `ALK-ROUNDING-001` step 6. Where a compliant continuous
+   candidate rounds to a command that exceeds the guard, step 7 applies as written: step
+   toward the current command by actuator increments until feasible. If no changed
+   representable command is feasible, the outcome is the withheld state above.
+
+**Neither position may emit the guard value itself as the recommendation**, whether reached
+by capping or by stepping. A command numerically equal to \(V_{alk,max,24h}\) is
+indistinguishable from a capped one, so it is withheld.
+
+This rule constrains **engine-generated** delivery. A keeper's pre-existing dose above the
+guard is not an engine-generated command; the engine reports the exceedance and withholds
+any new command that would also exceed it, and this rule does not say what else follows.
 
 
 For a 77 L validation example:
@@ -9057,15 +9183,15 @@ Assuming evidence is sufficient and no intervention lock/confounder overrides:
 | Position | Trajectory | Automatic maintenance logic |
 |---|---|---|
 | Below | Falling | Increase toward consumption-matching maintenance |
-| Below | Stable | Hold maintenance; offer return plan |
+| Below | Stable | Hold maintenance; offer return plan where `returnPlanEligibleTrajectory` holds (`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`) |
 | Below | Rising | Hold maintenance (`ALK-TOWARD-RANGE-HOLD-001`) where the rise is supported; do not increase merely because low; evaluate why it is rising / active plan |
 | In range | Falling | Increase maintenance if supported; forecast lower edge |
 | In range | Stable | Hold |
 | In range | Rising | Decrease maintenance if supported; forecast upper edge |
 | Above | Falling | Hold maintenance (`ALK-TOWARD-RANGE-HOLD-001`) where the fall is supported; do not keep reducing merely because high; evaluate active plan/current maintenance |
-| Above | Stable | Hold maintenance; offer return plan |
+| Above | Stable | Hold maintenance; offer return plan where `returnPlanEligibleTrajectory` holds (`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`) |
 | Above | Rising | Decrease toward consumption-matching maintenance if consumption is interpretable |
-| Any | Uncertain | Hold / gather evidence |
+| Any | Uncertain | Hold / gather evidence. `UNCERTAINTY_LIMITED` with the ordinary evidence minimum met is return-plan eligible and the offer is not suppressed here |
 | Any | Rapid confirmed | Apply rapid/safety rule |
 | Any | Active unevaluable intervention | Hold current intervention unless override |
 
@@ -9088,7 +9214,7 @@ and forbids inventing them.
 
 ```text
 recommendationConfidence = UNSPECIFIED
-reason                   = OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE
+reason                   = OUTPUT_CONFIDENCE_UNSPECIFIED
 ```
 
 Until a classification is separately specified and canonised, `UNSPECIFIED` is the emitted
@@ -15674,7 +15800,24 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | F5-12 `recommendationConfidence = UNSPECIFIED` | `ALK-CONFIDENCE-OUTPUT-001` amended (`ALK-071`) | `OI-CONFIDENCE-001` |
 
 All eleven blocking items are closed. Every withheld output they gated now has a determined
-value or a **canonised** `NOT_RUN`.
+value or a **canonised** `NOT_RUN`, with two narrow exceptions recorded below.
+
+### Deliberately not answered inside a closed item
+
+Independent review found three points where encoding a decision would have required a
+second decision the owner did not make. Each is left undetermined with an explicit refusal
+rather than resolved by derivation, and each is a **new** register item rather than a
+reopening of the closed one:
+
+| Item | The question Freeze 5 does not answer |
+|---|---|
+| `OI-HIGHBREACHBAND-001` | Whether a negative `C_estimate` that is **not** materially negative counts as "physically uninterpretable" for `ALK-HIGH-BREACH-UNRESOLVED-001`. It decides whether alkalinity dosing is paused to 0 mL/day in a band spanning `-1.28·sigma_S <= C < 0`. Outside that band the fail-safe is fully determined. |
+| `OI-CLUSTERTIE-001` | Which of two candidate clusters sharing a representative timestamp is accepted. `ALK-INDEPENDENT-SELECTION-001` orders by timestamp and states no tie-break; the two can carry different values and therefore different doses. |
+| `OI-RETESTFLOOR-001` | Whether the retest scheduler should carry a minimum useful interval above `ALK-008`'s 24 h trend-acceptance boundary. Freeze 5 supplies no floor, so a fast-moving tank may be told to test before a test can count for trend. |
+
+The first two withhold the dependent output. The third does not withhold anything; it
+schedules an earlier test than `ALK-008` can use for trend, which costs a test strip and
+not tank safety.
 
 ### Constants
 
@@ -15683,7 +15826,7 @@ Freeze 5 introduces **no new numeric constant.** Every threshold it uses is alre
 ```text
 ALK_SLOPE_SUPPORT_K = 1.28          # F5-03 materiality boundary
 sigma_Alk_base      = 0.10 dKH      # F5-09 T_signal numerator
-24 h independence   = ALK-008       # F5-01 selection, F5-09 observation floor
+24 h independence   = ALK-008       # F5-01 selection, F5-07 rapid pair
 24 h safety cadence = ALK-052       # F5-09 forecast safety lead
 48 h routine        = ALK-050       # F5-09 routine candidate
 ~Day 4              = ALK-053       # F5-09 ordinary-observation ceiling
@@ -15692,8 +15835,9 @@ sigma_Alk_base      = 0.10 dKH      # F5-09 T_signal numerator
 ```
 
 `sigma_P`, `sigma_D`, `K_detect`, a generic `RequiredMovement`, a `boundarySafetyMargin`
-distinct from the 24 h lead, a `minimumExposure`, an Alk `Z` threshold and numeric
-confidence thresholds are all deliberately **not** introduced.
+distinct from the 24 h lead, a `minimumExposure`, a scheduler minimum useful interval, an
+Alk `Z` threshold and numeric confidence thresholds are all deliberately **not**
+introduced.
 
 ### Carried forward unchanged
 
@@ -15724,7 +15868,8 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
 - normalization uncertainty propagation (`OI-NORMUNCERT-001`);
 - minimum post-change exposure (`OI-EXPOSURE-001`);
 - `ALK-037`'s Day-4 wording (`OI-DAY4-001`) and `ALK-012`'s illustrative examples
-  (`OI-STABLE-001`), both documentation defects whose normative text already governs.
+  (`OI-STABLE-001`), both documentation defects whose normative text already governs;
+- the three items in *Deliberately not answered inside a closed item* above.
 
 ### Freeze status
 
@@ -16391,10 +16536,10 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `ALK-PREDICTED-POST-SLOPE-001` | `ALK-G010`, `WG-ALK-001` |
 | `ALK-POSTCHANGE-RETEST-001` | `ALK-G010`, `ALK-G011`, `WG-ALK-060` |
 | `ALK-RETURN-EXPIRY-001` | `WG-ALK-031`, `WG-ALK-032` |
-| `ALK-LIQUID-VOLUME-GUARD-001` | `WG-ALK-067` |
+| `ALK-LIQUID-VOLUME-GUARD-001` | `WG-ALK-067`, `AD-SAF-003`, `AD-SAF-004` |
 | `ALK-FORECAST-SLOPE-001` | `WG-ALK-042`, `WG-ALK-043` |
 | `ALK-VARIABLE-SEMANTICS-001` | `INV-ALK-VARIABLES-001` |
-| `ALK-CONFIDENCE-OUTPUT-001` | `INV-ALK-CONFIDENCE-001` |
+| `ALK-CONFIDENCE-OUTPUT-001` | `INV-ALK-CONFIDENCE-001`, `AD-OUT-001` |
 | `ALK-SLOPE-SUPPORT-001` | `WG-ALK-001`, `WG-ALK-002`, `WG-ALK-062` |
 | `ALK-RESPONSE-PRE-EVIDENCE-001` | `WG-ALK-044` |
 | `ALK-RESPONSE-CLASSIFIER-001` | `WG-ALK-007`, `WG-ALK-008`, `WG-ALK-009` |
@@ -16410,6 +16555,16 @@ For identical evidence and supported slope, changing only a descriptive confiden
 | `MIGRATION-ALK-ONLY-001` | `X-MIG-001` |
 | `MIGRATION-INERT-CA-MG-MEASUREMENTS-001` | `X-MIG-001` |
 | `MIGRATION-MG-GATE-ISOLATION-001` | `X-MIG-001` |
+| `ALK-INDEPENDENT-SELECTION-001` | `AD-SEG-001`, `AD-SEG-005` |
+| `ALK-SUSPECT-DETECTION-001` | `AD-VAL-001`, `AD-TRD-004`, `ALK-G024`, `ALK-G025` |
+| `ALK-NEGATIVE-MATERIALITY-001` | `AD-CON-002`, `WG-ALK-013`, `ALK-G026` |
+| `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` | `WG-ALK-014`, `AD-RTN-003`, `AD-MNT-008` |
+| `ALK-TOWARD-RANGE-HOLD-001` | `AD-MNT-006`, `AD-MNT-007`, `AD-MNT-008` |
+| `ALK-RAPID-BASIS-001` | `AD-RAP-001` |
+| `ALK-RETURN-TERMINATED-BY-SAFETY-001` | `AD-RTN-004`, `AD-RTN-005` |
+| `ALK-RETEST-SCHEDULER-001` | `AD-RET-001`, `AD-RET-002`, `AD-RET-003`, `AD-RET-004`, `WG-ALK-060` |
+| `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` | `WG-ALK-011`, `AD-SEG-006`, `ALK-G022` |
+| `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | `AD-SAF-002`, `AD-SAF-005` |
 
 ---
 

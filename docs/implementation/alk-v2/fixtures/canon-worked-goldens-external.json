@@ -122,7 +122,7 @@
       "title": "High breach plus uninterpretable consumption pauses Alk addition",
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-051", "ALK-HIGH-BREACH-UNRESOLVED-001"] },
       "rulesExercised": ["ALK-HIGH-BREACH-UNRESOLVED-001", "ALK-NEGATIVE-CONSUMPTION-001", "ALK-NEGATIVE-MATERIALITY-001"],
-      "input": { "outerMaxDkh": 11.0, "latestAlkDkh": 11.40, "currentAlkDoseMlPerDay": 10.0, "consumptionEstimate": "NEGATIVE - uninterpretable under ALK-NEGATIVE-MATERIALITY-001 on either branch", "temporaryUpwardCorrectionActive": false },
+      "input": { "outerMaxDkh": 11.0, "latestAlkDkh": 11.40, "currentAlkDoseMlPerDay": 10.0, "consumptionEstimate": "MATERIALLY NEGATIVE under ALK-NEGATIVE-MATERIALITY-001, i.e. C_estimate + 1.28*sigma_S < 0", "temporaryUpwardCorrectionActive": false },
       "expectedAction": {
         "outerBoundState": "BREACHED_HIGH",
         "interventionType": "SAFETY_RETURN",
@@ -134,7 +134,7 @@
       },
       "expectedReasonCodes": ["SAFETY_OUTER_BOUND_BREACHED_HIGH", "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE", "RETEST_HIGH_BREACH_FAILSAFE"],
       "forbidden": { "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden.", "reasonCodes": ["SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED"] },
-      "openIssues": ["OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03); the zero-dose fail-safe is no longer gated, because a negative C_estimate is uninterpretable on both materiality branches"]
+      "openIssues": ["OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03); the fail-safe is un-gated on the MATERIAL branch, which is this fixture. The narrow non-material band is OI-HIGHBREACHBAND-001 and is exercised by AD-CON-002."]
     },
     {
       "fixtureId": "WG-ALK-052",

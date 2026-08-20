@@ -320,7 +320,7 @@
         "optionalReturnPlan": {
           "aimPointLevelDkh": 8.50,
           "pace": "STEADY", "plannedSlopeDkhPerDay": 0.25,
-          "temporaryDoseMlPerDay": 12.6075042, "roundedTemporaryDoseMlPerDay": 12.6,
+          "temporaryDoseMlPerDay": 12.607503608, "roundedTemporaryDoseMlPerDay": 12.6,
           "levelDistanceDkh": 0.70, "idealizedDurationDays": 2.8,
           "offer": "AVAILABLE", "optIn": true
         }

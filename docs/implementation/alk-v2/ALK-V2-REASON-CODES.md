@@ -120,6 +120,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `EVIDENCE_INSUFFICIENT_CLUSTERS` | `GATING` | Fewer than 3 independent clusters in the 14-day window. | `have`, `need: 3`, `windowDays: 14`, `nextUsefulTestAt` |
 | `EVIDENCE_INSUFFICIENT_SPAN` | `GATING` | Span under 4 days. | `haveDays`, `needDays: 4`, `nextUsefulTestAt` |
 | `EVIDENCE_INSUFFICIENT_POSTCHANGE_SPAN` | `GATING` | Post-change regime has not yet reached the ordinary minimum. | `postClusters`, `postSpanDays`, `earliestSufficientAt` |
+| `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | `REFUSAL` | Two candidate clusters share a representative timestamp; which is accepted is undetermined. Position, safety, history and retest continue. | `tiedClusterIds[]`, `representativeAt`, `openIssue: OI-CLUSTERTIE-001` |
 | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | `INFO` | Forward-greedy chronological selection ran; at least one candidate cluster was not accepted as an ordinary trend observation. Its non-trend uses are unaffected. | `acceptedClusterIds[]`, `notAcceptedClusterIds[]`, `separationHours[]`, `ruleId: ALK-INDEPENDENT-SELECTION-001` |
 | `EVIDENCE_CONFOUNDED_HARD` | `GATING` | A hard confounder prevents the inference. | `confounders[]` |
 | `EVIDENCE_ANOMALOUS_LATEST_CLUSTER` | `GATING` | Latest cluster unresolved; ordinary dose action withheld. | `clusterId`, `spreadDkh` |
@@ -255,7 +256,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RAIL` | `SAFETY` | Combined intentional movement would exceed 0.50 dKH/day. Emitted alongside the above. | `safetyMovementDkh`, `maintenanceEffectDkh`, `railDkh: 0.50` |
 | `MAINTENANCE_HOLD_TOWARD_RANGE` | `INFO` | Below range with a supported rise, or above range with a supported fall. Automatic maintenance does not oppose a supported trajectory already moving the level toward the preferred range. | `position`, `trajectory`, `S_observed`, `S_supported`, `maintenanceEstimate`, `forecastRangeEntryDays`, `ruleId: ALK-TOWARD-RANGE-HOLD-001` |
 | `MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE` | `SAFETY` | Negative or uninterpretable consumption cannot size a change; the accepted estimate is held. | `consumptionDkhPerDay`, `acceptedMaintenanceEstimate` |
-| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The executable command is withheld and is **never** capped to the guard value. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAfterRounding: true`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
+| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The executable command is withheld and is **never** capped to the guard value, nor emitted equal to it. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAt: CONTINUOUS \| POST_ROUNDING`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
 
 ## BRACKET_ — owner: `MAINTENANCE`
 
@@ -294,6 +295,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `SAFETY_RETURN_COMPLETE` | `INFO` | Buffered destination reached; ordinary sequencing resumes. | `A_now`, `safetyDestinationDkh` |
 | `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | `INFO` | One-off safety volume emitted although the maintenance increment is missing. | `correctionVolumeMl`, `P` |
 | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` | `SAFETY` | Above `outerMax` with an uninterpretable mass balance; pausing dosing is recommended. Not a maintenance estimate. | `A_now`, `outerMax`, `maintenanceEstimateStatus: UNRESOLVED` |
+| `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` | `GATING` | Above `outerMax` with a negative but **not** materially negative `C_estimate`. Whether that counts as physically uninterpretable is undetermined, so the zero-dose pause is `NOT_RUN`. Position, outer-bound state and the 24 h cadence continue. | `consumptionDkhPerDay`, `materialityMargin`, `openIssue: OI-HIGHBREACHBAND-001` |
 | `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` with `C_estimate >= 0`; the temporary safety **rate** path runs instead of the zero-dose pause. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
 | `SAFETY_HIGH_BREACH_SLOWER_DECLINE` | `INFO` | Zero dosing cannot achieve the desired decline; the achievable rate is reported. | `desiredRate`, `achievableRate`, `C_estimate` |
 | `SAFETY_RATE_RAIL_APPLIED` | `SAFETY` | 0.50 dKH/day physical-effect rail bound the change. | `uncappedEffect`, `railDkhPerDay: 0.50`, `cappedDeltaDose` |
@@ -321,9 +323,9 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` | `INFO` | `T_detect` candidate canonically `NOT_RUN`; Freeze 5 declined to invent `K_detect`. | `ruleId: ALK-RETEST-SCHEDULER-001` |
 | `RETEST_SIGNAL_ACCUMULATION` | `INFO` | Confidence-building candidate selected: `T_signal = 0.10 / |S_supported|`. | `sSupportedDkhPerDay`, `tSignalDays`, `recommendedAt` |
 | `RETEST_SIGNAL_ACCUMULATION_NOT_RUN` | `INFO` | `T_signal` candidate `NOT_RUN` because `S_supported = 0` or movement evidence is `INSUFFICIENT`. | `sSupportedDkhPerDay`, `movementEvidence` |
-| `RETEST_FORECAST_BOUNDARY_RISK` | `SAFETY` | Testing scheduled before a projected outer-bound crossing, targeting the 24 h safety lead. `T_boundary <= 0` returns test-now semantics. | `T_outerDays`, `T_boundaryDays`, `boundSide`, `recommendedAt` |
+| `RETEST_FORECAST_BOUNDARY_RISK` | `SAFETY` | Testing scheduled before a projected outer-bound crossing, targeting the 24 h safety lead. `T_boundary <= 0` returns test-now semantics. Not submitted once the level is already breached. | `T_outerDays`, `T_boundaryDays`, `boundSide`, `recommendedAt` |
 | `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE` | `INFO` | The return-plan arrival-check candidate is canonically `NOT_RUN`; ordinary, rapid, safety and expiry candidates continue. | `returnPlanId`, `ruleId: ALK-RETEST-SCHEDULER-001` |
-| `RETEST_OBSERVATION_FLOOR_APPLIED` | `INFO` | An ordinary observation candidate was clamped up to the 24 h independence minimum. Never applied to repeat-now, rapid, safety or forecast-boundary candidates. | `rawCandidateHours`, `floorHours: 24` |
+| `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` | `INFO` | Part II §66's minimum-useful-interval clamp is `NOT_RUN`; Freeze 5 supplies no scheduler floor. | `openIssue: OI-RETESTFLOOR-001` |
 | `RETEST_OBSERVATION_CEILING_APPLIED` | `INFO` | An ordinary observation candidate was clamped down to the ~Day-4 window. | `rawCandidateHours`, `ceilingHours: 96` |
 
 ## CAPABILITY_ — owner: `CAPABILITY`
@@ -395,7 +397,7 @@ output.
 | `CLUSTER_` | 5 |
 | `SEGMENT_` | 21 |
 | `DELIVERY_` | 5 |
-| `EVIDENCE_` | 9 |
+| `EVIDENCE_` | 10 |
 | `TRAJECTORY_` | 8 |
 | `UNCERTAINTY_` | 5 |
 | `CONSUMPTION_` | 8 |
@@ -405,14 +407,14 @@ output.
 | `MAINTENANCE_` | 17 |
 | `BRACKET_` | 4 |
 | `RETURN_` | 12 |
-| `SAFETY_` | 17 |
+| `SAFETY_` | 18 |
 | `RETEST_` | 16 |
 | `CAPABILITY_` | 14 |
 | `OUTPUT_` | 3 |
 | `AUDIT_` | 3 |
 | `PRESENTATION_` | 5 |
 | `MIGRATION_` | 4 |
-| **Total** | **239** |
+| **Total** | **241** |
 
 ---
 
@@ -425,10 +427,10 @@ failure.
 
 | Retired code | Replaced by | Freeze-5 decision |
 |---|---|---|
-| `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | F5-01 |
+| `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED`; `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` for the identical-timestamp case Freeze 5 left open | F5-01 |
 | `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` (renamed: the state is decided, not unavailable) | F5-02 |
 | `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | F5-03 |
-| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (now reachable) and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | F5-03 |
+| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (reachable on the material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE`, and `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` for the band Freeze 5 left open | F5-03 |
 | `RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED` | `RETURN_OFFER_AVAILABLE` / `RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY` | F5-04 |
 | `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `MAINTENANCE_HOLD_TOWARD_RANGE` | F5-05 |
 | `MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED` | `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | F5-06 |
@@ -436,14 +438,19 @@ failure.
 | `RETURN_SUSPENDED_BY_SAFETY_RETURN` | `RETURN_TERMINATED_BY_SAFETY_RETURN` + `RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY` | F5-08 |
 | `RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE` | `RETEST_SIGNAL_ACCUMULATION` / `RETEST_SIGNAL_ACCUMULATION_NOT_RUN` | F5-09 |
 | `RETEST_BOUNDARY_MARGIN_UNAVAILABLE` | `RETEST_FORECAST_BOUNDARY_RISK` | F5-09 |
-| `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` | `RETEST_OBSERVATION_FLOOR_APPLIED` + `RETEST_OBSERVATION_CEILING_APPLIED` | F5-09 |
+| `RETEST_OBSERVATION_FLOOR_APPLIED` | *(never shipped — Freeze 5 supplies no scheduler floor; `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` is retained instead)* | F5-09 |
 | `SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED` | `SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE` | F5-10 |
 | `SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED` | `SAFETY_TEMP_RATE_ADVISORY_EMITTED` + `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` | F5-11 |
-| `OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE` | `OUTPUT_CONFIDENCE_UNSPECIFIED` (renamed: `UNSPECIFIED` is the decided value) | F5-12 |
+| `OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE` | `OUTPUT_CONFIDENCE_UNSPECIFIED` (renamed: `UNSPECIFIED` is the decided value). `ALK-071` names the new code. | F5-12 |
 
-Two `RETEST_` codes are **kept**, with their meaning changed from "policy absent" to
-"canonically `NOT_RUN`": `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
-`RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`.
+Three `RETEST_` codes are **kept**. `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
+`RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE` change meaning from "policy absent" to
+"canonically `NOT_RUN`". `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` keeps its original meaning:
+Freeze 5 supplies no scheduler floor.
+
+A code listed here is retired **as an emitted code**. Where a Freeze-5 decision turned out
+to leave a narrow question open, the replacement column names the code that now covers the
+open part — a refusal under a precise name, not a reinstatement of the vague one.
 
 ---
 

@@ -171,9 +171,10 @@ would destroy exactly the readings the safety layer exists for.
 | `INVALID` | Known not to represent a usable measurement. Retained, excluded from analysis. | yes | no |
 | `SUPERSEDED` | Explicitly replaced while retained for audit. A repeat that merely differs does **not** supersede — use a cluster. | yes | no |
 
-`SUSPECT` cannot currently be derived automatically for alkalinity — see
-`OI-SUSPECT-001`. It is set from explicit user marking, a known device/test fault event,
-or an internally inconsistent cluster.
+`SUSPECT` is never derived from an automatic statistical test for alkalinity: that
+detection is canonically `NOT_RUN` (`ALK-SUSPECT-DETECTION-001`, F5-02). It is set from
+explicit user marking, a known device/test fault event, or an internally inconsistent
+cluster.
 
 ### `MeasurementCluster` `DERIVED`
 
@@ -190,7 +191,7 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `madDkh` | dKH | `median(|x_i − median(x)|)`. |
 | `sigmaClusterDkh` | dKH | `max(SIGMA_ALK_BASE, 1.4826 · madDkh)`. **Never** divided by `√n` (Part II §5.6). |
 | `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`). |
-| `independent` | — | `true` when selected as an independent observation — see `OI-INDEPENDENCE-001`. |
+| `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
 
 Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
 member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention
@@ -514,7 +515,7 @@ Seven distinct quantities that `ALK-VARIABLE-SEMANTICS-001` forbids collapsing:
 | `currentDoseMlPerDay` | mL/day | What is running now. |
 | `maintenanceEstimateMlPerDay` | mL/day | `C/P` — the dose that would give zero slope if the observed estimate were exact. Audit/explanation. |
 | `continuousActionCandidateMlPerDay` | mL/day | `D_current − S_supported/P`, before physical and actuator limits. |
-| `recommendedDoseMlPerDay` | mL/day | The final feasible, rounded, implementable command. |
+| `recommendedDoseMlPerDay` | mL/day | The final feasible, rounded, implementable command. `WITHHELD` where no feasible command exists — a first-class value, never `null` and never omitted. |
 | `deltaDoseMlPerDay` | mL/day | `recommended − current`. |
 | `deltaEffectDkhPerDay` | dKH/day | `P · deltaDose` — the physical effect of the final command. |
 | `predictedPostSlopeDkhPerDay` | dKH/day | `S_observed + P · deltaDose`. **Normally non-zero.** |
@@ -528,7 +529,7 @@ Plus:
 | `doseStepRegime` | `ORDINARY` \| `BASELINE_ESTABLISHMENT`. |
 | `capApplied` | `NONE` \| `ORDINARY_25` \| `EXCEPTIONAL_50`. |
 | `bracketStatus` | `NOT_RUN` \| `CONSISTENT` \| `CONFLICT` — advisory only (`OI-BRACKETEFFECT-001`). |
-| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY`. |
+| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds an executable command rather than affirming the current dose. |
 | `reasonCodes[]` | |
 
 `RecommendationAction` closed vocabulary: `NO_CHANGE` \| `HOLD_CURRENT_DOSE` \|
@@ -686,7 +687,8 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `bSafetyDkh` | dKH | `0.20`, fixed. **Never** recomputed from the current kit, residual scatter or `sigma_point` (`ALK-SAFETY-BUFFER-001` Freeze-2 interpretation). |
 | `desiredMovementDkh` | dKH | `min(A_safe,low − A_now, 0.50)` low; `min(A_now − A_safe,high, 0.50)` high. |
 | `safetyCorrectionVolumeMl` | mL | `ΔA_safety / P_selected`. Low breach only. **A volume.** |
-| `safetyTemporaryDoseMlPerDay` | mL/day | High breach with interpretable consumption. **A rate.** See `OI-SAFETYRATE-001`. |
+| `temporarySafetyRateAdvisoryMlPerDay` | mL/day | High breach with interpretable consumption. **A rate**, at full precision, and an advisory target rather than a pump setting. Emitted even when the actuator increment is missing (`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`). |
+| `temporarySafetyPumpCommandMlPerDay` | mL/day | The executable rounded pump command for the same rate. `NOT_RUN` while `actuatorIncrementMlPerDay` is unavailable. **Never merged with the field above** — that merge is what `M-1` and F5-11 exist to prevent. |
 | `safetyDoseRecommendationMlPerDay` | mL/day | `0` under `ALK-HIGH-BREACH-UNRESOLVED-001`. |
 | `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |
@@ -713,7 +715,7 @@ RetestDecision {
   candidateTimes[]    { candidateClass, at, included|excluded, reason }
   candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
                       (T_detect, return-plan arrival cadence)
-  clampsApplied[]     RETEST_OBSERVATION_FLOOR_APPLIED | RETEST_OBSERVATION_CEILING_APPLIED
+  clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED
   assumptions[]
 }
 ```

@@ -151,8 +151,25 @@ Three properties this shape guarantees, each of which a naive implementation los
 
 ```text
 1. the anchor is the LAST ACCEPTED cluster, never the last candidate examined
-2. appending a newer cluster never changes an earlier acceptance  (replay stability)
+2. appending a cluster AFTER the latest accepted one never changes an earlier acceptance
 3. the >= 24 h comparison is inclusive at exactly 24 h           [ALK-008, ALK-RAPID-001]
+```
+
+Property 2 is bounded to appended data. A cluster backdated to before the current earliest
+candidate re-runs selection from the new earliest and may accept a different set. That is
+required by `ALK-065` / `WG-ALK-029` — a backdated valid measurement changes the present
+analysis — and the historical assessment record stays immutable regardless.
+
+```text
+PRECONDITION, checked before selection runs:
+    no two candidate clusters share a representativeAt          [OI-CLUSTERTIE-001]
+    violated -> independentSelection = TIE_UNRESOLVED
+                movementEvidence     = INSUFFICIENT
+                automaticMaintenanceAction = WITHHELD
+                EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED
+                + PII-2.4 item 4 ambiguity marking
+    Reachable: PII-5.3 groups automatically only within the same or a compatible method,
+    so two incompatible methods at one instant yield two clusters at one timestamp.
 ```
 
 A cluster that is not accepted is **not excluded, invalidated or hidden**. It MAY still:
@@ -177,8 +194,10 @@ candidate was not accepted.
 **FORBIDDEN** backward-greedy selection; keep-all-and-mark; re-anchoring on a rejected
 cluster; any selection whose result depends on the newest reading.
 
-**TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (later arrival
-does not retroactively change selection); `EVD-002` all spacings ≥ 24 h proceeds normally.
+**TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (appended
+cluster does not change selection; backdated-earlier case asserted separately);
+`AD-SEG-007` (identical representative timestamps ⇒ refusal); `EVD-002` all spacings ≥ 24 h
+proceeds normally.
 
 ## A5 — Segment construction
 
@@ -461,7 +480,9 @@ dead-end label (`IX-005`).
 
 ## A12 — Rapid override — `ALK-RAPID-001`
 
-**INPUTS** the latest independent pair of clusters, known events in the interval.
+**INPUTS** the latest cluster in the segment and the most recent **candidate** cluster at
+least 24 h before it — not only accepted clusters, because `ALK-008` grants a non-accepted
+cluster the right to contribute to the rapid rule. Plus known events in the interval.
 
 **DECISION TREE**
 
@@ -610,8 +631,12 @@ C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY
         -> maintenanceAction = HOLD
         -> CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED
 
-    both branches are uninterpretable for maintenance sizing, so where
-    A_now > OuterMax both arm ALK-HIGH-BREACH-UNRESOLVED-001 (0 mL/day pause)
+    high-breach consequence above OuterMax:      [ALK-NEGATIVE-MATERIALITY-001 Scope]
+        materially negative      -> ALK-HIGH-BREACH-UNRESOLVED-001, 0 mL/day pause
+        NOT materially negative  -> UNDETERMINED       [OI-HIGHBREACHBAND-001]
+                                    highBreachZeroDosePause = NOT_RUN
+                                    SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED
+    maintenance is HOLD on both branches either way
 ```
 
 At exactly `C_estimate + 1.28 * sigma_S = 0` the result is **not** materially negative.
@@ -775,6 +800,9 @@ evidence, rail, step cap, bracket and non-negative rules.
 6. recheck every hard constraint affected by discretisation:
        rate rail, step cap, non-negative, liquid-volume guard
                                             [ALK-LIQUID-VOLUME-GUARD-001, ALK-049]
+   the guard was already applied to the CONTINUOUS candidate at ALK-049 step 8, so any
+   guard violation seen here was caused by discretisation alone, which is exactly
+   step 7's precondition
 7. if a hard constraint is violated only because rounding moved the command further
    from D_current, step by R_pump TOWARD D_current until feasible
 8. if the feasible command equals D_current:
@@ -1471,8 +1499,8 @@ consumption INTERPRETABLE:
         ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
         P_selected invalid -> neither field; state the required dKH movement only
 
-consumption PHYSICALLY UNINTERPRETABLE  (C_estimate < 0, either branch of
-ALK-NEGATIVE-MATERIALITY-001):                         [ALK-HIGH-BREACH-UNRESOLVED-001]
+consumption MATERIALLY NEGATIVE (ALK-NEGATIVE-MATERIALITY-001):
+                                                       [ALK-HIGH-BREACH-UNRESOLVED-001]
     stop any separately temporary upward correction/return component
     safetyDoseRecommendation  = 0 mL/day
     safetyDoseReason          = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
@@ -1482,9 +1510,12 @@ ALK-NEGATIVE-MATERIALITY-001):                         [ALK-HIGH-BREACH-UNRESOLV
     retest ~24 h, or sooner if a rapid/suspicious rule requires it
 ```
 
-`C_estimate >= 0` is `INTERPRETABLE` and takes the first branch;
-`C_estimate < 0` is uninterpretable on **both** materiality branches and takes the second
-(`ALK-NEGATIVE-MATERIALITY-001`). The fail-safe is no longer gated.
+`C_estimate >= 0` is `INTERPRETABLE` and takes the first branch. A **materially negative**
+`C_estimate` takes the second. A negative `C_estimate` that is **not** materially negative
+takes neither: whether it counts as "physically uninterpretable" is undetermined
+(`OI-HIGHBREACHBAND-001`), so the zero-dose pause is `NOT_RUN` with
+`SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` while position, outer-bound state and the
+24 h cadence continue.
 
 The zero-dose pause is a fail-safe response to an invalid model, not a claim that
 biological consumption is zero. It is **not** pushed through the ordinary rail
@@ -1601,11 +1632,20 @@ if a recommended 24 h delivery would exceed V_alk_max_24h:
         lengthen/stage until BOTH the guard and the 0.50 dKH/day rail hold
         report the longer duration; only the offending single-day command is withheld
 
-POSITION: hard constraint. Evaluated on the continuous candidate AND rechecked after
-          actuator discretisation in ALK-ROUNDING-001 step 6, beside the rate rail.
-          A rounded command that violates it -> ALK-ROUNDING-001 steps 7-8 (step toward
-          D_current); if nothing feasible remains, the withheld state above.
-          If D_current ITSELF exceeds the guard, withhold rather than affirm D_current.
+POSITION: hard constraint, binding at BOTH positions:
+  1 continuous candidate, ALK-049 step 8. Exceeds -> WITHHELD, stop.
+    ALK-ROUNDING-001 is NOT entered, so its step 7 "violates only because rounding
+    moved the command" precondition is never reached with a false premise.
+  2 rounded command, ALK-ROUNDING-001 step 6. A compliant continuous candidate that
+    rounds ABOVE the guard -> step 7 steps toward D_current until feasible;
+    if nothing feasible remains -> WITHHELD.
+
+NEVER emit a command numerically equal to V_alk_max_24h, at either position, whether
+reached by capping or by stepping: it is indistinguishable from a capped command.
+
+The guard constrains ENGINE-GENERATED delivery. A keeper's pre-existing dose above the
+guard is not an engine-generated command; report the exceedance and withhold any new
+command that would also exceed it.
 ```
 
 The 0.50 dKH/day rail remains **independently** binding. A stronger solution reduces
@@ -1619,8 +1659,10 @@ canon's 0.0693 dKH/mL reference solution.
 `SAFETY_LIQUID_GUARD_EXCEEDED` / `MAINTENANCE_LIQUID_GUARD_EXCEEDED` when the executable
 command is withheld.
 
-**TESTS** `WG-ALK-067`, `AD-SAF-003` (staging), `AD-SAF-004` (maintenance command withheld,
-not capped, with the post-rounding recheck).
+**TESTS** `WG-ALK-067`, `AD-SAF-003` (staging), `AD-SAF-004` (a compliant continuous
+candidate rounds above the guard; the post-rounding recheck steps back — this is the case a
+pre-rounding-only check cannot catch), `AD-SAF-006` (continuous candidate already over the
+guard ⇒ withheld at step 8, never issued at the guard value).
 
 ---
 
@@ -1768,12 +1810,17 @@ RAPID_MOVEMENT            ~24 h
 FORECAST_BOUNDARY_RISK    T_boundary = T_outer - 1.0 days      (24 h safety lead)
                           T_outer from ALK-062 using S_observed, NEVER S_supported
                           T_boundary <= 0 -> REPEAT_NOW semantics
-                          not subject to the ordinary-observation floor
+                          NOT SUBMITTED once outerBoundState is BREACHED_LOW/HIGH:
+                          there is no crossing left to forecast, ALK-062 clamps T_outer
+                          to 0, and without this exclusion the scheduler would hold at
+                          REPEAT_NOW forever and make the ~24 h safety cadence
+                          unreachable in the state it was written for
 POST_CHANGE_FIRST         ~48 h after the actual dose change
 POST_CHANGE_SECOND        ~48 h after the first  (~Day 4)
 SIGNAL_ACCUMULATION       T_signal = 0.10 / |S_supported|   days
                           NOT_RUN when S_supported = 0 or evidence is INSUFFICIENT,
-                          which includes every post-change regime before Day +6
+                          which includes a post-change regime that has not yet reached
+                          ordinary sufficiency
 RETURN_PLAN_EXPIRY        the plan's stored expiry, T_expiry = 2*T_plan + 2
 ROUTINE_CADENCE           48 h
 ```
@@ -1783,21 +1830,29 @@ ROUTINE_CADENCE           48 h
 in `candidatesNotRun[]` with `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
 `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`. This is a decided state, not a gap.
 
-**CLAMPS on ordinary observation candidates only**
+**CLAMP on ordinary observation candidates only**
 
 ```text
-floor    24 h   ALK-008 independence minimum       RETEST_OBSERVATION_FLOOR_APPLIED
 ceiling  96 h   the existing ~Day-4 window         RETEST_OBSERVATION_CEILING_APPLIED
 
-the floor NEVER delays REPEAT_NOW, RAPID_MOVEMENT, SAFETY_RETURN_ACTIVE,
-HIGH_BREACH_FAILSAFE or FORECAST_BOUNDARY_RISK
+NO FLOOR. PII-66's minimum useful interval is NOT supplied  [OI-RETESTFLOOR-001]
+          minimumUsefulIntervalApplied = NOT_RUN
+          RETEST_MINIMUM_INTERVAL_UNAVAILABLE
+ALK-008's 24 h is a TREND-INDEPENDENCE minimum and is not repurposed as a scheduling
+floor. Where |S_supported| > 0.10 dKH/day, T_signal is under 24 h and the scheduler may
+recommend a test ALK-008 will not accept as a new full-strength trend observation. That
+test still serves position, anomaly confirmation and ALK-RAPID-BASIS-001.
 ```
 
 **SELECTION**
 
 ```text
-selected = earliest applicable candidate, after the clamps
+selected = earliest applicable candidate, after the clamp
 REPEAT_NOW outranks ordinary scheduling                              [PII-55]
+TIES: where candidates share the earliest time, emit EVERY tied candidate's reason code
+      and record all of them in candidateTimes[]. Reason codes are additive, so no
+      precedence is invented and the audit record does not depend on evaluation order.
+      Reachable: T_signal at 24.0 h vs RAPID_MOVEMENT, or at 48.0 h vs ROUTINE_CADENCE.
 preserve the understandable ~48 h human rhythm in RENDERING; the stored timestamp
 is exact
 ```
@@ -1806,10 +1861,12 @@ is exact
 and the not-run list.
 
 **TESTS** `WG-ALK-060`, `WG-ALK-001` (post-change first, 48 h), `WG-ALK-006` (rapid, 24 h),
-`ALK-G010`, `ALK-G011`, `AD-RET-001` (`T_signal` clamped up to the 24 h floor and selected),
+`ALK-G010`, `ALK-G011`, `AD-RET-001` (`T_signal` under 24 h is selected unclamped),
 `AD-RET-002` (`T_signal` above the ceiling; routine cadence still earlier),
 `AD-RET-003` (forecast boundary lead selects 40 h),
-`AD-RET-004` (crossing inside the lead ⇒ test now).
+`AD-RET-004` (crossing inside the lead ⇒ test now),
+`AD-RET-005` (already breached ⇒ the forecast candidate is not submitted and the ~24 h
+safety cadence governs).
 
 ## A47 — Capability gate — `ALK-CAPABILITY-CONTRACT-001`
 

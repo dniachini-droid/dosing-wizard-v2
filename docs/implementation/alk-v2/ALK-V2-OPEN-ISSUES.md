@@ -53,8 +53,17 @@ Items with no such box remain open, and their "Until closed" behaviour still gov
 declining to add a threshold, so the behaviour is unchanged and the exposure is now named
 rather than open.
 
-Twenty-seven items remain. Resolution of any of them belongs to a governed Alk Freeze 6 (or
-a shared freeze where the defect is shared), per the Freeze-5 reopening rule.
+Twenty-seven items remain from the original register, and Freeze-5 review **opened three
+new ones** — `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001` and `OI-RETESTFLOOR-001`, in
+section A2. Each is a question that encoding a Freeze-5 decision surfaced and that the
+decision itself does not answer. Two of them withhold a dependent output; the third does
+not.
+
+That the register grew is the intended direction. A review of a canon reissue that found
+nothing new would mean the review was not adversarial.
+
+Resolution of any of them belongs to a governed Alk Freeze 6 (or a shared freeze where the
+defect is shared), per the Freeze-5 reopening rule.
 
 ---
 
@@ -911,6 +920,138 @@ outright and a fresh opt-in is required after the safety return completes.
 
 ---
 
+# A2. Opened by `ALK_V2_FREEZE_5`
+
+Independent review of the Freeze-5 encoding found three points where writing a decision
+into the canon would have required a **second** decision the owner did not make. Each is
+left undetermined here rather than resolved by derivation, per the rule that a canon gap is
+never filled by the run that found it.
+
+These are **new** items, not reopenings. The Freeze-5 decisions they sit beside are closed.
+
+## OI-HIGHBREACHBAND-001 — the high-breach status of a negative but not materially negative consumption estimate
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-NEGATIVE-MATERIALITY-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`; `ALK-031`
+- **Owner module:** `SAFETY` / `CONSUMPTION`
+- **Raised by:** `canon-conformance-auditor`, Freeze-5 review
+
+F5-03 defines materially negative consumption and states its consequence **for maintenance
+sizing**: neither branch may reduce an established maintenance dose. It says the
+non-material branch is "uncertainty-limited/uninterpretable".
+
+`ALK-HIGH-BREACH-UNRESOLVED-001` asks a different question — whether `C_estimate` is
+"physically uninterpretable" — and its answer decides whether the engine **recommends
+pausing alkalinity dosing to 0 mL/day**.
+
+Two readings survive:
+
+- **(a) only the material branch is uninterpretable.** The boundary then does exactly the
+  job `OI-NEGCONS-001` said it does: it decides the fail-safe. `ALK-031`'s own two branch
+  headings — `UNCERTAIN / non-resolvable` versus `NON_PHYSICAL_OR_UNEXPLAINED_GAIN` —
+  support this, and it is consistent with `ALK-NEGATIVE-MATERIALITY-001`'s stated
+  conservatism, which justifies `sigma_P = sigma_D = 0` as *delaying* a pause.
+- **(b) both negative branches are uninterpretable.** F5-03 does use the word for both. But
+  then the boundary is irrelevant to the fail-safe, the pause fires across the whole
+  negative range, and the conservatism argument that justifies the boundary contradicts the
+  behaviour it produces.
+
+**Failure scenario.** `A_now = 11.2 dKH` above `OuterMax = 11.0`; three clean clusters give
+`sigma_S = 0.035355339`, so the band is `-0.045255 <= C_estimate < 0`. At `D = 1.6 mL/day`,
+`C = -0.03912`, inside the band. Under (a) the engine reports the breach and holds. Under
+(b) it recommends stopping alkalinity dosing entirely.
+
+**Until closed.**
+
+```text
+highBreachZeroDosePause = NOT_RUN
+reason                  = SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED
+```
+
+Outside the band the fail-safe is fully determined in both directions: materially negative
+arms it, non-negative takes the temporary-safety-rate path. Maintenance is HOLD throughout.
+Fixture: `AD-CON-002`.
+
+---
+
+## OI-CLUSTERTIE-001 — two candidate clusters sharing a representative timestamp
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-INDEPENDENT-SELECTION-001`; Part II §5.3; Part II §2.4
+- **Owner module:** `SEGMENTATION`
+- **Raised by:** `breaker`, Freeze-5 review
+
+F5-01 resolves which cluster survives when clusters are *close together*. It assumes
+distinct representative timestamps and states no tie-break for identical ones.
+
+The tie is reachable. Part II §5.3 groups readings automatically only within the same or a
+compatible test method, so two incompatible methods run at one instant produce **two**
+clusters with the same representative time. Part II §5.2's explicit grouping gives a second
+route.
+
+**Failure scenario.** `8.60` (Hanna) and `8.80` (Salifert) at Day 0 09:00, then `8.30` at
+Day 2 and `8.00` at Day 4, `D_current = 9.0`, `P = 0.0693`.
+
+| accepted | `S_TS` | `sigma_S` | `S_supported` | rounded command |
+|---|---|---|---|---|
+| `8.60, 8.30, 8.00` | −0.15 | 0.035355339 | −0.104745166 | **10.5 mL/day** |
+| `8.80, 8.30, 8.00` | −0.20 | 0.035355339 | −0.154745166 | **11.2 mL/day** |
+
+Both sit inside the 25% step cap and the 0.50 dKH/day rail, so nothing downstream
+reconciles them. 0.7 mL/day of divergence from one identical ledger.
+
+**Until closed.**
+
+```text
+independentSelection       = TIE_UNRESOLVED
+movementEvidence           = INSUFFICIENT
+automaticMaintenanceAction = WITHHELD
+reason                     = EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED
+```
+
+with Part II §2.4 item 4's ambiguity marking. Position, safety, history and retest are
+unaffected. Fixture: `AD-SEG-007`.
+
+**Note for the owner.** Averaging the two into one cluster is *not* available as a quiet
+default: Part II §5.3 kept them separate deliberately, because they are different methods.
+
+---
+
+## OI-RETESTFLOOR-001 — the retest scheduler has no minimum useful interval
+
+- **Class:** `CANON_DEFECT` (minor) + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-RETEST-SCHEDULER-001`; Part II §66; `ALK-008`
+- **Owner module:** `RETEST`
+- **Raised by:** `canon-conformance-auditor` and `breaker`, Freeze-5 review
+
+F5-09 supplies a ceiling (the ~Day-4 window) and forbids inventing constants to fill the
+previously absent generic scheduler parameters. Part II §66's **minimum useful interval**
+was one of them, so Freeze 5 does not supply it.
+
+The consequence is real but small. Where `|S_supported| > 0.10 dKH/day`,
+`T_signal = 0.10 / |S_supported|` is under 24 hours, and the scheduler recommends a test
+that `ALK-008` will not accept as a new full-strength maintenance-trend observation. The
+test still establishes position, still confirms or refutes an anomaly, and still feeds
+`ALK-RAPID-BASIS-001`.
+
+**Why `ALK-008`'s 24 h was not reused.** It is a *trend-independence* minimum, not a
+*scheduling* minimum. Repurposing it would be a new mapping, and it would place the floor
+exactly on the acceptance boundary with no tolerance — a keeper testing two minutes early
+would produce nothing for the trend.
+
+**Until closed.**
+
+```text
+minimumUsefulIntervalApplied = NOT_RUN
+reason                       = RETEST_MINIMUM_INTERVAL_UNAVAILABLE
+```
+
+The candidate is emitted as computed. This costs test strips, not tank safety: the
+scheduler errs early, never late. Fixture: `AD-RET-001`.
+
+
+---
+
 # B. Non-blocking canon defects
 
 ## OI-STABLE-001 — `ALK-012`'s illustrative examples contradict its normative condition
@@ -1687,14 +1828,22 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 
 | Status | Count | IDs |
 |---|---|---|
+| **OPENED by Freeze-5 review** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-40 distinct issue IDs (13 + 11 + 13 + 3). **Nothing is blocking.** All eight items that
-carried `OWNER_DECISION_REQUIRED` were decided by Freeze 5.
+43 distinct issue IDs (3 + 13 + 11 + 13 + 3). All eight items that carried
+`OWNER_DECISION_REQUIRED` before Freeze 5 were decided by it; three new ones were opened by
+its review.
+
+**Two of the three withhold a dependent output** — `OI-HIGHBREACHBAND-001` gates the
+high-breach zero-dose pause inside a band spanning `-1.28·sigma_S <= C < 0`, and
+`OI-CLUSTERTIE-001` withholds automatic maintenance when two clusters share a representative
+timestamp. Both are narrow and both fail safe. Everything the eleven originally blocking
+items gated is now emitted.
 
 `OI-PIPELINE-001` remains open only for the composite rail's position; its liquid-guard
 limb is closed by F5-06. `OI-STABLE-001` is confirmed rather than closed: F5-04 explicitly
@@ -1711,7 +1860,8 @@ normative text still governs.
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 |
 | `NO_PROBLEM` | 3 |
 
-**What is buildable.** Everything. After Freeze 5 no open item blocks a dependent output:
+**What is buildable.** Everything except the two narrow refusals in section A2. After
+Freeze 5 the following are fully determined:
 current position, outer-bound state, the whole `SAFETY_RETURN` path including the temporary
 high-breach rate, clustering and independent selection, segmentation, Theil-Sen trend,
 `sigma_S`, `S_supported`, consumption and its materiality classification, the ordinary
