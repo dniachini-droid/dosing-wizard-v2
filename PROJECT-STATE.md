@@ -40,8 +40,12 @@ Phase 0 — Preserve and found V2
   `docs/implementation/alk-v2/`. It is specification only: no application runtime, no
   framework, no database, no dependencies.
 - `ALK_V2_FREEZE_5` closed every blocking item in that package's open-issue register.
-  Twelve owner decisions (F5-01 … F5-12) were written into the canon, creating ten new
-  stable rule IDs and amending two. **No Alk output is blocked by an open issue.**
+  Nineteen owner decisions were written into the canon: F5-01 … F5-12, then the three
+  amendments F5-13 … F5-15 that independent review of the first encoding made necessary,
+  then decisions 16 … 19, which resolve the six findings review of those amendments
+  escalated and **supersede the earlier Freeze-5 wording wherever they conflict**.
+  Eighteen new stable rule IDs exist and several rules are amended.
+  **No Alk output is blocked by an open issue.**
   Eleven non-blocking canon defects remain open and are listed in the Freeze-5
   declaration's *Deliberately left open* section.
 - No V2 application runtime exists.
@@ -124,14 +128,16 @@ repository and have been copied into `docs/canon/` with verified SHA-256 equalit
 Recorded rather than silently resolved. Neither the canon nor the handoff has been
 edited; both are byte-for-byte copies.
 
-0. **The canon's recorded defects — thirteen closed, eleven still open.**
-   The Alk implementation package inventories all normative canon rules (271 after
-   Freeze 5) and classifies every ambiguity found. Twenty-four were genuine canon
-   defects, eleven of them blocking a dependent output.
+0. **The canon's recorded defects — twenty-one closed, eleven still open.**
+   The Alk implementation package inventories all normative canon rules (279 after
+   Freeze 5 and its later decisions) and classifies every ambiguity found. Twenty-four
+   were genuine canon defects, eleven of them blocking a dependent output. Review of the
+   encoding then opened eight more items, all of which the owner has since decided
+   (F5-13 … F5-15, then decisions 16 … 19; register sections A2 and A3).
 
-   `ALK_V2_FREEZE_5` closed thirteen — every blocking one, plus `OI-RAPIDBASIS-001` and
-   `OI-CONFIDENCE-001` — through the governed reissue path the Freeze-4 reopening rule
-   requires. Eleven non-blocking defects remain, recorded in
+   `ALK_V2_FREEZE_5` closed thirteen of the original register — every blocking one, plus
+   `OI-RAPIDBASIS-001` and `OI-CONFIDENCE-001` — and the eight review-opened items, through the governed
+   reissue path the Freeze-4 reopening rule requires. Eleven non-blocking defects remain, recorded in
    `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md` and not repaired: `OI-STABLE-001`,
    `OI-DAY4-001`, `OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
    `OI-POTENCYSNAP-001`, `OI-WG024-001`, `OI-ANOMCLUSTER-001`, `OI-OVERSHOOT-001`,
