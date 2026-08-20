@@ -363,3 +363,92 @@ $ git diff acc66155 --stat -- docs/canon/
   executable one. That is fixture work governed by canon.
 - No CI configuration. `OD-005`.
 - No merge.
+
+---
+
+## Rebase onto `ALK_V2_FREEZE_5` — appended after the fact
+
+`main` moved while this branch was open: PR #5 merged, bringing `ALK_V2_FREEZE_5`
+and 20 commits. Rebased `acc66155` → `7aaadef`.
+
+### Conflicts
+
+**One**, in `docs/implementation/alk-v2/ALK-V2-INVARIANTS.md`, at `INV-B5`.
+
+- **`main` changed:** the `Assert`, adding that `recommendationConfidence` is
+  always emitted as `UNSPECIFIED` under `ALK_V2_FREEZE_5` — an owner decision.
+  It also added a negative control: *multiply the continuous candidate by a
+  confidence-derived factor; `AD-OUT-001` and `INV-ALK-CONFIDENCE-001` must
+  fail.*
+- **This branch changed:** the negative control only — *multiply the continuous
+  action candidate by a factor chosen from `recommendationConfidence`; the
+  four-way sweep must then return four different values; `INV-ALK-CONFIDENCE-001`
+  must fail.* The `Assert` was left at its base text.
+- **Kept: `main`'s side entirely.** The two negative controls describe the *same*
+  mutation, so this is a duplicate rather than a disagreement — and `main`'s is
+  the better-sourced of the two, citing `AD-OUT-001`, a Freeze-5 fixture this
+  branch had no knowledge of. The behaviour change in the `Assert` is `main`'s
+  alone; this branch never touched it, so there was nothing to weigh against it.
+  Editing a line the freeze had just written would have been the wrong move on
+  a canon-adjacent document.
+- **Lost:** the observable this branch's phrasing named ("four different
+  values"). Judged not worth editing frozen text to reinstate.
+
+No other file conflicted. Both sides' work survives: all 76 invariants carry a
+negative control, `main`'s 16 new invariants and 6 amended ones are byte-intact,
+and 33 of this branch's 34 negative controls are unchanged.
+
+### What the rebase then required, and why
+
+**The harness's own completeness assertion fired on all 16 new invariants** —
+`INV-C12`..`C15`, `G10`..`G17`, `I7`..`I10` — the moment the rebase landed. That
+is `D-4`'s mechanism working on a real change rather than on a mutation, and it
+is the single best evidence in this branch that the assertion is worth having.
+All 16 are now accounted for.
+
+Three of them — `INV-I8`, `INV-I9`, `INV-I10` — are recorded under a new reason,
+`OWNED_BY_PACKAGE_GATE`: they are document-level properties already executed by
+`validate-freeze-5.py`, which arrived with Freeze 5. Implementing them here as
+well would give one rule two owners, which `MASTER RULE 1` calls a defect rather
+than a coincidence.
+
+### Two defects in my own checkers, found by the rebase and fixed
+
+- **Group attribution was positional.** Freeze 5 appended its 16 invariants after
+  the last `## Group` heading rather than filing each under its own, so
+  `INV-G10` sits physically under "Group I". The parser attributed by position
+  and reported three false coverage-table mismatches. The id letter is
+  authoritative; fixed.
+- **A forbidden retired code was called vacuous.** Freeze 5 retires codes into
+  "Retired by …" tables. Six fixtures forbid a retired code, which is exactly
+  right — `INV-I7` asserts no retired code is emitted — and the checker reported
+  all six as vacuous assertions. The parser now reads all the retired tables (35
+  codes) and treats forbidding one as legitimate. Both were **my** defects, and
+  both would have been published as findings against `main`'s package.
+
+### One new finding in the package — RECORDED, LEFT OPEN
+
+The reason-code coverage summary disagrees with its own tables: it declares
+`CAPABILITY_` = 14 and `SAFETY_` = 18; the document holds 13 and 19 distinct
+rows, no duplicates. Hand-verified before reporting, precisely because the two
+defects above were mine rather than the package's.
+
+### Results after the rebase
+
+```
+no engine        exit 1   6 fixtures FAIL/ENGINE_ABSENT, corpus problems 0
+reference oracle exit 1   6/6 executable fixtures PASS, all 4 engine-facing
+                          checks PASS, INV-A1/A2/A3 PASS
+mutations        exit 0   25 defined, 24 caught, 0 missed, 1 blocked (M-8)
+```
+
+The corpus is now **204 fixtures** (was 160), **242 live reason codes** plus 35
+retired (was 235), **76 invariants** (was 60). Freeze 5 added 44 fixtures and
+**not one of them is executable**: the number stays 6. `canonVersion` reads
+`SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5` with no harness change, which is what
+"the harness transcribes nothing" was for.
+
+### Also open
+
+Two gates now exist. `validate-freeze-5.py` and this harness overlap on document
+checks. Not resolved here; recorded in `CONFORMANCE-HARNESS.md`.

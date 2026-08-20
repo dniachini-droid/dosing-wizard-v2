@@ -57,24 +57,28 @@ loudly instead of reporting a small, clean pass.
 
 ## What it cannot cover — the important section
 
-**Of 160 fixtures, 6 can be executed against an engine.**
+**Of 204 fixtures, 6 can be executed against an engine.**
+
+(Counts here are as of `ALK_V2_FREEZE_5`. Every one of them is computed by the
+harness at run time; none is transcribed. `ALK_V2_FREEZE_5` added 44 fixtures
+and **none of them is executable**, so the executable count did not move.)
 
 The documented interface is one pure function of
 `(eventLedger, configurationHistory, asOf)` (`ALK-V2-IMPLEMENTATION-CONTRACT.md`
 §4). A fixture is executable only when the harness can build that input from it
-without inventing anything. The other 154 are listed individually in every run,
+without inventing anything. The other 198 are listed individually in every run,
 under the reason they cannot be run:
 
 | Class | Count | Why |
 |---|---|---|
 | `EXECUTABLE` | 6 | carries an event ledger and an `asOf` |
 | `NO_ASOF` | 6 | carries an event ledger but states no `asOf`; choosing one would be inventing an input |
-| `ABSTRACT_INPUT` | 106 | `input` is a scenario description in an ad-hoc vocabulary (`sPreDkhPerDay`, `readings: 4`, `day0: {...}`), not an event ledger |
-| `CROSS_REFERENCE` | 23 | no `input`; defers to another fixture via `equivalentTo` |
-| `NO_INPUT` | 7 | no `input` and no cross-reference; nothing to submit |
-| `PROPERTY_FIXTURE` | 12 | a property plus a generator, not a single input/output pair |
+| `ABSTRACT_INPUT` | 146 | `input` is a scenario description in an ad-hoc vocabulary (`sPreDkhPerDay`, `readings: 4`, `day0: {...}`), not an event ledger |
+| `CROSS_REFERENCE` | 22 | no `input`; defers to another fixture via `equivalentTo` |
+| `NO_INPUT` | 6 | no `input` and no cross-reference; nothing to submit |
+| `PROPERTY_FIXTURE` | 18 | a property plus a generator, not a single input/output pair |
 
-Separately, **49 fixtures carry at least one expected value that is prose**
+Separately, **59 fixtures carry at least one expected value that is prose**
 rather than a value an engine field can equal — `"known from the single valid
 reading"`, `"0.064 < R_obs < 0.1439"`. Those entries are named individually and
 excluded from comparison. Comparing them would require the harness to interpret
@@ -94,14 +98,16 @@ prevent.
 This is not a defect in the fixtures. They were written to pin canon behaviour
 for a human reader, before any engine or interface existed. It is a precise
 statement of how much of the corpus is machine-checkable **today**, and the
-number is 6 of 160. Turning an `ABSTRACT_INPUT` fixture into an executable one
+number is 6 of 204. Turning an `ABSTRACT_INPUT` fixture into an executable one
 means writing its event ledger, which is fixture work governed by the canon —
 not something the harness may do on the fixture's behalf.
 
-**Of 60 invariants, 6 have an executable form** — three run against an engine,
-three are carried by document-level checks. The remaining 54 are listed with one
-of three reasons: needs engine behaviour, needs implementation source to scan,
-or has no executable form. The harness asserts that these two sets partition the
+**Of 76 invariants, 6 have an executable form** — three run against an engine,
+three are carried by document-level checks. The remaining 70 are listed with one
+of four reasons: needs engine behaviour, needs implementation source to scan,
+has no executable form, or is already owned by the alk-v2 package's own
+validator (`validate-freeze-5.py`), where implementing it here as well would
+give one rule two owners. The harness asserts that these two sets partition the
 invariant document exactly, so an invariant added and forgotten becomes a
 harness failure rather than silently counting as covered.
 
@@ -191,6 +197,11 @@ verdict red no matter what the oracle does.
 Three document defects, reported and left for the owner. The harness reports
 them on every run, which is the most durable form of recording available.
 
+0. **The reason-code coverage summary disagrees with its own tables.** It
+   declares `CAPABILITY_` = 14 and `SAFETY_` = 18; the document holds 13 and 19
+   distinct rows respectively, with no duplicates. Hand-verified. New at
+   `ALK_V2_FREEZE_5`.
+
 1. **`POSITION_NO_VALID_MEASUREMENT` is not in the closed catalogue.**
    `ALK-V2-ALGORITHM-CONTRACT.md` §`CORE-POSITION-001` requires the engine to
    emit it, and the rule-traceability table names it, but
@@ -224,6 +235,19 @@ them on every run, which is the most durable form of recording available.
 
 None of these is fixed here. Fixing them means editing the alk-v2 package
 documents, which this work was scoped out of.
+
+## Two gates now exist
+
+`ALK_V2_FREEZE_5` brought `docs/implementation/alk-v2/validate-freeze-5.py`, a
+package-scoped mechanical validator, and `recompute-goldens.py`. Their document
+checks and this harness's document checks overlap.
+
+That overlap is **not resolved here, and it should be**. Canon `MASTER RULE 1`:
+two implementations of one rule that agree today are a defect, not a
+coincidence. Where this harness can see that a property is already owned by the
+package validator — `INV-I8`, `INV-I9`, `INV-I10` — it declines to implement it
+and says so rather than quietly agreeing. Whether the two gates should merge,
+and which owns what, is an open question for the owner.
 
 ## What the harness will not tell you
 

@@ -57,6 +57,14 @@ NO_EXECUTABLE_FORM = (
     "wording, design-review judgement, or a quantity the canon deliberately "
     "leaves unassigned for alkalinity."
 )
+OWNED_BY_PACKAGE_GATE = (
+    "is a document-level property already executed by the alk-v2 package's own "
+    "validator (docs/implementation/alk-v2/validate-freeze-5.py, and "
+    "recompute-goldens.py for the golden-recomputation clause). Implementing it "
+    "here as well would give one rule two owners, which canon MASTER RULE 1 "
+    "calls a defect rather than a coincidence. Whether the two gates should be "
+    "merged is recorded as an open question, not settled here."
+)
 
 NOT_EXECUTABLE_REASONS: Dict[str, str] = {
     # Group A
@@ -122,6 +130,27 @@ NOT_EXECUTABLE_REASONS: Dict[str, str] = {
     "INV-I4": NO_ENGINE_BEHAVIOUR,
     "INV-I5": NO_ENGINE_BEHAVIOUR,
     "INV-I6": NO_ENGINE_BEHAVIOUR,
+    # ---- added by ALK_V2_FREEZE_5 -------------------------------------------
+    # Sixteen invariants arrived with Freeze 5. The harness's completeness
+    # assertion caught every one of them the moment the branch was rebased,
+    # which is that assertion doing its job on a real change rather than on a
+    # mutation. Each is accounted for below; none is executed yet.
+    "INV-C12": NO_ENGINE_BEHAVIOUR,
+    "INV-C13": NO_ENGINE_BEHAVIOUR,
+    "INV-C14": NO_ENGINE_BEHAVIOUR,
+    "INV-C15": NO_ENGINE_BEHAVIOUR,
+    "INV-G10": NO_ENGINE_BEHAVIOUR,
+    "INV-G11": NO_ENGINE_BEHAVIOUR,
+    "INV-G12": NO_ENGINE_BEHAVIOUR,
+    "INV-G13": NO_ENGINE_BEHAVIOUR,
+    "INV-G14": NO_ENGINE_BEHAVIOUR,
+    "INV-G15": NO_ENGINE_BEHAVIOUR,
+    "INV-G16": NO_ENGINE_BEHAVIOUR,
+    "INV-G17": NO_ENGINE_BEHAVIOUR,
+    "INV-I7": NO_ENGINE_BEHAVIOUR,
+    "INV-I8": OWNED_BY_PACKAGE_GATE,
+    "INV-I9": OWNED_BY_PACKAGE_GATE,
+    "INV-I10": OWNED_BY_PACKAGE_GATE,
 }
 
 #: Invariants this module executes, and the CHK-* checks that carry the

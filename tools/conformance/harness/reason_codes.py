@@ -28,6 +28,11 @@ SEVERITIES = ("INFO", "GATING", "REFUSAL", "SAFETY")
 
 _GROUP_HEADING = re.compile(r"^##\s+([A-Z][A-Z0-9]*_)\s+—\s+owner:\s+`([^`]+)`")
 _APPENDIX_HEADING = re.compile(r"^##\s+Appendix")
+#: `ALK_V2_FREEZE_5` and the owner decisions after it retire codes into tables
+#: headed "Retired by ...", at both `##` and `###` level. A retired code is not
+#: in the closed set -- an engine may not emit it -- but a fixture that
+#: *forbids* one is making a real assertion, not a vacuous one.
+_RETIRED_HEADING = re.compile(r"^#{2,3}\s+Retired by\b")
 _COVERAGE_HEADING = re.compile(r"^##\s+Coverage summary")
 _TABLE_ROW = re.compile(r"^\|\s*`([A-Z][A-Z0-9_]*)`\s*\|\s*`?([A-Z]+)`?\s*\|(.*)\|\s*$")
 _APPENDIX_ROW = re.compile(r"^\|\s*`([A-Z][A-Z0-9_]*)`\s*\|\s*([^|]+)\|")
@@ -47,6 +52,8 @@ class ReasonCode:
 class Catalogue:
     codes: Dict[str, ReasonCode] = field(default_factory=dict)
     non_codes: Dict[str, str] = field(default_factory=dict)
+    #: code -> what replaced it. Retired codes are outside the closed set.
+    retired: Dict[str, str] = field(default_factory=dict)
     declared_group_totals: Dict[str, int] = field(default_factory=dict)
     declared_total: Optional[int] = None
     parse_problems: List[str] = field(default_factory=list)
@@ -75,15 +82,23 @@ def load(path: Optional[str] = None) -> Catalogue:
     owner = None
     in_appendix = False
     in_coverage = False
+    in_retired = False
 
     for n, raw in enumerate(lines, start=1):
         line = raw.rstrip("\n")
 
+        if _RETIRED_HEADING.match(line):
+            # Several such tables exist, one per retiring decision. Each is
+            # entered separately; an earlier parser in this repository read only
+            # the first and silently lost the rest, which the catalogue itself
+            # records at its "Retired by owner decisions 16-19" note.
+            in_retired, in_appendix, in_coverage, group = True, False, False, None
+            continue
         if _APPENDIX_HEADING.match(line):
-            in_appendix, in_coverage, group = True, False, None
+            in_appendix, in_coverage, in_retired, group = True, False, False, None
             continue
         if _COVERAGE_HEADING.match(line):
-            in_coverage, in_appendix, group = True, False, None
+            in_coverage, in_appendix, in_retired, group = True, False, False, None
             continue
 
         m = _GROUP_HEADING.match(line)
@@ -92,10 +107,17 @@ def load(path: Optional[str] = None) -> Catalogue:
             in_appendix = in_coverage = False
             continue
 
-        if line.startswith("## "):
+        if line.startswith("## ") or line.startswith("### "):
             # any other section ends the current group
-            group = owner = None
-            in_appendix = in_coverage = False
+            if not _RETIRED_HEADING.match(line):
+                group = owner = None
+                in_appendix = in_coverage = in_retired = False
+            continue
+
+        if in_retired:
+            m = re.match(r"^\|\s*`([A-Z][A-Z0-9_]*)`\s*\|(.*)$", line)
+            if m:
+                cat.retired.setdefault(m.group(1), m.group(2).strip(" |"))
             continue
 
         if in_appendix:
@@ -178,6 +200,12 @@ def self_consistency(cat: Catalogue) -> List[str]:
         problems.append(
             f"coverage summary total is {cat.declared_total}; "
             f"{len(cat.codes)} codes parsed"
+        )
+    live_and_retired = sorted(set(cat.retired) & set(cat.codes))
+    for tok in live_and_retired:
+        problems.append(
+            f"`{tok}` is listed as retired AND is still a live catalogue row; a "
+            f"code cannot be both emittable and retired"
         )
     overlap = sorted(set(cat.non_codes) & set(cat.codes))
     for tok in overlap:

@@ -130,11 +130,19 @@ def load(path: Optional[str] = None) -> InvariantDoc:
         m = _INV.match(line)
         if m:
             flush()
+            inv_id = m.group(1)
+            # **The group comes from the id, not from the position in the
+            # document.** `ALK_V2_FREEZE_5` appended sixteen invariants after
+            # the last `## Group` heading rather than filing each under its own
+            # heading, so `INV-G10` sits physically under "Group I". Attributing
+            # by position made the coverage cross-check report three false
+            # mismatches. The id letter is what the coverage table counts.
+            id_group = inv_id.split("-")[1][0]
             current = Invariant(
-                inv_id=m.group(1),
+                inv_id=inv_id,
                 title=m.group(2).strip(),
-                group=group,
-                group_title=group_title,
+                group=id_group,
+                group_title=group_title if id_group == group else "",
                 line=n,
             )
             part_key = None

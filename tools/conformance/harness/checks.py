@@ -135,11 +135,16 @@ def check_reason_code_closure_documents(
             for code in forb.get(key) or []:
                 if isinstance(code, str):
                     examined += 1
-                    if code not in cat.closed_set and code not in cat.non_codes:
+                    if (
+                        code not in cat.closed_set
+                        and code not in cat.non_codes
+                        and code not in cat.retired
+                    ):
                         violations.append(
                             f"{f.fixture_id} forbids `{code}`, which is in neither the "
-                            f"closed set nor the appendix; a forbidden code that does "
-                            f"not exist cannot be emitted and the assertion is vacuous"
+                            f"closed set, the appendix, nor the retired tables; a "
+                            f"forbidden code that never existed cannot be emitted and "
+                            f"the assertion is vacuous"
                         )
 
     for rule in _trace_rules(trace):
