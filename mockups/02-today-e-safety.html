@@ -111,11 +111,11 @@
       </div>
       <div class="dim is-safety">
         <dt>Intervention</dt>
-        <dd>Safety return active<span class="why">The safety return holds the lock on new dose changes.</span></dd>
+        <dd>Safety return &middot; not started<span class="why">Recommended at 08:50. The app has no record of the correction being made, and holds the lock on dose changes either way.</span></dd>
       </div>
       <div class="dim">
         <dt>Response</dt>
-        <dd>Not applicable<span class="why">No previous dose change is being watched.</span></dd>
+        <dd>Not run<span class="why">No ordinary dose change is being watched. A safety return is not classified for response.</span></dd>
       </div>
       <div class="dim">
         <dt>Overshoot</dt>
@@ -273,7 +273,7 @@
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">TRAJECTORY_RAPID_NOT_CONFIRMED</span>
           <span class="say">The rapid-movement exception was checked. The fall is steady rather than sudden, so the larger emergency dose step stays locked.</span>
-          <span class="payload"><span class="k">failedConditions</span> <b>[PAIR_SLOPE_BELOW_THRESHOLD]</b> &nbsp; <span class="k">pairSlopeDkhPerDay</span> <b>&minus;0.1850</b> &nbsp; <span class="k">thresholdDkhPerDay</span> <b>0.30</b></span>
+          <span class="payload"><span class="k">failedConditions</span> <b>[PAIR_SLOPE_BELOW_THRESHOLD]</b></span>
         </li>
 
         <li class="notice">

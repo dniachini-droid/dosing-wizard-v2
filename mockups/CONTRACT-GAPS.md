@@ -256,3 +256,29 @@ moved.
 **What would close it.** A `CONFIG_OUTER_BOUNDS_CHANGED` code with the old and new bounds
 in its payload, by the same logic that gave the target range one. The catalogue is closed,
 so this is a catalogue amendment rather than an interface decision.
+
+---
+
+## Gap 12 — "Not sure" has nowhere to go on a dose change's origin
+
+**Where it shows.** Log entry, the dose-change form: "Was this the change the app
+recommended?" with three answers — yes, no it was my own, and not sure.
+
+**What the contract provides.** `MaintenanceDoseState.origin` is `REQ` with a closed
+vocabulary of exactly two values, `MANUAL | RECOMMENDATION_ACCEPTED` (data contract §3).
+It carries no `UNK-OK` marker, so unlike `programmedDoseMlPerDay`, `solutionContextId`,
+`deliveryContextId` and `actuatorIncrementMlPerDay` on the same record, it has no way to
+express "not established".
+
+**What breaks.** A keeper who changed the dose weeks ago and genuinely cannot remember
+whether they were following the app has to be recorded as one or the other. That is
+exactly the collapse §0 forbids — "`UNKNOWN` never collapses to a value" — and it is not
+harmless: `origin = RECOMMENDATION_ACCEPTED` also obliges the record to carry
+`recommendedDoseMlPerDay`, so guessing wrong invents a second fact as well.
+
+**What would close it.** Marking `origin` `UNK-OK`, on the pattern the same record already
+uses for four other fields. A schema gap, not a chemistry one.
+
+**Note.** This is distinct from gap 3. Gap 3 is that there is no object representing a
+recommendation awaiting confirmation. This one is that even when the keeper answers, one
+of the three honest answers cannot be stored.

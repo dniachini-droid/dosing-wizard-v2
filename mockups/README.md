@@ -36,7 +36,7 @@ The screens are laid out mobile-first and cap their width on a larger window.
 | `05-entry-detail.html` | View, correct, supersede, mark suspect, mark invalid |
 | `06-history.html` | One chart per parameter, events marked, exclusions marked |
 | `07-settings.html` | Versioned settings with change history; read-only solution and potency panel |
-| `CONTRACT-GAPS.md` | Eleven things the screens could not express, left open |
+| `CONTRACT-GAPS.md` | Twelve things the screens could not express, left open |
 
 ## Sample data
 
