@@ -657,13 +657,22 @@ D_MARKED=('previously named','previously read','Superseded wording','superseded 
           'Amended by owner decision','RENAMED by','renamed from','Renamed by',
           'is a **rename, not a behaviour change**','split by','splits `D_established`',
           'as a single name','decision 20 splits','renamed and split','renamed from',
-          'appears nowhere as a live name','must not survive as a live name')
+          'appears nowhere as a live name','must not survive as a live name',
+          'is not a live name','anywhere as a live name','is retired and is not a live name')
 # Scope of the exemption. A markdown TABLE ROW is its own unit - a marker in one row must
 # not exempt the next - and is exempt only if the row itself carries a marker or names the
 # quantity that replaced the old name. Everything else is scoped to its PARAGRAPH, the
 # maximal run of non-blank non-table lines, because prose wraps and a marker sentence and
 # the name it marks routinely land on different lines.
-def _units(text):
+def _units(text, is_json=False):
+    if is_json:
+        # A JSON file has no paragraphs. adversarial.json holds ONE blank line in 185 KB, so
+        # blank-line splitting made the entire corpus a single unit that any unrelated history
+        # marker exempted - a false PASS on the one check owner decision 20 made mandatory.
+        # Found by canon-conformance-auditor; the unit here is the LINE.
+        for line in text.split('\n'):
+            yield line
+        return
     para=[]
     for line in text.split('\n'):
         if line.startswith('|'):
@@ -679,7 +688,7 @@ live_de=[]
 for fn in sorted(glob.glob(R+'docs/canon/*.md')+glob.glob(R+'docs/implementation/alk-v2/*.md')
                  +glob.glob(R+'docs/implementation/alk-v2/**/*.json', recursive=True)):
     if os.path.basename(fn) in ('ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md'): continue
-    for unit in _units(open(fn,encoding='utf-8',errors='ignore').read()):
+    for unit in _units(open(fn,encoding='utf-8',errors='ignore').read(), fn.endswith('.json')):
         # Every spelling the package uses for the retired name. The LaTeX form D_{established}
         # does NOT contain the substring D_established, and checking only the bare spelling
         # left the canon's own boxed formula - the single most load-bearing occurrence -
@@ -844,28 +853,70 @@ for fid,side in (('AD-ESC-001','high'),('AD-ESC-002','low')):
     cin={c['case']:c for c in inp['cases']}
     cev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
     cac={c['case']:c for c in f['expectedAction']['cases']}
-    bad=[]; boundaries=set()
+    bad=[]; boundaries=set(); straddles=0
+    OFF=_D('1.0')
     for name,c in cin.items():
+        # EXACT DECIMAL, no epsilon. ALK-DECIMAL-THRESHOLD-001 governs this predicate, and a
+        # gate that computed the boundary in binary64 with a 1e-12 tolerance would be using
+        # exactly the epsilon the rule forbids - and would agree with a wrong engine.
+        a_now=_D(repr(c['alkDkh']))
         if side=='high':
-            b=c['outerMaxDkh']+ADVISORY_OFFSET; esc=c['alkDkh']>=b
+            bd=_D(repr(c['outerMaxDkh']))+OFF; esc = a_now>=bd
+            b64 = c['alkDkh'] >= c['outerMaxDkh']+ADVISORY_OFFSET
         else:
-            b=c['outerMinDkh']-ADVISORY_OFFSET; esc=c['alkDkh']<=b
-        boundaries.add(round(b,9))
-        if abs(cev[name][('advisoryCeilingDkh' if side=='high' else 'advisoryFloorDkh')]-b)>1e-12:
-            bad.append((name,'boundary',b))
+            bd=_D(repr(c['outerMinDkh']))-OFF; esc = a_now<=bd
+            b64 = c['alkDkh'] <= c['outerMinDkh']-ADVISORY_OFFSET
+        if esc!=b64: straddles+=1
+        boundaries.add(str(bd))
+        stated=cev[name]['advisoryCeilingDkh' if side=='high' else 'advisoryFloorDkh']
+        if _D(repr(stated))!=bd: bad.append((name,'boundary',stated,str(bd)))
         if cev[name]['escalate']!=esc: bad.append((name,'escalate',cev[name]['escalate'],esc))
+        if 'binary64WouldEscalate' in cev[name] and cev[name]['binary64WouldEscalate']!=b64:
+            bad.append((name,'binary64 flag',cev[name]['binary64WouldEscalate'],b64))
         act=cac[name]
         if esc:
             # [M2] a reverted engine emits an ordinary sized rate here; a badly-repaired one
-            # emits 0. Both are forbidden, and NOT_RUN is asserted positively.
+            # emits 0. Both are forbidden, and the withheld sentinels are asserted positively.
             if act.get('advisoryRangeEscalation')!='ESCALATED': bad.append((name,'not escalated'))
+            for k in ('temporarySafetyRateAdvisoryMlPerDay','temporarySafetyPumpCommandMlPerDay'):
+                if k in act and act[k]!='NOT_RUN': bad.append((name,k,act[k]))
+            if 'recommendedDoseMlPerDay' in act and act['recommendedDoseMlPerDay']!='WITHHELD':
+                bad.append((name,'recommendedDoseMlPerDay must be WITHHELD, the data contract token',
+                            act['recommendedDoseMlPerDay']))
             for k in ('temporarySafetyRateAdvisoryMlPerDay','temporarySafetyPumpCommandMlPerDay',
                       'recommendedDoseMlPerDay'):
-                if k in act and act[k]!='NOT_RUN': bad.append((name,k,act[k]))
                 if act.get(k)==0: bad.append((name,k+' is zero - withheld means withheld'))
+            if act.get('maintenanceEstimateStatus') not in (None,'UNRESOLVED'):
+                bad.append((name,'maintenanceEstimateStatus',act.get('maintenanceEstimateStatus')))
+            # the shortened / reprioritised retest is PRESERVED, never suppressed by escalation
+            if act.get('nextTestApproxHours') in ('NOT_RUN',None) and act.get('retest') in ('NOT_RUN',None):
+                bad.append((name,'escalation suppressed the shortened retest'))
         else:
             if act.get('advisoryRangeEscalation')!='NONE': bad.append((name,'escalated inside the boundary'))
-    check(fid+' boundary recomputes as an offset and the comparison is inclusive', not bad, str(bad[:4]))
+            # EVERY non-escalating case's sized output is recomputed, not just one. Asserting a
+            # single named case left the others free to state any number at all.
+            P=c.get('selectedPotencyDkhPerMl', inp.get('selectedPotencyDkhPerMl'))
+            INC=c.get('actuatorIncrementMlPerDay', inp.get('actuatorIncrementMlPerDay'))
+            if side=='high':
+                ASH=c.get('safetyDestinationHighDkh', inp.get('safetyDestinationHighDkh'))
+                dc=c.get('currentDoseMlPerDay', inp.get('currentDoseMlPerDay'))
+                want=max(0.0, dc-min(c['alkDkh']-ASH,0.50)/P)
+                got=act.get('temporarySafetyRateAdvisoryMlPerDay')
+                if not isinstance(got,(int,float)) or abs(got-want)>1e-9:
+                    bad.append((name,'sized rate',got,want))
+                cmd=act.get('temporarySafetyPumpCommandMlPerDay')
+                if not isinstance(cmd,(int,float)) or abs(cmd-_round_to(want,INC))>1e-9:
+                    bad.append((name,'pump command',cmd,_round_to(want,INC)))
+            else:
+                ASL=c.get('safetyDestinationLowDkh', inp.get('safetyDestinationLowDkh'))
+                want=min(ASL-c['alkDkh'],0.50)/P
+                got=act.get('safetyCorrectionVolumeMl')
+                if not isinstance(got,(int,float)) or abs(got-want)>1e-9:
+                    bad.append((name,'correction volume',got,want))
+    check(fid+' boundary recomputes as an offset, exact-decimal and inclusive, with no epsilon',
+          not bad, str(bad[:4]))
+    check(fid+' carries a configuration where binary64 and exact decimal DISAGREE',
+          straddles>=1, '%d straddling configurations'%straddles)
     check(fid+' exercises at least two DIFFERENT boundaries, so it cannot pass on a pinned level',
           len(boundaries)>=2, str(sorted(boundaries)))
     check(fid+' preserves the breach classification and the shortened retest through escalation',
@@ -903,7 +954,7 @@ if f:
           'decision 21 exception: an already-authoritative safety rule that explicitly governs the state still governs')
     check('AD-ESC-002 withholds the engine mL/day guidance while that volume continues',
           cac['AT_FLOOR']['temporarySafetyRateAdvisoryMlPerDay']=='NOT_RUN'
-          and cac['AT_FLOOR']['recommendedDoseMlPerDay']=='NOT_RUN')
+          and cac['AT_FLOOR']['recommendedDoseMlPerDay']=='WITHHELD')
 
 # 17g. AD-ESC-003 - a contested episode does not bypass the boundary --------------------
 f=_fx('AD-ESC-003')
@@ -947,8 +998,16 @@ if f:
           "Remove the B' branch" in f['negativeControl'] and 'AD-SAF-009' in f['negativeControl'])
 
 # 17i. the new canon rules must not have introduced a second constant -------------------
-m=re.search(r'^`ALK-ADVISORY-RANGE-BOUNDARY-001`\s*$', CANON, re.M)
-seg=CANON[m.start():m.start()+9000] if m else ''
+def rule_body(rid):
+    """The whole body, to the next same-or-higher heading. A fixed-width window silently
+    truncates a rule that grows, and a check that reads past its own rule can pass on a
+    neighbour's text."""
+    m=re.search(r'^`'+re.escape(rid)+r'`\s*$', CANON, re.M)
+    if not m: return ''
+    nxt=re.search(r'^#{1,4} ', CANON[m.end():], re.M)
+    return CANON[m.start(): m.end()+nxt.start()] if nxt else CANON[m.start():]
+
+seg=rule_body('ALK-ADVISORY-RANGE-BOUNDARY-001')
 check('the advisory boundary is defined as an OFFSET from the configured bounds',
       'OuterMax + 1.0' in seg and 'OuterMin - 1.0' in seg
       and 'not a second set of pinned levels' in seg)
@@ -956,14 +1015,165 @@ check('the advisory boundary declares its inclusive comparison and forbids an ep
       'inclusive at the boundary' in seg and 'no epsilon exists or may be introduced' in seg)
 check('the advisory boundary states it does NOT close the flat-above-the-rail item',
       'narrows but does not resolve' in seg)
-m=re.search(r'^`ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`\s*$', CANON, re.M)
-seg=CANON[m.start():m.start()+9000] if m else ''
+seg=rule_body('ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001')
 check('branch B-prime states it does NOT close the C-zero discontinuity',
       'remains **open**' in seg and 'No\nbranch boundary is adjusted' in seg.replace('\r','')
       or 'No branch boundary is adjusted' in seg)
 check('the canon declares the single new constant of decisions 20-22',
       'advisory range offset = 1.0 dKH' in CANON and 'the ONLY new number' in CANON)
 
+# ---------- 18. the CANON's own text for decisions 20-22, asserted ----------
+# The breaker reverted every one of decisions 20, 21 and 22 IN THE CANON and this gate stayed
+# green: section 17 recomputes fixtures against fixtures and touched the canon only through a
+# handful of string-presence assertions, so canon-versus-fixture divergence was undetectable
+# in either direction. The canon is the sole behavioural authority; an implementer reads IT.
+# Every check below is the canon-side twin of a fixture-side check above, and each names the
+# reversion it exists to catch.
+
+DEC = rule_body('ALK-DELIVERY-RATE-BASIS-001')
+ADV = rule_body('ALK-ADVISORY-RANGE-BOUNDARY-001')
+SIZ = rule_body('ALK-HIGH-BREACH-SAFETY-SIZING-001')
+BPR = rule_body('ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001')
+DC  = open(R+'docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md',encoding='utf-8').read()
+def flat(t): return re.sub(r'\s+',' ',t)
+
+# 18a. [R1] the two boxed sizing formulas take D_current, and D_history is forbidden in them.
+# The reversion an implementer actually makes after a rename is not to resurrect the retired
+# name - it is to plug in the OTHER live name, which check 17a cannot see.
+for rid,seg in (('ALK-HIGH-BREACH-SAFETY-SIZING-001',SIZ),
+                ('ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001',BPR)):
+    boxed=re.findall(r'\\boxed\{(.*?)\}\s*\n\\\]', seg, re.S)
+    body='\n'.join(boxed)
+    check('canon %s boxes max(0, D_current - R_down/P_selected)'%rid,
+          'D_{current}' in body and 'R_{down}' in body and 'P_{selected}' in body
+          and '\\max' in body and 'D_{history}' not in body and 'D_{established}' not in body,
+          'boxed blocks: %d'%len(boxed))
+check('canon forbids substituting D_history into the safety formula',
+      'may **not** be substituted for' in flat(SIZ) and 'D_{history}' in SIZ)
+check('canon states consumption takes D_history, not D_current',
+      'P_{selected}D_{history}' in CANON and 'C = P_selected · D_history' in DC)
+
+# 18b. [R2] the advisory comparison is INCLUSIVE, in the canon, in both directions
+check('canon states the advisory comparison inclusively in both directions',
+      'A_{now}\\ge AdvisoryCeiling' in ADV and 'A_{now}\\le AdvisoryFloor' in ADV
+      and 'inclusive at the boundary' in flat(ADV)
+      and 'no epsilon exists or may be introduced' in flat(ADV))
+check('canon puts the advisory predicate in ALK-DECIMAL-THRESHOLD-001 governed table',
+      re.search(r'^\| advisory-range escalation against `AdvisoryCeiling` / `AdvisoryFloor` \| `ALK-ADVISORY-RANGE-BOUNDARY-001`',
+                CANON, re.M) is not None)
+
+# 18c. [R3] the D_current-unknown handling REFUSES and forbids zero, in the canon
+check('canon refuses on an unknown D_current and forbids zero',
+      'refuse, never assume zero' in flat(SIZ)
+      and 'Emitting `0 mL/day` here is **forbidden**' in flat(SIZ)
+      and 'Unknown handling — refuse, do not assume zero' in flat(DEC)
+      and '0 mL/day is NOT emitted as though it were a computed recommendation' in flat(DEC))
+check('canon keeps the two unknowns independent',
+      'consumption is UNAFFECTED where D_history is available' in flat(DEC)
+      and 'safety sizing is UNAFFECTED where D_current is known' in flat(DEC))
+
+# 18d. [R4] the ordering: escalation BEFORE sizing, stated on both sides
+check('canon states escalation runs before high-breach sizing, from the escalation rule',
+      '**before** high-breach safety sizing' in flat(ADV))
+check('canon states the reciprocal ordering from the sizing rule',
+      'is evaluated **before** this rule' in flat(SIZ)
+      and 'no rate is sized here at all' in flat(SIZ))
+
+# 18e. [R5, R12] escalation WITHHOLDS - it does not set zero - in canon and data contract
+check('canon states escalation withholds and is not zero',
+      'and not zero' in flat(ADV) and 'withheld**, not set' in flat(ADV)
+      and 'Zero is a delivery instruction; withholding is the absence of one' in flat(ADV))
+check('canon escalation emit-block uses the withheld sentinels, never 0',
+      re.search(r'temporarySafetyRateAdvisoryMlPerDay\s*=\s*NOT_RUN', ADV) is not None
+      and re.search(r'temporarySafetyPumpCommandMlPerDay\s*=\s*NOT_RUN', ADV) is not None
+      and re.search(r'recommendedDoseMlPerDay\s*=\s*WITHHELD', ADV) is not None
+      and re.search(r'(recommendedDose|temporarySafety\w*)MlPerDay\s*=\s*0\b', ADV) is None)
+check('data contract states the escalation fields are withheld and not zero',
+      'no executable command, and **not** zero' in DC
+      and 'In all three it is `NOT_RUN` and **never `0`**' in flat(DC)
+      and 'never `NOT_RUN` and never `0`, where `ALK-ADVISORY-RANGE-BOUNDARY-001` escalates' in flat(DC))
+
+# 18f. [R6] the exception clause is the NARROW one, and its open question is recorded
+check('canon keeps the NARROW exception wording',
+      'already-authoritative safety rule that explicitly governs the\nstate' in ADV
+      or 'already-authoritative safety rule that explicitly governs the state' in flat(ADV))
+check('canon does not widen the exception to any safety rule that merely bears on the state',
+      'bears on the state' not in flat(ADV))
+check('canon records the exception open question rather than settling it',
+      'OI-ADVISORYEXCEPTION-001' in ADV and 'closed or illustrative' in flat(ADV))
+
+# 18g. [R9] the contested quantifier is EVERY member, not any
+check('canon quantifies the contested carve-out over EVERY member',
+      'if\n**every** member' in ADV or 'if **every** member' in flat(ADV))
+check('canon does not quantify it existentially',
+      not re.search(r'if \*\*any\*\* member', flat(ADV)))
+check('canon keeps the straddling case non-escalating',
+      'straddle** the boundary' in flat(ADV) and 'escalation is `NOT_RUN`' in flat(ADV))
+check('canon names the contested carve-out as an exception to ALK-EPISODE-SINGLE-OUTPUT-001',
+      'ALK-EPISODE-SINGLE-OUTPUT-001' in ADV
+      and 'advisory-range escalation' in rule_body('ALK-EPISODE-SINGLE-OUTPUT-001'))
+
+# 18h. [R10] the preserved-unchanged clause, including the retest
+check('canon preserves the outer-bound classification through escalation',
+      'escalation does not reclassify it' in flat(ADV)
+      and 'Reset on escalation' not in flat(ADV))
+check('canon preserves the shortened retest through escalation, and says it is required',
+      'escalation does **not**\nsuppress it' in ADV or 'escalation does **not** suppress it' in flat(ADV))
+
+# 18i. [R11] B' is DISTINCT from an unknown D_current
+check("canon keeps branch B' distinct from an unknown D_current",
+      'Distinct from an unknown \\(D_{current}\\)' in BPR
+      and 'requires \\(D_{current}\\) to be\n**known**' in BPR.replace('  ',' ')
+      or 'requires \\(D_{current}\\) to be **known**' in flat(BPR))
+check("canon does not let B' swallow the unknown-D_current refusal",
+      'Also covers' not in flat(BPR) and 'treats it as 0' not in flat(BPR))
+
+# 18j. the partition is total, and B carries the uninterpretable disjunct
+check('canon partition is jointly exhaustive and mutually exclusive',
+      'jointly exhaustive and mutually exclusive' in flat(BPR)
+      and 'exactly one** of A, B and B' in flat(BPR))
+# The disjunct must be in the PARTITION BLOCK, not merely in the prose that explains it.
+# Mutation R16 deleted it from the block and this check passed on the surrounding paragraph.
+_part=''.join(re.findall(r'```text\n(.*?)```', BPR, re.S))
+check('canon branch B carries the computable-but-uninterpretable disjunct IN THE PARTITION',
+      'otherwise physically uninterpretable' in flat(_part)
+      and re.search(r'^A\.\s+C_estimate >= 0 AND physically interpretable', _part, re.M) is not None
+      and 'ALK-HIGH-BREACH-UNRESOLVED-001' in BPR,
+      'partition block: %d chars'%len(_part))
+check('canon names the two rate-withholding states that are NOT a fourth branch',
+      'What is NOT a fourth branch' in BPR
+      and 'P_{selected}\\) **unavailable or invalid**' in BPR)
+
+# 18k. the offset, and only the offset
+check('canon defines both boundaries as offsets from the configured bounds',
+      'AdvisoryCeiling = OuterMax + 1.0' in flat(ADV)
+      and 'AdvisoryFloor = OuterMin - 1.0' in flat(ADV)
+      and 'not a second set of pinned levels' in flat(ADV))
+check('canon declares the advisory offset as the only new constant of decisions 20-22',
+      'advisory range offset = 1.0 dKH' in CANON and 'the ONLY new number' in CANON)
+
+# 18l. all five escalation message elements are stated, and none is optional
+for el in ('the measured value','outside the range the engine will advise on',
+           'confirmed by a second test','doser should be checked',
+           'experienced judgement about the specific'):
+    check('canon escalation message states: %s'%el, el in flat(ADV))
+check('canon marks the five message elements as none-optional',
+      'all five, none optional' in flat(ADV))
+
+# 18m. every RECORDED EXPOSURE opened by this pass is present in canon AND in the register
+for oi,where in (('OI-BRANCHAREFUSAL-001',DEC),('OI-ADVISORYEXCEPTION-001',ADV),
+                 ('OI-ADVISORYMEMBERS-001',ADV),('OI-ADVISORYRETEST-001',ADV),
+                 ('OI-ADVISORYRETURN-001',ADV)):
+    check('canon records %s as an open exposure in the rule it affects'%oi,
+          oi in where and 'Not decided here' in flat(where))
+    m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
+    seg=''
+    if m:
+        nxt=OI.find('\n## ', m.end()); seg=OI[m.start(): nxt if nxt!=-1 else len(OI)]
+    check('register carries %s, OPEN and unresolved'%oi,
+          bool(m) and '**Status:** **OPEN.**' in seg and '> **RESOLVED' not in seg)
+
+print()
 print()
 print('%d checks failed' % len(fails))
 if fails:

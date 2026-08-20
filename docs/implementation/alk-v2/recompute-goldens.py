@@ -397,10 +397,21 @@ def main():
         wanted = [k for k in MASS_KEYS if k in stated and stated[k] != 'NOT_RUN']
         if not wanted:
             return
-        P = inp.get('selectedPotencyDkhPerMl') or inp.get('potencyDkhPerMl')
-        D = (inp.get('doseHistoryMeanMlPerDay') or inp.get('doseBasisMlPerDay')
-             or inp.get('currentDoseMlPerDay') or inp.get('establishedDoseMlPerDay'))
-        pd = inp.get('potencyTimesDoseDkhPerDay')
+        def first(*keys):
+            """`or`-chaining a lookup treats a legitimate 0 as absent. A D_history that
+            integrates to EXACTLY ZERO - the doser off for the whole interval, which is
+            precisely the state that accompanies a high breach after an overdose is stopped -
+            would fall through to D_current and perform the substitution decision 20
+            abolishes, inside the tool that exists to detect it."""
+            for k in keys:
+                v = inp.get(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return v
+            return None
+        P = first('selectedPotencyDkhPerMl', 'potencyDkhPerMl')
+        D = first('doseHistoryMeanMlPerDay', 'doseBasisMlPerDay',
+                  'currentDoseMlPerDay', 'establishedDoseMlPerDay')
+        pd = first('potencyTimesDoseDkhPerDay')
         if pd is None and isinstance(P, (int, float)) and isinstance(D, (int, float)):
             pd = P * D
         if isinstance(pd, (int, float)) and isinstance(S, (int, float)):
@@ -458,6 +469,74 @@ def main():
                 sub_ev[c['case']] = (c, {**inp, **cin[c['case']]})
         for name, (stated, ctx) in sub_ev.items():
             mass_balance(fid, fn, str(name), stated, ctx, S, sig)
+
+    # ---- 5b. decisions 21 and 22: boundaries, escalation and branch-B' sizing ----------
+    # The escalation and B-prime fixtures state R_down, its dose equivalent, sized rates,
+    # actuator commands, boundary levels and correction volumes, and the first version of this
+    # recorder reached NONE of them - it hard-coded the fixtures it knew about, and reported
+    # "0 unreadable" because `unreadable` was only appended for a KNOWN key whose inputs were
+    # missing. A stated value in a shape the tool never looked for was invisible rather than
+    # reported. Found by the breaker: a fixture stating a 99 mL/day INCREASE at 11.4 dKH
+    # passed both tools with the record digest unchanged.
+    ADVISORY_OFFSET = _D('1.0')      # decision 21, the only constant decisions 20-22 add
+
+    def case_ctx(f, c):
+        return {**(f.get('input') or {}), **c}
+
+    for fid in ('AD-ESC-001', 'AD-ESC-002', 'AD-ESC-003', 'AD-SAF-009', 'AD-DHS-003'):
+        f = fixtures.get(fid, (None, None))[1]
+        if not f:
+            continue
+        inp = f.get('input') or {}
+        ev = f.get('expectedIntermediateEvidence') or {}
+        act = f.get('expectedAction') or {}
+        cin = {c['case']: c for c in (inp.get('cases') or []) if isinstance(c, dict) and 'case' in c}
+        cev = {c['case']: c for c in (ev.get('cases') or []) if isinstance(c, dict) and 'case' in c}
+        cac = {c['case']: c for c in (act.get('cases') or []) if isinstance(c, dict) and 'case' in c}
+        names = sorted(set(cin) | set(cev) | set(cac)) or ['']
+        for name in names:
+            ctx = case_ctx(f, cin.get(name, {}))
+            e = cev.get(name, ev if not name else {})
+            a = cac.get(name, act if not name else {})
+            P = ctx.get('selectedPotencyDkhPerMl')
+            INC = ctx.get('actuatorIncrementMlPerDay')
+
+            # boundaries, in EXACT DECIMAL - ALK-DECIMAL-THRESHOLD-001 governs the predicate,
+            # and computing it in binary64 here would make the recorder agree with a wrong engine
+            if isinstance(ctx.get('outerMaxDkh'), (int, float)):
+                rec.note(fid, name, 'advisoryCeilingDkh', e.get('advisoryCeilingDkh'),
+                         float(_D(repr(ctx['outerMaxDkh'])) + ADVISORY_OFFSET))
+            if isinstance(ctx.get('outerMinDkh'), (int, float)):
+                rec.note(fid, name, 'advisoryFloorDkh', e.get('advisoryFloorDkh'),
+                         float(_D(repr(ctx['outerMinDkh'])) - ADVISORY_OFFSET))
+
+            # R_down, its dose equivalent, the sized rate and the actuator command
+            A = ctx.get('alkDkh')
+            ASH = ctx.get('safetyDestinationHighDkh')
+            if isinstance(A, (int, float)) and isinstance(ASH, (int, float)) and isinstance(P, (int, float)) \
+                    and A > ctx.get('outerMaxDkh', float('inf')):
+                rd = min(A - ASH, 0.50)
+                rec.note(fid, name, 'rDownDkh', e.get('rDownDkh'), rd)
+                rec.note(fid, name, 'rDownAsDoseMlPerDay', e.get('rDownAsDoseMlPerDay'), rd / P)
+                dc = ctx.get('currentDoseMlPerDay')
+                stated_rate = a.get('temporarySafetyRateAdvisoryMlPerDay')
+                if isinstance(dc, (int, float)) and isinstance(stated_rate, (int, float)):
+                    rate = max(0.0, dc - rd / P)
+                    rec.note(fid, name, 'temporarySafetyRateAdvisoryMlPerDay', stated_rate, rate)
+                    if isinstance(INC, (int, float)):
+                        rec.note(fid, name, 'temporarySafetyPumpCommandMlPerDay',
+                                 a.get('temporarySafetyPumpCommandMlPerDay'), round_to(rate, INC))
+
+            # the low-breach one-off correction volume, which decision 21's exception continues
+            ASL = ctx.get('safetyDestinationLowDkh')
+            if isinstance(A, (int, float)) and isinstance(ASL, (int, float)) and isinstance(P, (int, float)) \
+                    and A < ctx.get('outerMinDkh', float('-inf')):
+                dA = min(ASL - A, 0.50)
+                rec.note(fid, name, 'desiredMovementDkh', e.get('desiredMovementDkh'), dA)
+                for key in ('requiredVolumeMl', 'safetyCorrectionVolumeMl'):
+                    stated = e.get(key) if key in e else a.get(key)
+                    if stated is not None:
+                        rec.note(fid, name, key, stated, dA / P)
 
     # ---- 6. maintenance-controller arithmetic -----------------------------------
     # ALK-MAINTENANCE-SEMANTICS-001 / ALK-044 / ALK-PREDICTED-POST-SLOPE-001. Every one of

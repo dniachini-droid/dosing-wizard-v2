@@ -64,6 +64,13 @@ decided two of them as decisions 20 and 22. **Two remain open** —
 blocking register. Neither withholds an output: both name an exposure inside a path that
 still runs, and both forbid the implementation from compensating for it.
 
+Review of the **decisions 20–22 encoding** opened **five more**, in section A5, every one of
+which can change an actuator command, a safety action or a retest output. **All five are
+OPEN and none is decided.** Each states what the encoding does pending the owner's decision
+and what an implementer must not do instead, and each is mirrored as a `RECORDED EXPOSURE`
+block in the canon rule it affects. This is the register behaving as intended: a review of a
+canon reissue that found nothing would mean the review was not adversarial.
+
 That the register grew and then closed is the intended shape. A review of a canon reissue
 that found nothing new would mean the review was not adversarial; a review whose findings
 were then absorbed by derivation rather than by decision would mean the governance was not
@@ -1644,6 +1651,212 @@ branch boundary. The discontinuity is a named exposure.
 
 ---
 
+# A5. Opened by review of the decisions 20–22 encoding — ALL OPEN
+
+Focused `canon-conformance-auditor` and `breaker` review of the decisions 20–22 encoding
+reported findings that **can change an actuator command, a safety action or a retest
+output**. Under the task constraint they are reported and left for the owner rather than
+resolved by the run that found them. Each is recorded here **and** as a `RECORDED EXPOSURE`
+block in the canon rule it affects, so an implementer reaching the rule cannot miss it.
+
+**None of these is decided. Each states what the encoding does in the meantime, and what an
+implementer must not do instead.**
+
+| Item | Question | Can change |
+|---|---|---|
+| `OI-BRANCHAREFUSAL-001` | does high-breach branch A refuse when `D_current` is unknown? | an actuator command |
+| `OI-ADVISORYEXCEPTION-001` | is decision 21's exception list closed, and does the high-side safety return's rate continue beyond the ceiling? | an actuator command |
+| `OI-ADVISORYMEMBERS-001` | is a `SUSPECT` member a member for "every member beyond the boundary"? | a safety action |
+| `OI-ADVISORYRETEST-001` | is escalation a retest-scheduler candidate? | a retest output |
+| `OI-ADVISORYRETURN-001` | an in-flight downward return plan terminated at the ceiling | an actuator command |
+
+## OI-BRANCHAREFUSAL-001 — does branch A refuse when `D_current` is unknown?
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-DELIVERY-RATE-BASIS-001`; `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-003A` interpretable branch
+- **Owner module:** `SAFETY`
+- **Raised by:** `canon-conformance-auditor` and `breaker`, decisions 20–22 review
+- **Status:** **OPEN.** Not decided by owner decision 20.
+
+**The question.** Owner decision 20 states the unknown handling as "if `D_current` is unknown
+or not configured, no temporary safety rate is emitted", without naming a branch. The
+high-breach tree has three branches, and **branch A's formula does not contain
+`D_current`**:
+
+```text
+A   D_safety,temp = max(0, (C_estimate + S_safety) / P_selected)     <- no D_current
+B   D_safety,temp = max(0, D_current - R_down / P_selected)
+B'  D_safety,temp = max(0, D_current - R_down / P_selected)
+```
+
+`C_estimate` needs `D_history`, not `D_current`. So on branch A with `D_current` unknown and
+`D_history` available, every input the safety rate needs is present.
+
+**Why it matters, with numbers.** `A_now` 11.5 dKH, `OuterMax` 11.0, `A_safe,high` 10.8,
+`P_selected` 0.0693, `C_estimate` +0.60 dKH/day, actuator increment 0.1, `D_current`
+unknown:
+
+- read literally, decision 20 withholds: `temporarySafetyRateAdvisoryMlPerDay = NOT_RUN`;
+- read against the formulas, branch A emits `max(0, (0.60 − 0.50)/0.0693) = 1.443 mL/day`,
+  executable command **1.4 mL/day**.
+
+Withholding here is the outcome decision 22's own rationale rejects — "withholding a
+reduction … would leave delivery running unchanged above the outer bound". Emitting here
+contradicts four documents that state the refusal without a branch qualifier.
+
+**Until closed.** Branch A with an unknown `D_current` is **`NOT_RUN`** — the conservative
+reading of the decision as written — with the measured state, the reason and the required
+dKH movement and direction surfaced under `CORE-INFORM-PROCEED-001`, so the keeper is not
+left with silence. An implementer must **not** emit the branch-A rate instead. Note also
+that `ALK-ROUNDING-001`'s tie-toward-current and step-toward-current steps have no operand
+without `D_current`, so a branch-A rate could not be rounded to an executable command in
+that state even if it were emitted — which is itself a reason the owner may prefer the
+withholding reading.
+
+---
+
+## OI-ADVISORYEXCEPTION-001 — is decision 21's exception list closed, and what continues above the ceiling?
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001`; `ALK-OUTER-BOUND-ACTION-001`; `ALK-SAFETY-RETURN-INTEGRATION-001`; `ALK-SAFETY-CORRECTION-RESOLUTION-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** `canon-conformance-auditor` and `breaker`, decisions 20–22 review
+- **Status:** **OPEN.** Not decided by owner decision 21.
+
+**The question, in two parts.**
+
+1. **Closed or illustrative?** Decision 21 withholds delivery guidance "unless an
+   already-authoritative safety rule explicitly governs the state". The canon encodes that
+   as an enumeration. The stated principle — "the engine's own sized delivery guidance" —
+   does not by itself separate the listed rules from the withheld one: the low-breach
+   correction volume `V_safety = ΔA_safety / P_selected` is **also** sized by the engine,
+   from the same rail-bounded `min(…, 0.50)` desired movement and the same `P_selected`. A
+   reader cannot tell from the principle which side any unlisted rule falls on.
+2. **Does the high-side safety return continue?** `ALK-003A` triggers a `SAFETY_RETURN` on
+   **either** bound, and `ALK-SAFETY-RETURN-INTEGRATION-001` is an already-authoritative
+   safety rule. On the high side that return's **only** delivery instrument is
+   `D_safety,temp` — which this rule withholds. Read one way the return's output continues;
+   read the other it does not.
+
+**Why it matters, with numbers.** `AD-ESC-001`'s inputs (`P` 0.0693, `A_safe,high` 10.8,
+`D_current` 9.0 mL/day, increment 0.1):
+
+| `A_now` | escalates | engine's command | delivered |
+|---|---|---|---|
+| 11.9 | no | 1.8 mL/day | **1.8 mL/day** |
+| 12.0 | yes | none | **9.0 mL/day** — the pump continues at its configured rate |
+| 12.1 | yes | none | **9.0 mL/day** |
+
+`outerBoundState` is `BREACHED_HIGH` at all three. **Withholding is not neutral at an
+actuator**: the previously configured rate keeps running. Neither `ALK-046` /
+`ALK-COMPOSITE-RAIL-001` nor `ALK-LIQUID-VOLUME-GUARD-001` constrains it, because the engine
+generates no delivery for them to bind on. This is a faithful consequence of "withhold
+rather than set"; it is recorded so it is **visible rather than discovered**.
+
+**Until closed.** The enumeration is operative exactly as written: the low-breach one-off
+correction **volume** continues at and beyond `AdvisoryFloor` (`AD-ESC-002`); the high-side
+sized **rate** does not (`AD-ESC-001`). An implementer must **not** widen the enumeration,
+and must not infer from it that any unlisted safety rule continues.
+
+---
+
+## OI-ADVISORYMEMBERS-001 — is a `SUSPECT` member a member for "every member beyond the boundary"?
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001`; `ALK-EPISODE-RESOLUTION-001`; `ALK-SUSPECT-DETECTION-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** `breaker`, decisions 20–22 review
+- **Status:** **OPEN.** Not decided by owner decision 21.
+
+**The question.** The contested carve-out is a universal predicate over "every member". It
+is not defined against member **validity state**. `ALK-EPISODE-RESOLUTION-001` excludes
+`INVALID` measurements and is **silent on `SUSPECT`**, which is a live state with three
+canon-defined sources under `ALK-SUSPECT-DETECTION-001`.
+
+**Failure scenario.** One episode, same instant, `OuterMax` 11.0 so `AdvisoryCeiling` 12.0,
+incompatible methods so `CONTESTED_METHODS`:
+
+```text
+KIT_A  12.3
+KIT_B  12.6
+KIT_C  11.4   marked SUSPECT by the user
+```
+
+- SUSPECT counted as a member → not every member is beyond 12.0 → **no escalation**; the
+  card at 12.3/12.6 dKH says only "contested, repeat now";
+- SUSPECT excluded like INVALID → every remaining member is beyond → **escalate**.
+
+Two different safety outputs from the same three readings.
+
+**Until closed.** An implementer must **not** choose. Where any episode member's validity
+state leaves the predicate undecidable, emit the ordinary contested behaviour —
+`position`, `outerBoundState` and `rapidConfirmed` `NOT_RUN`, `REPEAT_NOW` — and surface
+that the advisory-boundary test could not be evaluated. Do not exclude `SUSPECT` members by
+analogy with `INVALID`, and do not escalate on a partial majority.
+
+---
+
+## OI-ADVISORYRETEST-001 — is escalation a retest-scheduler candidate?
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001`; `ALK-RETEST-SCHEDULER-001`; Part II §50; `X-INV-004`
+- **Owner module:** `RETEST`
+- **Raised by:** `breaker`, decisions 20–22 review
+- **Status:** **OPEN.** Not decided by owner decision 21.
+
+**The question.** Decision 21 requires the escalation output to state "that the reading
+should be **confirmed by a second test**", and separately to "preserve shortened/reprioritised
+retesting". `ALK-RETEST-SCHEDULER-001` is the single authority on Alk retest timing, states
+that "**no card, surface or other rule may compute a next-test time**", and enumerates the
+rules that may submit a candidate. `ALK-ADVISORY-RANGE-BOUNDARY-001` is **not** among them.
+
+**Failure scenario.** An escalated resolved episode at 12.0 dKH: the card says "confirm this
+reading", and the scheduler's own answer is the ~24 h high-breach cadence it already owned.
+The keeper is told to retest now and shown a next test tomorrow. By contrast a **contested**
+episode at the same level gets `REPEAT_NOW` from `ALK-EPISODE-RESOLUTION-001`, which makes
+the resolved case's 24 h look like an oversight rather than a decision.
+
+**Until closed.** **No new scheduler candidate is created.** The scheduler's existing answer
+stands and this rule may not compute a next-test time. An implementer must **not** add a
+`REPEAT_NOW` candidate for escalation on the grounds that it "obviously" belongs — that is
+the owner's call, and it changes a retest output.
+
+---
+
+## OI-ADVISORYRETURN-001 — an in-flight downward return plan terminated at the ceiling
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001`; `ALK-RETURN-TERMINATED-BY-SAFETY-001`; `ALK-SAFETY-RETURN-INTEGRATION-001`
+- **Owner module:** `SAFETY`
+- **Raised by:** `breaker`, decisions 20–22 review
+- **Status:** **OPEN.** Not decided by owner decision 21.
+
+**The question.** Decision 21 does not address an intervention already in flight when the
+level crosses the boundary, and `ALK-RETURN-TERMINATED-BY-SAFETY-001` is not amended by it.
+
+**Failure scenario.**
+
+1. Alk stable above the preferred range but inside `OuterMax`. A **downward** return plan is
+   offered and accepted; its temporary component **reduces** delivery below `D_current`.
+2. A doser fault drives the resolved episode value to 12.0 dKH with `OuterMax` 11.0.
+3. `outerBoundState = BREACHED_HIGH` (preserved by decision 21) → `SAFETY_RETURN` triggers.
+4. `ALK-RETURN-TERMINATED-BY-SAFETY-001` fires: the plan is `TERMINATED_BY_SAFETY_RETURN`
+   and `recommendedTemporaryMovement = STOP_PENDING_USER_ACTION`. Stopping a temporary
+   **reduction** returns delivery to the base rate — an **increase**.
+5. `ALK-ADVISORY-RANGE-BOUNDARY-001` withholds the `D_safety,temp` that would otherwise have
+   replaced it.
+
+Net: at 12.0 dKH the only delivery-affecting instruction the engine issues is *stop
+reducing*. Below the ceiling the state is safe, because the sized rate replaces the
+terminated component; at and beyond it there is no replacement.
+
+**Until closed.** The state is **named, not filled**. An implementer must **not** invent a
+hold-the-reduction rule, must not suppress the termination, and must not resume the plan.
+No fixture covers a return plan in flight across `AdvisoryCeiling`, and none is added here,
+because any expectation it asserted would be the decision.
+
+---
+
 # B. Non-blocking canon defects
 
 ## OI-STABLE-001 — `ALK-012`'s illustrative examples contradict its normative condition
@@ -2430,13 +2643,14 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 | **RESOLVED by owner decisions 16–19** | 5 | OI-HIGHBREACHSIZING-001, OI-EPISODE-001, OI-CROSSMETHOD-001, OI-DECIMALTHRESHOLD-001, OI-EPISODECONSUMER-001 |
 | **OPENED by decisions 16–19 review, RESOLVED by owner decisions 20 and 22** | 2 | OI-DELIVERYRATEBASIS-001, OI-UNCOMPUTABLEC-001 |
 | **OPENED by decisions 16–19 review, LEFT OPEN** | 2 | OI-SIZINGFLAT-001 (narrowed by decision 21, not closed), OI-CZERODISCONT-001 (not addressed) |
+| **OPENED by decisions 20–22 review, LEFT OPEN — reported to the owner, not decided** | 5 | OI-BRANCHAREFUSAL-001, OI-ADVISORYEXCEPTION-001, OI-ADVISORYMEMBERS-001, OI-ADVISORYRETEST-001, OI-ADVISORYRETURN-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
 | `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-47 distinct issue IDs (3 + 13 + 11 + 13 + 3 + 4). **Sixteen are resolved by Freeze 5** — the
+52 distinct issue IDs (3 + 13 + 11 + 13 + 3 + 4 + 5). **Sixteen are resolved by Freeze 5** — the
 thirteen its original decisions closed, plus the three its review opened and its amendments
 F5-13, F5-14 and F5-15 then closed. Seven more are resolved by owner decisions 16–22.
 
@@ -2445,6 +2659,13 @@ None was resolved by derivation. **Nothing is blocking, and no output is withhel
 of a decision** — including the two items section A4 leaves open: `OI-SIZINGFLAT-001` and
 `OI-CZERODISCONT-001` both name an exposure inside a path that runs and produces a value,
 and both forbid the implementation from compensating.
+
+**That is no longer true of section A5.** `OI-BRANCHAREFUSAL-001` and
+`OI-ADVISORYMEMBERS-001` each withhold an output pending an owner decision — a branch-A
+safety rate, and the advisory-boundary test on an episode with a `SUSPECT` member. Both
+withhold the *conservative* way, both surface the state and the reason rather than going
+silent, and neither guesses. But the claim "nothing is blocking" does not survive them, and
+saying so plainly is more use to the owner than preserving the sentence.
 
 `OI-PIPELINE-001` remains open only for the composite rail's position; its liquid-guard
 limb is closed by F5-06. `OI-STABLE-001` is confirmed rather than closed: F5-04 explicitly

@@ -3534,7 +3534,7 @@
           "ALK-OUTER-BOUND-ACTION-001",
           "ALK-HIGH-BREACH-UNRESOLVED-001"
         ],
-        "note": "Owner decision 16. D_safety,temp = max(0, D_current - R_down / P_selected), R_down = min(A_now - 10.80, 0.50). C_estimate and sigma_S are stated inputs exactly as in AD-SAF-002; with D_established = 9.0 and P = 0.0693 a C_estimate of -0.20 corresponds to S_observed = 0.8237 dKH/day, and the materiality cases correspond to S_observed = 0.80. R_down/P at the rail is the corpus derived constant railAsDoseDeltaMlPerDay = 7.215007215007215."
+        "note": "Owner decision 16. D_safety,temp = max(0, D_current - R_down / P_selected), R_down = min(A_now - 10.80, 0.50). C_estimate and sigma_S are stated inputs exactly as in AD-SAF-002; with D_current = 9.0 and P = 0.0693 a C_estimate of -0.20 corresponds to S_observed = 0.8237 dKH/day, and the materiality cases correspond to S_observed = 0.80. R_down/P at the rail is the corpus derived constant railAsDoseDeltaMlPerDay = 7.215007215007215."
       },
       "rulesExercised": [
         "ALK-HIGH-BREACH-SAFETY-SIZING-001",
@@ -4784,14 +4784,14 @@
         "rDownAsDoseMlPerDay": 7.215007215007215,
         "observedSlopeDkhPerDay": "NOT_RUN",
         "consumptionDkhPerDay": "NOT_RUN",
-        "notComputableReason": "FIRST_EVER_TEST",
         "branchSelected": "B_PRIME",
         "branchesAvailable": [
           "A",
           "B",
           "B_PRIME"
         ],
-        "exactlyOneBranchSelected": true
+        "exactlyOneBranchSelected": true,
+        "notComputableBecause": "no prior reading, so no observed slope and no dose-history interval; C_estimate = P*D_history - S_observed cannot be evaluated"
       },
       "expectedAction": {
         "temporarySafetyRateAdvisoryMlPerDay": 1.7849927849927854,
@@ -4809,6 +4809,8 @@
         "SAFETY_OUTER_BOUND_BREACHED_HIGH",
         "SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE",
         "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE",
         "RETEST_HIGH_BREACH_FAILSAFE"
       ],
       "openIssues": [
@@ -4854,6 +4856,9 @@
           "fall through with no branch selected",
           "select two branches",
           "refuse as though D_current were unknown"
+        ],
+        "names": [
+          "notComputableReason as a new enumerated vocabulary - the reason is carried by co-emitting the existing code that already names it"
         ]
       }
     },
@@ -4912,6 +4917,12 @@
             "outerMaxDkh": 10.5,
             "alkDkh": 11.5,
             "safetyDestinationHighDkh": 10.3
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "outerMaxDkh": 7.19,
+            "alkDkh": 8.19,
+            "safetyDestinationHighDkh": 6.99
           }
         ]
       },
@@ -4945,6 +4956,15 @@
             "case": "ALT_BOUNDS_AT",
             "advisoryCeilingDkh": 11.5,
             "escalate": true
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "advisoryCeilingDkh": 8.19,
+            "escalate": true,
+            "exactDecimalBoundaryDkh": "8.19",
+            "binary64BoundaryDkh": 8.190000000000001,
+            "binary64WouldEscalate": false,
+            "note": "7.19 + 1.0 is exactly 8.19 in decimal and 8.190000000000001 in binary64, so A_now = 8.19 >= boundary is TRUE exactly and FALSE in binary64. ALK-DECIMAL-THRESHOLD-001 governs and the exact answer is ESCALATE. No two-decimal outerMax in 10.00-13.99 produces a high-side straddle, which is why this case uses an unusual but schema-valid bound; AD-ESC-002's DECIMAL_STRADDLE_AT carries the same class on a configuration a keeper would plausibly set (outerMin 8.2, floor exactly 7.2)."
           }
         ],
         "comparison": "exact decimal, inclusive at the boundary; ALK-DECIMAL-THRESHOLD-001; no epsilon",
@@ -4958,12 +4978,13 @@
             "temporarySafetyRateAdvisoryMlPerDay": 1.7849927849927854,
             "temporarySafetyPumpCommandMlPerDay": 1.8,
             "outerBoundState": "BREACHED_HIGH",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           },
           {
             "case": "AT_CEILING",
             "advisoryRangeEscalation": "ESCALATED",
-            "recommendedDoseMlPerDay": "NOT_RUN",
+            "recommendedDoseMlPerDay": "WITHHELD",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
             "maintenanceEstimateStatus": "UNRESOLVED",
@@ -4980,7 +5001,7 @@
           {
             "case": "ABOVE_CEILING",
             "advisoryRangeEscalation": "ESCALATED",
-            "recommendedDoseMlPerDay": "NOT_RUN",
+            "recommendedDoseMlPerDay": "WITHHELD",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
             "maintenanceEstimateStatus": "UNRESOLVED",
@@ -4992,14 +5013,28 @@
             "advisoryRangeEscalation": "NONE",
             "temporarySafetyRateAdvisoryMlPerDay": 1.7849927849927854,
             "temporarySafetyPumpCommandMlPerDay": 1.8,
-            "outerBoundState": "BREACHED_HIGH"
+            "outerBoundState": "BREACHED_HIGH",
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           },
           {
             "case": "ALT_BOUNDS_AT",
             "advisoryRangeEscalation": "ESCALATED",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
-            "outerBoundState": "BREACHED_HIGH"
+            "outerBoundState": "BREACHED_HIGH",
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "advisoryRangeEscalation": "ESCALATED",
+            "recommendedDoseMlPerDay": "WITHHELD",
+            "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
+            "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
+            "maintenanceEstimateStatus": "UNRESOLVED",
+            "outerBoundState": "BREACHED_HIGH",
+            "nextTestApproxHours": 24
           }
         ],
         "note": "Escalation WITHHOLDS delivery guidance. It does not set it to zero, and it does not reclassify outerBoundState."
@@ -5037,6 +5072,11 @@
           },
           "ALT_BOUNDS_AT": {
             "advisoryRangeEscalation": "NONE"
+          },
+          "DECIMAL_STRADDLE_AT": {
+            "advisoryRangeEscalation": "NONE",
+            "comparisonBasis": "binary64",
+            "temporarySafetyRateAdvisoryMlPerDay": 0
           }
         },
         "cases2": [
@@ -5046,7 +5086,40 @@
           "suppress the shortened retest because the engine escalated",
           "reclassify outerBoundState because the engine escalated"
         ]
-      }
+      },
+      "expectedReasonCodesByCase": {
+        "BELOW_CEILING": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ],
+        "AT_CEILING": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ],
+        "ABOVE_CEILING": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ],
+        "ALT_BOUNDS_BELOW": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ],
+        "ALT_BOUNDS_AT": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ],
+        "DECIMAL_STRADDLE_AT": [
+          "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "RETEST_HIGH_BREACH_FAILSAFE"
+        ]
+      },
+      "note_reasonCodes": "expectedReasonCodes is the UNION over cases and must not be asserted per case; expectedReasonCodesByCase is the per-case truth. AD-ESC-003 STRADDLING in particular must NOT emit SAFETY_ADVISORY_RANGE_EXCEEDED."
     },
     {
       "fixtureId": "AD-ESC-002",
@@ -5101,6 +5174,12 @@
             "outerMinDkh": 7.5,
             "alkDkh": 6.5,
             "safetyDestinationLowDkh": 7.7
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "outerMinDkh": 8.2,
+            "alkDkh": 7.2,
+            "safetyDestinationLowDkh": 8.4
           }
         ]
       },
@@ -5134,6 +5213,17 @@
             "case": "ALT_BOUNDS_AT",
             "advisoryFloorDkh": 6.5,
             "escalate": true
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "advisoryFloorDkh": 7.2,
+            "escalate": true,
+            "exactDecimalBoundaryDkh": "7.2",
+            "binary64BoundaryDkh": 7.199999999999999,
+            "binary64WouldEscalate": false,
+            "desiredMovementDkh": 0.5,
+            "requiredVolumeMl": 7.215007215007215,
+            "note": "8.2 - 1.0 is exactly 7.2 in decimal and 7.199999999999999 in binary64, so 7.2 <= boundary is TRUE exactly and FALSE in binary64. A binary64 engine silently drops the escalation and emits ordinary low-breach guidance at a level the owner decided is beyond what the engine will advise on. One-decimal bounds a keeper could plausibly set."
           }
         ],
         "comparison": "exact decimal, inclusive at the boundary; no epsilon",
@@ -5146,12 +5236,13 @@
             "advisoryRangeEscalation": "NONE",
             "safetyCorrectionVolumeMl": 7.215007215007215,
             "outerBoundState": "BREACHED_LOW",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           },
           {
             "case": "AT_FLOOR",
             "advisoryRangeEscalation": "ESCALATED",
-            "recommendedDoseMlPerDay": "NOT_RUN",
+            "recommendedDoseMlPerDay": "WITHHELD",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
             "maintenanceEstimateStatus": "UNRESOLVED",
@@ -5170,24 +5261,40 @@
           {
             "case": "BELOW_FLOOR",
             "advisoryRangeEscalation": "ESCALATED",
-            "recommendedDoseMlPerDay": "NOT_RUN",
+            "recommendedDoseMlPerDay": "WITHHELD",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
             "safetyCorrectionVolumeMl": 7.215007215007215,
             "outerBoundState": "BREACHED_LOW",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           },
           {
             "case": "ALT_BOUNDS_INSIDE",
             "advisoryRangeEscalation": "NONE",
             "safetyCorrectionVolumeMl": 7.215007215007215,
-            "outerBoundState": "BREACHED_LOW"
+            "outerBoundState": "BREACHED_LOW",
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           },
           {
             "case": "ALT_BOUNDS_AT",
             "advisoryRangeEscalation": "ESCALATED",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
-            "outerBoundState": "BREACHED_LOW"
+            "outerBoundState": "BREACHED_LOW",
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
+          },
+          {
+            "case": "DECIMAL_STRADDLE_AT",
+            "advisoryRangeEscalation": "ESCALATED",
+            "recommendedDoseMlPerDay": "WITHHELD",
+            "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
+            "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
+            "safetyCorrectionVolumeMl": 7.215007215007215,
+            "outerBoundState": "BREACHED_LOW",
+            "nextTestApproxHours": 24,
+            "maintenanceEstimateStatus": "UNRESOLVED"
           }
         ]
       },
@@ -5218,6 +5325,11 @@
           },
           "ALT_BOUNDS_AT": {
             "advisoryRangeEscalation": "NONE"
+          },
+          "DECIMAL_STRADDLE_AT": {
+            "advisoryRangeEscalation": "NONE",
+            "comparisonBasis": "binary64",
+            "recommendedDoseMlPerDay": 0
           }
         },
         "cases2": [
@@ -5227,7 +5339,44 @@
           "suppress the shortened retest",
           "withhold the one-off correction volume of an already-authoritative safety rule"
         ]
-      }
+      },
+      "expectedReasonCodesByCase": {
+        "INSIDE_FLOOR": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ],
+        "AT_FLOOR": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ],
+        "BELOW_FLOOR": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ],
+        "ALT_BOUNDS_INSIDE": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ],
+        "ALT_BOUNDS_AT": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ],
+        "DECIMAL_STRADDLE_AT": [
+          "SAFETY_OUTER_BOUND_BREACHED_LOW",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "SAFETY_RETURN_ACTIVE",
+          "RETEST_SAFETY_RETURN_ACTIVE"
+        ]
+      },
+      "note_reasonCodes": "expectedReasonCodes is the UNION over cases and must not be asserted per case; expectedReasonCodesByCase is the per-case truth. AD-ESC-003 STRADDLING in particular must NOT emit SAFETY_ADVISORY_RANGE_EXCEEDED."
     },
     {
       "fixtureId": "AD-ESC-003",
@@ -5313,7 +5462,7 @@
           {
             "case": "ALL_BEYOND",
             "advisoryRangeEscalation": "ESCALATED",
-            "recommendedDoseMlPerDay": "NOT_RUN",
+            "recommendedDoseMlPerDay": "WITHHELD",
             "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
             "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
             "maintenanceEstimateStatus": "UNRESOLVED",
@@ -5384,7 +5533,21 @@
           "suppress REPEAT_NOW because the engine escalated",
           "emit 0 mL/day in place of the withheld guidance"
         ]
-      }
+      },
+      "expectedReasonCodesByCase": {
+        "ALL_BEYOND": [
+          "EPISODE_CONTESTED_METHODS",
+          "SAFETY_ADVISORY_RANGE_EXCEEDED",
+          "RETEST_EPISODE_CONTESTED",
+          "VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED"
+        ],
+        "STRADDLING": [
+          "EPISODE_CONTESTED_METHODS",
+          "RETEST_EPISODE_CONTESTED",
+          "VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED"
+        ]
+      },
+      "note_reasonCodes": "expectedReasonCodes is the UNION over cases and must not be asserted per case; expectedReasonCodesByCase is the per-case truth. AD-ESC-003 STRADDLING in particular must NOT emit SAFETY_ADVISORY_RANGE_EXCEEDED."
     }
   ]
 }

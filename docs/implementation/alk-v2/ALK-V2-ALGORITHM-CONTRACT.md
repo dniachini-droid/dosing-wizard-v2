@@ -1485,6 +1485,15 @@ learned value does not carry over as equally valid.
 
 **PRECONDITIONS** `A_now < outerMin` from the latest valid cluster.
 
+**PRECEDING CHECK** — `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 21, `A40b`) is
+evaluated on the resolved episode value **before** this step. At or beyond
+`AdvisoryFloor = outerMin − 1.0 dKH` the engine's own sized delivery guidance in mL/day is
+withheld — `recommendedDoseMlPerDay = WITHHELD`, `temporarySafetyRateAdvisoryMlPerDay` and
+`temporarySafetyPumpCommandMlPerDay` `NOT_RUN`, and **not zero**. The one-off correction
+**volume** `V_safety` below is named in decision 21's exception list and **continues** to be
+emitted, together with `outerBoundState = BREACHED_LOW` and the shortened retest. Whether
+that exception list is closed is `OI-ADVISORYEXCEPTION-001`, OPEN.
+
 **FORMULA**
 
 ```text
@@ -1532,11 +1541,13 @@ Magnesium data is **not a required input** for the Alk safety action. Ordinary
 non-safety Alk/Ca correction logic may still respect the Mg gate; this exception belongs
 only to the Alk outer-bound safety return.
 
-**TESTS** `WG-ALK-041`, `WG-ALK-055`, `WG-ALK-061`, `X-GOV-003`.
+**TESTS** `WG-ALK-041`, `WG-ALK-055`, `WG-ALK-061`, `X-GOV-003`, `AD-ESC-002` (the advisory
+floor: inside acts, at and beyond escalates while `V_safety` continues).
 
 ## A40 — Outer-bound safety return, high breach
 
-**PRECONDITIONS** `A_now > outerMax`.
+**PRECONDITIONS** `outerMax < A_now < AdvisoryCeiling`. At or beyond `AdvisoryCeiling` this
+whole step is not reached — see `A40b`.
 
 **DECISION TREE**
 
@@ -1558,8 +1569,13 @@ consumption INTERPRETABLE  (C_estimate >= 0):
         ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
         P_selected invalid -> neither field; state the required dKH movement only
 
-consumption NEGATIVE - EITHER side of the materiality boundary:      [branch B]
+consumption NEGATIVE - EITHER side of the materiality boundary,      [branch B]
+  OR computable but otherwise physically uninterpretable:
                                               [ALK-HIGH-BREACH-SAFETY-SIZING-001]
+    the uninterpretable disjunct is ALK-HIGH-BREACH-UNRESOLVED-001's own wording -
+      "negative, on either side of the boundary, OR otherwise physically
+      uninterpretable" - and it is carried here so branch A's "and physically
+      interpretable" conjunct cannot leave a state matching no branch
     C_estimate is NOT usable for safety-dose sizing
     R_down        = min(A_now - A_safe_high, 0.50)
     D_safety_temp = max(0, D_current - R_down / P_selected)           [mL/day]
@@ -1595,21 +1611,44 @@ consumption NOT COMPUTABLE AT ALL:                                   [branch B']
     everything else - rails, guard, rounding, advisory/executable separation,
       SAFETY_RETURN integration, ~24 h cadence - exactly as branch B
 
-D_current UNKNOWN or NOT CONFIGURED - on ANY of A, B, B':
-                                      [ALK-DELIVERY-RATE-BASIS-001, decision 20]
-    temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
-    temporarySafetyPumpCommandMlPerDay  = NOT_RUN
-    NOT 0 mL/day - zero is a computed floor, never a stand-in for an unknown input
+D_current UNKNOWN or NOT CONFIGURED:  [ALK-DELIVERY-RATE-BASIS-001, decision 20]
+    B and B' cannot evaluate max(0, D_current - R_down / P_selected):
+        temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
+        temporarySafetyPumpCommandMlPerDay  = NOT_RUN
+        NOT 0 mL/day - zero is a computed floor, never a stand-in for an unknown input
+    A does not take D_current at all - see the RECORDED EXPOSURE below; pending the
+        owner's decision A is ALSO NOT_RUN, with the required dKH movement and
+        direction stated under CORE-INFORM-PROCEED-001
+    ordinary maintenance sizing/capping/rounding take D_current directly:
+        recommendedDoseMlPerDay = WITHHELD
     surface the measured state and the reason; request doser configuration through
       the EXISTING anomaly/confirmation machinery
     SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
     outer-bound state, SAFETY_RETURN and the shortened cadence continue unchanged
+    consumption is UNAFFECTED where D_history is available
+
+P_selected UNAVAILABLE or INVALID - on ANY branch:
+    D_safety_temp is not calculable; state the required dKH movement and direction
+      only, under CORE-INFORM-PROCEED-001. This is the PRE-EXISTING potency clause of
+      ALK-HIGH-BREACH-SAFETY-SIZING-001, not a fourth branch. Note it also makes
+      C_estimate uncomputable, so the branch selected is B'.
 ```
 
+**RECORDED EXPOSURE — `OI-BRANCHAREFUSAL-001`, OPEN.** Branch A's formula
+`max(0, (C_estimate + S_safety) / P_selected)` does **not** take `D_current`. With
+`D_current` unknown and `D_history` available, every input branch A needs is present.
+Owner decision 20 states the refusal without naming a branch; read literally it withholds a
+computable safety reduction above the outer bound, read against the formulas it does not
+reach A. On `A_now` 11.5, `C_estimate` +0.60, `P` 0.0693 the two readings give
+**1.44 mL/day** and **`NOT_RUN`**. That is an actuator command and it is the owner's to
+settle; pending that, A is `NOT_RUN` and the state is surfaced rather than silently sized.
+
 **Branch selection is total and disjoint.** Over `outerMax < A_now < AdvisoryCeiling`,
-exactly one of A (`C_estimate >= 0`), B (`C_estimate < 0`) and B′ (`C_estimate` not
-computable) is selected for every state. There is no fourth branch and no state that selects
-none. `INV-G12` asserts it.
+exactly one of A (`C_estimate >= 0` **and** physically interpretable), B (`C_estimate < 0`
+**or** computable-but-uninterpretable) and B′ (`C_estimate` not computable at all) is
+selected for every state. There is no fourth branch and no state that selects none.
+An unknown `D_current` and an invalid `P_selected` withhold the *rate* without changing the
+*branch*. `INV-G12` asserts it.
 
 `C_estimate >= 0` is `INTERPRETABLE` and sizes from consumption. Any negative
 `C_estimate` — on either side of `ALK-NEGATIVE-MATERIALITY-001`'s boundary — is unusable for
@@ -1664,7 +1703,7 @@ escalate  <=>  A_now >= AdvisoryCeiling  OR  A_now <= AdvisoryFloor
                (ALK-DECIMAL-THRESHOLD-001). NO epsilon exists or may be added.
 
 escalate:
-    recommendedDoseMlPerDay             = NOT_RUN
+    recommendedDoseMlPerDay             = WITHHELD   # the data contract's own token
     temporarySafetyRateAdvisoryMlPerDay = NOT_RUN
     temporarySafetyPumpCommandMlPerDay  = NOT_RUN
     maintenanceEstimateStatus           = UNRESOLVED
@@ -1676,8 +1715,13 @@ escalate:
       that the doser should be checked for fault or overdose; that correction at this
       level requires experienced judgement about the specific system
 
-    PRESERVED: outerBoundState (BREACHED_HIGH / BREACHED_LOW - NOT reclassified);
-               shortened / reprioritised retesting; every raw measurement
+    PRESERVED, and REQUIRED - escalation does not suppress any of them:
+               outerBoundState (BREACHED_HIGH / BREACHED_LOW - NOT reclassified);
+               the shortened / reprioritised retest the scheduler already owned
+                 (~24 h high-breach cadence, or REPEAT_NOW where a repeat rule
+                  already requires one) - still EMITTED, never NOT_RUN;
+               every raw measurement and audit record;
+               ALK-RETURN-TERMINATED-BY-SAFETY-001 and the intervention lock
 
     EXCEPTION: an already-authoritative safety rule that explicitly governs the state
       continues to govern - ALK-SAFETY-CORRECTION-RESOLUTION-001's one-off correction
@@ -1695,7 +1739,32 @@ CONTESTED EPISODE:
 
 **SCOPE** This narrows but does **not** resolve `OI-SIZINGFLAT-001`. Between `outerMax` and
 `AdvisoryCeiling`, `R_down` still saturates at the 0.50 dKH/day rail and the sized rate stops
-responding to `A_now`. That item stays open.
+responding to `A_now`. `R_down` saturates at `A_now >= A_safe,high + 0.50`, i.e. at
+`outerMax + 0.30` for the owner's bounds, so **0.70 of the 1.0 dKH advisory band is flat**.
+That item stays open.
+
+**RECORDED EXPOSURES, all OPEN and none decided here** — each is also a `RECORDED EXPOSURE`
+block in the canon rule and a register entry:
+
+```text
+OI-ADVISORYEXCEPTION-001  is the exception list closed or illustrative, and does the
+                          high-side SAFETY_RETURN's temporary rate continue at or
+                          beyond AdvisoryCeiling?  Encoded as written: it does not.
+OI-ADVISORYMEMBERS-001    is a SUSPECT member a member for "every member beyond"?
+                          Encoded as: do not choose - emit contested + REPEAT_NOW.
+OI-ADVISORYRETEST-001     is escalation a retest-scheduler candidate?  Encoded as:
+                          no new candidate; the scheduler's existing answer stands.
+OI-ADVISORYRETURN-001     an in-flight DOWNWARD return plan terminated at the ceiling
+                          stops a reduction and so raises delivery, with no sized
+                          replacement.  Encoded as: named, not filled.
+```
+
+**Consequence of "withhold rather than set", stated as a number.** On `AD-ESC-001`'s inputs
+(`P` 0.0693, `A_safe,high` 10.8, `D_current` 9.0, increment 0.1): 11.9 dKH commands
+**1.8 mL/day**; 12.0 dKH commands nothing, so the pump continues at **9.0 mL/day**.
+`outerBoundState` is `BREACHED_HIGH` at both. Neither `ALK-046` nor
+`ALK-LIQUID-VOLUME-GUARD-001` constrains the continuing rate, because the engine generates
+no delivery for them to bind on.
 
 **OUTPUT** `AdvisoryRangeEscalation`.
 
@@ -1705,9 +1774,10 @@ responding to `A_now`. That item stays open.
 this check is `NOT_RUN`; the outer-bound machinery is already unavailable in that state.
 
 **TESTS** `AD-ESC-001` (ceiling: immediately below ⇒ ordinary sizing, exactly at ⇒
-escalation, immediately above ⇒ escalation), `AD-ESC-002` (the same three against the
-floor), `AD-ESC-003` (contested episode, all members beyond ⇒ escalation, not
-withheld-as-contested).
+escalation, immediately above ⇒ escalation; two configured bound pairs; a decimal-straddling
+pair), `AD-ESC-002` (the same against the floor, plus the `OuterMin = 8.2` / `A_now = 7.2`
+case where binary64 and exact decimal disagree), `AD-ESC-003` (contested episode, all
+members beyond ⇒ escalation, not withheld-as-contested; straddling ⇒ `NOT_RUN`).
 
 ## A41 — Safety-return completion and integration
 

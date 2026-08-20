@@ -590,19 +590,27 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`;
   `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-003A` interpretable branch (owner decision 22).
 - **Generator:** every state with `outerMax < A_now < AdvisoryCeiling`, crossed with
-  `C_estimate ∈ {positive, exactly zero, negative-not-material, negative-material,
-  NOT COMPUTABLE}` and `D_current ∈ {known above the floor, known at the floor, known below
-  the floor, unknown}`.
-- **Assert:** for **every** generated state, exactly one of A (`C_estimate >= 0`),
-  B (`C_estimate < 0`) and B′ (`C_estimate` not computable) is selected — never zero
-  branches, never two. Where `D_current` is known, the selected branch produces a rate.
-  Where `D_current` is unknown, the branch is still selected and identified, and the
-  **rate** is `NOT_RUN` under `ALK-DELIVERY-RATE-BASIS-001` — the refusal is not a fourth
-  branch. B and B′ produce the identical `max(0, D_current − R_down / P_selected)`;
-  `maintenanceEstimateStatus` is `UNRESOLVED` on both.
+  `C_estimate ∈ {positive-and-interpretable, exactly zero, positive-but-NOT-physically-
+  interpretable, negative-not-material, negative-material, NOT COMPUTABLE}`,
+  `D_current ∈ {known above the floor, known at the floor, known below the floor, unknown}`
+  and `P_selected ∈ {valid, invalid, unavailable, zero}`.
+- **Assert:** for **every** generated state, exactly one of A (`C_estimate >= 0` **and**
+  physically interpretable), B (`C_estimate < 0` **or** computable-but-uninterpretable) and
+  B′ (`C_estimate` not computable at all) is selected — never zero branches, never two. A
+  computable, non-negative, **not physically interpretable** estimate selects **B**, per
+  `ALK-HIGH-BREACH-UNRESOLVED-001`'s own routing; it must not fall through. Where
+  `D_current` and `P_selected` are both usable, the selected branch produces a rate.
+  Two states withhold the **rate** without changing the **branch**, and neither is a fourth
+  branch: `D_current` unknown (`ALK-DELIVERY-RATE-BASIS-001`) and `P_selected`
+  unavailable/invalid (`ALK-HIGH-BREACH-SAFETY-SIZING-001`'s preserved potency clause — note
+  it also makes `C_estimate` uncomputable, so the branch is B′). B and B′ produce the
+  identical `max(0, D_current − R_down / P_selected)`; `maintenanceEstimateStatus` is
+  `UNRESOLVED` on both.
 - **Negative control:** remove the B′ branch so a non-computable `C_estimate` falls through;
   `AD-SAF-009` must fail with zero branches selected. Separately, route a non-computable
-  `C_estimate` to A by treating it as zero; `AD-SAF-009` must fail.
+  `C_estimate` to A by treating it as zero; `AD-SAF-009` must fail. Separately again, drop
+  B's "or computable but otherwise physically uninterpretable" disjunct; the
+  positive-but-uninterpretable generated state must fail with zero branches.
 - **Why it exists:** before decision 22 a high breach with no computable consumption
   estimate matched neither `C_estimate >= 0` nor `C_estimate < 0`, and produced no delivery
   response at all above the outer bound.
@@ -618,16 +626,27 @@ Fixture bodies for the canon-named invariants are in
   and one whose members straddle it.
 - **Assert:** immediately inside the boundary, ordinary high-breach sizing (or the ordinary
   low-breach path) runs and emits a rate. At the boundary and beyond,
-  `recommendedDoseMlPerDay`, `temporarySafetyRateAdvisoryMlPerDay` and
-  `temporarySafetyPumpCommandMlPerDay` are all `NOT_RUN` and **none of them is `0`**;
+  `recommendedDoseMlPerDay` is `WITHHELD` and `temporarySafetyRateAdvisoryMlPerDay` and
+  `temporarySafetyPumpCommandMlPerDay` are `NOT_RUN` — and **none of them is `0`**;
   `SAFETY_ADVISORY_RANGE_EXCEEDED` is emitted; `outerBoundState` is unchanged from what the
-  breach rules give; the shortened/reprioritised retest is still emitted;
+  breach rules give; the shortened/reprioritised retest is **still emitted** and is never
+  `NOT_RUN`; **all five** required message elements are present;
   `maintenanceEstimateStatus` is `UNRESOLVED`. A contested episode whose members are **all**
   beyond the boundary escalates rather than being withheld as contested. A straddling
   contested episode resolves nothing and takes `REPEAT_NOW`.
+- **Assert (exact decimal, no epsilon):** the boundary is computed and compared in **exact
+  decimal**. Generate configurations where binary64 disagrees — `OuterMin = 8.2` with
+  `A_now = 7.2` (exact floor `7.2`, binary64 floor `7.199999999999999`), `OuterMin = 8.7`
+  with `A_now = 7.7`, and the high-side two-decimal analogues — and assert the exact-decimal
+  answer. A binary64 implementation silently drops the escalation, which is a safety action
+  decided by representation error.
 - **Negative control:** remove the boundary so ordinary sizing applies above the ceiling;
   `AD-ESC-001` and `AD-ESC-002` must fail. Emit `0` instead of withholding; `AD-ESC-001`
-  must fail. Let a contested episode bypass the check; `AD-ESC-003` must fail.
+  must fail. Let a contested episode bypass the check; `AD-ESC-003` must fail. Suppress the
+  shortened retest on escalation; `AD-ESC-001` and `AD-ESC-002` must fail. Drop one of the
+  five message elements; `AD-ESC-001` must fail. Change the quantifier from *every* member
+  to *any* member; `AD-ESC-003`'s straddling case must fail. Compare the boundary in
+  binary64; the `OuterMin = 8.2` / `A_now = 7.2` case must fail.
 - **Scope, asserted:** this invariant does **not** assert that the sized rate responds to
   `A_now` between `outerMax` and `AdvisoryCeiling`. It does not, and that exposure stays
   open.
@@ -642,10 +661,13 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** high-breach safety sizing uses `D_current` and consumption uses `D_history`,
   on every generated interval and in **both** directions of dose change — so an
   interchange is caught by a sign error, not only by a magnitude error. `D_current`
-  unknown ⇒ no safety rate, no pump command, and **not** `0`, while consumption still runs
-  if `D_history` is available. `D_history` unavailable ⇒ consumption `UNRESOLVED`, while
-  safety sizing still runs if `D_current` is known. `D_established` appears nowhere as a
-  live name.
+  unknown ⇒ no safety rate on branches B and B′, no pump command, `recommendedDoseMlPerDay`
+  `WITHHELD`, and **not** `0`, while consumption still runs if `D_history` is available.
+  (Branch A is `OI-BRANCHAREFUSAL-001`, OPEN; this invariant asserts only the branches whose
+  formula takes `D_current`.) `D_history` unavailable ⇒ consumption `UNRESOLVED`, while
+  safety sizing still runs if `D_current` is known. A `D_history` that integrates to
+  **exactly zero** — the doser off for the whole interval — is a value, not an absence, and
+  must not fall back to `D_current`. `D_established` appears nowhere as a live name.
 - **Negative control:** swap `D_current` for `D_history` in the safety formula;
   `AD-DHS-001` must fail in **both** directions. Emit `0` when `D_current` is unknown;
   `AD-DHS-002` must fail. Withhold safety sizing because `D_history` is unavailable;

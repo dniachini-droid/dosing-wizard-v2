@@ -66,7 +66,7 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 131 check sites emitting 245 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| `validate-freeze-5.py` | Mechanical gate: 164 check sites emitting 292 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
 | `recompute-goldens.py` | **Recorder, not a gate.** Independently recomputes every fixture-stated derived value from its declared inputs and writes a machine-readable record, so "no arithmetic moved" is a checkable claim rather than an assertion. `--diff <record>` reports every golden that moved against a stored baseline. |
 | `baselines/*.json` | Golden baseline records. `golden-baseline-65c6030.json` is the state before owner decisions 20-22; `golden-post-decisions-20-22.json` is the state after. |
 | `fixtures/*.json` | Machine-readable golden corpus — 193 fixtures plus schema, config defaults and index. |
@@ -80,13 +80,15 @@ package and the canon appear to disagree, the canon governs and this package is 
 251  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 by owner decisions
                   16-19, 1 by owner decision 20)
  72  machine-testable invariants
- 47  open issues  (16 resolved by Freeze 5 and its amendments, 7 by owner decisions 16-22,
+ 52  open issues  (16 resolved by Freeze 5 and its amendments, 7 by owner decisions 16-22,
                   11 canon defects carried forward, 13 pinned, 3 no-problem,
-                  2 DELIBERATELY LEFT OPEN by decisions 20-22)
-  0  outputs withheld for want of an owner decision
+                  2 DELIBERATELY LEFT OPEN by decisions 20-22,
+                  5 OPENED by review of the 20-22 encoding and REPORTED, not decided)
+  2  outputs withheld pending an owner decision (OI-BRANCHAREFUSAL-001,
+                  OI-ADVISORYMEMBERS-001) - both withhold conservatively and surface why
   0  rules without a fixture
   0  rules with more than one owner
-348 -> 362  derived values recomputed from declared inputs; 0 moved across decisions 20-22
+348 -> 420  derived values recomputed from declared inputs; 0 moved across decisions 20-22
 ```
 
 ---
