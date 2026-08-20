@@ -127,16 +127,32 @@ unlisted=sorted(c for c in emitted if c not in catalogue)
 check('every emitted reason code is catalogued', not unlisted, str(unlisted))
 emitted_retired=sorted(c for c in emitted if c in retired)
 check('no retired reason code is emitted by a fixture', not emitted_retired, str(emitted_retired))
-# retired codes must not appear as required codes anywhere in the package prose either
-leak=[]
-for d in DOCS:
-    if os.path.basename(d) in ('ALK-V2-REASON-CODES.md','ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md'): continue
-    t=open(d,encoding='utf-8').read()
-    for line in t.split('\n'):
-        if 'Negative control' in line or 'negative control' in line: continue
-        for c in retired:
-            if c in line: leak.append((os.path.basename(d),c))
+# retired codes must not appear as required codes anywhere in the package prose either.
+# A line is exempt ONLY if it says, on that same line, that the code is retired, renamed or
+# forbidden. Previously the exemption was the bare substring 'negative control', which any
+# unrelated sentence could carry; the breaker showed the exemption had no negative control of
+# its own, so one is asserted below.
+_RETIRE_MARK=re.compile(r'negative control|RETIRED|Retired|retired|retires|renamed|Renamed|forbidden|previously read|preserved rather than deleted|superseded|Superseded', re.I)
+def _retired_code_leaks(texts):
+    out=[]
+    for name,t in texts:
+        for line in t.split('\n'):
+            if _RETIRE_MARK.search(line): continue
+            if line.lstrip().startswith('>'): continue      # preserved-history blockquote
+            for c in retired:
+                if c in line: out.append((name,c))
+    return out
+_spec_texts=[(os.path.basename(d),open(d,encoding='utf-8').read()) for d in DOCS
+             if os.path.basename(d) not in ('ALK-V2-REASON-CODES.md','ALK-V2-OPEN-ISSUES.md','ALK-V2-ADVERSARIAL-REVIEW.md')]
+leak=_retired_code_leaks(_spec_texts)
 check('no retired code referenced as live in the specs', not leak, str(leak[:6]))
+# NEGATIVE CONTROL for the check above: a genuinely live use must be caught, and the
+# exemption must not swallow it.
+_probe='reason = %s'%sorted(retired)[0]
+check('the retired-code scan catches a live use (negative control)',
+      len(_retired_code_leaks([('PROBE.md',_probe)]))==1, _probe)
+check('the retired-code exemption does not fire on an unmarked line (negative control)',
+      len(_retired_code_leaks([('PROBE.md','the engine emits %s here'%sorted(retired)[0])]))==1)
 
 # ---------- 7. Freeze-5 decision coverage: positive + negative control ----------
 DEC={'F5-01':['OI-INDEPENDENCE-001'],'F5-02':['OI-SUSPECT-001','OI-MADFLOOR-001'],
@@ -787,8 +803,15 @@ if f:
     check('AD-DHS-002 keeps consumption running - the two unknowns are independent',
           abs(a['consumptionDkhPerDay']-(P*inp['doseHistoryMeanMlPerDay']-inp['observedSlopeDkhPerDay']))<1e-9
           and a['consumptionPhysicality']=='NON_PHYSICAL_OR_UNEXPLAINED_GAIN')
-    check('AD-DHS-002 still selects a branch - the refusal is not a fourth branch',
-          ev['branchSelected']=='B' and abs(ev['rDownDkh']-0.4)<1e-12)
+    check('AD-DHS-002 selects NO branch - decision 25 refuses BEFORE selection',
+          ev['branchSelected']=='NOT_RUN' and ev['preconditionPassed'] is False
+          and abs(ev['rDownDkh']-0.4)<1e-12)
+    _s10=_fx('AD-SAF-010')
+    _s10ev={c['case']:c for c in _s10['expectedIntermediateEvidence']['cases']} if _s10 else {}
+    check('AD-DHS-002 agrees with AD-SAF-010 on the shape of a D_current-unknown refusal',
+          bool(_s10ev) and all(c['branchSelected']==ev['branchSelected']
+                               and c['preconditionPassed']==ev['preconditionPassed']
+                               for c in _s10ev.values() if c['preconditionPassed'] is False))
     check('AD-DHS-002 preserves the breach state and the shortened cadence',
           a['outerBoundState']=='BREACHED_HIGH' and a['nextTestApproxHours']==24)
     check('AD-DHS-002 forbids the floored-at-zero code, which would misread a refusal as a floor',
@@ -1075,10 +1098,16 @@ f=_fx('INV-G12')
 check('INV-G12 exists', f is not None)
 if f:
     txt=json.dumps(f)
+    # [F1] INV-G12 partitions the states that REACH selection. It must say so, or it
+    # contradicts INV-G15's pre-branch refusal. Both readings of the same state is exactly
+    # the ambiguity decision 25 exists to abolish.
     check('INV-G12 asserts joint exhaustiveness and mutual exclusion',
           'exactly one branch is selected for every generated state' in txt
           and 'no generated state selects zero branches' in txt
           and 'never two' in f['property'])
+    check('INV-G12 scopes itself to the states that REACH branch selection (decision 25)',
+          'reach' in txt.lower() and 'precondition' in txt.lower()
+          and 'INV-G15' in txt)
     check('INV-G12 carries the B-prime removal as its negative control',
           "Remove the B' branch" in f['negativeControl'] and 'AD-SAF-009' in f['negativeControl'])
 
@@ -1145,7 +1174,7 @@ check('canon states the advisory comparison inclusively in both directions',
       and 'inclusive at the boundary' in flat(ADV)
       and 'no epsilon exists or may be introduced' in flat(ADV))
 check('canon puts the advisory predicate in ALK-DECIMAL-THRESHOLD-001 governed table',
-      re.search(r'^\| advisory-range escalation against `AdvisoryCeiling` / `AdvisoryFloor` \| `ALK-ADVISORY-RANGE-BOUNDARY-001`',
+      re.search(r'^\| advisory-range confidence warning against `AdvisoryCeiling` / `AdvisoryFloor` \| `ALK-ADVISORY-RANGE-BOUNDARY-001`',
                 CANON, re.M) is not None)
 
 # 18c. [R3] the D_current-unknown handling REFUSES and forbids zero, in the canon
@@ -1243,10 +1272,15 @@ check('canon states the application never commands a pump',
 check('canon states there is ONE output, not two',
       'One output, not two' in flat(REC)
       and 'is **retired**' in flat(REC)
-      and 'full-precision value retained as an auditable intermediate' in flat(REC))
+      and 'retained as an **auditable intermediate**' in flat(REC))
 check('canon states actuator capability is not a concept',
       'Actuator capability is not a concept in this system' in flat(REC)
-      and 'no increment to be missing' in flat(REC))
+      and 'no state in which the engine must refuse to advise for want of one' in flat(REC))
+# [F5] item 2 must NOT deny the existence of the field item 5 renames and eight artefacts read.
+check('canon does not declare recommendationPrecisionMlPerDay nonexistent',
+      'There is no `recommendationPrecisionMlPerDay`' not in flat(REC)
+      and 'no `R_{pump}`, no increment' not in flat(REC)
+      and 'The field **exists and is read**' in flat(REC))
 check('canon states withholding has no physical effect',
       'Withholding a recommendation has no physical effect' in flat(REC)
       and 'a mechanism that does not exist' in flat(REC))
@@ -1278,10 +1312,12 @@ check('canon declares decisions 23-26 introduce no constant',
       'Decisions 23–26 introduce no constant at all' in flat(CANON))
 
 # 18i. [R11] B' is DISTINCT from an unknown D_current
+# [F16] this was `A and B or C`, binding as `(A and B) or C`. C was true, so the check was
+# vacuous and replacing the primary anchor still passed. Parenthesised, both limbs bind.
 check("canon keeps branch B' distinct from an unknown D_current",
       'Distinct from an unknown \\(D_{current}\\)' in BPR
-      and 'requires \\(D_{current}\\) to be\n**known**' in BPR.replace('  ',' ')
-      or 'requires \\(D_{current}\\) to be **known**' in flat(BPR))
+      and ('requires \\(D_{current}\\) to be\n**known**' in BPR.replace('  ',' ')
+           or 'requires \\(D_{current}\\) to be **known**' in flat(BPR)))
 check("canon does not let B' swallow the unknown-D_current refusal",
       'Also covers' not in flat(BPR) and 'treats it as 0' not in flat(BPR))
 
@@ -1331,6 +1367,291 @@ for oi in ('OI-SIZINGFLAT-001','OI-CZERODISCONT-001'):
         nxt=OI.find('\n## ', m.end()); seg=OI[m.start(): nxt if nxt!=-1 else len(OI)]
     check('%s is STILL open after decisions 23-26'%oi,
           bool(m) and '**Status:** **OPEN.**' in seg and '> **RESOLVED' not in seg)
+
+
+# ======================================================================================
+# 19. ABSENCE CHECKS — what must NOT be sayable anywhere in live text
+#
+# Every decision-23/24/25/26 check in section 18 is a string-PRESENCE assertion, and the
+# breaker demonstrated that all four decisions can be reverted IN CANON by ADDING a
+# contradicting clause: the asserted string is still there, so the gate stays green. Four
+# mutations (M5 decision 23, M6 decision 24, M7 decision 26, M8 decision 25) passed a
+# 192-check gate. Presence cannot see a contradiction; only absence can.
+#
+# Each scanner below has a NEGATIVE CONTROL that feeds it the exact mutation text the
+# breaker used, and fails if the scanner does not catch it. A checker never shown to fail
+# is not a gate (CORE-CANON-COVERAGE-001).
+# ======================================================================================
+
+# The corpus, as units, with preserved history excluded. History that has been reworded is
+# no longer history, so a blockquote is skipped WHOLE, never line-by-line.
+_LIVE_SKIP = ('ALK-V2-OPEN-ISSUES.md', 'ALK-V2-ADVERSARIAL-REVIEW.md',
+              'CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md')
+
+def _live_units():
+    """Yield (filename, unit) over live (non-history) prose in canon and the specs."""
+    for fn in sorted(glob.glob(R + 'docs/canon/*.md')
+                     + glob.glob(R + 'docs/implementation/alk-v2/*.md')):
+        if os.path.basename(fn) in _LIVE_SKIP:
+            continue
+        for unit in _units(open(fn, encoding='utf-8', errors='ignore').read()):
+            lines = [l for l in unit.split('\n') if l.strip()]
+            if lines and all(l.lstrip().startswith('>') for l in lines):
+                continue                       # preserved history, quoted whole
+            yield os.path.basename(fn), unit
+
+_LIVE_CORPUS = list(_live_units())
+
+def _scan(pred, extra=()):
+    """Every live unit matching pred, plus any synthetic units supplied for a control."""
+    return [(n, re.sub(r'\s+', ' ', u).strip()[:110])
+            for n, u in list(_LIVE_CORPUS) + list(extra) if pred(re.sub(r'\s+', ' ', u))]
+
+# --- 19a. [M5, decision 23] nothing may withhold an output for want of a precision -----
+_M5 = ('Where `recommendationPrecisionMlPerDay` is unavailable the rounded figure '
+       '`temporarySafetyRateRecommendationMlPerDay` is `NOT_RUN` and only the continuous '
+       'rate is emitted.')
+
+# The claim being hunted is CAUSAL: an output withheld BECAUSE a precision is absent. A unit
+# that merely mentions rounding near an unrelated withholding (the liquid-volume guard) is
+# not that claim, so absence-of-the-precision and the withholding must appear linked.
+_ABSENT = r'(?:missing|unavailable|unknown|absent|not configured|for want of|is MISSING|NOT CONFIGURED)'
+_WITHHOLD = r'(?:NOT_RUN|WITHHELD|withheld|withhold|withholds|REFUSE|refuses|refuse)'
+_PRECISION = r'(?:recommendationPrecisionMlPerDay|actuatorIncrementMlPerDay|R_\{?pump\}?|recommendation precision|actuator increment|maintenance-rate increment|device increment|the increment)'
+
+def _p_precision_withholds(u):
+    if not re.search(_PRECISION, u):
+        return False
+    linked = (re.search(_ABSENT + r'[^.]{0,160}' + _WITHHOLD, u)
+              or re.search(_WITHHOLD + r'[^.]{0,160}' + _ABSENT, u))
+    if not linked:
+        return False
+    # A CONFIGURED value <= 0 is a validation failure and always was: that refusal survives.
+    if re.search(r'<= ?0|≤ ?0|less than or equal to zero|CONFIGURED precision is|CONFIGURED and', u):
+        return False
+    # Statements that the withholding does NOT happen, or that record it as history.
+    if re.search(r'not withheld|nothing withheld|nothing is withheld|withholds nothing|'
+                 r'never `NOT_RUN`|not `NOT_RUN`|never withheld|no longer|retired|RETIRED|'
+                 r'retires|previously|superseded|Superseded|must not|may not|does not|'
+                 r'is not blocked|forbidden|Forbidden|negative control|Negative control|'
+                 r'not NOT_RUN|there is no ', u, re.I):
+        return False
+    return True
+
+check('no live text withholds an output for want of a recommendation precision [M5]',
+      not _scan(_p_precision_withholds), str(_scan(_p_precision_withholds)[:4]))
+check('  ^ negative control: the M5 mutation is caught',
+      len(_scan(_p_precision_withholds, [('PROBE.md', _M5)])) == 1)
+
+# --- 19b. [M6, decision 24] the advisory boundary may not withhold anything ------------
+_M6 = ('Where the warning attaches, the ordinary maintenance recommendation '
+       '`recommendedDoseMlPerDay` is WITHHELD and only the safety rate is stated.')
+
+def _p_boundary_withholds(u):
+    if not re.search(r'AdvisoryCeiling|AdvisoryFloor|advisory boundary|advisory range|'
+                     r'the warning attaches|advisoryConfidenceWarning', u):
+        return False
+    if not re.search(r'WITHHELD|withheld|withholds|NOT_RUN|escalates|escalate|'
+                     r'not sized|no rate is sized|is not reached', u):
+        return False
+    if re.search(r'not withheld|nothing withheld|nothing is withheld|withholds nothing|'
+                 r'never withheld|no longer|retired|RETIRED|retires|previously|superseded|'
+                 r'Superseded|must not|may not|forbidden|negative control|Negative control|'
+                 r'gates nothing|still runs|still sized|still sizes|is NOT|not `NOT_RUN`|'
+                 r'withholds neither|rewrote|rewritten|into a warning', u, re.I):
+        return False
+    return True
+
+check('no live text lets the advisory boundary withhold an output [M6]',
+      not _scan(_p_boundary_withholds), str(_scan(_p_boundary_withholds)[:4]))
+check('  ^ negative control: the M6 mutation is caught',
+      len(_scan(_p_boundary_withholds, [('PROBE.md', _M6)])) == 1)
+
+# --- 19c. [M8, decision 25] no branch is exempt from the pre-branch precondition -------
+_M8 = ('**Branch A is exempt.** Where consumption is interpretable the branch A formula '
+       'max(0,(C_estimate + S_safety)/P_selected) runs and states its rate, because it does '
+       'not reference D_current.')
+
+def _p_branch_a_exempt(u):
+    if not re.search(r'[Bb]ranch A', u):
+        return False
+    if not re.search(r'exempt|does not apply|not apply to A|unaffected by the precondition|'
+                     r'runs and states its rate|is not refused', u):
+        return False
+    if re.search(r'not exempt|no branch is exempt|applies identically|applies to branch A|'
+                 r'retired|previously|superseded|Superseded|must not|may not|forbidden|'
+                 r'negative control|Negative control', u, re.I):
+        return False
+    return True
+
+check('no live text exempts branch A from the D_current precondition [M8]',
+      not _scan(_p_branch_a_exempt), str(_scan(_p_branch_a_exempt)[:4]))
+check('  ^ negative control: the M8 mutation is caught',
+      len(_scan(_p_branch_a_exempt, [('PROBE.md', _M8)])) == 1)
+
+# --- 19d. [M7, decision 26] the warning may not state an interval of its own -----------
+_M7 = ('The warning nonetheless states its own confirmation interval, which halves whatever '
+       'the scheduler produced.')
+
+def _p_warning_own_interval(u):
+    if not re.search(r'warning', u, re.I):
+        return False
+    if not re.search(r'its own (confirmation )?interval|own retest|halves|its own schedule|'
+                     r'shortens the retest|own cadence|second interval', u, re.I):
+        return False
+    if re.search(r'must not|may not|never states|states NO interval|no interval of its own|'
+                 r'retired|previously|superseded|Superseded|forbidden|negative control|'
+                 r'Negative control|renders whatever', u, re.I):
+        return False
+    return True
+
+check('no live text gives the warning a retest interval of its own [M7]',
+      not _scan(_p_warning_own_interval), str(_scan(_p_warning_own_interval)[:4]))
+check('  ^ negative control: the M7 mutation is caught',
+      len(_scan(_p_warning_own_interval, [('PROBE.md', _M7)])) == 1)
+
+# --- 19e. a RETIRED RULE ID may not be cited as live governing authority ---------------
+# Check 13 covers retired reason CODES only. Nothing covered retired RULE IDs, and the
+# breaker found ALK-SAFETY-CORRECTION-RESOLUTION-001 named as live authority for a safety
+# output inside ALK-ROUNDING-001's Scope, in ordinary prose with no marker.
+RETIRED_RULES = ('ALK-SAFETY-TEMP-RATE-RESOLUTION-001', 'ALK-SAFETY-CORRECTION-RESOLUTION-001')
+
+def _p_retired_rule_live(u):
+    if not any(r in u for r in RETIRED_RULES):
+        return False
+    # Only a GOVERNANCE assertion counts. Naming a retired rule in a retirement table or a
+    # decision map is a record of history, not a claim that it governs an output.
+    if not re.search(r'governed by|governs|is owned by|owns |under `ALK-SAFETY|'
+                     r'applies|exempt under|per `ALK-SAFETY|remains governed', u):
+        return False
+    if re.search(r'RETIRED|retired|retires|no longer governs|previously|superseded|'
+                 r'Superseded|not live authority|may cite|negative control|Negative control|'
+                 r'reclassified|INAPPLICABLE', u, re.I):
+        return False
+    return True
+
+_rr = _scan(_p_retired_rule_live)
+check('no retired RULE ID is cited as live governing authority',
+      not _rr, str(_rr[:4]))
+check('  ^ negative control: a live citation is caught',
+      len(_scan(_p_retired_rule_live,
+                [('PROBE.md', 'The correction volume remains governed by '
+                              'ALK-SAFETY-CORRECTION-RESOLUTION-001.')])) == 1)
+
+# Same, over the fixtures' rulesExercised / canonSource, where a retired ID means the
+# fixture claims to exercise a rule that governs nothing.
+_frr = []
+for fid, (fn, f) in fixtures.items():
+    for key in ('rulesExercised',):
+        for r in f.get(key, []) or []:
+            if r in RETIRED_RULES:
+                _frr.append((fid, r))
+check('no fixture claims to exercise a retired rule', not _frr, str(_frr[:6]))
+
+# --- 19f. [F9] expectedReasonCodesByCase and variantReasonCodes are READ ---------------
+# The gate collected reason codes from `expectedReasonCodes` and `variant.expectedReasonCodes`
+# only. `expectedReasonCodesByCase` is the shape decisions 24-26 introduced, and
+# `variantReasonCodes` predates them; between them 70+ assertions were never validated
+# against the catalogue or the retired set. The breaker appended two retired codes to
+# AD-ESC-001 and the gate stayed green.
+_extra = collections.Counter()
+_extra_sites = []
+def _harvest(fid, o, path=''):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            if k in ('expectedReasonCodesByCase', 'variantReasonCodes') and isinstance(v, dict):
+                for case, codes in v.items():
+                    for c in codes or []:
+                        _extra[c] += 1
+                        _extra_sites.append((fid, k, case, c))
+            else:
+                _harvest(fid, v, path + '/' + str(k))
+    elif isinstance(o, list):
+        for v in o:
+            _harvest(fid, v, path)
+for fid, (fn, f) in fixtures.items():
+    _harvest(fid, f)
+
+check('the by-case reason-code shapes are actually read by this gate',
+      len(_extra) > 0 and len(_extra_sites) >= 40,
+      '%d distinct codes over %d sites' % (len(_extra), len(_extra_sites)))
+_bad = sorted({c for c in _extra if c not in catalogue})
+check('every by-case reason code is catalogued', not _bad, str(_bad))
+_badr = sorted({c for c in _extra if c in retired})
+check('no by-case reason code is retired', not _badr, str(_badr))
+# Negative control: the harvester must see a code planted in that shape.
+_probe = {'expectedReasonCodesByCase': {'PROBE': ['PROBE_CODE_NOT_IN_CATALOGUE']}}
+_extra_before = len(_extra_sites)
+_harvest('PROBE', _probe)
+check('  ^ negative control: the by-case harvester sees a planted code',
+      len(_extra_sites) == _extra_before + 1
+      and 'PROBE_CODE_NOT_IN_CATALOGUE' not in catalogue)
+
+# A fixture's own `forbidden.reasonCodes` must not be contradicted by its expectations.
+_contra = []
+for fid, (fn, f) in fixtures.items():
+    forb = set((f.get('forbidden', {}) or {}).get('reasonCodes', []) or [])
+    if not forb:
+        continue
+    got = set(f.get('expectedReasonCodes', []) or [])
+    for k, v in (f.get('expectedReasonCodesByCase', {}) or {}).items():
+        got |= set(v or [])
+    if forb & got:
+        _contra.append((fid, sorted(forb & got)))
+check('no fixture expects a code it also forbids', not _contra, str(_contra[:4]))
+
+# --- 19g. [F8] the warning must not alter the retest ACROSS the boundary ---------------
+# The gate compared the three retest fields WITHIN a warned case only, so setting every
+# warned case to 6 h while the unwarned cases stayed at 24 h passed. Decision 24's own
+# words - "the warning must not alter ... the retest schedule" - are a statement about the
+# two SIDES of the boundary, so the comparison has to cross it.
+for fid in ('AD-ESC-001', 'AD-ESC-002'):
+    f = _fx(fid)
+    check('%s exists' % fid, f is not None)
+    if not f:
+        continue
+    cases = {c['case']: c for c in f['expectedAction']['cases']}
+    warned = {k: v for k, v in cases.items() if v.get('advisoryConfidenceWarning') == 'ATTACHED'}
+    unwarned = {k: v for k, v in cases.items() if v.get('advisoryConfidenceWarning') != 'ATTACHED'}
+    check('%s states both warned and unwarned cases' % fid,
+          len(warned) >= 1 and len(unwarned) >= 1,
+          'warned=%d unwarned=%d' % (len(warned), len(unwarned)))
+    for field in ('nextTestApproxHours',):
+        vals_w = {v.get(field) for v in warned.values() if field in v}
+        vals_u = {v.get(field) for v in unwarned.values() if field in v}
+        check('%s: the warning does not move %s across the boundary' % (fid, field),
+              bool(vals_w) and bool(vals_u) and vals_w == vals_u,
+              'warned=%s unwarned=%s' % (sorted(map(str, vals_w)), sorted(map(str, vals_u))))
+    # and the three retest fields agree within every case that states them
+    for name, c in cases.items():
+        present = [k for k in ('nextTestApproxHours', 'warningRetestIntervalHours',
+                               'schedulerRetestIntervalHours') if k in c]
+        if len(present) > 1:
+            check('%s/%s: one retest answer, not two (decision 26)' % (fid, name),
+                  len({c[k] for k in present}) == 1,
+                  str({k: c[k] for k in present}))
+
+# --- 19h. [F17] AD-REC-002's forbidden phrases are searched against the package --------
+# The gate asserted the LIST had four entries and that one contained 'pump continues'. It
+# never searched for them. Two of the four were live in the algorithm contract.
+f = _fx('AD-REC-002')
+check('AD-REC-002 exists', f is not None)
+if f:
+    phrases = (f.get('forbidden', {}) or {}).get('phrases', []) or []
+    check('AD-REC-002 names at least four forbidden phrases', len(phrases) >= 4, str(len(phrases)))
+    hits = []
+    for ph in phrases:
+        key = re.sub(r'\s+', ' ', ph.strip().lower())
+        for n, u in _LIVE_CORPUS:
+            fu = re.sub(r'\s+', ' ', u).lower()
+            if key in fu:
+                hits.append((n, ph[:48]))
+    check('no forbidden phrase survives in live text', not hits, str(hits[:4]))
+    check('  ^ negative control: a planted forbidden phrase is caught',
+          bool(phrases) and any(
+              re.sub(r'\s+', ' ', phrases[0].strip().lower())
+              in re.sub(r'\s+', ' ', u).lower()
+              for _, u in [('PROBE.md', 'Note that ' + phrases[0] + ' in this state.')]))
 
 print()
 print('%d checks failed' % len(fails))

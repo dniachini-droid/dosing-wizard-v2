@@ -568,7 +568,7 @@ Fixture bodies for the canon-named invariants are in
   the two; `AD-EPI-002`, `AD-EPI-003` and `AD-EPI-004` must fail. Move the two members three
   minutes apart and the outputs must not change.
 - **Why it exists:** exact-timestamp coalescing left position, rapid and a three-minute
-  offset able to change an recommendation and an outer-bound classification by storage
+  offset able to change a recommendation and an outer-bound classification by storage
   order.
 
 ### INV-C14 — Canonical decimal thresholds compare exactly
@@ -589,28 +589,55 @@ Fixture bodies for the canon-named invariants are in
 ### INV-G12 — Exactly one high-breach branch is selected, always
 - **Canon:** `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`;
   `ALK-HIGH-BREACH-SAFETY-SIZING-001`; `ALK-003A` interpretable branch (owner decision 22).
-- **Generator:** every state with `outerMax < A_now < AdvisoryCeiling`, crossed with
+- **Scope, amended by owner decisions 24 and 25.** The region is `A_now > outerMax` with
+  **no upper limit** (decision 24 removed the `AdvisoryCeiling` bound), and the invariant
+  governs only the states that **reach** branch selection — that is, those whose pre-branch
+  precondition passed. `INV-G15` governs the gate in front of it. **The two are
+  complementary and must never be read as competing answers for the same state.**
+- **Generator:** every state with `A_now > outerMax`, **including at and beyond
+  `AdvisoryCeiling`**, crossed with
   `C_estimate ∈ {positive-and-interpretable, exactly zero, positive-but-NOT-physically-
   interpretable, negative-not-material, negative-material, NOT COMPUTABLE}`,
   `D_current ∈ {known above the floor, known at the floor, known below the floor, unknown}`
-  and `P_selected ∈ {valid, invalid, unavailable, zero}`.
-- **Assert:** for **every** generated state, exactly one of A (`C_estimate >= 0` **and**
-  physically interpretable), B (`C_estimate < 0` **or** computable-but-uninterpretable) and
-  B′ (`C_estimate` not computable at all) is selected — never zero branches, never two. A
-  computable, non-negative, **not physically interpretable** estimate selects **B**, per
-  `ALK-HIGH-BREACH-UNRESOLVED-001`'s own routing; it must not fall through. Where
-  `D_current` and `P_selected` are both usable, the selected branch produces a rate.
-  Two states withhold the **rate** without changing the **branch**, and neither is a fourth
-  branch: `D_current` unknown (`ALK-DELIVERY-RATE-BASIS-001`) and `P_selected`
-  unavailable/invalid (`ALK-HIGH-BREACH-SAFETY-SIZING-001`'s preserved potency clause — note
-  it also makes `C_estimate` uncomputable, so the branch is B′). B and B′ produce the
-  identical `max(0, D_current − R_down / P_selected)`; `maintenanceEstimateStatus` is
-  `UNRESOLVED` on both.
+  and `P_selected ∈ {valid, invalid, unavailable, zero}`. States with `D_current` unknown
+  are expected to be **refused by the precondition** and to select **no** branch; they are
+  checked against `INV-G15`, not against the partition below.
+- **Assert:** for every generated state **that reaches selection**, exactly one of A
+  (`C_estimate >= 0` **and** physically interpretable), B (`C_estimate < 0` **or**
+  computable-but-uninterpretable) and B′ (`C_estimate` not computable at all) is selected —
+  never zero branches, never two. A computable, non-negative, **not physically
+  interpretable** estimate selects **B**, per `ALK-HIGH-BREACH-UNRESOLVED-001`'s own
+  routing; it must not fall through. Where `D_current` and `P_selected` are both usable, the
+  selected branch produces a rate. **Every state at or beyond `AdvisoryCeiling` still selects
+  a branch and still states a rate** — the boundary attaches a warning and gates nothing.
+
+  The two "no rate" states are **not the same shape**:
+
+  - `D_current` **unknown** — the precondition of `ALK-DELIVERY-RATE-BASIS-001` refuses
+    **before** selection (owner decision 25), so `preconditionPassed` is `false` and
+    `branchSelected` is `NOT_RUN`. This is not a fourth branch because it is not a branch:
+    it is the gate in front of the tree, and it is `INV-G15`'s to assert.
+  - `P_selected` **unavailable or invalid** — the precondition **passed**, a branch **is**
+    selected (B′, since an invalid potency also makes `C_estimate` uncomputable), and
+    `ALK-HIGH-BREACH-SAFETY-SIZING-001`'s preserved potency clause withholds the mL figure
+    while stating the required dKH movement and direction.
+
+  B and B′ produce the identical `max(0, D_current − R_down / P_selected)`;
+  `maintenanceEstimateStatus` is `UNRESOLVED` on both.
+
+  > **Superseded by owner decision 25, preserved rather than deleted.** This invariant
+  > previously asserted: "Two states withhold the **rate** without changing the **branch**,
+  > and neither is a fourth branch: `D_current` unknown (`ALK-DELIVERY-RATE-BASIS-001`) and
+  > `P_selected` unavailable/invalid." Decision 25 moved the `D_current` refusal ahead of
+  > branch selection, so it no longer selects a branch at all.
 - **Negative control:** remove the B′ branch so a non-computable `C_estimate` falls through;
   `AD-SAF-009` must fail with zero branches selected. Separately, route a non-computable
   `C_estimate` to A by treating it as zero; `AD-SAF-009` must fail. Separately again, drop
   B's "or computable but otherwise physically uninterpretable" disjunct; the
-  positive-but-uninterpretable generated state must fail with zero branches.
+  positive-but-uninterpretable generated state must fail with zero branches. Separately
+  again, restore the decision-20 reading and let a `D_current`-unknown state select branch B
+  while withholding only the rate; `AD-DHS-002` and `AD-SAF-010` must disagree with each
+  other, which is the ambiguity decision 25 abolished.
 - **Why it exists:** before decision 22 a high breach with no computable consumption
   estimate matched neither `C_estimate >= 0` nor `C_estimate < 0`, and produced no delivery
   response at all above the outer bound.
@@ -749,13 +776,14 @@ Three more were added by owner decisions 16–19. `INV-G11` pins the high-breach
 to its formula so no classification can choose it. `INV-C13` pins one episode output for
 every consumer, under permuted order and jittered timestamps alike. `INV-C14` pins exact
 decimal comparison for the canonical thresholds. All three exist because the finding they
-close could change an recommendation, a safety action or an outer-bound classification.
+close could change a recommendation, a safety action or an outer-bound classification.
 
 Three more were added by owner decisions 20–22, all in group G because all three decide a
 safety action. `INV-G12` asserts that the three high-breach predicates are jointly
 exhaustive and mutually exclusive, so no state can fall through with no delivery response.
-`INV-G13` pins the advisory boundary: at or beyond it the engine escalates and **withholds**
-delivery guidance rather than setting it to zero. `INV-G14` pins `D_current` and `D_history`
+`INV-G13` pinned the advisory boundary as a refusal; **owner decision 24 rewrote it** and it
+now pins the boundary as a warning that changes no answer — see the decisions 23–26 paragraph
+below. `INV-G14` pins `D_current` and `D_history`
 apart, and does it on mixed-dose intervals in both directions — on a constant-dose segment
 the two are numerically equal, which is exactly why one name carrying both quantities went
 unnoticed by every fixture in the corpus. `INV-G10` and `INV-G11` were amended for the

@@ -843,7 +843,7 @@
         "continuousActionCandidateMlPerDay": 9.04508781532,
         "roundedTo": 9.0,
         "action": "HOLD_CURRENT_DOSE",
-        "reason": "ACTUATOR_RESOLUTION"
+        "reason": "MAINTENANCE_ROUNDS_TO_CURRENT_DOSE"
       },
       "expectedReasonCodes": [
         "MAINTENANCE_ROUNDS_TO_CURRENT_DOSE"
@@ -1531,10 +1531,10 @@
         "bindingThresholdPotencyDkhPerMl": 0.00025
       },
       "expectedAction": {
-        "issueAsOne24hCommand": false,
+        "recommendAsOneDoseWithin24h": false,
         "stagedOverDays": 2,
         "reportsLongerDuration": true,
-        "executableDosingCommandForTheOffendingDay": "WITHHELD",
+        "recommendationForTheOffendingDay": "WITHHELD",
         "cappedToGuardAndPresented": false
       },
       "expectedReasonCodes": [
@@ -3254,7 +3254,7 @@
           2000,
           2050
         ],
-        "note": "2000 is the guard value and is indistinguishable from a capped command; 2050 is the rounded candidate. Both are forbidden. HELD is also forbidden as the action status: the guard withholds an recommendation rather than affirming the current dose."
+        "note": "2000 is the guard value and is indistinguishable from a capped command; 2050 is the rounded candidate. Both are forbidden. HELD is also forbidden as the action status: the guard withholds a recommendation rather than affirming the current dose."
       }
     },
     {
@@ -4587,7 +4587,7 @@
     },
     {
       "fixtureId": "AD-DHS-002",
-      "title": "D_current unknown refuses the safety rate - no rate, no command, and NOT zero",
+      "title": "D_current unknown refuses the safety rate BEFORE branch selection - no rate, no branch, and NOT zero",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
@@ -4596,7 +4596,7 @@
           "CORE-INFORM-PROCEED-001",
           "ALK-CAPABILITY-CONTRACT-001"
         ],
-        "note": "Owner decision 20, unknown handling. Negative control: 0 mL/day is a computed floor, never a stand-in for an unknown input."
+        "note": "Owner decision 20 unknown handling, AMENDED BY OWNER DECISION 25 to a pre-branch precondition. Negative control: 0 mL/day is a computed floor, never a stand-in for an unknown input, and B is not the branch here because no branch is selected."
       },
       "rulesExercised": [
         "ALK-DELIVERY-RATE-BASIS-001",
@@ -4626,8 +4626,9 @@
         "materialityMarginDkhPerDay": 0.045254833996,
         "cPlusKSigma": -0.08154516600400002,
         "materiallyNegative": true,
-        "branchSelected": "B",
-        "note": "The branch is still selected and identified - the refusal is not a fourth branch. R_down is still computed. Only the rate, which needs D_current, is withheld."
+        "preconditionPassed": false,
+        "branchSelected": "NOT_RUN",
+        "note": "AMENDED BY OWNER DECISION 25. The refusal is a PRECONDITION evaluated BEFORE branch selection, so selection does not run and NO branch is selected. It is not a fourth branch because it is not a branch at all - it is the gate in front of the branch tree. R_down and C_estimate are still computed; they do not need D_current. Under owner decision 20 alone this fixture stated branchSelected B."
       },
       "expectedAction": {
         "temporarySafetyRateContinuousMlPerDay": "NOT_RUN",
@@ -4655,7 +4656,8 @@
         "RETEST_HIGH_BREACH_FAILSAFE"
       ],
       "openIssues": [
-        "OI-DELIVERYRATEBASIS-001 - RESOLVED by owner decision 20"
+        "OI-DELIVERYRATEBASIS-001 - RESOLVED by owner decision 20",
+        "OI-BRANCHAREFUSAL-001 - RESOLVED by owner decision 25"
       ],
       "forbidden": {
         "note": "REVERSION MUTATION TARGET. Emitting 0 mL/day here states a computed answer the engine does not have, and is indistinguishable on the card from a genuine floor. Substituting D_history for the unknown D_current is the other forbidden repair.",
@@ -4781,7 +4783,7 @@
         "ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001",
         "ALK-HIGH-BREACH-SAFETY-SIZING-001",
         "ALK-DELIVERY-RATE-BASIS-001",
-        "ALK-SAFETY-TEMP-RATE-RESOLUTION-001",
+        "ALK-RECOMMEND-ONLY-001",
         "ALK-ROUNDING-001",
         "ALK-RETEST-SCHEDULER-001"
       ],

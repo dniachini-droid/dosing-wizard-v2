@@ -65,7 +65,7 @@ blocking register. Neither withholds an output: both name an exposure inside a p
 still runs, and both forbid the implementation from compensating for it.
 
 Review of the **decisions 20–22 encoding** opened **five more**, in section A5, every one of
-which can change an recommendation, a safety action or a retest output. **All five are
+which can change a recommendation, a safety action or a retest output. **All five are
 OPEN and none is decided.** Each states what the encoding does pending the owner's decision
 and what an implementer must not do instead, and each is mirrored as a `RECORDED EXPOSURE`
 block in the canon rule it affects. This is the register behaving as intended: a review of a
@@ -1266,7 +1266,7 @@ Three properties followed:
 it "widens without bound" with residual scatter. On a scattered series it was roughly 9.3×
 wider than on a clean one, tolerating an unexplained gain of about 0.42 dKH/day above the
 outer bound with no reduction in delivery. Decision 16 removes the band from sizing rather
-than capping it, so the uncapped width no longer sizes an recommendation.
+than capping it, so the uncapped width no longer sizes a recommendation.
 
 ---
 
@@ -1679,7 +1679,7 @@ branch boundary. The discontinuity is a named exposure.
 # A5. Opened by review of the decisions 20–22 encoding — ALL OPEN
 
 Focused `canon-conformance-auditor` and `breaker` review of the decisions 20–22 encoding
-reported findings that **can change an recommendation, a safety action or a retest
+reported findings that **can change a recommendation, a safety action or a retest
 output**. Under the task constraint they are reported and left for the owner rather than
 resolved by the run that found them. Each is recorded here **and** as a `RECORDED EXPOSURE`
 block in the canon rule it affects, so an implementer reaching the rule cannot miss it.
@@ -1689,11 +1689,11 @@ implementer must not do instead.**
 
 | Item | Question | Can change |
 |---|---|---|
-| `OI-BRANCHAREFUSAL-001` | does high-breach branch A refuse when `D_current` is unknown? | an recommendation |
-| `OI-ADVISORYEXCEPTION-001` | is decision 21's exception list closed, and does the high-side safety return's rate continue beyond the ceiling? | an recommendation |
+| `OI-BRANCHAREFUSAL-001` | does high-breach branch A refuse when `D_current` is unknown? | a recommendation |
+| `OI-ADVISORYEXCEPTION-001` | is decision 21's exception list closed, and does the high-side safety return's rate continue beyond the ceiling? | a recommendation |
 | `OI-ADVISORYMEMBERS-001` | is a `SUSPECT` member a member for "every member beyond the boundary"? | a safety action |
 | `OI-ADVISORYRETEST-001` | is escalation a retest-scheduler candidate? | a retest output |
-| `OI-ADVISORYRETURN-001` | an in-flight downward return plan terminated at the ceiling | an recommendation |
+| `OI-ADVISORYRETURN-001` | an in-flight downward return plan terminated at the ceiling | a recommendation |
 
 ## OI-BRANCHAREFUSAL-001 — does branch A refuse when `D_current` is unknown?
 
@@ -1746,7 +1746,7 @@ reading of the decision as written — with the measured state, the reason and t
 dKH movement and direction surfaced under `CORE-INFORM-PROCEED-001`, so the keeper is not
 left with silence. An implementer must **not** emit the branch-A rate instead. Note also
 that `ALK-ROUNDING-001`'s tie-toward-current and step-toward-current steps have no operand
-without `D_current`, so a branch-A rate could not be rounded to an recommendation in
+without `D_current`, so a branch-A rate could not be rounded to a recommendation in
 that state even if it were emitted — which is itself a reason the owner may prefer the
 withholding reading.
 

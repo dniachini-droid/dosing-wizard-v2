@@ -114,18 +114,21 @@
 
     { "fixtureId": "INV-G12", "title": "Exactly one high-breach branch is selected, always", "provenance": { "class": "CANON_DERIVED", "canonSource": ["ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001", "ALK-HIGH-BREACH-SAFETY-SIZING-001", "ALK-003A"] },
       "kind": "PROPERTY",
-      "property": "For every state with OuterMax < A_now < AdvisoryCeiling, exactly one of the three high-breach predicates is selected: A (C_estimate >= 0 and physically interpretable), B (C_estimate negative, either side of the materiality boundary) or B' (C_estimate not computable at all). Never zero branches; never two.",
-      "generator": "Cross C_estimate over {positive, exactly zero, negative-not-material, negative-material, NOT COMPUTABLE} with D_current over {known above the floor, known at the floor, known below the floor, unknown}, at several A_now inside the band and several sigma_S.",
+      "property": "For every state with A_now > OuterMax - the WHOLE high-breach region, with no upper limit, since owner decision 24 removed the AdvisoryCeiling bound - THAT REACHES BRANCH SELECTION, exactly one of the three high-breach predicates is selected: A (C_estimate >= 0 and physically interpretable), B (C_estimate negative, either side of the materiality boundary) or B' (C_estimate not computable at all). Never zero branches; never two. A state REACHES branch selection when the pre-branch precondition of ALK-DELIVERY-RATE-BASIS-001 passes, i.e. when D_current is known; where it is unknown, owner decision 25 refuses BEFORE selection and INV-G15 governs instead. INV-G12 and INV-G15 are complementary and must never be read as competing answers for the same state.",
+      "generator": "Cross C_estimate over {positive, exactly zero, negative-not-material, negative-material, NOT COMPUTABLE} with D_current over {known above the floor, known at the floor, known below the floor, unknown}, at several A_now above OuterMax INCLUDING at and beyond AdvisoryCeiling, and several sigma_S. States with D_current unknown are expected to be refused by the precondition and to select NO branch; they are checked against INV-G15, not against the partition.",
       "mustHold": [
         "exactly one branch is selected for every generated state",
         "C_estimate exactly zero selects A, not B - the comparison is C_estimate >= 0",
         "B and B' produce the identical max(0, D_current - R_down / P_selected)",
         "maintenanceEstimateStatus is UNRESOLVED on both B and B'",
-        "an unknown D_current does not create a fourth branch: the branch is still selected and identified, and only the RATE is NOT_RUN under ALK-DELIVERY-RATE-BASIS-001",
+        "an unknown D_current does not create a fourth branch, because it does not reach the branch tree at all: owner decision 25 refuses in a PRECONDITION evaluated BEFORE selection, so preconditionPassed is false and branchSelected is NOT_RUN. Under owner decision 20 alone this line read that the branch was still selected and only the rate was NOT_RUN; decision 25 replaced that reading.",
+   "an invalid P_selected DOES reach selection: the precondition passes, branch B' is selected because an invalid potency also makes C_estimate uncomputable, and the pre-existing potency clause withholds the mL figure while stating the required dKH movement",
+   "every state at or beyond AdvisoryCeiling still selects a branch and still states a rate - the boundary attaches a warning and gates nothing (owner decision 24)",
         "no generated state selects zero branches"
       ],
       "negativeControl": "Remove the B' branch so a non-computable C_estimate falls through; AD-SAF-009 must fail with zero branches selected. Separately, route a non-computable C_estimate to A by treating it as zero; AD-SAF-009 must fail on the emitted rate.",
       "whyItExists": "Before owner decision 22, a high breach with no computable consumption estimate matched neither C >= 0 nor C < 0. The state produced no delivery response at all above the outer bound, and nothing in the corpus asserted that the predicates covered the space.",
-      "openIssues": ["OI-UNCOMPUTABLEC-001 - RESOLVED by owner decision 22"] }
+      "openIssues": ["OI-UNCOMPUTABLEC-001 - RESOLVED by owner decision 22",
+  "OI-BRANCHAREFUSAL-001 - RESOLVED by owner decision 25; this invariant was amended to scope itself to the states that REACH selection"] }
   ]
 }

@@ -219,7 +219,7 @@ Examples:
 - mistyped or dimensionally invalid concentration;
 - incompatible units;
 - impossible/non-physical mass balance;
-- missing rounding to the current dose required for a final dose;
+- missing actuator resolution required for a final dose — **RETIRED as a risk category by owner decision 23**: the application never commands a pump, so this state cannot arise; where a *configured display precision* is absent the full-precision recommendation is stated and nothing is refused;
 - corrupted or ambiguous dose-change time;
 - missing provenance needed for empirical calibration;
 - contradictory evidence that makes the recommendation unsupported.
@@ -533,7 +533,7 @@ reason = HISTORICAL_CONFIGURATION_UNAVAILABLE
 
 - config-independent historical facts/analyses may still be shown or computed when their own requirements are satisfied.
 
-Do not manufacture historical target ranges, net volume, potency, rounding to the current dose or other configuration merely to make replay complete.
+Do not manufacture historical target ranges, net volume, potency, recommendation precision or other configuration merely to make replay complete.
 
 ## 2.3 Derived estimates
 
@@ -4942,16 +4942,27 @@ no execution path from the engine to the tank.**
 
 Everything below follows from that one fact.
 
-**1. One output, not two.** The distinction between an "exact advisory rate" and an
-"recommended rate" is **retired**. Where this canon previously emitted two
-figures it emits **one recommended rate**, rounded for human legibility, with the
-full-precision value retained as an auditable intermediate exactly as ordinary maintenance
-already does (`continuousActionCandidateMlPerDay` beside `recommendedDoseMlPerDay`).
+**1. One output, not two.** The distinction between an "exact advisory rate" that the
+keeper may act on and an "executable command" that a pump would execute is **retired**,
+because the second half of it never existed. Where this canon previously emitted two
+**separately labelled outputs** — one exact and actionable, one rounded and executable, the
+second sometimes `NOT_RUN` while the first was stated — it emits **one recommended rate**,
+rounded for human legibility. The full-precision value is retained as an **auditable
+intermediate**, not as a second output, exactly as ordinary maintenance already does
+(`continuousActionCandidateMlPerDay` beside `recommendedDoseMlPerDay`). Retaining an
+intermediate is not the retired split: the split was two *answers*, and there is now one.
 
 **2. Actuator capability is not a concept in this system.** Every rule, predicate, reason
-code, status and fixture whose only purpose was to withhold or round an output because
-recommendation precision was unknown or unavailable is **retired**. There is no
-`recommendationPrecisionMlPerDay`, no `R_{pump}`, no increment to be missing.
+code and status whose only purpose was to **withhold** an output because a *device*
+increment was unknown or unavailable is **retired**. There is no actuator, no device
+increment, and no state in which the engine must refuse to advise for want of one.
+
+This retires a **capability concept**, not a **number**. The rounding increment itself
+survives, reclassified — see item 5. The symbol \(R_{pump}\) is renamed
+\(R_{precision}\) wherever it appears, because it never described a pump; the quantity, its
+value and every threshold expressed in it (`ALK-STEP-CAP-001`'s
+\(0.25\,D_{current}\ge R_{precision}\) and \(D_{current}\ge 4R_{precision}\), and
+`ALK-ROUNDING-001`'s rounding step) are **arithmetically unchanged**.
 
 **3. No actuator-capability status.** `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` is retired.
 The remaining `CAPABILITY_` states — missing potency, missing solution or delivery context,
@@ -4969,13 +4980,31 @@ about **advice only**.
 **5. Rounding survives, for legibility only.** `ALK-ROUNDING-001` continues to round a
 recommended number, because a human reads it. It does **not** exist to match a hardware
 increment. Its increment is renamed `recommendationPrecisionMlPerDay`: a **display
-convention**, not a device capability. It is never "unavailable" in the sense that withholds
-an output — where no precision is configured the engine states the full-precision
-recommendation.
+convention**, not a device capability. The field **exists and is read** — item 2 retires the
+capability that made it load-bearing, not the field. It is never "unavailable" in the sense
+that withholds an output. Precisely:
 
-**6. Vocabulary.** The phrases "actuator command", "executable command" and "pump command"
-are **not live vocabulary** in this canon. The output is a **recommendation** or a **recommended
-rate**.
+```text
+recommendationPrecisionMlPerDay CONFIGURED and > 0
+    -> ALK-ROUNDING-001 rounds to it, exactly as before
+
+recommendationPrecisionMlPerDay CONFIGURED and <= 0
+    -> VALIDATION_RECOMMENDATION_PRECISION_INVALID; this is a bad configured value,
+       which is a validation failure and always was
+
+recommendationPrecisionMlPerDay NOT CONFIGURED AT ALL
+    -> the engine states the FULL-PRECISION recommendation and withholds nothing
+    -> NO reason code is emitted for this: it is an ordinary answer, not an exception
+    -> ALK-ROUNDING-001's step-6 hard-constraint recheck STILL RUNS
+    -> NOT a capability refusal, NOT NOT_RUN, NOT WITHHELD
+    -> no default increment is assumed, invented or borrowed
+```
+
+**6. Vocabulary.** The phrases "actuator command", "executable command", "pump command" and
+"nearest pump setting" are **not live vocabulary** in this canon. The output is a
+**recommendation** or a **recommended rate**. Where those phrases appear inside a passage
+marked as preserved history, they are quoted history and are **left exactly as they were
+written** — history that has been reworded is no longer history.
 
 **What this rule does not change.** Every chemistry conclusion, threshold, rail, guard,
 uncertainty treatment, evidence rule and retest rule is untouched. Decision 23 changes what
@@ -4988,7 +5017,7 @@ deleted:
 |---|---|
 | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` | its entire premise was the split between an exact advisory rate and an executable rounded command under an unavailable device increment |
 | `ALK-SAFETY-CORRECTION-RESOLUTION-001` | an `M-1` exemption for a one-off volume when the maintenance increment is missing; there is no increment to be missing |
-| `M-1`'s recommendation-precision limb | the remainder of `ALK-CAPABILITY-CONTRACT-001` is unaffected |
+| `M-1`'s `actuatorIncrementMlPerDay` limb — the field, its `REFUSE` behaviour and `ACTUATOR_INCREMENT_REQUIRED` | there is no actuator increment to require; the remainder of `ALK-CAPABILITY-CONTRACT-001` is unaffected |
 
 ---
 
@@ -5242,10 +5271,12 @@ Permanent maintenance remains a separate inference.
 
 `ALK-SAFETY-CORRECTION-RESOLUTION-001` — **RETIRED by owner decision 23**
 
-**This rule no longer governs anything.** It was an `M-1` exemption: it let a one-off
-`SAFETY_RETURN` correction volume be emitted even though the maintenance **device
-increment** was missing. `ALK-RECOMMEND-ONLY-001` retires recommendation precision as a concept,
-so there is no increment to be missing and nothing to exempt the correction from.
+**This rule no longer governs anything, and it is not live authority for any output.** It
+was an `M-1` exemption: it let a one-off `SAFETY_RETURN` correction volume be emitted even
+though the maintenance **actuator increment** (`actuatorIncrementMlPerDay`) was missing.
+`ALK-RECOMMEND-ONLY-001` retires actuator capability as a concept, so there is no device
+increment to be missing and nothing to exempt the correction from. **No rule may cite this
+ID as governing authority.**
 
 **What survives, and where it now lives.** The one-off low-breach correction volume itself
 is calculated by `ALK-OUTER-BOUND-ACTION-001`, which is unchanged:
@@ -5276,10 +5307,12 @@ mL correction under `CORE-INFORM-PROCEED-001`.
 
 `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` — **RETIRED by owner decision 23**
 
-**This rule no longer governs anything.** Its entire premise was the separation of an exact
-advisory rate from an recommended rate while an recommendation precision was
-unavailable. `ALK-RECOMMEND-ONLY-001` establishes that the application never commands a
-pump, so there is no recommendation to separate and no increment to be missing.
+**This rule no longer governs anything, and it is not live authority for any output.** Its
+entire premise was the separation of an exact advisory rate from an **executable rounded
+command** while an **actuator increment** was unavailable. `ALK-RECOMMEND-ONLY-001`
+establishes that the application never commands a pump, so there is no executable command to
+separate the advisory rate from, and no device increment to be missing. **No rule may cite
+this ID as governing authority.**
 
 **What survives, and where it now lives.** The high-breach paths produce
 \(D_{safety,temp}\), a temporary safety **rate** in mL/day — from consumption where
@@ -5305,13 +5338,13 @@ have nothing to do with device capability:
 
 > **Superseded wording, preserved rather than deleted.** This rule previously read:
 >
-> > The exemption is extended to cover it. When `recommendationPrecisionMlPerDay` is unavailable,
+> > The exemption is extended to cover it. When `actuatorIncrementMlPerDay` is unavailable,
 > > the **exact calculated temporary safety rate may be emitted as an advisory rate**. Two
 > > outputs are kept **distinct and separately labelled**, and must never be merged:
 > > `temporarySafetyRateContinuousMlPerDay = D_safety,temp` (exact, full precision);
-> > `temporarySafetyRateRecommendationMlPerDay = NOT_RUN` (while the increment is absent);
+> > `temporarySafetyRateExecutableMlPerDay = NOT_RUN` (while the increment is absent);
 > > `reason = CAPABILITY_ACTUATOR_INCREMENT_REQUIRED`. Once the increment becomes
-> > available, the recommendation is produced by `ALK-ROUNDING-001` from the same
+> > available, the executable command is produced by `ALK-ROUNDING-001` from the same
 > > advisory rate.
 >
 > `OI-SAFETYRATE-001`, which Freeze 5 closed as F5-11 by writing this rule, is
@@ -5512,9 +5545,9 @@ removes that bound**: the ordinary rules now run at every level, so `R_{down}` s
 the 0.50 dKH/day rail and the sized rate stops responding to \(A_{now}\) from
 \(A_{safe,high}+0.50\) **upward without limit**, exactly as it did before decision 21.
 `OI-SIZINGFLAT-001` is therefore **not narrowed any more, and is emphatically not closed**.
-Its reach is wider under decision 24 than under decision 21, and this rule **narrows but does
-not resolve** nothing at all — it removes the narrowing that decision 21 provided. Nothing here compensates for
-it, and no branch boundary is moved.
+Its reach is wider under decision 24 than under decision 21: this rule **narrows nothing** and
+**resolves nothing** — it removes the narrowing that decision 21 provided. Nothing here
+compensates for it, and no branch boundary is moved.
 
 > **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision
 > 21 this rule read, in place of everything above from "What happens at and beyond the
@@ -5666,10 +5699,18 @@ Two clusters of readings fall at the floor rather than above it: with \(P=0.0693
 \(R_{down}/P_{selected}\) is 3.6–7.2 mL/day, so a configured dose below that delivers
 zero. `AD-CON-002` is such a case and is not a counter-example to the bullets above.
 
-**Where this rule sits in the sequence.** The escalation check of
-`ALK-ADVISORY-RANGE-BOUNDARY-001` is evaluated **before** this rule. At or beyond
-`AdvisoryCeiling` no rate is sized here at all. This rule governs the band
-\(OuterMax < A_{now} < AdvisoryCeiling\).
+**Where this rule sits in the sequence, as amended by owner decision 24.** This rule governs
+the **whole** high-breach region \(A_{now} > OuterMax\), with **no upper limit**.
+`ALK-ADVISORY-RANGE-BOUNDARY-001` no longer gates it: under owner decision 24 that rule is a
+warning, not a refusal, so at and beyond \(AdvisoryCeiling\) this rule **still sizes the
+rate, by the same arithmetic**, and the warning attaches beside the answer. There is no
+level above which sizing stops.
+
+> **Superseded wording, preserved rather than deleted.** Under owner decision 21 this
+> paragraph read: "The escalation check of `ALK-ADVISORY-RANGE-BOUNDARY-001` is evaluated
+> **before** this rule. At or beyond `AdvisoryCeiling` no rate is sized here at all. This
+> rule governs the band \(OuterMax < A_{now} < AdvisoryCeiling\)." Owner decision 24
+> removed that bound.
 
 **Everything else is preserved and still applies:**
 
@@ -5694,7 +5735,9 @@ configured delivery rate are all already frozen.
 
 `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`
 
-**Owner decision 22.** Where \(OuterMax < A_{now} < AdvisoryCeiling\) and \(C_{estimate}\)
+**Owner decision 22, as amended by owner decision 24.** Where \(A_{now} > OuterMax\) — at
+any level above the outer bound, with **no upper limit**, because owner decision 24 made the
+advisory boundary a warning rather than a refusal — and \(C_{estimate}\)
 is **not computable at all** — insufficient history, a first-ever test, an unknown dose
 history, or any other state in which the mass balance cannot be evaluated rather than
 evaluating to a number — the state takes the **branch B pathway**:
@@ -5738,7 +5781,8 @@ two states are not interchangeable: one is missing the consumption estimate, the
 missing the quantity the formula reduces.
 
 **The three high-breach predicates are jointly exhaustive and mutually exclusive** over the
-state space \(OuterMax < A_{now} < AdvisoryCeiling\):
+state space \(A_{now} > OuterMax\) — the **whole** region, with no upper limit, since owner
+decision 24 removed the `AdvisoryCeiling` bound decision 21 had imposed on it:
 
 ```text
 A.   C_estimate >= 0 AND physically interpretable
@@ -5750,8 +5794,10 @@ B'.  C_estimate not computable at all
        -> sized from D_current              (this rule)
 ```
 
-Every high-breach state below \(AdvisoryCeiling\) selects **exactly one** of A, B and B'.
-There is no fourth branch and no state that selects none.
+Every high-breach state that **reaches** branch selection selects **exactly one** of A, B
+and B'. There is no fourth branch. A state reaches branch selection at any level above
+\(OuterMax\), with no upper limit (owner decision 24), **provided the high-breach
+precondition of `ALK-DELIVERY-RATE-BASIS-001` passes**.
 
 **Why B carries the uninterpretable disjunct.** Branch A's precondition in `ALK-003A` is
 `C_estimate >= 0` **and** physically interpretable, so a computable, non-negative estimate
@@ -5763,18 +5809,31 @@ routes it to `ALK-HIGH-BREACH-SAFETY-SIZING-001`. B is therefore written to matc
 existing routing rather than to a narrower `C_estimate < 0`. No new decision is taken here:
 the disjunct is read off the rule that already owns the routing.
 
-**What is NOT a fourth branch.** Two states withhold a rate without selecting a different
-branch, and neither breaks the partition:
+**What is NOT a fourth branch, as amended by owner decision 25.** Two states produce no
+rate, and neither creates a fourth branch — but they are **not** the same shape as each
+other, and the difference is load-bearing:
 
-- \(D_{current}\) **unknown** — `ALK-DELIVERY-RATE-BASIS-001` refuses. The branch is still
-  selected and identified; only the rate is `NOT_RUN`;
-- \(P_{selected}\) **unavailable or invalid** — `ALK-HIGH-BREACH-SAFETY-SIZING-001`'s
-  preserved potency clause already governs: \(D_{safety,temp}\) is not calculable and the
-  engine states the required dKH movement and direction only, under
-  `CORE-INFORM-PROCEED-001`. Note this state also makes \(C_{estimate}\) uncomputable, so
-  the branch it selects is B'.
+- \(D_{current}\) **unknown or not configured** — the high-breach **precondition** of
+  `ALK-DELIVERY-RATE-BASIS-001` refuses, and it is evaluated **before** branch selection.
+  Selection therefore does not run and **no branch is selected**:
+  `branchSelected = NOT_RUN`, `preconditionPassed = false`. This is not a fourth branch
+  because it is not a branch at all — it is the gate in front of the branch tree;
+- \(P_{selected}\) **unavailable or invalid** — the precondition passes, a branch **is**
+  selected, and `ALK-HIGH-BREACH-SAFETY-SIZING-001`'s preserved potency clause then
+  governs: \(D_{safety,temp}\) is not calculable and the engine states the required dKH
+  movement and direction only, under `CORE-INFORM-PROCEED-001`. This state also makes
+  \(C_{estimate}\) uncomputable, so the branch it selects is B'.
 
-This is asserted as an invariant, not left to inspection.
+So exactly one of these three shapes holds for every high-breach state: the precondition
+refuses and no branch is selected; or a branch is selected and states a rate; or a branch is
+selected and the potency clause withholds the mL figure. `INV-G12` and `INV-G15` assert this
+together, and they must not be read as disagreeing: `INV-G12` partitions the states that
+**reach** selection, `INV-G15` governs the gate in front of it.
+
+> **Superseded wording, preserved rather than deleted.** Under owner decision 20 alone this
+> passage read: "\(D_{current}\) **unknown** — `ALK-DELIVERY-RATE-BASIS-001` refuses. The
+> branch is still selected and identified; only the rate is `NOT_RUN`." Owner decision 25
+> moved the refusal ahead of branch selection, so no branch is selected.
 
 **Not addressed here.** The discontinuity in sized rate as \(C_{estimate}\) crosses zero
 between branches A and B remains **open** and is deliberately not closed by this rule. No
@@ -6267,21 +6326,33 @@ none of them re-derives it:
 | consumption estimation | `ALK-CONSUMPTION-ESTIMATE-001` |
 | forecast | `ALK-FORECAST-SLOPE-001`, `ALK-062` |
 | maintenance-dose calculation | `ALK-049` pipeline |
-| advisory-range escalation | `ALK-ADVISORY-RANGE-BOUNDARY-001` (added by owner decision 21) |
+| advisory-range confidence warning | `ALK-ADVISORY-RANGE-BOUNDARY-001` (added by owner decision 21; rewritten as a warning by owner decision 24) |
 
 This is `MASTER RULE 1` and `X-INV-004` applied to the episode: one owner constructs the
 episode, and everything downstream reads its output.
 
-**Amended by owner decision 21 — one named exception, and only one.**
-`ALK-ADVISORY-RANGE-BOUNDARY-001` consumes the resolved episode value like every other
-consumer above. Where the episode is **contested** and no value resolves, it additionally
-evaluates a **universal predicate over the members** — whether *every* member is at or
-beyond the advisory boundary. That is admissible under the headline prohibition because it
-**selects no measurement**: it produces no level, promotes no member to `position`, and
-answers only a yes/no about the whole set. Where the members straddle the boundary the
-predicate is false and nothing further happens. No other consumer gains this exception, and
-`position`, `outerBoundState` and `rapidConfirmed` remain `NOT_RUN` on a contested episode
-whether or not escalation applies.
+**Amended by owner decision 24 — the exception is RETIRED and there is now no exception at
+all.** `ALK-ADVISORY-RANGE-BOUNDARY-001` consumes the resolved episode value like every
+other consumer above, and does **nothing else**. Decision 21 had given it one named
+exception — a universal predicate over the members of a contested episode — because it
+needed to decide whether to **withhold advice**. Decision 24 stopped it withholding advice,
+so the question the predicate answered no longer arises and the predicate is retired with
+it. Where the episode is **contested** and no value resolves, there is no value to warn
+about and no recommendation for a warning to attach to; the ordinary contested handling
+governs unchanged, with `position`, `outerBoundState` and `rapidConfirmed` `NOT_RUN` and
+`REPEAT_NOW`. **This rule therefore has no exceptions, named or otherwise.**
+
+> **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision
+> 21 this passage read: "**Amended by owner decision 21 — one named exception, and only
+> one.** `ALK-ADVISORY-RANGE-BOUNDARY-001` consumes the resolved episode value like every
+> other consumer above. Where the episode is **contested** and no value resolves, it
+> additionally evaluates a **universal predicate over the members** — whether *every* member
+> is at or beyond the advisory boundary. That is admissible under the headline prohibition
+> because it **selects no measurement**: it produces no level, promotes no member to
+> `position`, and answers only a yes/no about the whole set. Where the members straddle the
+> boundary the predicate is false and nothing further happens. No other consumer gains this
+> exception, and `position`, `outerBoundState` and `rapidConfirmed` remain `NOT_RUN` on a
+> contested episode whether or not escalation applies."
 
 **For a RESOLVED episode** — emit one canonical episode value and time for downstream use.
 
@@ -6364,7 +6435,7 @@ The predicates this governs are:
 | position against the preferred range edges | `ALK-004` |
 | outer-bound breach against `OuterMin` / `OuterMax` | `ALK-003A` |
 | safety-return completion against `A_safe,low` / `A_safe,high` | `ALK-003A` |
-| advisory-range escalation against `AdvisoryCeiling` / `AdvisoryFloor` | `ALK-ADVISORY-RANGE-BOUNDARY-001` (added by owner decision 21) |
+| advisory-range confidence warning against `AdvisoryCeiling` / `AdvisoryFloor` | `ALK-ADVISORY-RANGE-BOUNDARY-001` (added by owner decision 21; the predicate is unchanged by owner decision 24, only what it triggers) |
 
 **Amended by owner decision 21.** The advisory-boundary row is the fifth predicate. Its
 operands already qualify under the scope list above — a configured decimal bound plus a
@@ -6376,9 +6447,12 @@ that it is.
 
 The extension is not decorative. With `OuterMin = 8.2` the exact floor is
 `8.2 − 1.0 = 7.2`; in binary64 it is `7.199999999999999`, so a resolved episode value of
-exactly `7.2 dKH` escalates under exact decimal and does **not** escalate under binary64 —
-a safety action decided by representation error, on a one-decimal configuration a keeper
-could plausibly set. The same class exists on the high side at two-decimal bounds.
+exactly `7.2 dKH` **warns** under exact decimal and does **not** warn under binary64 — a
+safety-relevant output decided by representation error, on a one-decimal configuration a
+keeper could plausibly set. The same class exists on the high side at two-decimal bounds.
+Under owner decision 24 what the predicate decides is whether the confidence warning
+attaches, not whether advice is withheld; the predicate, its operands and its inclusivity
+are unchanged.
 
 Worked consequence, which is the reason this rule exists:
 
@@ -6852,7 +6926,7 @@ The uncertainty model already gives the desired behaviour:
 
 - sparse/noisy evidence → \(\sigma_S\) large → supported slope shrinks toward zero;
 - longer clean evidence → \(\sigma_S\) falls → a persistent slow trend becomes supportable;
-- tiny supported corrections may still round to HOLD at rounding to the current dose;
+- tiny supported corrections may still round to HOLD at the configured recommendation precision;
 - no separate percentage or endpoint threshold is needed to suppress noise.
 
 This lets the Alk noise floor participate quantitatively rather than acting as a second binary gate.
@@ -8221,7 +8295,7 @@ ceiling for it.** The band still scales with \(\sigma_S\) and still has no fixed
 it no longer controls the delivered high-breach rate: that comes from \(R_{down}\) and the
 established dose, both of which are bounded. What the band still decides is the recorded
 maintenance classification, the wording and the maintenance evidence state — none of which
-sizes an recommendation.
+sizes a recommendation.
 
 ### Slight negative within uncertainty
 
@@ -8266,7 +8340,7 @@ Default response to materially unexplained negative consumption:
 
 ### Explicit outer-bound exception
 
-If the latest Alk is **above `OuterMax`** and below `AdvisoryCeiling`, `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes a temporary reduction of actual Alk delivery, which floors at 0 mL/day where the configured contribution cannot absorb \(R_{down}\). At or beyond `AdvisoryCeiling`, `ALK-ADVISORY-RANGE-BOUNDARY-001` withholds the rate instead of sizing one.
+If the latest Alk is **above `OuterMax`** — at any level, with no upper limit — `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes a temporary reduction of recommended Alk delivery, which floors at 0 mL/day where the configured contribution cannot absorb \(R_{down}\). At or beyond `AdvisoryCeiling` the rate is **still sized, by the same arithmetic**; under owner decision 24 `ALK-ADVISORY-RANGE-BOUNDARY-001` attaches a confidence warning beside that answer and withholds nothing.
 
 **Amended by owner decision 21**, preserved for history — this sentence previously read
 "If the latest Alk is **above `OuterMax`**", with no upper bound on the region the sizing
@@ -9105,7 +9179,7 @@ D_{current}\ge4R_{pump}
 
 the ordinary 25% cap becomes active automatically.
 
-This is a deterministic consequence of the 25% cap and rounding to the current dose, not a separately chosen tank-size threshold.
+This is a deterministic consequence of the 25% cap and the configured recommendation precision, not a separately chosen tank-size threshold.
 
 ### Narrow rapid/outer-bound relaxation
 
@@ -9179,8 +9253,30 @@ R_precision = recommendationPrecisionMlPerDay
 
 Preconditions:
 
-- `R_precision` is known and greater than zero;
 - the continuous candidate has already passed the applicable evidence, physical-rail, step-cap, empirical-bracket and non-negative-dose rules.
+
+**Amended by owner decision 23 — `R_precision` is no longer a precondition of this rule
+running.** It was one while a missing increment meant a pump could not be commanded. Under
+`ALK-RECOMMEND-ONLY-001` there is no pump, so a missing increment means only that there is
+no display convention to round to. This rule therefore always runs, in three states:
+
+```text
+R_precision CONFIGURED and > 0   -> steps 1-8 below, unchanged
+R_precision CONFIGURED and <= 0  -> VALIDATION_RECOMMENDATION_PRECISION_INVALID (a bad
+                                    configured value; a validation failure, as before)
+R_precision NOT CONFIGURED       -> steps 1-4 and 7-8 do not apply, because there is
+                                    nothing to round to. The recommendation IS the
+                                    continuous candidate, stated at full precision.
+                                    STEP 6 STILL RUNS: the hard-constraint recheck against
+                                    ALK-046 and ALK-LIQUID-VOLUME-GUARD-001 is not a
+                                    rounding artefact and is never skipped. No default
+                                    increment is assumed.
+```
+
+> **Superseded wording, preserved rather than deleted.** This precondition previously read
+> "`R_pump` is known and greater than zero", `R_pump` being the actuator increment
+> `actuatorIncrementMlPerDay`. Owner decision 23 retired the actuator premise; the symbol is
+> renamed \(R_{precision}\) and the precondition is replaced by the three-state table above.
 
 ### Canonical rounding
 
@@ -9204,9 +9300,21 @@ Do not force a one-increment change merely to avoid HOLD.
 
 ### Scope
 
-M-1's recommendation precision requirement applies to final actionable **maintenance mL/day**.
+**Amended by owner decision 23.** Rounding to a configured display precision applies to
+every final recommended mL/day figure the engine states — ordinary maintenance and the
+temporary high-breach safety rate alike. There is no longer a class of output that is
+exempt, because there is no longer a refusal to be exempt from: nothing is withheld for want
+of an increment anywhere, so a one-off urgent `SAFETY_RETURN` correction volume needs no
+exemption and is simply stated, rounded where a precision is configured and at full
+precision where none is.
 
-A one-off urgent `SAFETY_RETURN` correction volume remains governed by `ALK-SAFETY-CORRECTION-RESOLUTION-001` and is not blocked merely because a maintenance-rate increment is unknown.
+> **Superseded wording, preserved rather than deleted.** This section previously read: "M-1's
+> actuator increment requirement applies to final actionable **maintenance mL/day**. A
+> one-off urgent `SAFETY_RETURN` correction volume remains governed by
+> `ALK-SAFETY-CORRECTION-RESOLUTION-001` and is not blocked merely because a
+> maintenance-rate increment is unknown." Both
+> `ALK-SAFETY-CORRECTION-RESOLUTION-001` and M-1's increment limb are retired by owner
+> decision 23 and neither is live authority for anything.
 
 ---
 
@@ -12388,7 +12496,7 @@ From 9.0 mL/day:
 D_f=9.1461
 \]
 
-Nearest pump setting:
+Nearest recommendation precision step:
 
 \[
 D_{recommended}=9.1\ mL/day
@@ -12474,7 +12582,7 @@ D_f
 2.2330\ mL/day
 \]
 
-Nearest pump setting:
+Nearest recommendation precision step:
 
 \[
 D_{recommended}=2.2
@@ -13293,7 +13401,7 @@ D_{temporary}
 12.6075\ mL/day
 \]
 
-Nearest pump setting:
+Nearest recommendation precision step:
 
 \[
 12.6\ mL/day
@@ -14395,7 +14503,7 @@ Continuous target:
 7.4885
 \]
 
-Nearest pump setting:
+Nearest recommendation precision step:
 
 \[
 7.5\ mL/day
@@ -15145,27 +15253,46 @@ Later post-change measurements may establish a new current maintenance trend ind
 
 ---
 
-## WG-ALK-045 — Missing recommendation precision refuses final actionable mL/day
+## WG-ALK-045 — An absent recommendation precision states the full-precision figure
+
+**REWRITTEN by owner decision 23.** The behaviour this golden pinned — refusing a final
+mL/day recommendation because a device increment was unknown — is retired with the actuator
+premise it rested on.
 
 Inputs:
 - sufficient supported falling Alk trend;
 - valid configured potency;
 - current dose known;
-- `recommendationPrecisionMlPerDay = MISSING`.
+- `recommendationPrecisionMlPerDay = NOT CONFIGURED`.
 
 Required:
 
 ```text
-observedSlope = calculated
-supportedSlope = calculated
+observedSlope             = calculated
+supportedSlope            = calculated
 continuousActionCandidate = calculated
-recommendedDose = WITHHELD
-reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID   # only where a CONFIGURED precision is <= 0
+recommendedDose           = the continuous candidate, at FULL PRECISION
+roundingApplied           = false
+outputWithheld            = false
+reason                    = none for this - it is an ordinary answer, not an exception
 ```
 
-The app must ask for the implementable dosing increment.
+Step 6 of `ALK-ROUNDING-001` — the hard-constraint recheck against `ALK-046` and
+`ALK-LIQUID-VOLUME-GUARD-001` — **still runs**. It is not a rounding artefact.
 
-No 0.1 mL/day assumption is allowed.
+The app **may** offer to capture a display precision, and must not make the recommendation
+conditional on getting one. **No 0.1 mL/day assumption is allowed**, then or now.
+
+A **configured** value of zero or less is a different state and still refuses:
+`reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID`.
+
+> **Superseded by owner decision 23, preserved rather than deleted.** This golden previously
+> read: "**WG-ALK-045 — Missing actuator increment refuses final actionable mL/day.**
+> Inputs: sufficient supported falling Alk trend; valid configured potency; current dose
+> known; `actuatorIncrementMlPerDay = MISSING`. Required: `observedSlope = calculated`,
+> `supportedSlope = calculated`, `continuousActionCandidate = calculated`,
+> `recommendedDose = WITHHELD`, `reason = ACTUATOR_INCREMENT_REQUIRED`. The app must ask for
+> the implementable dosing increment. No 0.1 mL/day assumption is allowed."
 
 ---
 
@@ -15647,7 +15774,7 @@ the retired ACTUATOR_INCREMENT_REQUIRED refusal did not block SAFETY_RETURN, and
 Forbidden:
 
 ```text
-withhold urgent safety correction solely because recommendationPrecisionMlPerDay is missing
+the app must not withhold an urgent safety correction solely because recommendationPrecisionMlPerDay is missing
 ```
 
 If `P_selected` is invalid/unknown, the mL value is withheld and only the required dKH movement may be stated.
@@ -15944,43 +16071,57 @@ Disable the affected optional analysis/subsystem while unrelated Alk control con
 recommendationPrecisionMlPerDay
 ```
 
-The smallest maintenance-dose change the keeper can reliably implement.
+The granularity at which the keeper wants a recommendation **stated**. Under
+`ALK-RECOMMEND-ONLY-001` this is a **display convention**, not a device capability: the
+application never commands a pump, so nothing here describes what hardware can execute.
 
 Examples:
-- dosing pump → smallest programmable daily-rate increment;
-- manual dosing → smallest practical daily-dose increment the keeper chooses to use.
+- the keeper doses with a pump programmable in 0.1 mL/day steps and wants figures in those
+  steps;
+- the keeper doses by hand with a syringe and picks a practical granularity.
 
 ### Capture
 
-New required Alk dosing-setup field for final actionable maintenance recommendations.
+An **optional** Alk dosing-setup field. It was a required one while it gated an output; it
+no longer gates anything.
 
 ### Missing behaviour
 
 ```text
-REFUSE
-reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID   # only where a CONFIGURED precision is <= 0
+CONFIGURED and > 0   -> ALK-ROUNDING-001 rounds the recommendation to it
+CONFIGURED and <= 0  -> REFUSE the final maintenance rate
+                        reason = VALIDATION_RECOMMENDATION_PRECISION_INVALID
+                        (a bad configured value: a validation failure, and always was)
+NOT CONFIGURED       -> STATE THE FULL-PRECISION RECOMMENDATION. Nothing is withheld,
+                        nothing is NOT_RUN, no reason code is emitted for it, and no
+                        default increment is assumed.
 ```
 
-The engine may still calculate:
-- observed slope;
-- supported slope;
-- continuous action candidate.
+No hidden 0.1 mL/day default, in any of the three states.
 
-It must not emit a final rounded actionable **maintenance mL/day** recommendation until the increment is known.
+**There is no longer any refusal here for an ABSENT precision, and therefore no exception to
+one.** `ALK-ROUNDING-001` states the same three-state behaviour and owns the rounding
+itself; this datum's only job is to say what the field is.
 
-No hidden 0.1 mL/day default.
-
-### Explicit safety exception
-
-This refusal does **not** apply to the one-off correction volume produced by:
-
-```text
-ALK-SAFETY-CORRECTION-RESOLUTION-001
-```
-
-An urgent `SAFETY_RETURN` may calculate and emit its one-off mL correction from valid potency even when `recommendationPrecisionMlPerDay` is missing.
-
-`recommendationPrecisionMlPerDay` in older Part III wording is interpreted as this recommendation precision and should be implemented under the portable field above.
+> **Superseded wording, preserved rather than deleted.** This capability datum previously
+> read, under the name `actuatorIncrementMlPerDay`:
+>
+> > The smallest maintenance-dose change the actuator can execute. Examples: dosing pump →
+> > smallest programmable daily-rate increment; manual dosing → smallest practical daily-dose
+> > increment the keeper chooses to use. **Capture:** new **required** Alk dosing-setup field
+> > for final actionable maintenance recommendations. **Missing behaviour:** `REFUSE`,
+> > `reason = ACTUATOR_INCREMENT_REQUIRED`. The engine may still calculate observed slope,
+> > supported slope and the continuous action candidate, but "must not emit a final rounded\n> > actionable **maintenance mL/day** recommendation until the increment is known". No hidden
+> > 0.1 mL/day default. **Explicit safety exception:** this refusal does not apply to the
+> > one-off correction volume produced by `ALK-SAFETY-CORRECTION-RESOLUTION-001`; an urgent
+> > `SAFETY_RETURN` may calculate and emit its one-off mL correction from valid potency even
+> > when `actuatorIncrementMlPerDay` is missing.
+>
+> Owner decision 23 retired the actuator premise. `ACTUATOR_INCREMENT_REQUIRED` is retired,
+> `ALK-SAFETY-CORRECTION-RESOLUTION-001` is retired, and with the refusal gone the exception
+> has nothing to except. `VALIDATION_ACTUATOR_INCREMENT_INVALID` is renamed
+> `VALIDATION_RECOMMENDATION_PRECISION_INVALID` and survives, because a configured value of
+> zero or less is invalid whether or not a pump exists.
 
 ---
 
@@ -16376,7 +16517,7 @@ reason = HISTORICAL_CONFIGURATION_UNAVAILABLE
 Consequences:
 
 - preserve raw historical measurements/events;
-- do not backfill today's target range, net volume, potency or rounding to the current dose into the old period;
+- do not backfill today's target range, net volume, potency or recommendation precision into the old period;
 - current V2 analysis from the first valid configuration version onward proceeds normally;
 - config-independent historical analysis may still run if its own inputs are valid.
 
@@ -16473,7 +16614,7 @@ This is a capability deferral, not a retreat from the learner design.
 
 | Review item | Required behaviour when missing |
 |---|---|
-| M-1 recommendation precision | **REFUSE** final actionable dose; request setup value |
+| M-1 recommendation precision | **REFUSE** only where a CONFIGURED value is ≤ 0; where none is configured, state the full-precision recommendation and withhold nothing (owner decision 23) |
 | M-2 solution context | Core uses theoretical potency; potency learner **NOT_RUN** |
 | M-3 delivery context | Core uses confirmed programmed dose; potency learner **NOT_RUN** |
 | M-4 replacement-water Alk | **DEGRADE** to deterministic unknown-WC branch |
@@ -16624,8 +16765,10 @@ F-1  safety + maintenance composite rail wording
 F-2  B_safety apparent adaptivity
      CLOSED — explicitly documented as fixed 0.20 dKH controller constant in Freeze 2
 
-F-3  M-1 recommendation-precision refusal versus SAFETY_RETURN
-     CLOSED — M-1 applies to maintenance mL/day; one-off safety correction is explicitly exempt
+F-3  M-1 actuator-increment refusal versus SAFETY_RETURN
+     CLOSED at Freeze 5 — M-1 applied to maintenance mL/day; the one-off safety correction
+     was explicitly exempt. RECLASSIFIED INAPPLICABLE by owner decision 23: the refusal it
+     needed an exemption from no longer exists
 
 N-6  ALK-022 D_eff pointer to M-6
      CLOSED — inline M-6 delivery-basis semantics added
@@ -16984,17 +17127,21 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
   (`ALK-EPISODE-SINGLE-OUTPUT-001`);
 - **safety sizing is flat above the rail** (`OI-SIZINGFLAT-001`) — once
   \(A_{now}-A_{safe,high}\ge0.50\), \(R_{down}\) saturates and \(D_{safety,temp}\) stops
-  responding to the level. Decision 21 **narrows** the exposure by bounding the region to
-  \(OuterMax < A_{now} < AdvisoryCeiling\) and escalating beyond it. It does **not** close
-  the item: inside that band the flatness remains;
-- **five items opened by review of the decisions 20–22 encoding**, none of which owner
-  decisions 20–22 settle, each recorded as a `RECORDED EXPOSURE` block in the rule it
-  affects and as a register entry: `OI-BRANCHAREFUSAL-001` (does branch A refuse when
-  \(D_{current}\) is unknown), `OI-ADVISORYEXCEPTION-001` (is decision 21's exception list
-  closed, and does the high-side safety return's rate continue beyond the ceiling),
-  `OI-ADVISORYMEMBERS-001` (is a `SUSPECT` member a member for "every member beyond the
-  boundary"), `OI-ADVISORYRETEST-001` (is escalation a retest-scheduler candidate),
-  `OI-ADVISORYRETURN-001` (an in-flight downward return plan terminated at the ceiling);
+  responding to the level. Decision 21 narrowed the exposure by bounding the region;
+  **owner decision 24 removed that bound**, so the item is **no longer narrowed at all**
+  and its reach is wider than it was under decision 21: the flatness now runs from
+  \(A_{safe,high}+0.50\) **upward without limit**. It is emphatically not closed;
+- **the five items opened by review of the decisions 20–22 encoding are all now RESOLVED**
+  by owner decisions 24, 25 and 26, and their `RECORDED EXPOSURE` blocks have been replaced
+  in place by `RESOLVED` blocks in the rules they affected: `OI-BRANCHAREFUSAL-001`
+  (decision 25 — the refusal is a precondition evaluated before branch selection, applying
+  identically to A, B and B′), `OI-ADVISORYEXCEPTION-001`, `OI-ADVISORYRETURN-001` and
+  `OI-ADVISORYMEMBERS-001` (decision 24 — nothing is withheld at the boundary, so there is
+  no exception list to close, no return plan to terminate and no member-wise predicate to
+  interpret), and `OI-ADVISORYRETEST-001` (decision 26 — the scheduler is the single retest
+  authority and the warning renders its answer). **None of the five is still open**, and
+  this list is not authority for their status: the register in
+  `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md` is;
 - **the sized-rate discontinuity at \(C_{estimate}=0\)** (`OI-CZERODISCONT-001`) — branch A
   sizes from consumption and branch B/B′ from \(D_{current}\), and the two need not meet at
   \(C_{estimate}=0\). Decision 22 adds the missing B′ branch and explicitly does **not**

@@ -1074,7 +1074,7 @@
           "COMBINED_24H_TOTAL"
         ],
         "stageOrLengthenUntilBothSatisfied": true,
-        "executableDosingCommandWhenNoStagingAvailable": "WITHHELD",
+        "recommendationWhenNoStagingAvailable": "WITHHELD",
         "cappedToGuardAndPresentedAsRecommendation": false,
         "recheckedAfterActuatorRounding": true,
         "railSatisfactionImpliesGuardSatisfaction": false
