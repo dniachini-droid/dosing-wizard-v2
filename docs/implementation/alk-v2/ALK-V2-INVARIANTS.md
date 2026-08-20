@@ -36,6 +36,9 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** Part II §64.
 - **Generator:** re-run with reversed map/set iteration where the platform permits.
 - **Assert:** identical output.
+- **Negative control:** select the median pairwise slope by taking the middle element of an unordered
+  collection rather than of a sorted one; two runs whose set-iteration order
+  differs must then return different slopes.
 
 ### INV-A4 — Display rounding never changes classification, trend or dose
 - **Canon:** Part II §2.3; `ALK-002`.
@@ -98,6 +101,9 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** `ALK-STAGING-001`; `X-INV-008`; `ALK-072` item 8.
 - **Assert:** no constant in `{1.00, 0.90, 0.75, 0.70, 0.55}` appears as a multiplier
   anywhere in the maintenance pipeline; no raw-mL magnitude band exists.
+- **Negative control:** reinstate a raw-mL staging band that scales the final dose by one of
+  `{1.00, 0.90, 0.75, 0.70, 0.55}` according to a magnitude class;
+  `INV-ALK-STAGING-001` must fail.
 
 ### INV-B7 — Dimension safety
 - **Canon:** `ALK-VARIABLE-SEMANTICS-001`; Part I §44; `X-INV-009`.
@@ -121,6 +127,9 @@ Fixture bodies for the canon-named invariants are in
 ### INV-C2 — Repeat uncertainty is never divided by √n
 - **Canon:** Part II §5.6.
 - **Assert:** `sigmaCluster ≥ SIGMA_ALK_BASE` for every cluster regardless of member count.
+- **Negative control:** divide `sigmaCluster` by `√n` for an n-member repeat cluster; a cluster of three
+  repeats then reports a sigma below `SIGMA_ALK_BASE`, and the movement evidence
+  it supports improves purely because the same measurement was taken again.
 
 ### INV-C3 — The lookback is never extended because evidence is sparse
 - **Canon:** `ALK-007`; Part II §1.3, §17; `WG-ALK-049`.
@@ -141,6 +150,9 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** Part II §72 item 3.
 - **Generator:** shift `effectiveAt` within a window containing no measurement.
 - **Assert:** results identical; shifting it across a measurement changes the segment.
+- **Negative control:** derive segment boundaries from `recordedAt` instead of `effectiveAt`; shifting
+  `effectiveAt` across a measurement then leaves the segment unchanged, which is
+  the half of the assertion that carries the physical meaning.
 
 ### INV-C6 — The pre-change anchor never becomes a post-change observation
 - **Canon:** Part II §31, §72 item 4; `ALK-017`.
@@ -153,16 +165,24 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** Part II §19.6, §72 item 9.
 - **Assert:** every pairwise slope has `t_j > t_i`; if merging duplicates leaves fewer than
   three eligible clusters, the result is `INSUFFICIENT` rather than a fit over fragments.
+- **Negative control:** admit pairwise pairs where `t_j == t_i` and let the resulting infinite or `NaN`
+  slope enter the median; separately, allow a fit over the two clusters that
+  survive duplicate merging instead of returning `INSUFFICIENT`.
 
 ### INV-C8 — An unresolved latest anomaly cannot be silently excluded to produce a dose change
 - **Canon:** Part II §48, §72 item 7; `ALK-051`.
 - **Generator:** mark the latest cluster `SUSPECT` or `ANOMALOUS`.
 - **Assert:** ordinary dose escalation or reversal is withheld and a repeat is
   recommended; the cluster is not dropped from the series.
+- **Negative control:** drop the latest cluster from the series once it is marked `SUSPECT` and fit over
+  the remainder; `ALK-G024` and `ALK-G025` must fail.
 
 ### INV-C9 — Theil–Sen is invariant to input ordering after sorting
 - **Canon:** Part II §72 item 8.
 - **Assert:** shuffling the input array does not change the slope, intercept, residuals or
+  `sigma_S`.
+- **Negative control:** form the pairwise slopes from the array as supplied and skip the sort entirely;
+  shuffling the input array then changes `slope`, `intercept`, `residuals` and
   `sigma_S`.
 
 ### INV-C10 — `sigma_point` is never below the analytical floor
@@ -174,6 +194,9 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** Part II §19.5.
 - **Assert:** `sigma_S` is a function of `(sigma_point, Sxx)` only; injecting a large
   pairwise MAD does not change `S_supported`.
+- **Negative control:** add the pairwise-slope MAD into `sigma_S` as a further additive term; injecting a
+  large pairwise MAD while holding `sigma_point` and `Sxx` fixed then changes
+  `S_supported`, and `AD-TRD-004` must fail.
 
 ---
 
@@ -206,21 +229,34 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** the mirrored result equals the mirrored expectation, except where an
   explicit `ALK-` rule defines an asymmetry (`ALK-003A` high breach, which cannot deliver
   a negative correction, and `ALK-HIGH-BREACH-UNRESOLVED-001`).
+- **Negative control:** give the high-side branch a different step cap from the low-side branch in a case
+  that is neither of the two named asymmetries; the mirrored result then diverges
+  from the mirrored expectation, and `WG-ALK-033` must fail against `WG-ALK-001`.
 
 ### INV-D4 — Maintenance is sized from the supported slope, never the observed slope
 - **Canon:** `ALK-044`; `ALK-MAINTENANCE-SEMANTICS-001`.
 - **Assert:** `continuousActionCandidate = D_current − S_supported/P` exactly;
   `maintenanceEstimate = D_current − S_observed/P` exactly; the two are distinct fields.
+- **Negative control:** compute `continuousActionCandidate` from `S_observed`; `WG-ALK-001` and
+  `WG-ALK-002` must fail, and the two fields become numerically identical, which
+  is separately the collapse `INV-B7` forbids. (Executed today as harness
+  mutation `M-3`.)
 
 ### INV-D5 — The empirical bracket never changes the number
 - **Canon:** `ALK-032`; `ALK-072` item 11; `AUDIT-023`; `WG-ALK-054`.
 - **Generator:** vary the historical bracket across `{absent, consistent, conflicting}`.
 - **Assert:** `recommendedDoseMlPerDay` identical in all three; only reason codes and the
   confidence label differ.
+- **Negative control:** let a conflicting historical bracket scale the recommended dose toward the
+  bracket; the three-way sweep then returns three different doses and
+  `WG-ALK-054` must fail.
 
 ### INV-D6 — The dose is never negative after any constraint
 - **Canon:** `ALK-049` step 7; `AUDIT-022`; `WG-ALK-035`.
 - **Assert:** `recommendedDoseMlPerDay ≥ 0` and `temporaryDoseMlPerDay ≥ 0` on every path.
+- **Negative control:** remove the non-negative clamp at `ALK-049` step 7 and let the continuous
+  candidate through; `WG-ALK-035` must fail with a negative
+  `recommendedDoseMlPerDay`.
 
 ---
 
@@ -231,17 +267,26 @@ Fixture bodies for the canon-named invariants are in
 - **Generator:** issue a recommendation; add no implementation event; advance `asOf`.
 - **Assert:** no `Intervention` exists; `exposureFraction` is undefined; the dose state is
   unchanged; `implementationState` remains `UNKNOWN` or `NOT_IMPLEMENTED`.
+- **Negative control:** create the `Intervention` when the recommendation is issued rather than when an
+  implementation event is recorded; `implementationState` then leaves `UNKNOWN`
+  with no evidence for it, and `X-GOV-001` must fail.
 
 ### INV-E2 — An interrupted intervention is never labelled succeeded or failed
 - **Canon:** Part I §57 item 9; Part II §36; `WG-ALK-021`.
 - **Assert:** `responseAttribution ∈ {INTERRUPTED, INTERRUPTED_BY_SAFETY_RETURN}` and never
   a six-way class, for any interruption sequence.
+- **Negative control:** let the six-way classifier run on an interrupted intervention by treating the
+  interruption as the end of the response window; `WG-ALK-021` and `ALK-G017`
+  must fail.
 
 ### INV-E3 — Dose history is never collapsed
 - **Canon:** Part II §37; `WG-ALK-021`; Part I §9.2.
 - **Generator:** N consecutive dose changes with N ∈ 2..6.
 - **Assert:** the ledger contains N dose states; no state is merged; each intervention has
   its own prediction snapshot.
+- **Negative control:** merge consecutive dose states that share a programmed value into one state; a
+  2..6 change sequence then reports fewer states than were recorded and one
+  intervention loses its prediction snapshot; `WG-ALK-021` must fail.
 
 ### INV-E4 — Prediction snapshots are immutable
 - **Canon:** `ALK-PREDICTION-SNAPSHOT-001`; `WG-ALK-019`; `WG-ALK-020`; `WG-ALK-038`.
@@ -257,6 +302,9 @@ Fixture bodies for the canon-named invariants are in
   `R_exp/B ∈ {0.5, 1, 1.5, 2, 3, 5, 10}`.
 - **Assert:** exactly one class matches every `R_obs`; `INCONCLUSIVE` covers the remainder;
   the `PARTIAL` interval is empty exactly when `R_exp − B ≤ B`.
+- **Negative control:** widen the `EXPECTED` interval so that it overlaps `PARTIAL`; the sweep then finds
+  an `R_obs` matching two classes at once, and exhaustiveness fails separately if
+  `INCONCLUSIVE` is narrowed to a fixed interval instead of the remainder.
 
 ### INV-E6 — `OVERSHOOT` is orthogonal to the response class
 - **Canon:** Part I §7.6A; Part II §34A; `ALK-043`.
@@ -271,11 +319,15 @@ Fixture bodies for the canon-named invariants are in
   PRECHANGE_EVIDENCE_INSUFFICIENT}` while the post-change regime has sufficient evidence.
 - **Assert:** a maintenance recommendation is still produced from the current supported
   slope in every case.
+- **Negative control:** withhold the maintenance recommendation whenever `responseAttribution` is not a
+  resolved class; `ALK-G039B` and `WG-ALK-040` must fail.
 
 ### INV-E8 — No dose event is ever inferred from chemistry
 - **Canon:** `ALK-INTERVENTION-EXTERNAL-CHANGE-001`; `WG-ALK-018`.
 - **Assert:** the count of `MaintenanceDoseState` records is a pure function of recorded
   events; no code path creates one from an unexplained response.
+- **Negative control:** create a `MaintenanceDoseState` when an unexplained response is detected;
+  `WG-ALK-018` must fail.
 
 ---
 
@@ -287,6 +339,8 @@ Fixture bodies for the canon-named invariants are in
   or calibration change between the pre and post windows.
 - **Assert:** `potencyObservationEligible = false` in every case; observations remain
   attached to their original context.
+- **Negative control:** keep `potencyObservationEligible = true` when only the solution batch changes
+  between the pre and post windows; `AD-POT-002` must fail.
 
 ### INV-F2 — The potency layer never silently replaces the biological consumption model
 - **Canon:** Part I §21, §57 item 8; `ALK-015`.
@@ -301,11 +355,17 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** `selectedPotencySource = LEARNED` only when confidence is `CALIBRATED` or
   `STRONGLY_CALIBRATED`; `PLAUSIBILITY_HOLD` and `DIAGNOSTIC_ONLY` observations never enter
   the pool.
+- **Negative control:** adopt the learned potency as soon as one calibration-grade observation exists,
+  before the confidence ladder reaches `CALIBRATED`; `WG-ALK-026` and
+  `WG-ALK-027` must fail.
 
 ### INV-F4 — Calibration is never circular
 - **Canon:** `ALK-PREDICTION-SNAPSHOT-001`; `WG-ALK-020`.
 - **Assert:** an intervention's own potency observation never re-derives that
   intervention's expected response.
+- **Negative control:** recompute the intervention's expected response from the potency its own
+  post-window produced, rather than from the prediction snapshot; `WG-ALK-020`
+  must fail.
 
 ---
 
@@ -333,6 +393,8 @@ Fixture bodies for the canon-named invariants are in
   that at most one such component is ever simultaneously recommended (the safety return
   defers maintenance unconditionally, and a return-plan offer is mutually exclusive with a
   supported non-zero slope).
+- **Negative control:** size the safety correction and the maintenance change against the rail
+  independently rather than against their signed sum; `WG-ALK-052` must fail.
 
 ### INV-G4 — The safety buffer is a fixed constant
 - **Canon:** `ALK-SAFETY-BUFFER-001` Freeze-2 interpretation.
@@ -346,6 +408,8 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** completion requires `A_now ≥ outerMin + 0.20` (low) or
   `A_now ≤ outerMax − 0.20` (high); crossing the raw bound yields
   `RECOVERING_INSIDE_BOUND` with the return still active.
+- **Negative control:** complete the return the moment `A_now` crosses the raw `outerMin`, without
+  `B_SAFETY`; `WG-ALK-053` must fail.
 
 ### INV-G6 — An unavailable capability never emits an active controller recommendation
 - **Canon:** `ALK-CAPABILITY-CONTRACT-001`; `CORE-INFORM-PROCEED-001`; `WG-ALK-045`.
@@ -359,18 +423,24 @@ Fixture bodies for the canon-named invariants are in
 - **Generator:** `magnesiumGateState ∈ {ALERT_LOW, NOT_ALERT_LOW, UNKNOWN}`.
 - **Assert:** the safety return is emitted in all three; a low-Mg warning appears only
   under `ALERT_LOW` and is never invented under `UNKNOWN`.
+- **Negative control:** hold the safety return unless `magnesiumGateState == NOT_ALERT_LOW`;
+  `WG-ALK-055` and `AD-SAF-001` must fail.
 
 ### INV-G8 — During the Alk-only runtime, `magnesiumGateState` is constant
 - **Canon:** `MIGRATION-MG-GATE-ISOLATION-001`; `X-MIG-001`.
 - **Generator:** log Mg values across the whole plausible range.
 - **Assert:** `magnesiumGateState == UNKNOWN` unconditionally; no Ca/Mg trend, evidence,
   schedule, notification or verdict is produced.
+- **Negative control:** derive `magnesiumGateState` from the most recent logged Mg value; `X-MIG-001`
+  and `AD-CAP-001` must fail.
 
 ### INV-G9 — A recommendation to stop is never recorded as an actual stop
 - **Canon:** `IX-004`; `ALK-RETURN-EXPIRY-001`; `ALK-SAFETY-RETURN-INTEGRATION-001` §10;
   `WG-ALK-032`; `WG-ALK-051`.
 - **Assert:** `actualDoseState` changes only on a recorded implementation event; a
   recommended stop or pause leaves it at the last confirmed value or `UNKNOWN`.
+- **Negative control:** advance `actualDoseState` when a stop is recommended; `WG-ALK-032` must fail and
+  the three-state distinction `X-GOV-001` rests on collapses.
 
 ---
 
@@ -388,24 +458,35 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** no code path infers a past dose from chemistry movement, back-fills a past
   dose from current settings, or treats an absent dose-change record as evidence that the
   dose was unchanged.
+- **Negative control:** default an absent dose-change record to "unchanged since the last known state";
+  `AD-CON-001` must fail, because a missing dose context then yields an
+  approximate consumption instead of an ineligible one.
 
 ### INV-H3 — A configuration change now never alters a historical recommendation
 - **Canon:** Part I §46; Part II §72 item 11; `X-INV-006`; `WG-ALK-028`; `WG-ALK-065`.
 - **Generator:** replay a fixed ledger under two different current configurations.
 - **Assert:** stored historical `EngineResult`s are byte-identical; a re-analysis produces
   a **new** `assessmentId`.
+- **Negative control:** resolve the configuration for a historical assessment at read time rather than at
+  that assessment's own `asOf`; `WG-ALK-028` and `WG-ALK-065` must fail, and
+  `INV-CONFIG-001`'s two-variant replay stops being byte-identical.
 
 ### INV-H4 — A backdated edit recomputes the present, never the past record
 - **Canon:** `ALK-065`; `WG-ALK-029`; `WG-ALK-030`; `AUDIT-029`.
 - **Assert:** inserting, editing or invalidating a historical reading creates a new current
   assessment and leaves every prior assessment record unchanged; raw measurements are never
   physically deleted.
+- **Negative control:** rewrite the prior `EngineResult` in place when a backdated reading is inserted,
+  reusing its `assessmentId`; `WG-ALK-029` and `WG-ALK-030` must fail.
 
 ### INV-H5 — Normalization is exactly auditable and raw values survive
 - **Canon:** Part II §72 items 6 and 10; §8.
 - **Assert:** for every normalized point,
   `rawClusterValue − Σ appliedSteps == normalizedValue` exactly, and every source event id
   is recorded.
+- **Negative control:** store the normalized value over `rawClusterValue` and record only the total
+  adjustment; the per-step reconstruction then no longer balances and the source
+  event ids are gone; `WG-ALK-011` must fail.
 
 ---
 
@@ -428,16 +509,23 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** this package's output contract; Part I §47.
 - **Assert:** every emitted code is in `ALK-V2-REASON-CODES.md` and carries its full
   declared payload.
+- **Negative control:** emit one code that is not in the catalogue, and separately one catalogued code
+  with an empty payload; each must fail the check on its own. (Executed today as
+  harness mutation `M-4`.)
 
 ### INV-I4 — Every withheld output carries a reason
 - **Canon:** `ALK-CAPABILITY-CONTRACT-001`; `CORE-INFORM-PROCEED-001`; `IX-005`.
 - **Assert:** for every field whose value is `NOT_RUN`, `WITHHELD` or `UNRESOLVED`, at least
   one reason code with severity `GATING` or `REFUSAL` names it in `affectedOutputs[]`.
+- **Negative control:** withhold `doseRecommendation` and emit no `GATING` or `REFUSAL` code naming it;
+  `WG-ALK-045` must fail. (Executed today as harness mutations `M-7` and `M-20`.)
 
 ### INV-I5 — `HOLD` is a complete recommendation
 - **Canon:** Part I §30; `IX-005`.
 - **Assert:** every `HOLD` result carries its hold reasons, the current position, the
   observed and supported slopes where computed, and a next-test time.
+- **Negative control:** return `HOLD` carrying only the action, with no hold reasons and no next-test
+  time; `WG-ALK-002` and `AD-MNT-001` must fail.
 
 ### INV-I6 — Open issues surface as refusals, never as defaults
 - **Canon:** this package's conformance gate item 8; `CORE-INFORM-PROCEED-001`.
