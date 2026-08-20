@@ -32,6 +32,23 @@ stated intent, because "does this do what it claims" is part of the review.
 If a canon file appears in the changed paths, say so prominently. Canon should
 never be in a PR diff.
 
+**Run the conformance harness against the target. It is a required check
+(`DEC-016`), and this gate is where "required" is verified rather than
+asserted.**
+
+```bash
+python3 tools/conformance/run-conformance.py [--engine '<engine command>']
+python3 tools/conformance/run-mutations.py
+```
+
+A PR that touches the engine or anything under `docs/implementation/alk-v2/`
+and does not pass is `CHANGES_REQUIRED` on that ground alone. Read the
+harness's **NOT COVERED** section before accepting any coverage claim in the PR
+body: it names every fixture that could not be executed and why, and a claim of
+coverage by a fixture in that list is not coverage. If the PR adds a checker
+without adding its negative control, that is a `CORRECTNESS_GAP` — a checker
+never shown to fail is not a gate (canon `CORE-CANON-COVERAGE-001` item 9).
+
 ## 2 — Choose the reviewers
 
 **Default: one.** Pick the one whose subject the change actually is:
@@ -45,10 +62,17 @@ never be in a PR diff.
 | `domain-verifier` | Is the scientific or reef-domain claim it makes or implies actually supported? |
 | `migration-auditor` | Is historical truth, provenance or V1-to-V2 promotion at risk? |
 | `architecture-reviewer` | Does this technical choice carry the product described in the vision and roadmap? |
+| `normal-operation-reviewer` | On an ordinary tank with ordinary readings, does this give a sensible answer? |
 
 **Add more only where the change materially touches that subject.** State which
 you ran and which you considered and skipped — a skip needs a reason, but a
 reason is one line.
+
+**`normal-operation-reviewer` is triggered by subject, not by risk** (`DEC-018`):
+add it whenever the change touches trend, dose, retest or user-visible output
+behaviour. It runs independently of `breaker` rather than after it — they answer
+different questions, and neither's result should shape the other's. It reports
+in specification mode until a runtime exists, and says so.
 
 **Chemistry, controller, dosing or safety-rail changes always get
 `canon-conformance-auditor` and `breaker`, both.** That is the floor for work
@@ -57,7 +81,7 @@ where a wrong answer reaches a tank.
 Reviewers run concurrently in fresh context, each with the same brief and no
 knowledge of the others' findings.
 
-## 3 — Adjudicate only if you need to
+## 3 — Adjudicate only if you need to, then `jake`
 
 Invoke `adjudicator` when reviewers disagree, when a serious finding is
 contested, or when there are enough findings that deduplication is real work.
@@ -71,6 +95,17 @@ Severities: `BLOCKER`, `CANON_DEFECT`, `CORRECTNESS_GAP`, `EXPECTED_DEBT`,
 
 Verify a finding before promoting it, and verify an `EXPECTED_DEBT` citation
 before accepting it — open the cited passage and check it defers *this* gap.
+
+**Then `jake`, last, over whatever the round produced.** He is not a reviewer
+and adding him does not extend the review (`DEC-017`): he sorts finished
+findings into `BUG`, `EDGE CASE` or `ALREADY COVERED` by whether the reference
+system would plausibly reach the state, and he changes no severity. Run him when
+the round produced findings the owner will read; a clean round has nothing for
+him to sort and you say so. Where `adjudicator` also ran, it goes first and
+`jake` sorts its adjudicated list.
+
+The two labels are read together and neither replaces the other: `BLOCKER` +
+`EDGE CASE` is a verified defect nobody will meet, and the report carries both.
 
 ## 4 — One classification
 
@@ -90,6 +125,7 @@ Where more than one applies, report the most severe and list the others.
 target: (base..head, changed paths, stated intent)
 independence: (was this reviewed by a session that did not write it?)
 reviewers run: (and which were considered and skipped, with reasons)
+conformance harness: (run? verdict? what it reported as NOT COVERED?)
 classification:
 findings, ranked: (id / severity / what / evidence / authority quoted / fix)
 expected debt: (each with the citation that defers it)

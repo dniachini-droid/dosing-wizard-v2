@@ -86,9 +86,9 @@ bind file-editing tools and not `Bash`. Everything else is process discipline.
 
 | Work | Workflow | Reviewers |
 |---|---|---|
-| Ordinary implementation | `/implement` | one by default; specialists where materially relevant |
-| Chemistry, controller, dosing, safety rails | `/implement-chemistry` | fixtures, then `canon-conformance-auditor` + `breaker` |
-| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default |
+| Ordinary implementation | `/implement` | one by default; specialists where materially relevant; `jake` after, if there are findings |
+| Chemistry, controller, dosing, safety rails | `/implement-chemistry` | harness, fixtures and invariants, then `canon-conformance-auditor` + `breaker`; `jake` after the sequence |
+| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default; `jake` after, if there are findings |
 | One unresolved blocking question | `/research-sprint` | `domain-verifier` if scientific |
 | Unattended overnight work | **withdrawn** — see `/overnight-cycle` | — |
 
@@ -103,28 +103,56 @@ Which reviewers run is a decision, and it is recorded here so that it is
 explicit rather than habitual. A run states which of these it ran, and which it
 considered and did not, with reasons.
 
+**This table describes what the skills in `.claude/skills/` actually run.** It
+is a description, not an instruction to them: where this table and a skill
+disagree, the skill is what happens and this table is wrong. It was wrong once
+already — an earlier version of this row described `/implement-chemistry` as
+running two agents inside a sequence that skill declares closed to extension.
+That contradiction was resolved by `DEC-017` and `DEC-018`, in the direction of
+the skill.
+
 | Situation | Reviewers, in order | Notes |
 |---|---|---|
 | Documentation or cross-document change | `integrator` | The primary reviewer while the repository is documentation-only |
-| Ordinary implementation | one reviewer whose subject the change is in | `/implement` step 5 lists the specialist triggers |
-| Chemistry, controller, dosing, safety rails | fixtures and invariants, then `canon-conformance-auditor` + `breaker`, then `normal-operation-reviewer`, then `jake` over the combined findings | `/implement-chemistry`'s fixed sequence, plus the two ordinary-use reviewers |
-| Any change to trend, dose, retest or user-visible output behaviour | `normal-operation-reviewer` | The change is in the ordinary middle (`PRC-003`), which is where the product earns its value |
-| Any round that produced adversarial or conformance findings the owner will read | `jake`, last | Sorts what matters from what does not; adds nothing new |
-| Reviewers disagree, or a finding is contested | `adjudicator` | Not a routine stage |
+| Ordinary implementation | one reviewer whose subject the change is in, plus specialists it triggers | `/implement` step 5 lists the triggers |
+| Chemistry, controller, dosing, safety rails | fixtures and invariants and the conformance harness, then `canon-conformance-auditor` + `breaker` concurrently, then one fix pass | `/implement-chemistry` steps 3–6. **This reviewer sequence is fixed and closed to extension.** |
+| Any change to trend, dose, retest or user-visible output behaviour | `normal-operation-reviewer`, as a specialist trigger in `/implement` step 5 and `/pr-gate` step 2 | The change is in the ordinary middle (`PRC-003`), which is where the product earns its value (`DEC-018`) |
+| Any round that produced findings the owner will read | `jake`, strictly after the reviewers and before the fix pass | Sorts what matters from what does not; adds nothing new (`DEC-017`) |
+| Reviewers disagree, or a finding is contested | `adjudicator` | Not a routine stage; runs before `jake` where both run |
 | A question no authority settles | `advisor` | Invoked by the session; agents cannot invoke each other |
 
-**`jake` runs last or not at all.** He consumes finished reports. Running him
-before the reviewers have finished gives him a partial finding set to sort, and
-his output looks identical either way.
+**`jake` runs after the reviewer sequence, not within it** (`DEC-017`). He is
+not a reviewer: he consumes finished reports and produces an orthogonal label,
+so a step that runs strictly after a sequence, on its output, does not extend
+that sequence. This is why he can sit inside `/implement-chemistry` — at step 6,
+after both reviewers and before the single fix pass — while that skill's
+reviewer sequence stays closed. He takes the same slot `adjudicator` does, and
+for the same reason: his sorting is only useful if it reaches the fix pass.
+Running him before the reviewers have finished gives him a partial finding set
+to sort, and his output looks identical either way.
 
-**`normal-operation-reviewer` runs independently of `breaker`, not after it.**
-They answer different questions and neither's result should shape the other's.
-Where both run, `jake` receives both.
+**`normal-operation-reviewer` is a reviewer, and that difference is
+load-bearing.** It is wired into `/implement` and `/pr-gate` as a specialist
+trigger (`DEC-018`). It is deliberately **not** in `/implement-chemistry`'s
+fixed sequence, because adding a reviewer there is exactly the extension that
+sequence forbids, and the argument that lets `jake` past does not carry across.
+Whether chemistry work should get an ordinary-use review anyway is a real
+question, and it is open as `OD-004` rather than settled here.
 
-**Neither is a gate.** A round with no adversarial findings has nothing for
-`jake` to sort, and a change that touches nothing the user sees does not need
+Where it does run, it runs independently of `breaker`, not after it: they answer
+different questions and neither's result should shape the other's. Where both
+run, `jake` receives both.
+
+**Neither is a gate.** A round with no findings has nothing for `jake` to sort,
+and a change that touches nothing the user sees does not need
 `normal-operation-reviewer`. Saying so in the run record is the requirement;
 running them by reflex is not.
+
+**The conformance harness is a gate** (`DEC-016`), and it is the one thing in
+this table that is not an agent. `tools/conformance/run-conformance.py` and
+`tools/conformance/run-mutations.py` run before the reviewers in `/implement`
+and `/implement-chemistry`, and again in `/pr-gate`. A rule that a test can pin
+should be pinned by a test; the reviewers are for what is left over.
 
 **Deterministic tests are preferred to prose review.** A rule that can be pinned
 by a failing test should be, and review is what is left over.
@@ -445,7 +473,9 @@ himself or reconstructs a report he was not given.
 the repository; anything more would let him act on what he sorts.
 
 **Invoke when:** a review round has produced adversarial or conformance findings
-that the owner will read. Last in the round, after the reviewers have finished.
+that the owner will read. After the reviewers have finished, and — where the
+workflow has one — before the fix pass, so that the sorting reaches the work
+(`DEC-017`). Never inside a reviewer sequence.
 
 **Overlap prevention.** This is the boundary that matters, because `adjudicator`
 and `jake` both stand between reviewers and the reader.

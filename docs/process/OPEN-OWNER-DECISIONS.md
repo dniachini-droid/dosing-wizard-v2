@@ -278,6 +278,161 @@ Option 3, with option 2's one-paragraph mapping added now so the fork is
 recorded rather than latent. It would be wrong if Phase 1 schema work starts
 before this is revisited, in which case option 1 should be settled first.
 
+---
+
+## OD-004 — Should chemistry work also get an ordinary-use review?
+
+- **Raised:** 2026-08-20 · **By:** conformance-harness run, Part 4 wiring · **Status:** OPEN
+- **Blocks:** nothing — `/implement-chemistry` runs today exactly as written
+
+**The question, in plain language**
+
+`normal-operation-reviewer` asks whether the product gives a sensible answer on
+an ordinary tank with ordinary readings. `/implement-chemistry` is the workflow
+for the changes most likely to produce an unreasonable answer. Should that
+workflow run it?
+
+**Why it is undecided**
+
+`/implement-chemistry` says "This sequence is fixed. Do not shorten it and do
+not extend it." `AGENT-ROSTER.md`'s composition table, as merged from
+`claude/dosing-wizard-review-agents-hpnc50`, described the chemistry round as
+running `normal-operation-reviewer` and then `jake` inside that sequence. Both
+could not be true.
+
+The owner has resolved the `jake` half (`DEC-017`): he is not a reviewer, so a
+step that runs strictly after the sequence does not extend it. That reasoning
+does not carry across. `normal-operation-reviewer` *is* a reviewer, and adding
+a reviewer is the thing the fixed sequence forbids.
+
+So the wiring instruction was followed where it was given — `/implement` and
+`/pr-gate` (`DEC-018`) — and the roster's chemistry row was corrected to match
+what the skill actually runs. That leaves a real gap: the highest-consequence
+workflow is the one that does not ask whether the answer is any good.
+
+**Options**
+
+1. **Leave it as it stands.** Chemistry work gets canon conformance and
+   adversarial attack; ordinary-use review reaches it only when a session uses
+   `/implement`. Commits to: the fixed sequence staying genuinely fixed. Costs:
+   the gap above. Reversible: yes.
+2. **Add it to `/implement-chemistry` as a fourth reviewer**, and change the
+   skill's "do not extend it" sentence to name the new fixed sequence.
+   Commits to: a longer mandatory round on every chemistry change. Forecloses:
+   nothing. Cost: one more agent per chemistry run, and the precedent that the
+   sequence can be extended when the extension seems worthwhile — which is how
+   fixed sequences stop being fixed.
+3. **Add it as a post-sequence step alongside `jake`**, on the same argument
+   `DEC-017` uses. Commits to: a second exception to a rule that has now had
+   one. Cheaper than option 2 and harder to justify, because unlike `jake` this
+   agent produces findings rather than sorting them.
+
+**Which direction being wrong hurts more**
+
+Asymmetric toward option 1 being wrong, but not sharply. A chemistry change
+that is canon-conformant, survives adversarial attack, and is still unusable in
+practice is a real failure mode — it is the one `normal-operation-reviewer`
+exists for. Against that, the sequence being extendable by anyone who thinks
+the extension is worthwhile is the failure mode "fixed" was written to prevent.
+
+**What already covers this**
+
+Partly. `canon-conformance-auditor` catches behaviour that does not match
+canon; `breaker` catches behaviour that fails under attack. Neither asks
+whether canon-conformant behaviour is defensible to a keeper — the roster says
+so explicitly under `normal-operation-reviewer`'s overlap prevention.
+
+**What must change alongside**
+
+Whichever option is chosen: `AGENT-ROSTER.md`'s composition table, which must
+keep matching what the skills actually run. Under option 2 or 3, the skill's
+own "do not extend it" sentence needs rewriting rather than quietly reading
+around.
+
+**Recommendation, and what would make it wrong**
+
+Option 2, with the sequence re-stated rather than merely extended — if the
+owner wants ordinary-use review on chemistry work, the honest form is a new
+fixed sequence of four, not an exception. It would be wrong if chemistry
+changes are rare enough, and `/implement` common enough, that the gap closes
+itself in practice; option 1 is then the cheaper truth.
+
+---
+
+## OD-005 — Should the conformance harness be enforced by CI, and by what?
+
+- **Raised:** 2026-08-20 · **By:** conformance-harness run · **Status:** OPEN
+- **Blocks:** nothing — `DEC-016` makes the harness required as process discipline today
+
+**The question, in plain language**
+
+`DEC-016` makes the conformance harness a required check. Nothing on GitHub
+enforces that. Should there be a workflow that runs it on every pull request,
+and should the check be required to pass before merge?
+
+**Why it is undecided**
+
+`DEC-016` records the decision; it deliberately does not configure enforcement,
+because enforcement is a repository setting the owner holds. This is the same
+shape as `OD-001` and depends on it: a required status check is configured on
+the branch protection rule that `OD-001` is about.
+
+There is a second part that `OD-001` does not cover. The harness is **red
+today** and will stay red until an engine exists and the three document defects
+it reports are resolved. A required check that cannot pass blocks every merge,
+including the merges that would fix it. So enforcement needs either a baseline
+the check is measured against, or a start date, or a scope limited to changes
+that touch the engine.
+
+**Options**
+
+1. **Add the workflow now, reporting only; make it required when it can pass.**
+   Commits to: the output being visible on every PR from today. Cost: near
+   zero. Reversible: yes.
+2. **Add it and make it required immediately, with the current failures
+   recorded as an accepted baseline** the check compares against. Commits to:
+   maintaining a baseline file, which is a thing that goes stale. Catches
+   regressions from today.
+3. **Wait for `OD-001`.** Commits to nothing; the harness stays a command
+   someone remembers to run.
+
+**Which direction being wrong hurts more**
+
+Mildly. The harness exists and runs from one command either way; this is about
+whether anyone is reminded.
+
+**What already covers this**
+
+Nothing. There is no CI configuration in this repository at all.
+
+**What must change alongside**
+
+`docs/process/AUTONOMY-AND-CONTROLS.md`, which owns what is and is not a
+control, and `DEC-016`'s consequences section, which currently says enforcement
+is unconfigured.
+
+**Recommendation, and what would make it wrong**
+
+Option 1. It is cheap, it makes the harness's report visible on every change
+without blocking anything, and it converts to option 2 by flipping one setting
+once an engine exists. It would be wrong if the owner wants regression
+protection from today, in which case option 2's baseline is the price of it.
+
 ## Closed
 
-*None yet.*
+## OD-006 — Is the conformance harness a required check?
+
+- **Raised:** 2026-08-20 · **Status:** CLOSED — see `DEC-016` (2026-08-20)
+
+Decided by the owner before the work began, and recorded here so that a reader
+of this queue finds it alongside `OD-001`, which it depends on for enforcement.
+
+## OD-007 — Does `jake` run inside the reviewer sequence or after it?
+
+- **Raised:** 2026-08-20 · **Status:** CLOSED — see `DEC-017` (2026-08-20)
+
+Decided by the owner. `/implement-chemistry`'s fixed sequence and the roster's
+composition table contradicted each other; the sequence stays fixed and `jake`
+is a post-processing step over its output. The residue for
+`normal-operation-reviewer` is `OD-004`, which is open.
+
