@@ -272,9 +272,22 @@ fixture this format converts.
 reason it is not a decision about chemistry.** An empty list is a strong claim
 and should be true when it is made.
 
-`assertionsUnchanged: true` claims that no `expected*` value, no
-`expectedReasonCodes` entry and no `forbidden` entry differs from the source
-fixture. A conversion that needs to change one is not a conversion.
+`assertionsUnchanged: true` claims that **no comparable assertion differs from
+the source fixture** — no compared `expected*` value, no `expectedReasonCodes`
+entry, no `forbidden` entry. A conversion that needs to change one is not a
+conversion.
+
+The single permitted movement is a §4.3 prose demotion, and it is permitted
+precisely because a prose expectation was never a comparable assertion: the
+comparator reported it as non-comparable and checked nothing. Every demotion
+must still be declared in `prosePromoted`, naming the field that already
+carries the value — so `assertionsUnchanged: true` alongside a non-empty
+`prosePromoted` is consistent, and the reader can verify it in one place rather
+than by diffing.
+
+This is mechanically checkable and should be checked: compare the four
+expectation blocks, `expectedReasonCodes` and `forbidden` against the source
+commit, and every difference must be a key named in `prosePromoted`.
 
 ### What a conversion may never supply
 
