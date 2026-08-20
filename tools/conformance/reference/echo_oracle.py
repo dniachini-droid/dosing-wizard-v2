@@ -25,6 +25,16 @@ WHAT A GREEN MUTATION RUN THEREFORE PROVES
     That the harness detects the defect class. It proves nothing whatever
     about any engine's correctness, because there is no engine.
 
+HOW IT FINDS ITS FIXTURE
+    Not from the request. The harness deliberately does **not** send a fixture
+    id, because the documented interface is a function of
+    `(eventLedger, configurationHistory, asOf)` and an id is none of those --
+    sending one would hand any engine the key to a published answer table and
+    leave the harness unable to tell a correct engine from a lookup. The oracle
+    therefore matches on the content of the ledger it was given, using its own
+    canonical ordering so that a reordered ledger still finds the same fixture.
+    That lookup is a property of *this* stand-in, not of the protocol.
+
 THE THREE THINGS IT DOES COMPUTE, AND WHY
     A pure echo could not be sabotaged by `M-1` (event ordering) or `M-2`
     (clock reads), because a pure echo never looks at the ledger or the
@@ -44,6 +54,7 @@ THE THREE THINGS IT DOES COMPUTE, AND WHY
 from __future__ import annotations
 
 import copy
+import json
 import os
 import sys
 from datetime import datetime
@@ -76,6 +87,7 @@ class _Cache:
     corpus: Optional[corpus_mod.Corpus] = None
     contract: Optional[dc_mod.Contract] = None
     catalogue: Optional[rc_mod.Catalogue] = None
+    by_content: Optional[Dict[str, Any]] = None
 
 
 def _load():
@@ -83,7 +95,24 @@ def _load():
         _Cache.corpus = corpus_mod.load()
         _Cache.contract = dc_mod.load()
         _Cache.catalogue = rc_mod.load()
+    if _Cache.by_content is None:
+        _Cache.by_content = {}
+        for f in _Cache.corpus.fixtures:
+            inp = f.body.get("input") or {}
+            if not isinstance(inp, dict):
+                continue
+            key = _content_key(inp.get("asOf"), inp.get("events") or [])
+            _Cache.by_content.setdefault(key, f)
     return _Cache.corpus, _Cache.contract, _Cache.catalogue
+
+
+def _content_key(as_of: Any, events: Any) -> str:
+    """Order-independent identity of a submitted ledger."""
+    items = sorted(
+        json.dumps(e, sort_keys=True, separators=(",", ":"), default=str)
+        for e in (events if isinstance(events, list) else [])
+    )
+    return json.dumps([as_of, items], separators=(",", ":"))
 
 
 def _parse_instant(s: Any) -> Optional[datetime]:
@@ -117,10 +146,27 @@ class EchoOracle:
         return fn(value, **ctx) if fn else value
 
     # -- the oracle --------------------------------------------------------
+    ENGINE_VERSION = "echo-oracle/0 (NOT AN ENGINE)"
+
     def __call__(self, request: Dict[str, Any]) -> Dict[str, Any]:
         c, contract, cat = _load()
-        fixture = c.by_id(request.get("fixtureId", ""))
+        if request.get("op") == "describe":
+            # Canon §47/§64: a replay is stamped with the version that produced
+            # it. Even a stand-in must answer this, or the run cannot say what
+            # produced its result.
+            return self._hook(
+                "describe",
+                {
+                    "engineVersion": self.ENGINE_VERSION,
+                    "canonVersion": (c.index.get("canonAuthority") or ""),
+                },
+                request=request,
+            )
+        fixture = (_Cache.by_content or {}).get(
+            _content_key(request.get("asOf"), request.get("events") or [])
+        )
         body = copy.deepcopy(fixture.body) if fixture else {}
+        label = fixture.fixture_id if fixture else "UNMATCHED"
 
         events: List[Dict[str, Any]] = list(request.get("events") or [])
         ordered = self._hook(
@@ -143,12 +189,12 @@ class EchoOracle:
         for field in contract.engine_result_fields:
             result[field] = _NOT_RUN
 
-        result["assessmentId"] = f"ASSESS-{request.get('fixtureId', 'UNKNOWN')}"
+        result["assessmentId"] = f"ASSESS-{label}"
         result["assessmentAsOf"] = as_of
         result["parameter"] = "ALK"
-        result["engineVersion"] = "echo-oracle/0 (NOT AN ENGINE)"
-        result["canonVersion"] = body.get("provenance", {}).get(
-            "canonAuthority", "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4"
+        result["engineVersion"] = self.ENGINE_VERSION
+        result["canonVersion"] = self._hook(
+            "canon_version", c.index.get("canonAuthority") or "", request=request
         )
         result["configVersionId"] = (request.get("configuration") or {}).get(
             "configVersionId", _NOT_RUN
@@ -157,7 +203,7 @@ class EchoOracle:
         result["latestValidClusterId"] = (
             f"CL-{latest.get('measuredAt')}" if latest else _NOT_RUN
         )
-        result["auditTraceId"] = f"TRACE-{request.get('fixtureId', 'UNKNOWN')}"
+        result["auditTraceId"] = f"TRACE-{label}"
         result["capabilities"] = []
 
         # A forecast placeholder is emitted only for horizons no fixture block
@@ -225,7 +271,7 @@ class EchoOracle:
                 "code": code,
                 "owner": cat.owner_of(code) or "UNKNOWN",
                 "severity": cat.severity_of(code) or "INFO",
-                "payload": {"fixtureId": request.get("fixtureId"), "missing": withheld},
+                "payload": {"assessment": label, "affectedOutputs": withheld},
             }
             for code in codes
         ]

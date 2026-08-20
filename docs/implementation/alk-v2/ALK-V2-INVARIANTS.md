@@ -37,8 +37,12 @@ Fixture bodies for the canon-named invariants are in
 - **Generator:** re-run with reversed map/set iteration where the platform permits.
 - **Assert:** identical output.
 - **Negative control:** select the median pairwise slope by taking the middle element of an unordered
-  collection rather than of a sorted one; two runs whose set-iteration order
-  differs must then return different slopes.
+  collection rather than of a sorted one, then run the same input in **two
+  separate processes** with different `PYTHONHASHSEED` values; the two must then
+  return different slopes. The separate processes are load-bearing: within one
+  process, set and dict iteration order does not vary between runs for the same
+  insertion sequence, so an in-process repeat would not catch it. The harness's
+  executable `INV-A3` today submits in-process only and says so.
 
 ### INV-A4 — Display rounding never changes classification, trend or dose
 - **Canon:** Part II §2.3; `ALK-002`.
@@ -102,8 +106,10 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** no constant in `{1.00, 0.90, 0.75, 0.70, 0.55}` appears as a multiplier
   anywhere in the maintenance pipeline; no raw-mL magnitude band exists.
 - **Negative control:** reinstate a raw-mL staging band that scales the final dose by one of
-  `{1.00, 0.90, 0.75, 0.70, 0.55}` according to a magnitude class;
-  `INV-ALK-STAGING-001` must fail.
+  `{0.90, 0.75, 0.70, 0.55}` according to a magnitude class;
+  `INV-ALK-STAGING-001` must fail. The band is stated without `1.00` on purpose:
+  the assertion is a static scan for the whole constant set, but a control that
+  scaled by the identity would change no number and could pass.
 
 ### INV-B7 — Dimension safety
 - **Canon:** `ALK-VARIABLE-SEMANTICS-001`; Part I §44; `X-INV-009`.
@@ -130,6 +136,11 @@ Fixture bodies for the canon-named invariants are in
 - **Negative control:** divide `sigmaCluster` by `√n` for an n-member repeat cluster; a cluster of three
   repeats then reports a sigma below `SIGMA_ALK_BASE`, and the movement evidence
   it supports improves purely because the same measurement was taken again.
+  **Not executable today**, for the same reason as harness mutation `M-8`: no
+  executable fixture contains two readings inside the repeat window, and
+  supplying the clustering behaviour outside an engine would mean implementing
+  a canon rule. It becomes executable when an engine clusters, or when a
+  repeat-carrying fixture becomes executable.
 
 ### INV-C3 — The lookback is never extended because evidence is sparse
 - **Canon:** `ALK-007`; Part II §1.3, §17; `WG-ALK-049`.
@@ -237,10 +248,12 @@ Fixture bodies for the canon-named invariants are in
 - **Canon:** `ALK-044`; `ALK-MAINTENANCE-SEMANTICS-001`.
 - **Assert:** `continuousActionCandidate = D_current − S_supported/P` exactly;
   `maintenanceEstimate = D_current − S_observed/P` exactly; the two are distinct fields.
-- **Negative control:** compute `continuousActionCandidate` from `S_observed`; `WG-ALK-001` and
-  `WG-ALK-002` must fail, and the two fields become numerically identical, which
-  is separately the collapse `INV-B7` forbids. (Executed today as harness
-  mutation `M-3`.)
+- **Negative control:** compute `continuousActionCandidate` from `S_observed`; `WG-ALK-001` must
+  fail, because it is the fixture that asserts
+  `continuousActionCandidateMlPerDay` directly. The two fields also become
+  numerically identical, which is separately the collapse `INV-B7` forbids.
+  `WG-ALK-002` cannot detect this: its `expectedAction` asserts only `action`
+  and `recommendedDoseMlPerDay`.
 
 ### INV-D5 — The empirical bracket never changes the number
 - **Canon:** `ALK-032`; `ALK-072` item 11; `AUDIT-023`; `WG-ALK-054`.
@@ -510,22 +523,34 @@ Fixture bodies for the canon-named invariants are in
 - **Assert:** every emitted code is in `ALK-V2-REASON-CODES.md` and carries its full
   declared payload.
 - **Negative control:** emit one code that is not in the catalogue, and separately one catalogued code
-  with an empty payload; each must fail the check on its own. (Executed today as
-  harness mutation `M-4`.)
+  with an empty payload; each must fail the check on its own. Both halves are
+  executed today: the closed-set half by harness mutation `M-4`, the mandatory-
+  payload half by `CHK-RC-CLOSURE-ENGINE`, which enforces catalogue rule 4.
 
 ### INV-I4 — Every withheld output carries a reason
 - **Canon:** `ALK-CAPABILITY-CONTRACT-001`; `CORE-INFORM-PROCEED-001`; `IX-005`.
 - **Assert:** for every field whose value is `NOT_RUN`, `WITHHELD` or `UNRESOLVED`, at least
   one reason code with severity `GATING` or `REFUSAL` names it in `affectedOutputs[]`.
 - **Negative control:** withhold `doseRecommendation` and emit no `GATING` or `REFUSAL` code naming it;
-  `WG-ALK-045` must fail. (Executed today as harness mutations `M-7` and `M-20`.)
+  `WG-ALK-045` must fail. Two further mutations of the same clause must also
+  fail it: emitting a `GATING` code that names a *different* output, and
+  withholding a field nested inside a container rather than at the top level.
+  All three are executed today, by harness mutations `M-7` and `M-20` against
+  `CHK-WITHHELD-REASONED`, which resolves withheld fields at any depth and
+  requires each to be named in an `affectedOutputs`.
 
 ### INV-I5 — `HOLD` is a complete recommendation
 - **Canon:** Part I §30; `IX-005`.
 - **Assert:** every `HOLD` result carries its hold reasons, the current position, the
   observed and supported slopes where computed, and a next-test time.
-- **Negative control:** return `HOLD` carrying only the action, with no hold reasons and no next-test
-  time; `WG-ALK-002` and `AD-MNT-001` must fail.
+- **Negative control:** return `HOLD` carrying only the action, with no hold reasons. `WG-ALK-002`
+  and `AD-MNT-001` both fail on the missing hold reasons, which they assert as
+  required reason codes.
+  **The next-test-time half has no fixture behind it today:** neither of those
+  fixtures carries an `expectedRetest` block, and no executable fixture asserts
+  a next-test time on a `HOLD`. Until one does, that clause is prose. Making it
+  executable needs a `HOLD` fixture with an `expectedRetest` block, which is
+  fixture work governed by canon.
 
 ### INV-I6 — Open issues surface as refusals, never as defaults
 - **Canon:** this package's conformance gate item 8; `CORE-INFORM-PROCEED-001`.

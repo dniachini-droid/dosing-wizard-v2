@@ -368,13 +368,28 @@ def check_trace_coverage(c: corpus_mod.Corpus, trace: Dict[str, Any]) -> CheckOu
     )
 
 
-def check_dimension_safety(contract: dc_mod.Contract) -> CheckOutcome:
+def check_dimension_safety(
+    contract: dc_mod.Contract, c: Optional[corpus_mod.Corpus] = None
+) -> CheckOutcome:
     """`INV-B7` / `INV-ALK-VARIABLES-001`, the part executable without code.
 
-    The full invariant is about implementation fields. Until an engine exists
-    the subject is the data contract itself: it declares the field names an
-    engine must use, so a contract field with two dimensions, or a forbidden
-    bare name, is the defect arriving one layer earlier.
+    Two populations, because the contract's declared fields are not the only
+    names an engine is asked for:
+
+    1. the field names the data contract declares, and
+    2. **every field name the fixture corpus asserts**, which is a much larger
+       set and is what `compare.compare_by_name` actually resolves against.
+
+    The second was missing, and its absence mattered: the harness's by-name
+    resolution is justified by `INV-B7` making a name unambiguous, so checking
+    only the 50 contract names left the justification unvalidated exactly where
+    the resolution happens. `WG-ALK-045` alone asserts `observedSlope`,
+    `supportedSlope`, `continuousActionCandidate` and `recommendedDose` --
+    undimensioned twins of dimensioned names elsewhere in the corpus.
+
+    Corpus-asserted names are reported as violations of the *contract's* naming
+    rule, not of canon: the fixtures are canon-derived and this harness does not
+    edit them.
     """
     violations: List[str] = list(contract.parse_problems)
     examined = 0
@@ -383,6 +398,22 @@ def check_dimension_safety(contract: dc_mod.Contract) -> CheckOutcome:
         + [("ReasonCode", f) for f in contract.reason_code_fields]
         + [("AuditTrace", f) for f in contract.audit_trace_fields]
     )
+    corpus_names: Dict[str, str] = {}
+    if c is not None:
+        for f in c.fixtures:
+            for block in corpus_mod.EXPECTATION_BLOCKS:
+                v = f.body.get(block)
+                if isinstance(v, dict):
+                    for k in v:
+                        if k not in ("note", "$comment", "derivation", "why"):
+                            corpus_names.setdefault(k, f.fixture_id)
+    declared = {n for _, n in all_fields}
+    all_fields += [
+        (f"corpus({corpus_names[n]})", n)
+        for n in sorted(corpus_names)
+        if n not in declared
+    ]
+
     for owner, name in all_fields:
         examined += 1
         if name in contract.forbidden_bare_names and name not in contract.container_fields:
@@ -390,6 +421,26 @@ def check_dimension_safety(contract: dc_mod.Contract) -> CheckOutcome:
                 f"{owner}.{name} uses a bare name the contract forbids "
                 f"({', '.join(sorted(contract.forbidden_bare_names))})"
             )
+        if owner.startswith("corpus(") and not any(
+            name.endswith(sfx) for sfx in contract.dimension_suffixes
+        ):
+            # The hazard is narrow and worth stating precisely: the *same*
+            # quantity named twice, once with a dimension and once without, so
+            # that `compare_by_name` will resolve both. That is exactly
+            # `name + <a declared dimension suffix>` existing elsewhere.
+            # A merely similar name (`actualDose` / `actualDoseState`,
+            # `at7_05` / `at7_21`) is a different quantity and is not flagged.
+            twins = sorted(
+                name + sfx
+                for sfx in contract.dimension_suffixes
+                if (name + sfx) in declared or (name + sfx) in corpus_names
+            )
+            if twins:
+                violations.append(
+                    f"{owner}.{name} carries no dimension suffix while "
+                    f"{', '.join(twins)} does; the same quantity is named two ways "
+                    f"and `compare_by_name` resolves both (INV-B7)"
+                )
         hits = [s for s in contract.dimension_suffixes if name.endswith(s)]
         if len(hits) > 1:
             longest = max(len(h) for h in hits)
@@ -403,10 +454,12 @@ def check_dimension_safety(contract: dc_mod.Contract) -> CheckOutcome:
         title="Data-contract field names carry exactly one dimension",
         status=FAIL if violations else PASS,
         what_was_checked=(
-            f"{examined} field names declared by EngineResult, ReasonCode and "
-            f"AuditTrace against the {len(contract.dimension_suffixes)} dimension "
-            f"suffixes and {len(contract.forbidden_bare_names)} forbidden bare names "
-            f"in {contract.source} §0"
+            f"{examined} field names -- {len(declared)} declared by EngineResult, "
+            f"ReasonCode and AuditTrace, plus {len(all_fields) - len(declared)} "
+            f"further names asserted by the fixture corpus -- against the "
+            f"{len(contract.dimension_suffixes)} dimension suffixes and "
+            f"{len(contract.forbidden_bare_names)} forbidden bare names in "
+            f"{contract.source} §0"
         ),
         violations=violations,
         subjects_examined=examined,
@@ -426,6 +479,66 @@ def run_document_checks(
         check_reason_code_owner_single(cat, trace),
         check_index_integrity(c, trace, invariant_ids),
         check_trace_coverage(c, trace),
-        check_dimension_safety(contract),
+        check_dimension_safety(contract, c),
     ]
     return outcomes, problems
+
+
+def check_engine_version(
+    described: Dict[str, Any],
+    replies: List[Tuple[str, Dict[str, Any]]],
+    c: corpus_mod.Corpus,
+) -> CheckOutcome:
+    """Canon §64's third replay condition, and canon §47's stamp.
+
+    "Deterministic replay holds given the same event ledger, the same
+     configuration versions **and the same engine/canon version**. Replays are
+     stamped with the version that produced them."  -- CLAUDE.md, quoting canon
+
+    The harness previously checked that `engineVersion` and `canonVersion` were
+    *present* and never looked at their values, and never recorded them. An
+    engine built against a superseded freeze passed, and the report could not
+    afterwards say which canon it had been run against.
+    """
+    violations: List[str] = []
+    declared_authority = c.index.get("canonAuthority")
+    seen: Set[str] = set()
+    for fixture_id, result in replies:
+        cv = result.get("canonVersion")
+        if isinstance(cv, str):
+            seen.add(cv)
+            if declared_authority and cv != declared_authority:
+                violations.append(
+                    f"{fixture_id}: engine declares canonVersion `{cv}`; the corpus is "
+                    f"written against `{declared_authority}`"
+                )
+    if len(seen) > 1:
+        violations.append(
+            f"the engine reported {len(seen)} different canonVersions in one run: "
+            f"{', '.join(sorted(seen))}"
+        )
+    if not replies:
+        return CheckOutcome(
+            check_id="CHK-ENGINE-VERSION",
+            title="Engine and canon versions are declared, stamped and current",
+            status=NOT_COVERED,
+            what_was_checked="no engine reply was produced",
+            detail="requires an engine and at least one executable fixture",
+        )
+    if not described:
+        violations.append(
+            "the engine answered no `describe` request, so the run cannot be stamped "
+            "with the engine version that produced it (canon §47)"
+        )
+    return CheckOutcome(
+        check_id="CHK-ENGINE-VERSION",
+        title="Engine and canon versions are declared, stamped and current",
+        status=FAIL if violations else PASS,
+        what_was_checked=(
+            f"the describe response plus the canonVersion of {len(replies)} replies, "
+            f"each required to equal the corpus authority "
+            f"`{declared_authority or '(undeclared)'}`"
+        ),
+        violations=violations,
+        subjects_examined=len(replies),
+    )

@@ -126,6 +126,16 @@ def check_emitted_reason_codes(
                         f"{fixture_id}: `{code}` emitted by `{emitted_owner}`; the "
                         f"catalogue's single owner is `{declared_owner}`"
                     )
+                # Catalogue rule 4: "Payload is mandatory. Every code carries the
+                # exact fields listed. A code without its payload cannot be
+                # rendered honestly or audited." This is `INV-I3`'s second
+                # clause, which nothing enforced.
+                payload = rc.get("payload")
+                if not isinstance(payload, dict) or not payload:
+                    violations.append(
+                        f"{fixture_id}: `{code}` emitted with an empty payload; the "
+                        f"catalogue makes the payload mandatory (rule 4)"
+                    )
 
     if not replies:
         return CheckOutcome(
@@ -150,50 +160,119 @@ def check_emitted_reason_codes(
     )
 
 
+def _withheld_fields(node: Any, path: str = "") -> List[str]:
+    """Every field, at any depth, whose value is a withheld marker.
+
+    An earlier version looked only at top-level keys, so an engine that
+    withheld `doseRecommendation.recommendedDoseMlPerDay` was invisible to the
+    check and the check reported PASS over zero subjects.
+    """
+    out: List[str] = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            p = f"{path}.{k}" if path else k
+            if isinstance(v, str) and v in WITHHELD_MARKERS:
+                out.append(p)
+            else:
+                out.extend(_withheld_fields(v, p))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out.extend(_withheld_fields(v, f"{path}[{i}]"))
+    return out
+
+
+def _named_outputs(rc: Any) -> List[str]:
+    """Outputs a reason code claims to explain, from its payload."""
+    if not isinstance(rc, dict):
+        return []
+    payload = rc.get("payload")
+    if not isinstance(payload, dict):
+        return []
+    named: List[str] = []
+    for key in ("affectedOutputs", "affected", "missing", "notRun"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            named.append(value)
+        elif isinstance(value, list):
+            named.extend(v for v in value if isinstance(v, str))
+    return named
+
+
 def check_withheld_carries_reason(
     replies: List[Tuple[str, Dict[str, Any]]], cat: rc_mod.Catalogue
 ) -> CheckOutcome:
     """`INV-I4` / schema invariant 8: no output is silently absent.
 
-    Every top-level field whose value is `NOT_RUN`, `WITHHELD` or `UNRESOLVED`
-    must be accompanied by at least one `GATING` or `REFUSAL` code.
+    The invariant is specific, and this check now enforces what it says rather
+    than a weaker paraphrase of it:
+
+        "for every field whose value is NOT_RUN, WITHHELD or UNRESOLVED, at
+         least one reason code with severity GATING or REFUSAL **names it in
+         affectedOutputs[]**."
+
+    The earlier version asked only whether *some* `GATING`/`REFUSAL` code was
+    present anywhere in the result. Under that rule an engine that legitimately
+    marked one reading suspect satisfied the refusal guarantee for every other
+    withheld output in the same assessment.
     """
     violations: List[str] = []
     examined = 0
     for fixture_id, result in replies:
-        withheld = [
-            k for k, v in result.items() if isinstance(v, str) and v in WITHHELD_MARKERS
-        ]
+        withheld = _withheld_fields(result)
         if not withheld:
             continue
         examined += len(withheld)
-        severities: Set[str] = set()
+
+        explained: Set[str] = set()
+        any_gating = False
         for rc in _emitted_codes(result):
-            code = rc if isinstance(rc, str) else (rc.get("code") if isinstance(rc, dict) else None)
+            code = rc if isinstance(rc, str) else (
+                rc.get("code") if isinstance(rc, dict) else None
+            )
             sev = cat.severity_of(code) if isinstance(code, str) else None
-            if sev:
-                severities.add(sev)
-        if not ({"GATING", "REFUSAL"} & severities):
+            if sev not in ("GATING", "REFUSAL"):
+                continue
+            any_gating = True
+            for name in _named_outputs(rc):
+                explained.add(name)
+                explained.add(name.rsplit(".", 1)[-1])
+
+        if not any_gating:
             violations.append(
-                f"{fixture_id}: {', '.join(sorted(withheld))} withheld, but no emitted "
-                f"code has severity GATING or REFUSAL"
+                f"{fixture_id}: {len(withheld)} field(s) withheld "
+                f"({', '.join(sorted(withheld)[:4])}"
+                f"{', ...' if len(withheld) > 4 else ''}), but no emitted code has "
+                f"severity GATING or REFUSAL"
+            )
+            continue
+
+        unexplained = [
+            w for w in withheld if w not in explained and w.rsplit(".", 1)[-1] not in explained
+        ]
+        if unexplained:
+            violations.append(
+                f"{fixture_id}: withheld without being named by any GATING or "
+                f"REFUSAL code's affectedOutputs: "
+                f"{', '.join(sorted(unexplained)[:6])}"
+                f"{', ...' if len(unexplained) > 6 else ''}"
             )
 
     if not replies:
         return CheckOutcome(
             check_id="CHK-WITHHELD-REASONED",
-            title="Every withheld output carries a gating or refusal reason",
+            title="Every withheld output is named by a gating or refusal reason",
             status=NOT_COVERED,
             what_was_checked="no engine reply was produced",
             detail="requires an engine and at least one executable fixture",
         )
     return CheckOutcome(
         check_id="CHK-WITHHELD-REASONED",
-        title="Every withheld output carries a gating or refusal reason",
+        title="Every withheld output is named by a gating or refusal reason",
         status=FAIL if violations else PASS,
         what_was_checked=(
-            f"{examined} withheld fields across {len(replies)} engine replies, each "
-            f"required to be explained by a GATING or REFUSAL code"
+            f"{examined} withheld fields at any depth across {len(replies)} engine "
+            f"replies, each required to be named in the affectedOutputs of a GATING "
+            f"or REFUSAL code"
         ),
         violations=violations,
         subjects_examined=examined,

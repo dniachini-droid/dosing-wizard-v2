@@ -40,6 +40,7 @@ class ComparisonResult:
     compared: int = 0
     skipped_prose: List[str] = field(default_factory=list)
     tolerance_unspecified: List[str] = field(default_factory=list)
+    precision_below_tolerance: List[str] = field(default_factory=list)
     absent_from_engine: List[str] = field(default_factory=list)
 
     @property
@@ -61,16 +62,31 @@ def _tolerance_for(field_name: str, table: Dict[str, Any]) -> Tuple[float, bool]
     return float(strictest), False
 
 
-def _is_prose(value: Any) -> bool:
-    """A string that is a sentence rather than an enum value or an identifier."""
+def is_prose(value: Any) -> bool:
+    """A string that is a sentence rather than a value an engine field can equal.
+
+    **One predicate, one owner.** There were briefly two — this one and a
+    narrower copy in `corpus._unreadable_expectations` — and they disagreed on
+    17 corpus entries, so the published count of non-comparable expectations
+    depended on which one you asked. `corpus` now calls this.
+
+    The rule is deliberately conservative: a single token with no whitespace is
+    a value, whatever its case. `SET_MAINTENANCE_DOSE`, `FALLING`, `decrease`,
+    `blocked` and `non-zero` are all compared; only something with internal
+    whitespace or a trailing full stop is treated as a sentence. The earlier
+    version required an upper-case single token and so discarded 14 lower-case
+    enum values as if they were prose.
+    """
     if not isinstance(value, str):
         return False
     s = value.strip()
     if not s:
         return False
-    if s.upper() == s and " " not in s:
-        return False  # SET_MAINTENANCE_DOSE, FALLING, EXACT ...
-    return " " in s or s.endswith(".") or any(c.islower() for c in s)
+    return " " in s or "\t" in s or s.endswith(".")
+
+
+#: Kept as a private alias so existing call sites read unchanged.
+_is_prose = is_prose
 
 
 def compare_block(
@@ -161,6 +177,18 @@ def _compare_value(
         t, specified = _tolerance_for(name, tol)
         if not specified:
             r.tolerance_unspecified.append(path)
+        step = _last_digit_step(exp)
+        if step is not None and step > t:
+            # The golden is written to fewer decimals than the tolerance
+            # demands, so a correct engine can differ from it by more than the
+            # tolerance simply because the fixture rounded. Reported, never
+            # silently widened: the tolerance is the schema's and the value is
+            # canon's, and neither is the harness's to adjust.
+            r.precision_below_tolerance.append(
+                f"{path}: golden {exp!r} is written to a last place of {step:g}, "
+                f"coarser than the {t:g} tolerance applied to it; a correct engine "
+                f"can fail this comparison by rounding alone"
+            )
         if math.isnan(act) or math.isinf(act):
             r.mismatches.append(Mismatch(path, exp, act, "not finite"))
             return
@@ -261,3 +289,70 @@ def effective_tolerance(schema: Dict[str, Any], fixture_override: Optional[Dict[
             {k: v for k, v in fixture_override.items() if isinstance(v, (int, float))}
         )
     return table
+
+
+def _last_digit_step(value: float) -> Optional[float]:
+    """The size of one unit in the last written decimal place of `value`.
+
+    `10.5` -> 0.1, `9.14609` -> 1e-5. `None` when the literal is long enough
+    that its written precision is not the limiting factor.
+    """
+    text = repr(float(value))
+    if "e" in text or "E" in text:
+        return None
+    if "." not in text:
+        return None
+    decimals = len(text.split(".", 1)[1].rstrip("0"))
+    if decimals == 0 or decimals >= 15:
+        return None
+    # Only a value written to three or more decimals is plausibly a *truncated*
+    # computed quantity. One or two decimals is an exact intended value -- an
+    # actuator command like 10.5 mL/day, which the fixture schema says to
+    # "compare exactly after rounding", or a reading like 8.6 dKH. Flagging
+    # those would bury the real signal in noise and train the reader to skip
+    # the notes.
+    if decimals < 3:
+        return None
+    return 10.0 ** (-decimals)
+
+
+def widened_tolerances(
+    schema: Dict[str, Any], fixture_override: Optional[Dict[str, Any]]
+) -> List[str]:
+    """Fixture-level tolerance overrides that make the gate looser.
+
+    The fixture schema permits an override ("overrides the default tolerance if
+    the fixture needs one"), so widening is a supported path and the harness
+    does not forbid it. It must not be *invisible*, though: the corpus and the
+    engine will be edited in the same pull request, by the same author, under
+    pressure to turn a red green.
+    """
+    out: List[str] = []
+    if not fixture_override:
+        return out
+    defaults = schema.get("defaultTolerance") or {}
+    for key, value in fixture_override.items():
+        if not isinstance(value, (int, float)):
+            continue
+        base = defaults.get(key)
+        if isinstance(base, (int, float)) and value > base:
+            out.append(
+                f"tolerance.{key} is widened by this fixture from the schema default "
+                f"{base:g} to {value:g} ({value / base:.3g}x looser)"
+            )
+    return out
+
+
+def forbidden_epsilon(schema: Dict[str, Any]) -> float:
+    """Equality epsilon for a forbidden numeric value.
+
+    Read from the schema's own tolerance table rather than written here. The
+    same constant living in two places is what `MASTER RULE 1` calls a defect
+    rather than a coincidence.
+    """
+    table = schema.get("defaultTolerance") or {}
+    value = table.get("dimensionless")
+    if isinstance(value, (int, float)):
+        return float(value)
+    numeric = [v for v in table.values() if isinstance(v, (int, float))]
+    return float(min(numeric)) if numeric else 0.0

@@ -41,13 +41,41 @@ python3 tools/conformance/run-conformance.py [--engine '<engine command>']
 python3 tools/conformance/run-mutations.py
 ```
 
-A PR that touches the engine or anything under `docs/implementation/alk-v2/`
-and does not pass is `CHANGES_REQUIRED` on that ground alone. Read the
-harness's **NOT COVERED** section before accepting any coverage claim in the PR
-body: it names every fixture that could not be executed and why, and a claim of
-coverage by a fixture in that list is not coverage. If the PR adds a checker
-without adding its negative control, that is a `CORRECTNESS_GAP` — a checker
-never shown to fail is not a gate (canon `CORE-CANON-COVERAGE-001` item 9).
+**Read the verdict the way `DEC-016` states it, not as "must be green".** The
+harness is red on a clean tree today and will stay red until an engine exists
+and the document defects it reports are resolved. "Required" means the gate must
+run, its real output must be in the PR, and **the change must not make it
+worse**. A rule that no PR could satisfy is a rule that gets waived, which is
+the failure `DEC-016`'s own rationale names.
+
+So the test is a comparison against the base commit, not an absolute:
+
+```bash
+git stash --include-untracked            # or check out the base in a worktree
+python3 tools/conformance/run-conformance.py --json /tmp/base.json
+git stash pop
+python3 tools/conformance/run-conformance.py --json /tmp/head.json
+```
+
+- **Any subject failing at head that passed at base → `CHANGES_REQUIRED`**, on
+  that ground alone.
+- A subject failing at both is pre-existing. Name it in the report; it is not
+  this PR's to fix and not a reason to block.
+- `run-mutations.py` must be **GREEN** at head. It compares against its own
+  baseline internally, so unlike the conformance run it has no excuse.
+
+Read the harness's **NOT COVERED** section before accepting any coverage claim
+in the PR body: it names every fixture that could not be executed and why, and a
+claim of coverage by a fixture in that list is not coverage. A fixture reported
+`NOT_COVERED / nothing to compare` answered but verified nothing — it is not a
+pass.
+
+If the PR adds a checker without adding its negative control, that is a
+`CORRECTNESS_GAP` — a checker never shown to fail is not a gate (canon
+`CORE-CANON-COVERAGE-001` item 9, and `DEC-016`). Check the control fires for
+the **mechanism it names**: `run-mutations.py` reports `NOT CAUGHT BY ITS NAMED
+MECHANISM` when a sabotage turns something else red instead, which is how a
+checker that cannot fire gets published as demonstrated.
 
 ## 2 — Choose the reviewers
 
@@ -125,7 +153,8 @@ Where more than one applies, report the most severe and list the others.
 target: (base..head, changed paths, stated intent)
 independence: (was this reviewed by a session that did not write it?)
 reviewers run: (and which were considered and skipped, with reasons)
-conformance harness: (run? verdict? what it reported as NOT COVERED?)
+conformance harness: (base verdict vs head verdict; any subject newly failing;
+                     mutation harness green?; what it reported as NOT COVERED)
 classification:
 findings, ranked: (id / severity / what / evidence / authority quoted / fix)
 expected debt: (each with the citation that defers it)

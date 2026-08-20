@@ -41,8 +41,15 @@ class Mutation:
     #: Which harness claim this is the negative control for.
     guards: str
     #: Subject ids expected to go red, as "fixture:ID" / "check:ID" /
-    #: "invariant:ID". Checked against what actually went red.
+    #: "invariant:ID". **Enforced**: a mutation whose declared subjects do not
+    #: go red is reported NOT CAUGHT even if something else did.
     expect_red: List[str] = field(default_factory=list)
+    #: A substring that must appear in the *text* of at least one new failure.
+    #: This is what makes a control prove the mechanism it names rather than
+    #: any mechanism at all -- M-11 was credited for four red fixtures that
+    #: went red through the ordinary comparator while the checker it claimed
+    #: to guard never fired.
+    expect_mechanism: str = ""
     hooks: Dict[str, Callable] = field(default_factory=dict)
     #: For BLOCKED entries: exactly what must be true for it to run.
     unblocks_when: str = ""
@@ -152,17 +159,14 @@ def _m10_recommend_anyway(payload, block, field, body, request):
 
 
 def _m11_forbidden_value(payload, block, field, body, request):
-    """Return exactly what the fixture forbids."""
+    """Return exactly what the fixture forbids, at its contract location."""
     forbidden = body.get("forbidden") or {}
     out = dict(payload)
-    changed = False
     for key, value in forbidden.items():
-        if key in ("note", "$comment", "cases", "wording"):
+        if key in ("note", "$comment", "cases", "wording", "reasonCodes"):
             continue
-        if key in out or key in ("trajectory", "action", "recommendedDoseMlPerDay"):
-            out[key] = value
-            changed = True
-    return out if changed else payload
+        out[key] = value
+    return out
 
 
 def _m12_drop_required_code(codes, body, request):
@@ -231,6 +235,19 @@ def _m19_name_collision(result, body, request):
     return out
 
 
+def _m21_stale_canon_version(result, body, request):
+    """Answer as an engine built against a superseded freeze."""
+    out = dict(result)
+    out["canonVersion"] = "SHARED_V2_FREEZE_1 / ALK_V2_FREEZE_3"
+    return out
+
+
+def _m21_stale_describe(described, request):
+    out = dict(described)
+    out["canonVersion"] = "SHARED_V2_FREEZE_1 / ALK_V2_FREEZE_3"
+    return out
+
+
 def _m20_silent_withhold(result, body, request):
     """Withhold an output and emit no code at all."""
     out = dict(result)
@@ -259,6 +276,7 @@ MUTATIONS: List[Mutation] = [
             "negative control."
         ),
         expect_red=["invariant:INV-A1"],
+        expect_mechanism="reversing the input event array changed the output",
         hooks={"order_events": _m1_insertion_order},
     ),
     Mutation(
@@ -272,6 +290,7 @@ MUTATIONS: List[Mutation] = [
             "that repeated runs are identical. Named as INV-A2's negative control."
         ),
         expect_red=["invariant:INV-A2", "invariant:INV-A1", "invariant:INV-A3"],
+        expect_mechanism="assessmentAsOf",
         hooks={"as_of": _m2_system_clock},
     ),
     Mutation(
@@ -293,6 +312,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="observedSlopeDkhPerDay",
         hooks={"block": _m3_observed_from_supported},
     ),
     Mutation(
@@ -307,6 +327,7 @@ MUTATIONS: List[Mutation] = [
             "shape -- evaluative, not explanatory."
         ),
         expect_red=["check:CHK-RC-CLOSURE-ENGINE", "invariant:INV-I3"],
+        expect_mechanism="not in the closed set",
         hooks={"reason_codes": _m4_uncatalogued_code},
     ),
     Mutation(
@@ -327,6 +348,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="differs by",
         hooks={"block": _m5_round_before_classifying, "latest_value": _m5_round_latest},
     ),
     Mutation(
@@ -349,6 +371,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="recommendedDoseMlPerDay",
         hooks={"block": _m6_history_for_current},
     ),
     Mutation(
@@ -365,6 +388,7 @@ MUTATIONS: List[Mutation] = [
             "withheld output carries a reason; no output is silently absent."
         ),
         expect_red=["check:CHK-WITHHELD-REASONED"],
+        expect_mechanism="no emitted code has severity GATING or REFUSAL",
         hooks={"reason_codes": _m7_skip_refusal},
     ),
     Mutation(
@@ -409,6 +433,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "check:CHK-WITHHELD-REASONED",
         ],
+        expect_mechanism="required reason code",
         hooks={"reason_codes": _m9_drop_advisory},
     ),
     Mutation(
@@ -422,6 +447,7 @@ MUTATIONS: List[Mutation] = [
             "HOLD; turning it into a dose change is the defect this guards."
         ),
         expect_red=["fixture:WG-ALK-002"],
+        expect_mechanism="action",
         hooks={"block": _m10_recommend_anyway},
     ),
     Mutation(
@@ -441,6 +467,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-003",
             "fixture:WG-ALK-004",
         ],
+        expect_mechanism="forbidden value",
         hooks={"block": _m11_forbidden_value},
     ),
     Mutation(
@@ -461,6 +488,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="required reason code",
         hooks={"reason_codes": _m12_drop_required_code},
     ),
     Mutation(
@@ -474,6 +502,7 @@ MUTATIONS: List[Mutation] = [
             "schema violation, distinct from a withheld one."
         ),
         expect_red=["check:CHK-OUTPUT-SHAPE"],
+        expect_mechanism="absent",
         hooks={"result": _m13_missing_declared_field},
     ),
     Mutation(
@@ -487,6 +516,7 @@ MUTATIONS: List[Mutation] = [
             "output with no owner, no dimension and no audit path."
         ),
         expect_red=["check:CHK-OUTPUT-SHAPE"],
+        expect_mechanism="not declared by the data contract",
         hooks={"result": _m14_undeclared_field},
     ),
     Mutation(
@@ -500,6 +530,7 @@ MUTATIONS: List[Mutation] = [
             "loses the fact that an output was held."
         ),
         expect_red=["check:CHK-RC-CLOSURE-ENGINE"],
+        expect_mechanism="severity",
         hooks={"result": _m15_wrong_severity},
     ),
     Mutation(
@@ -513,6 +544,7 @@ MUTATIONS: List[Mutation] = [
             "the catalogue's rule 3, one owner per code."
         ),
         expect_red=["check:CHK-RC-CLOSURE-ENGINE"],
+        expect_mechanism="catalogue's single owner",
         hooks={"result": _m16_wrong_owner},
     ),
     Mutation(
@@ -533,6 +565,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="differs by",
         hooks={"block": _m17_just_outside_tolerance},
     ),
     Mutation(
@@ -553,6 +586,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="not finite",
         hooks={"block": _m18_not_finite},
     ),
     Mutation(
@@ -577,6 +611,7 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-006",
             "fixture:WG-ALK-033",
         ],
+        expect_mechanism="appears at",
         hooks={"result": _m19_name_collision},
     ),
     Mutation(
@@ -594,9 +629,33 @@ MUTATIONS: List[Mutation] = [
             "fixture:WG-ALK-001",
             "fixture:WG-ALK-002",
         ],
+        expect_mechanism="GATING or REFUSAL",
         hooks={"result": _m20_silent_withhold},
     ),
 ]
+
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-21",
+        title="Answer as an engine built against a superseded canon freeze",
+        defect_class="stale authority",
+        status=EXECUTABLE,
+        sabotage=(
+            "both the describe response and every result declare "
+            "`SHARED_V2_FREEZE_1 / ALK_V2_FREEZE_3`, the historical pair"
+        ),
+        guards=(
+            "CHK-ENGINE-VERSION, i.e. canon §64's third replay condition -- same "
+            "ledger, same configuration versions *and the same engine/canon "
+            "version*. The two stale identifiers are exactly the ones "
+            "`AGENT-ROSTER.md` records as superseded."
+        ),
+        expect_red=["check:CHK-ENGINE-VERSION"],
+        expect_mechanism="the corpus is written against",
+        hooks={"result": _m21_stale_canon_version, "describe": _m21_stale_describe},
+    )
+)
 
 
 def by_id(mid: str) -> Optional[Mutation]:

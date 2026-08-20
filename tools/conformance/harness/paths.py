@@ -12,7 +12,14 @@ def repo_root() -> str:
 
 
 ROOT = repo_root()
-ALK = os.path.join(ROOT, "docs", "implementation", "alk-v2")
+
+#: The alk-v2 package the harness reads. Overridable **only** so that the
+#: mutation harness can point the whole harness at a deliberately corrupted
+#: copy of the documents and confirm the document-level checks go red. Nothing
+#: in a normal run sets it, and a run that does says so in its report.
+ALK = os.environ.get("ALK_V2_PACKAGE_DIR") or os.path.join(
+    ROOT, "docs", "implementation", "alk-v2"
+)
 FIXTURES = os.path.join(ALK, "fixtures")
 
 REASON_CODES_MD = os.path.join(ALK, "ALK-V2-REASON-CODES.md")

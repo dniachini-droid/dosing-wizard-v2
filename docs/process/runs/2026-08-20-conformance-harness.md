@@ -81,9 +81,11 @@ Design points worth recording because they were decisions:
 ### Part 2 — the mutation set
 
 `tools/conformance/run-mutations.py` and `tools/conformance/mutations/`. Twenty
-named sabotages of `tools/conformance/reference/echo_oracle.py`. A mutation
-counts as caught when it makes the harness fail subjects the unmutated baseline
-passed; the delta rather than the absolute verdict, because the pre-existing
+named sabotages of `tools/conformance/reference/echo_oracle.py`, which the fix
+pass grew to 25 across two arms — 21 oracle mutations and 4 document mutations.
+A mutation counts as caught when it makes the harness fail subjects the
+unmutated baseline passed **and** the failure text names the mechanism it
+guards; the delta rather than the absolute verdict, because the pre-existing
 document defects hold the absolute verdict red regardless.
 
 ### Part 3 — invariant negative controls
@@ -116,13 +118,14 @@ usefulness are only satisfied by the earlier slot.
 ### Found by the harness, in the alk-v2 package — RECORDED, LEFT OPEN
 
 None of these is fixed here: fixing them means editing alk-v2 package documents,
-which this run was scoped out of. The harness reports all three on every run.
+which this run was scoped out of. The harness reports all four on every run.
 
 | # | Severity | Finding |
 |---|---|---|
 | 1 | `CORRECTNESS_GAP` | `POSITION_NO_VALID_MEASUREMENT` is required by `ALK-V2-ALGORITHM-CONTRACT.md` and named by the traceability table, but is not in the closed catalogue. An engine implementing `CORE-POSITION-001` as written would emit an uncatalogued code, failing conformance-gate item 4. |
 | 2 | `CORRECTNESS_GAP` | Twenty-two reason codes have two owners between the catalogue's owner headings and the traceability table's owner column, e.g. `TRAJECTORY_UNCERTAINTY_LIMITED` (`TREND` vs `SUPPORT`). The catalogue's rule 3 and `INV-I2` both forbid it. |
 | 3 | `CORRECTNESS_GAP` | Twenty fixture ids are claimed as coverage by the traceability table and do not exist (`VAL-001..008`, `CLU-001..005`, `TIME-001`, `INT-005`, `AUDIT-023`, `AUDIT-027`, `AUDIT-028`, `AD-DEL-002`, `ALK-021`), while `traceability/alk-v2-traceability.json` declares `rulesWithoutFixture: []`. Three further entries in that column are prose or span references. |
+| 4 | `CORRECTNESS_GAP` | Eight fixtures assert an undimensioned twin of a dimensioned field name (`observedSlope` vs `observedSlopeDkhPerDay`, `maintenanceDose` vs `maintenanceDoseMlPerDay`, and six more). `INV-B7` requires one meaning per field name, and the harness's by-name resolution rests on it. Found only after the fix pass extended the check from 39 names to 446. |
 
 ### Found about the corpus itself — RECORDED, LEFT OPEN
 
@@ -158,14 +161,118 @@ Both filed in `docs/process/OPEN-OWNER-DECISIONS.md`. `OD-006` and `OD-007` are
 recorded closed there, pointing at `DEC-016` and `DEC-017`, so that a reader of
 that queue finds them alongside `OD-001`.
 
+## The fix pass — one, per `/implement`
+
+`test-engineer` returned 16 findings, one a `BLOCKER`. `jake` sorted them: 14
+`BUG`, 1 `EDGE CASE`, 1 `ALREADY COVERED`, and read the fix-pass question as
+"which of these make a statement the repository publishes false". That reading
+decided the pass.
+
+### The BLOCKER, verified independently before acting
+
+`runner._check_forbidden` resolved forbidden keys against **top-level**
+`EngineResult` keys only. Of the corpus's 21 substantive `forbidden` entries, 19
+name nested fields (`action`, `recommendedDoseMlPerDay`,
+`predictedPostSlopeDkhPerDay`, ...), so the check could not fire for them — and
+skipped silently. `M-11`, published as the negative control proving that check
+fires, was being credited because four fixtures went red through the *ordinary
+comparator*.
+
+Confirmed by calling the function directly under the mutation, rather than
+taking the report on trust:
+
+```
+WG-ALK-001     forbidden entries=['predictedPostSlopeDkhPerDay']  -> violations=[]
+WG-ALK-002     forbidden entries=['trajectory']                   -> violations=[]
+WG-ALK-003     forbidden entries=['action']                       -> violations=[]
+WG-ALK-004     forbidden entries=['recommendedDoseMlPerDay']      -> violations=[]
+```
+
+A checker that cannot fire, published as demonstrated, is exactly what canon
+`CORE-CANON-COVERAGE-001` item 9 and `DEC-016` forbid. Fixed by resolving
+forbidden keys through the same flattened-name index the comparator uses, and by
+recording every still-unresolvable forbidden assertion as a visible gap. After
+the fix, `M-11` fires through the checker it names:
+
+```
+M-11  result: CAUGHT — 4 new failing subject(s)
+      via   : forbidden value observedTrajectory.predictedPostSlopeDkhPerDay == 0 was returned
+```
+
+### The structural fix I had not seen at all
+
+The protocol put `fixtureId` in every request. The documented interface is a
+function of `(eventLedger, configurationHistory, asOf)`; an id is none of those,
+and the corpus is published in this repository. Nothing in the harness could
+have told a correct engine from a lookup table — against an engine an LLM is
+expected to write against that corpus. Fixed structurally by removing the id
+from what the engine sees, rather than by adding a mutation to detect the abuse.
+
+### Everything else changed in the pass
+
+- `expect_red` is now **enforced**, and each mutation additionally declares the
+  `expect_mechanism` its failure text must contain. A sabotage that turns
+  something else red now reports `NOT CAUGHT BY ITS NAMED MECHANISM`. This is
+  the structural fix for the class the BLOCKER belonged to.
+- **Four document mutations** (`D-1`..`D-4`) added: every prior mutation was a
+  hook on the oracle, so the three document-reading checks — and the harness's
+  own invariant-partition assertion — had no control. They corrupt a throwaway
+  copy of the package; the repository is never touched.
+- `CHK-WITHHELD-REASONED` now enforces `INV-I4` as written: withheld fields are
+  found at any depth, and each must be named in a `GATING`/`REFUSAL` code's
+  `affectedOutputs`. Previously any gating code anywhere satisfied it, and a
+  nested withheld field was invisible.
+- `CHK-RC-CLOSURE-ENGINE` now enforces the catalogue's rule 4 (mandatory
+  payload), which is `INV-I3`'s second clause and was unenforced.
+- New `CHK-ENGINE-VERSION`: canon §64's third replay condition and §47's stamp.
+  `describe()` was dead code and the versions were never recorded. `M-21` is its
+  control.
+- `CHK-DIMENSION-SAFETY` extended from the 39 contract-declared names to the 446
+  the corpus also asserts. It immediately found an eighth-order finding: 8
+  fixtures assert undimensioned twins of dimensioned names.
+- A fixture with **zero comparable expectations is `NOT_COVERED`, not `PASS`**.
+- Fixture-level tolerance **widening** is reported per fixture; goldens written
+  to fewer decimals than the tolerance demands are reported per field. Neither
+  widens the gate — the tolerance is the schema's.
+- One prose predicate with one owner (there were two, disagreeing on 17
+  entries); the forbidden-value epsilon is read from the schema instead of
+  hardcoded.
+- `--only <typo>` is a corpus problem, not a clean zero-fixture report.
+- `SubprocessEngine` reads with a 30-second deadline and kills a hung engine.
+- `INV-A1` carries a partial-execution note naming what its own generator asks
+  for and this run does not do.
+- Seven invariant negative controls corrected: `INV-D4`, `INV-I5`, `INV-A3`,
+  `INV-B6`, `INV-C2`, `INV-I3`, `INV-I4`. Four cited fixtures that do not assert
+  the quantity, or claimed execution that had not happened. Two of `jake`'s
+  sub-items I did **not** act on, on his advice and my own reading:
+  `INV-A3`'s control is realisable across processes, and `INV-B6`'s assertion is
+  a static scan — though I did drop the identity `1.00` from its multiplier set.
+- `/pr-gate`'s rule was unsatisfiable — it required a green harness on a tree
+  where the harness is red by design. Restated as a base-versus-head comparison,
+  which is what `DEC-016` actually says.
+
+### Recorded and left open, not fixed
+
+- The `M-8` block, unchanged.
+- `INV-I5`'s next-test-time clause has no fixture behind it; the invariant now
+  says so instead of citing two that cannot detect it.
+- The fourth document defect (undimensioned twins) — same scope bar as the other
+  three.
+
 ## Reviewers
 
 Per the task: `breaker` and `canon-conformance-auditor` were **not** run. This
 is test equipment, not chemistry.
 
 - **run:** `test-engineer`, once — would anything actually fail if this were
-  wrong.
-- **run:** `jake`, over `test-engineer`'s output.
+  wrong. It found 16, one a `BLOCKER`, and it found it by mutating a scratch
+  copy of the repository rather than by reading. That is the review that earned
+  its place here.
+- **run:** `jake`, over `test-engineer`'s output. 14 `BUG`, 1 `EDGE CASE`,
+  1 `ALREADY COVERED`; he also checked the one `EXPECTED_DEBT` citation I asked
+  him to verify and found it right for three of its four items and wrong for the
+  fourth (`M-8` was not named in `CONFORMANCE-HARNESS.md`, only in the run record
+  and the mutation module). That is now fixed.
 - **considered and not run:** `canon-conformance-auditor` and `breaker`
   (excluded by the task); `integrator` (the cross-document surface here is the
   skills-and-roster wiring, and `test-engineer`'s brief covered it);
@@ -183,8 +290,8 @@ output was read, not summarised from a distance.
 
 ```
 fixture failures   : 6
-check failures     : 3
-invariant failures : 5
+check failures     : 4
+invariant failures : 6
 corpus problems    : 0
 RESULT: RED   (exit 1)
 ```
@@ -198,26 +305,31 @@ checks run normally.
 
 ```
 fixture failures   : 0
-check failures     : 3
-invariant failures : 2
+check failures     : 4
+invariant failures : 3
 corpus problems    : 0
 RESULT: RED   (exit 1)
 ```
 
-All 6 executable fixtures pass; all three engine-facing mechanical checks pass;
-`INV-A1`, `INV-A2`, `INV-A3`, `INV-B7` pass. The five remaining failures are the
-three pre-existing document defects and the two invariants that delegate to
-them. This is the baseline the mutation harness measures against.
+All 6 executable fixtures pass; all four engine-facing mechanical checks pass;
+`INV-A1`, `INV-A2`, `INV-A3` pass. The seven remaining failures are the four
+pre-existing document defects and the three invariants that delegate to them.
+This is the baseline the mutation harness measures against.
 
 ### Mutation harness — `exit 0`
 
 ```
-mutations defined : 20
-  caught (red)    : 19
+mutations defined : 25
+  caught (red)    : 24   M-1..M-7, M-9..M-21, D-1..D-4
   NOT caught      : 0
-  blocked         : 1  M-8
+  blocked         : 1    M-8
 RESULT: GREEN
 ```
+
+Every caught mutation was verified to go red on the subject it declared **and**
+with the failure text naming the mechanism it guards. That second condition is
+new in the fix pass, and it is what turns "19 of 20 caught" from a count of
+mutations into a count of demonstrated checkers.
 
 `M-8` (repeat-window clustering) is blocked, with its unblocking condition
 stated in full in `tools/conformance/mutations/__init__.py` and reprinted on
@@ -234,9 +346,11 @@ $ git diff acc66155 --stat -- docs/canon/
 
 ## Outstanding, carried into the PR
 
-- The three alk-v2 document defects above. Not fixed; out of scope.
+- The four alk-v2 document defects above. Not fixed; out of scope.
 - Six-of-160 fixture executability. Not a defect to fix; a fact to see.
-- `M-8` blocked pending an engine.
+- `M-8` blocked pending an engine, with its condition stated.
+- `INV-I5`'s next-test-time clause has no fixture that can detect it. The
+  invariant now says so rather than citing two that cannot.
 - `OD-004` and `OD-005` open.
 
 ## What was deliberately not done

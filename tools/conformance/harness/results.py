@@ -24,6 +24,9 @@ class FixtureOutcome:
     mismatches: List[str] = field(default_factory=list)
     skipped_prose: List[str] = field(default_factory=list)
     tolerance_unspecified: List[str] = field(default_factory=list)
+    #: Things the harness could not evaluate, or evaluated under a caveat.
+    #: Never a pass and never a failure -- a visible gap.
+    notes: List[str] = field(default_factory=list)
     compared: int = 0
 
     @property
@@ -67,6 +70,8 @@ class RunReport:
     base_commit: str = ""
     engine_name: str = ""
     engine_present: bool = False
+    engine_version: str = "(not declared)"
+    canon_version: str = "(not declared)"
     fixtures: List[FixtureOutcome] = field(default_factory=list)
     checks: List[CheckOutcome] = field(default_factory=list)
     invariants: List[InvariantOutcome] = field(default_factory=list)

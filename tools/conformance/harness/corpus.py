@@ -31,8 +31,11 @@ Everything else is named, with the reason, in one of these classes:
 
 A count of "0 unreadable" that silently means "0 of the ones I know how to
 look at" is the specific failure this classification exists to prevent, so
-every class is reported with its full membership list, and the class totals
-are asserted to sum to the corpus total.
+every class is reported with its full membership list. Every fixture body the
+index enumerates receives exactly one class, and `CHK-INDEX-INTEGRITY` fails if
+the index and the bodies disagree about what the corpus contains -- which is
+what actually anchors the totals. The renderer sums the classes; it does not
+independently verify them, and this docstring previously claimed it did.
 """
 
 from __future__ import annotations
@@ -42,6 +45,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from . import compare as compare_mod
 from . import paths
 
 EXECUTABLE = "EXECUTABLE"
@@ -159,9 +163,8 @@ def _unreadable_expectations(body: Dict[str, Any]) -> List[str]:
         for k, val in v.items():
             if k in ("note", "$comment", "derivation", "why"):
                 continue
-            if isinstance(val, str) and (" " in val.strip() or val.endswith(".")):
-                if val.strip().upper() != val.strip():
-                    out.append(f"{block}.{k} = {val!r}")
+            if compare_mod.is_prose(val):
+                out.append(f"{block}.{k} = {val!r}")
     return out
 
 

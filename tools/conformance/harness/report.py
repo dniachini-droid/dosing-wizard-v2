@@ -32,6 +32,8 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
     w(RULE)
     w(f"base commit      : {r.base_commit}")
     w(f"engine           : {r.engine_name}")
+    w(f"engine version   : {r.engine_version}")
+    w(f"canon version    : {r.canon_version}")
     w(f"corpus           : {r.meta.get('corpusSource')}")
     w(
         f"corpus size      : {r.meta.get('fixtureCount')} fixtures "
@@ -61,10 +63,12 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
     executed = [f for f in r.fixtures if f.klass == corpus_mod.EXECUTABLE]
     passed = [f for f in executed if f.status == PASS]
     failed = [f for f in executed if f.status == FAIL]
+    vacuous = [f for f in executed if f.status == NOT_COVERED]
 
     w(f"executable and run : {len(executed)}")
     w(f"  passed           : {len(passed)}")
     w(f"  failed           : {len(failed)}")
+    w(f"  nothing to compare : {len(vacuous)}  (answered, but verified nothing)")
     w("")
     if executed:
         w(f"{'FIXTURE':<16}{'STATUS':<8}{'EXPECTED / ACTUAL':<0}")
@@ -88,6 +92,10 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
                 f"{'':<24}tolerance unspecified for: "
                 f"{', '.join(f.tolerance_unspecified[:4])}"
             )
+        for n in f.notes[: (None if verbose else 4)]:
+            w(f"{'':<24}note: {n}")
+        if not verbose and len(f.notes) > 4:
+            w(f"{'':<24}note: ... {len(f.notes) - 4} further notes")
     w("")
 
     # ---- What was NOT covered ---------------------------------------------
@@ -243,6 +251,8 @@ def render_json(r: RunReport) -> str:
             "baseCommit": r.base_commit,
             "engine": r.engine_name,
             "enginePresent": r.engine_present,
+            "engineVersion": r.engine_version,
+            "canonVersion": r.canon_version,
             "meta": r.meta,
             "result": "RED" if r.red else "GREEN",
             "exitCode": r.exit_code(),
@@ -269,6 +279,7 @@ def render_json(r: RunReport) -> str:
                     "mismatches": f.mismatches,
                     "notComparable": f.skipped_prose,
                     "toleranceUnspecified": f.tolerance_unspecified,
+                    "notes": f.notes,
                     "compared": f.compared,
                 }
                 for f in r.fixtures

@@ -152,7 +152,7 @@ def _executable_requests(c: corpus_mod.Corpus) -> List[Tuple[str, Dict[str, Any]
                 f.fixture_id,
                 {
                     "op": "assess",
-                    "fixtureId": f.fixture_id,
+                    "requestId": f"req-{abs(hash(f.fixture_id)) % 10**12:012d}",
                     "asOf": inp.get("asOf"),
                     "events": copy.deepcopy(inp.get("events") or []),
                     "configuration": cfg,
@@ -211,6 +211,12 @@ def _inv_a1(engine: ea.Engine, c: corpus_mod.Corpus) -> InvariantOutcome:
             f"serialisation each time"
         ),
         violations=violations,
+        detail=(
+            "PARTIAL. The document's generator for this invariant also asks for a "
+            "fresh process and a varied host locale; this run submits in-process "
+            "only, so cross-process nondeterminism (a differing hash seed, for "
+            "instance) would not be caught here. INV-A2 does vary the host timezone."
+        ),
         not_executable_reason="" if ran else "no engine reply to compare",
     )
 

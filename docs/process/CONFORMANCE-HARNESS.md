@@ -24,9 +24,9 @@ Python 3 standard library.
 
 | Stage | Subject | Needs an engine? |
 |---|---|---|
-| Mechanical document checks | the reason-code catalogue, the fixture index, the rule-traceability table, the data contract | no |
+| Mechanical document checks | the reason-code catalogue, the fixture index, the rule-traceability table, the data contract, and every field name the corpus asserts | no |
 | Fixture corpus | every fixture that carries a replayable event ledger and an `asOf` | yes |
-| Engine-facing mechanical checks | output shape against `EngineResult`; emitted reason codes against the closed set; every withheld output carrying a `GATING` or `REFUSAL` code | yes |
+| Engine-facing mechanical checks | output shape against `EngineResult`; emitted reason codes against the closed set, with their catalogued severity, owner and a non-empty payload; every withheld output — at any depth — named in the `affectedOutputs` of a `GATING` or `REFUSAL` code; engine and canon version declared and current | yes |
 | Executable invariants | `INV-A1` replay determinism, `INV-A2` no clock read, `INV-A3` no iteration-order dependence | yes |
 | Delegated invariants | `INV-B7`, `INV-I2`, `INV-I3` — the part executable without engine source | no |
 
@@ -74,11 +74,22 @@ under the reason they cannot be run:
 | `NO_INPUT` | 7 | no `input` and no cross-reference; nothing to submit |
 | `PROPERTY_FIXTURE` | 12 | a property plus a generator, not a single input/output pair |
 
-Separately, **47 fixtures carry at least one expected value that is prose**
+Separately, **49 fixtures carry at least one expected value that is prose**
 rather than a value an engine field can equal — `"known from the single valid
 reading"`, `"0.064 < R_obs < 0.1439"`. Those entries are named individually and
 excluded from comparison. Comparing them would require the harness to interpret
 a sentence.
+
+A single token is never treated as prose, whatever its case: `FALLING`,
+`decrease`, `blocked` and `non-zero` are all compared. Only internal whitespace
+or a trailing full stop makes a value a sentence. One predicate decides this,
+with one owner — there were briefly two, disagreeing on 17 entries, so the
+published count depended on which one you asked.
+
+A fixture whose expectations are *all* non-comparable is reported
+`NOT_COVERED / nothing to compare`, never `PASS`. It answered, and nothing was
+verified; counting that as a pass is the precise failure this report exists to
+prevent.
 
 This is not a defect in the fixtures. They were written to pin canon behaviour
 for a human reader, before any engine or interface existed. It is a precise
@@ -100,7 +111,7 @@ The run completes and reports. It does not crash.
 
 - every executable fixture reports `FAIL` with `no engine present` — never
   `SKIP`, because an unrun fixture must not read as a passing one;
-- the three engine-facing mechanical checks report `NOT_COVERED` with the reason;
+- the four engine-facing mechanical checks report `NOT_COVERED` with the reason;
 - the document-level checks run normally and pass or fail on their own merits;
 - the exit code is non-zero, because the corpus did not pass.
 
@@ -112,12 +123,26 @@ recorded in `DECISIONS.md` and has not been taken; a harness that could only
 load an engine written in its own language would take it by accident.
 
 ```
--> {"protocol": "alk-v2-conformance/1", "op": "assess", "fixtureId": "...",
+-> {"protocol": "alk-v2-conformance/1", "op": "assess", "requestId": "...",
     "asOf": "...", "events": [...], "configuration": {...},
     "configurationHistory": [...]}
 <- {"ok": true,  "engineResult": { ... }}
 <- {"ok": false, "error": "..."}
 ```
+
+**No fixture id is sent.** The documented interface is a function of
+`(eventLedger, configurationHistory, asOf)` and an id is none of those. An
+earlier version did send one, which meant nothing in the harness could tell a
+correct engine from a lookup table keyed on a corpus that is published in this
+repository — and the engine is expected to be written against that corpus.
+`requestId` is opaque. `op: "describe"` is called once per run and its
+`engineVersion` / `canonVersion` are stamped into the report, because canon §64
+makes the engine version part of what a replay holds constant and §47 requires
+the replay to say which version produced it.
+
+A hung engine fails the check rather than blocking it: the read has a 30-second
+deadline, after which the engine is killed and the run reports it. A required
+check that waits forever is a required check that gets waived.
 
 Expected values are resolved against the engine result **by field name**, not by
 a block-to-field mapping the harness invents. That is sound because
@@ -132,8 +157,26 @@ exactly that.
 checker is not trusted as a gate until a deliberate mutation of the defect class
 it targets has been shown to fail it.
 
-Twenty named sabotages are applied to a **reference oracle** that is emphatically
-not an engine: `tools/conformance/reference/echo_oracle.py` replays each
+Twenty-five named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
+**reference oracle** that is emphatically not an engine, and four (`D-1`..`D-4`)
+corrupt a throwaway copy of the alk-v2 documents, because a hook on an oracle
+can never reach a check whose subject is a document. The repository is never
+modified by either arm.
+
+**One is blocked.** `M-8` (repeat-window clustering) cannot run: no executable
+fixture contains two readings inside the 30-minute window, and supplying the
+clustering behaviour in the oracle would mean implementing a canon rule. Its
+unblocking condition is stated in full in `mutations/__init__.py` and reprinted
+on every run.
+
+A mutation counts as caught only when the subject it named goes red **and** the
+failure text names the mechanism it claims to guard. Both halves matter: the
+first version of this harness published `M-11` as demonstrating the
+forbidden-value check while that check could not fire at all — the four fixtures
+went red through the ordinary comparator instead. The mutation harness now
+reports `NOT CAUGHT BY ITS NAMED MECHANISM` for exactly that shape.
+
+The oracle: `tools/conformance/reference/echo_oracle.py` replays each
 fixture's own declared expectations back as an `EngineResult` and computes no
 chemistry whatsoever. A caught mutation proves the harness detects that defect
 class. It proves nothing about any engine, because there is no engine.
@@ -170,5 +213,33 @@ them on every run, which is the most durable form of recording available.
    i.e. complete coverage. Three further entries in that column are prose or
    span references rather than artefact ids.
 
+4. **Eight fixtures assert an undimensioned twin of a dimensioned field name.**
+   `WG-ALK-045` asserts `observedSlope`, `supportedSlope`,
+   `continuousActionCandidate` and `recommendedDose` while other fixtures assert
+   `observedSlopeDkhPerDay`, `supportedSlopeDkhPerDay`,
+   `continuousActionCandidateMlPerDay` and `recommendedDoseMlPerDay`; `WG-ALK-015`,
+   `WG-ALK-050`, `WG-ALK-058` and `ALK-G029` do the same for `maintenanceDose`,
+   `selectedPotency`, `maintenanceEstimate` and `temporaryDose`. `INV-B7` requires
+   one meaning per field name, and the harness's by-name resolution rests on it.
+
 None of these is fixed here. Fixing them means editing the alk-v2 package
 documents, which this work was scoped out of.
+
+## What the harness will not tell you
+
+Stated because a gate's limits are part of the gate.
+
+- **It cannot tell a correct engine from a very good guess** on a fixture whose
+  expectations are all prose. Such a fixture is reported `NOT_COVERED /
+  nothing to compare` rather than `PASS`, but that is the only protection.
+- **A fixture may widen its own tolerance.** The fixture schema permits it, so
+  the harness reports the widening on the fixture's line rather than forbidding
+  it. Read those lines: the corpus and the engine will be edited in the same
+  pull request.
+- **Some goldens are written to fewer decimals than the tolerance demands** —
+  `9.14609` compared at `1e-9`. A correct engine can fail those by rounding
+  alone. The harness reports it per field; it does not widen the tolerance,
+  which is the schema's and not the harness's.
+- **`INV-A1` runs in-process only.** Its own generator asks for a fresh process
+  and a varied host locale; the run says so in its own output rather than
+  letting a `PASS` read as the whole invariant.

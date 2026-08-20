@@ -473,9 +473,20 @@ class it targets has been shown to fail it.
 
 - The harness runs on every change that touches the engine or the alk-v2 package, and its
   real output — not a summary of it — goes into the run record.
+- **"Required" is a comparison, not an absolute.** The gate must run, its real
+  output must be in the pull request, and no subject may fail at head that passed at
+  the base commit. A subject failing at both is pre-existing and is named, not blocked
+  on. The mutation harness has no such allowance: it compares against its own baseline
+  internally and must be green. A rule no change could satisfy would be waived on the
+  change that most needed it, which is this decision's own rationale.
 - `/implement`, `/implement-chemistry` and `/pr-gate` all name it. A run that did not run
   it says so and says why.
-- A new checker without a negative control is an incomplete change.
+- A new checker without a negative control is an incomplete change, and the control must
+  be shown to fire **for the mechanism it names**. A sabotage that turns something else
+  red is not a demonstration; the mutation harness enforces this and reports
+  `NOT CAUGHT BY ITS NAMED MECHANISM` when it happens. This is not hypothetical — the
+  first version of this harness published a control that passed for the wrong reason
+  while the checker it claimed to guard could not fire at all.
 - This decision does not by itself configure any CI enforcement. Enforcement on GitHub
   depends on branch protection, which is `OD-001` and still open. Until then this is
   process discipline like everything else in this repository, and

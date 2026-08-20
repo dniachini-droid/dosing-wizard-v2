@@ -13,7 +13,7 @@ Protocol (one JSON object per line, both directions):
 
     -> {"protocol": "alk-v2-conformance/1",
         "op": "assess",
-        "fixtureId": "WG-ALK-001",
+        "requestId": "req-000000000000",
         "asOf": "2026-09-05T09:00:00+10:00",
         "events": [ ... ],
         "configuration": { ... },
@@ -23,7 +23,15 @@ Protocol (one JSON object per line, both directions):
     <- {"ok": false, "error": "...", "reasonCodes": ["..."]}
 
 `op` may also be `"describe"`, answered with
-`{"ok": true, "engineVersion": "...", "canonVersion": "..."}`.
+`{"ok": true, "engineVersion": "...", "canonVersion": "..."}`. The harness calls
+it once per run and stamps both into the report, because canon §64's third
+replay condition is *the same engine/canon version* and a replay that cannot
+say which version produced it is not a replay (canon §47).
+
+**No fixture id is sent.** The documented interface is a function of
+`(eventLedger, configurationHistory, asOf)`; an id is none of those, and
+sending one would let an engine answer from a lookup table keyed on a published
+corpus. `requestId` is opaque and carries no fixture identity.
 
 With no engine configured the harness uses `AbsentEngine`, which answers every
 request with `ENGINE_ABSENT`. That is a designed state, not a crash: the run
@@ -54,6 +62,11 @@ class EngineReply:
         return self.error == ENGINE_ABSENT
 
 
+#: Seconds to wait for one engine reply before declaring it hung. A required
+#: check that blocks forever is a check that gets waived.
+READ_TIMEOUT_SECONDS = 30.0
+
+
 class Engine:
     name = "engine"
 
@@ -79,9 +92,10 @@ class AbsentEngine(Engine):
 class SubprocessEngine(Engine):
     """An engine in any language, spoken to over stdin/stdout as JSON lines."""
 
-    def __init__(self, command: List[str]):
+    def __init__(self, command: List[str], timeout: float = READ_TIMEOUT_SECONDS):
         self.name = " ".join(command)
         self._command = command
+        self._timeout = timeout
         self._proc = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -99,7 +113,16 @@ class SubprocessEngine(Engine):
             assert self._proc.stdin and self._proc.stdout
             self._proc.stdin.write(json.dumps(payload) + "\n")
             self._proc.stdin.flush()
-            line = self._proc.stdout.readline()
+            line = self._readline_with_timeout()
+        except TimeoutError:
+            self._proc.kill()
+            return EngineReply(
+                ok=False,
+                error=(
+                    f"engine did not reply within {self._timeout:g}s and was killed; "
+                    f"a hung engine is a failed check, not a wait"
+                ),
+            )
         except Exception as exc:  # noqa: BLE001
             return EngineReply(ok=False, error=f"transport failure: {exc}")
         if not line:
@@ -113,9 +136,34 @@ class SubprocessEngine(Engine):
         if reply.get("ok"):
             res = reply.get("engineResult")
             if not isinstance(res, dict):
+                if payload.get("op") == "describe":
+                    return EngineReply(
+                        ok=True,
+                        result={
+                            k: v for k, v in reply.items() if k not in ("ok", "error")
+                        },
+                    )
                 return EngineReply(ok=False, error="ok reply carried no engineResult object")
             return EngineReply(ok=True, result=res)
         return EngineReply(ok=False, error=str(reply.get("error", "unspecified engine error")))
+
+    def _readline_with_timeout(self) -> str:
+        """`readline()` with a deadline.
+
+        Without one, a deadlocked engine blocks the required check forever.
+        `select` on the pipe is enough here: the protocol is one line per reply.
+        """
+        import select
+
+        assert self._proc.stdout
+        ready, _, _ = select.select([self._proc.stdout], [], [], self._timeout)
+        if not ready:
+            raise TimeoutError
+        return self._proc.stdout.readline()
+
+    def describe(self) -> Dict[str, Any]:
+        reply = self.assess({"op": "describe"})
+        return reply.result or {}
 
     def close(self) -> None:
         try:
@@ -143,6 +191,10 @@ class CallableEngine(Engine):
         mod = importlib.import_module(mod_name)
         self._fn = getattr(mod, attr)
         self.name = spec
+
+    def describe(self) -> Dict[str, Any]:
+        reply = self.assess({"op": "describe"})
+        return reply.result or {}
 
     def assess(self, request: Dict[str, Any]) -> EngineReply:
         try:
