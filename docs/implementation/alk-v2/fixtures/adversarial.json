@@ -3248,7 +3248,7 @@
           "Part II \u00a75.4",
           "ALK-005"
         ],
-        "note": "Freeze 5 F5-14, amended by owner decisions 17 and 19. Part II \u00a75.2 explicit grouping can declare two separate same-method clusters at one sampling moment. They are one testing episode and are pooled under the existing representative-value rules. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the episode OK. The incompatible-method case is NOT this fixture - decisions 17 and 18 contest it instead, and AD-EPI-002 carries it."
+        "note": "Freeze 5 F5-14, amended by owner decisions 17 and 19. Two same-method clusters can reach selection at one sampling moment however they were recorded. They are one testing episode and are pooled under the existing representative-value rules; the fixture asserts the pooled outcome and does not depend on which recording path produced the two clusters. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the episode OK. The incompatible-method case is NOT this fixture - decisions 17 and 18 contest it instead, and AD-EPI-002 carries it."
       },
       "rulesExercised": [
         "ALK-TESTING-EPISODE-001",
@@ -3328,7 +3328,7 @@
         "movementEvidence": "SUFFICIENT",
         "continuousActionCandidateMlPerDay": 10.763999509,
         "recommendedDoseMlPerDay": 10.8,
-        "note": "One instant is one testing episode however many methods were used. Selection never depends on which cluster the store happened to return first."
+        "note": "One sampling moment is one testing episode. Selection never depends on which cluster the store happened to return first, and pooling here is same-method only - incompatible methods are contested under ALK-EPISODE-RESOLUTION-001, which AD-EPI-002 carries."
       },
       "expectedReasonCodes": [
         "EPISODE_MEASUREMENTS_POOLED",
@@ -3848,7 +3848,7 @@
           {
             "readings": [
               {
-                "at": "2026-08-22T09:05:00+10:00",
+                "at": "2026-08-22T09:12:00+10:00",
                 "alkDkh": 8.4,
                 "method": "HANNA_CHECKER"
               }

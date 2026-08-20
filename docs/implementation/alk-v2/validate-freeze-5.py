@@ -552,6 +552,54 @@ if f:
           all(cev[n]['clusterStatus']=='OK' for n in cev if n.startswith('EXACT_')))
     check('AD-VAL-002 above 0.20 is still anomalous', cev['ABOVE']['clusterStatus']=='ANOMALOUS')
 
+# ---------- 16. fix pass after the decisions 16-19 review ----------
+# Each check here exists because the review found something the gate could not have caught.
+
+# 16a. the ISO-timestamp fixture shape INV-I10's generator does not read
+import datetime
+f=_fx('AD-EPI-001')
+if f:
+    eps=f['input']['episodes']; ev=f['expectedIntermediateEvidence']
+    r1=[x['alkDkh'] for x in eps[0]['readings']]
+    t1=[datetime.datetime.fromisoformat(x['at']) for x in eps[0]['readings']]
+    med=sorted(r1)[len(r1)//2]
+    medt=sorted(t1)[len(t1)//2]
+    sep=(datetime.datetime.fromisoformat(eps[1]['readings'][0]['at'])-medt).total_seconds()/3600.0
+    bad=[]
+    if abs(ev['episode1']['episodeValueDkh']-med)>1e-12: bad.append(('value',ev['episode1']['episodeValueDkh'],med))
+    if ev['episode1']['episodeTime']!=medt.isoformat(): bad.append(('time',ev['episode1']['episodeTime'],medt.isoformat()))
+    if abs(ev['episode1']['spreadDkh']-(max(r1)-min(r1)))>1e-9: bad.append(('spread',ev['episode1']['spreadDkh']))
+    if abs(ev['separationHours']-sep)>1e-9: bad.append(('separationHours',ev['separationHours'],sep))
+    check('AD-EPI-001 recomputes from its own ISO timestamps', not bad, str(bad))
+
+# 16b. no live instruction to pause high-breach delivery survives outside preserved history
+SUPERSEDED_PAUSE=['pause Alk addition',
+                  'recommend a temporary pause of Alk dosing to 0 mL/day',
+                  'safetyDoseRecommendation = 0 mL/day']
+live=[]
+# Exempt only the line itself: a blockquote line, or a line that carries its own
+# superseded/amended marker. A quoted string must sit on the marker line to be exempt, so a
+# re-inserted instruction on a fresh line still fails.
+MARKED=('previously read','previously required','Superseded wording','superseded by owner decision')
+for line in CANON.split('\n'):
+    if line.lstrip().startswith('>') or any(m in line for m in MARKED): continue
+    for t in SUPERSEDED_PAUSE:
+        if t in line: live.append((t, line.strip()[:70]))
+check('canon carries no live high-breach pause instruction outside preserved history',
+      not live, str(sorted(set(x[0] for x in live))))
+
+# 16c. the two safety invariants may not both assert an iff on the delivered rate
+g10=INV.split('### INV-G10')[1].split('### INV-')[0] if '### INV-G10' in INV else ''
+check('INV-G10 no longer asserts the superseded materiality-selects-the-rate form',
+      'the delivered rate is **identical** on both sides' in g10
+      and 'Amended by owner decision 16' in g10, 'len=%d'%len(g10))
+
+# 16d. the sizing rule's checkable requirements are scoped to the region where they hold
+m=re.search(r'^`ALK-HIGH-BREACH-SAFETY-SIZING-001`\s*$', CANON, re.M)
+seg=CANON[m.start():m.start()+9000] if m else ''
+check('sizing rule scopes its monotonicity requirements above the zero floor',
+      'above the zero\nfloor' in seg or 'above the zero floor' in seg)
+
 print()
 print('%d checks failed' % len(fails))
 if fails:

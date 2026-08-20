@@ -5445,7 +5445,9 @@ reason = SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO
 Negative-consumption materiality never selects zero versus a held rate. It classifies the
 maintenance model and its evidence, and nothing else here.
 
-**What this rule requires, stated so it is checkable:**
+**What this rule requires, stated so it is checkable.** All three hold **above the zero
+floor** — that is, where \(D_{established}>R_{down}/P_{selected}\). At or below the floor the
+rate is 0 and varies with nothing, which is the floor's purpose and not a violation:
 
 - the safety response **varies with \(A_{now}\)** through \(R_{down}\), monotonically,
   until the 0.50 dKH/day rail binds and \(R_{down}\) saturates;
@@ -5455,7 +5457,11 @@ maintenance model and its evidence, and nothing else here.
   `ALK-HIGH-BREACH-NO-PAUSE-001` previously produced is removed and must not reappear;
 - the materiality classification may change the recorded classification, the wording and
   the maintenance evidence state on either side of the boundary. It may **not** change
-  \(D_{safety,temp}\).
+  \(D_{safety,temp}\) — at, above or below the floor.
+
+Two clusters of readings fall at the floor rather than above it: with \(P=0.0693\),
+\(R_{down}/P_{selected}\) is 3.6–7.2 mL/day, so an established dose below that delivers
+zero. `AD-CON-002` is such a case and is not a counter-example to the bullets above.
 
 **Everything else is preserved and still applies:**
 
@@ -5907,8 +5913,8 @@ be `ANOMALOUS` on its own same-method spread; that path is unchanged.
 Otherwise:
 
 ```text
-episodeStatus = CONTESTED_METHODS
-reason        = EPISODE_CONTESTED_METHODS
+episodeStatus = RESOLVED            -> reason = EPISODE_RESOLVED
+episodeStatus = CONTESTED_METHODS   -> reason = EPISODE_CONTESTED_METHODS
 ```
 
 On a contested episode, all of the following hold together:
@@ -6026,9 +6032,20 @@ For user-entered decimal chemistry quantities:
   threshold applies**;
 - **no epsilon.** An arbitrary tolerance would be a new constant and is forbidden here.
 
-**Scope — where both operands are exact decimals:** a stored or normalized decimal
-measurement value, a difference of such values, and a frozen decimal canon constant. The
-predicates this governs are:
+**Scope — where both operands are exact decimals.** An operand qualifies when it is:
+
+- a **stored** decimal measurement value, at its entered precision;
+- a **unit-normalized** measurement value — the `ALK-002` meq/L conversion at
+  2.8 dKH per meq/L, which is an exact decimal multiplication. "Normalized" here means unit
+  conversion and nothing else; analytical normalization (water change, correction) produces
+  a derived quantity and is out of scope with the rest of them;
+- a **difference** of such values;
+- a **configured** decimal chemistry bound — the preferred-range edges and the outer bounds,
+  which are user-entered decimal quantities in exactly the sense owner decision 18 names;
+- a **frozen decimal canon constant**, and an exact-decimal **sum** of the above, such as
+  \(A_{safe,low}=OuterMin+B_{safety}\).
+
+The predicates this governs are:
 
 | Predicate | Rule |
 |---|---|
@@ -6785,9 +6802,20 @@ times" — stated explicitly so it is not re-derived differently by two implemen
 
 The pair is drawn from **resolved testing-episode outputs** — candidate episodes, whether
 or not they were accepted under `ALK-INDEPENDENT-SELECTION-001` (**owner decision 19**). A
-`CONTESTED_METHODS` episode emits no value, supplies no member of the pair, and therefore
-**cannot flip `rapidConfirmed` in either direction**; the competing measurements inside it
-are never compared against the 0.30 dKH/day threshold individually. What the pair is *not*
+`CONTESTED_METHODS` episode emits no value, so it supplies no member of the pair and the
+competing measurements inside it are never compared against the 0.30 dKH/day threshold
+individually. Where the **latest** candidate episode is contested it is a member of the pair
+by definition, so the determination is **withheld**, not recomputed from an older pair:
+
+```text
+rapidConfirmed = NOT_RUN
+reason         = EVIDENCE_WITHHELD_CONTESTED_EPISODE
+```
+
+`ALK-EPISODE-SINGLE-OUTPUT-001` requires exactly this — withhold the affected inference, and
+do not silently discard the latest episode and act on older evidence. Reading the exclusion
+as "drop it and pair the two resolved episodes below it" is that forbidden fallback and is
+not permitted. What the pair is *not*
 restricted to is the **accepted** set: it is drawn from candidate episodes, not only from
 those accepted under `ALK-INDEPENDENT-SELECTION-001`. `ALK-008` grants a cluster that is not accepted for
 ordinary trend the right to "contribute to a rapid-change rule", and that grant is
@@ -8535,9 +8563,16 @@ The temporary high-breach safety rate under `ALK-HIGH-BREACH-SAFETY-SIZING-001` 
 Do not manufacture a predicted movement solely to force that fail-safe through the ordinary rail calculation.
 
 Instead:
-- pause Alk addition;
+- deliver the temporary safety rate `ALK-HIGH-BREACH-SAFETY-SIZING-001` sizes, which floors
+  at 0 mL/day rather than being chosen as a pause (**amended by owner decision 16**;
+  this bullet previously read *"pause Alk addition"*);
 - retest on the safety cadence;
 - re-enter calculable rail logic once consumption/trajectory becomes interpretable.
+
+\(R_{down}\) is rail-bounded by construction, so the **continuous** rate cannot breach
+`ALK-046`. The **discretised** command can: rounding down by up to half an increment
+increases the delivered reduction, so `ALK-ROUNDING-001`'s step-6 hard-constraint recheck
+remains load-bearing on this path and is not waived by this clause.
 
 **V1 disposition:** KEEP, strengthened to apply across simultaneously active recommendation components.
 
@@ -8879,8 +8914,9 @@ The scheduler should preserve the understandable ~48-hour human rhythm rather th
 `ALK-RETEST-SCHEDULER-001`
 
 There is **one** Alk retest scheduler. `ALK-050`, `ALK-051`, `ALK-052`, `ALK-053`,
-`ALK-HIGH-BREACH-UNRESOLVED-001`, `ALK-RETURN-EXPIRY-001` and
-`ALK-SAFETY-RETURN-INTEGRATION-001` §9 submit candidates to it. No card, surface or other
+`ALK-HIGH-BREACH-UNRESOLVED-001`, `ALK-RETURN-EXPIRY-001`,
+`ALK-SAFETY-RETURN-INTEGRATION-001` §9 and `ALK-EPISODE-RESOLUTION-001` submit candidates to
+it. No card, surface or other
 rule may compute a next-test time (`X-INV-004`, Part II §50). This rule states the
 alkalinity parameterisation of Part II §51–§54 and §66, so the single scheduler is
 deterministic.
@@ -8890,7 +8926,7 @@ deterministic.
 | Part II candidate class | Alk parameterisation | Source |
 |---|---|---|
 | routine cadence | 48 h | `ALK-050` |
-| immediate repeat | now | `ALK-051`, driven by `ALK-SUSPECT-DETECTION-001`'s three sources |
+| immediate repeat | now | `ALK-051`, driven by `ALK-SUSPECT-DETECTION-001`'s three sources, and by `ALK-EPISODE-RESOLUTION-001`'s contested episode (owner decisions 17 and 19) |
 | rapid movement | ~24 h, or earlier where outer-bound risk requires it | `ALK-052` |
 | after a maintenance change | first useful response test ~48 h; normally a second around Day 4 | `ALK-053`, `ALK-POSTCHANGE-RETEST-001` |
 | safety return active | ~24 h | `ALK-SAFETY-RETURN-INTEGRATION-001` §9 |
@@ -14881,8 +14917,7 @@ recommend continuing 10.0 mL/day merely because permanent maintenance cannot be 
 pause to 0 mL/day chosen by the materiality classification rather than reached by the sizing floor
 ```
 
-**Superseded wording, preserved:** this golden previously required
-`safetyDoseRecommendation = 0 mL/day` on the materially-negative branch.
+**Superseded wording, preserved:** this golden previously required `safetyDoseRecommendation = 0 mL/day` on the materially-negative branch.
 
 ---
 
@@ -16348,7 +16383,10 @@ rather than resolved by derivation, and each was then decided by the owner as F5
 and F5-15. The register items they opened — `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001`
 and `OI-RETESTFLOOR-001` — are closed by those amendments.
 
-Nothing in Freeze 5 now withholds an output for want of an owner decision.
+Nothing in F5-01 … F5-15 withholds an output for want of an owner decision. Decisions 17–19
+do withhold `position`, `outerBoundState` and `rapidConfirmed` on a contested episode — that
+is the decided behaviour, and the items it depends on that remain open are named under
+*Deliberately left open* below rather than implied.
 
 ### Constants
 

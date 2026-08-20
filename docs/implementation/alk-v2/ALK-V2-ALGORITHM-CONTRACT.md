@@ -125,9 +125,11 @@ window.
 
 ## A4 — Independent-cluster selection
 
-**INPUTS** `MeasurementCluster[]` within the selected segment.
+**INPUTS** `Measurement[]` within the selected segment (step 0 runs on measurements, and
+emits `TestingEpisode[]`; `MeasurementCluster` is the same-method pool inside a resolved
+episode).
 
-**PRECONDITIONS** clusters built; segment bounds known.
+**PRECONDITIONS** segment bounds known.
 
 **ALGORITHM** — step 0 first: testing episodes are constructed and resolved *before* any of
 the selection below runs (**owner decisions 17 and 19**; this supersedes the exact-timestamp
@@ -1563,10 +1565,12 @@ consumption NEGATIVE - EITHER side of the materiality boundary:
     the advisory/executable separation, the rails, the guard and the rounding are
     exactly those of the interpretable branch above
 
-    REQUIRED, and checkable:
+    REQUIRED, and checkable ABOVE THE ZERO FLOOR (D_established > R_down/P_selected):
         the rate DECREASES as A_now rises, until R_down saturates at the 0.50 rail
         the rate moves ONE actuator increment per increment of D_established,
           including across the materiality boundary
+        AT OR BELOW the floor the rate is 0 and varies with nothing - that is the floor
+    REQUIRED EVERYWHERE:
         the materiality classification changes wording and evidence state only
 ```
 
@@ -1583,8 +1587,10 @@ on the middle branch.
 
 The temporary safety rate is a fail-safe response to an invalid model, not a claim about
 biological consumption. It is **not** pushed through the ordinary rail calculation, because
-there is no modelled trajectory to rail (`ALK-046` high-breach clause); `R_down` is itself
-rail-bounded. If the app cannot control the pump it says the rate is *recommended* and does
+there is no modelled trajectory to rail (`ALK-046` high-breach clause). \(R_{down}\) is
+rail-bounded, so the **continuous** rate cannot breach `ALK-046`; the **discretised** command
+can, because rounding down increases the delivered reduction, so `ALK-ROUNDING-001`'s step-6
+recheck stays load-bearing here. If the app cannot control the pump it says the rate is *recommended* and does
 not mark it as implemented until implementation is confirmed.
 
 **TESTS** `WG-ALK-051` (materially negative ⇒ sized, not paused), `AD-SAF-002` (advisory

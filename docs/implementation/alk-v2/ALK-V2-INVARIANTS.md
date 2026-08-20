@@ -471,16 +471,23 @@ Fixture bodies for the canon-named invariants are in
   asserts a `forbidden` entry naming the alternative the owner rejected.
 - **Negative control:** delete the `forbidden` block from `AD-MNT-006`; the check must fail.
 
-### INV-G10 — Delivery is paused only against a demonstrably broken mass balance
+### INV-G10 — The materiality boundary classifies; it never selects a delivered rate
 - **Canon:** `ALK-HIGH-BREACH-NO-PAUSE-001`; `ALK-NEGATIVE-MATERIALITY-001`;
-  `ALK-HIGH-BREACH-UNRESOLVED-001`.
+  `ALK-HIGH-BREACH-SAFETY-SIZING-001`.
+- **Amended by owner decision 16.** This invariant previously asserted
+  `safetyDoseRecommendationMlPerDay == 0` **iff** the estimate is materially negative, with
+  the established dose held on the other side. That is the discontinuity decision 16
+  abolished, and asserting it now contradicts `INV-G11`. The superseded assertion is
+  recorded here rather than deleted.
 - **Generator:** `A_now > outerMax`, sweeping `C_estimate` across the materiality boundary
-  `C + 1.28·sigma_S = 0` from both sides, at several `sigma_S`.
-- **Assert:** `safetyDoseRecommendationMlPerDay == 0` **iff** the estimate is materially
-  negative. On the non-material side the established dose is held, the outer-bound state and
-  the ~24 h cadence are still emitted, and `maintenanceEstimateStatus` is `UNRESOLVED`.
-- **Negative control:** pause on any negative `C_estimate`; `AD-CON-002` variant 1.6 must
-  fail.
+  `C + 1.28·sigma_S = 0` from both sides, at several `sigma_S`, holding `A_now`,
+  `D_established` and `P_selected` fixed.
+- **Assert:** the delivered rate is **identical** on both sides of the boundary; the
+  classification (`NON_PHYSICAL_OR_UNEXPLAINED_GAIN` versus `UNCERTAIN_NON_RESOLVABLE`), the
+  wording and the reason codes differ; the outer-bound state and the ~24 h cadence are
+  emitted on both sides; `maintenanceEstimateStatus` is `UNRESOLVED` on both sides.
+- **Negative control:** let the classification choose the rate — pause on the material side,
+  hold on the other; `AD-CON-002` and `AD-SAF-008` must fail.
 
 ### INV-C12 — Independent selection never depends on storage order
 - **Canon:** `ALK-SAME-TIMESTAMP-COALESCE-001`; `ALK-INDEPENDENT-SELECTION-001`;
@@ -526,11 +533,12 @@ Fixture bodies for the canon-named invariants are in
   0.50 dKH/day rail and `D_established` across the materiality boundary
   `C + 1.28·sigma_S = 0`, at several `sigma_S`.
 - **Assert:** `D_safety,temp == max(0, D_established − R_down / P_selected)` exactly;
-  the rate strictly decreases as `A_now` rises until `R_down` saturates at 0.50 and is
-  constant after; the rate changes by exactly one actuator increment per increment of
-  `D_established`, including across the materiality boundary; zero occurs **iff**
-  `D_established <= R_down / P_selected`; `maintenanceEstimateStatus` stays `UNRESOLVED`
-  on both branches.
+  zero occurs **iff** `D_established <= R_down / P_selected`. **Above that floor** the rate
+  strictly decreases as `A_now` rises until `R_down` saturates at 0.50 and is constant
+  after, and changes by exactly one actuator increment per increment of `D_established`,
+  including across the materiality boundary. At or below the floor the rate is 0 and varies
+  with nothing, which is the floor and not a violation. `maintenanceEstimateStatus` stays
+  `UNRESOLVED` on both branches.
 - **Negative control:** pause to 0 on the materially-negative branch and hold the
   established dose on the other; `AD-SAF-007`, `AD-SAF-008` and `AD-CON-002` must fail.
 - **Why it exists:** the superseded routing produced a 1.5 mL/day → pause versus

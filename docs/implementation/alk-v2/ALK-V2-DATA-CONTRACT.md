@@ -193,11 +193,30 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`), compared as **exact decimals** (`ALK-DECIMAL-THRESHOLD-001`): an exact spread of `0.20` is `OK`. Applies to same-method members only (`ALK-REPEAT-SPREAD-DOMAIN-001`). |
 | `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
 | `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling **same-method** measurements inside one testing episode (`ALK-TESTING-EPISODE-001`). The source clusters are retained for audit; the resolved episode value is what selection sees. |
-| `episodeId` | — | The testing episode this measurement belongs to (`ALK-TESTING-EPISODE-001`). Membership is the episode — explicit repeat relationship, otherwise the existing 30-minute window — not an identical timestamp. |
+| `episodeId` | — | The `TestingEpisode` this cluster belongs to (`ALK-TESTING-EPISODE-001`). A cluster is the **same-method pool inside** an episode; it is not the episode. |
+
+### `TestingEpisode`
+
+One owner constructs the episode and every Alk consumer reads its output
+(`ALK-EPISODE-SINGLE-OUTPUT-001`). It is a **distinct record**, not a field on
+`MeasurementCluster`: a `CONTESTED_METHODS` episode has two or more same-method pools and no
+single cluster that could carry its status.
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `episodeId` | — | Identity. Content-derived like every other id (`OI-DETERMINISM-001`). |
+| `memberMeasurementIds[]` | — | Every measurement in the episode, `INVALID` members included and marked. Nothing is deleted, hidden or down-weighted. |
+| `episodeMethods[]` | — | The distinct methods present after `INVALID` exclusion. More than one, with no canon compatibility classification, is what makes an episode contested. |
 | `episodeStatus` | — | `RESOLVED` \| `CONTESTED_METHODS` (`ALK-EPISODE-RESOLUTION-001`). `CONTESTED_METHODS` emits **no** episode value; members are preserved and kept distinct, `ALK-005` is not applied across them, and the affected inference is withheld. |
-| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads (`ALK-EPISODE-SINGLE-OUTPUT-001`). `NOT_RUN` on a contested episode. |
-| `episodeAt` | — | The one canonical episode time, under Part II §5.5. |
-| `episodeMethods[]` | — | The distinct methods present in the episode. More than one, with no canon compatibility classification, is what makes an episode contested. |
+| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads. `NOT_RUN` on a contested episode. |
+| `episodeAt` | — | The one canonical episode time, under Part II §5.5. `NOT_RUN` on a contested episode. |
+| `clusterIds[]` | — | The same-method pool(s) inside the episode. Exactly one when `RESOLVED`. |
+| `episodeSpreadDkh` | dKH | Spread of the resolved pool, under Part II §5.6. Not computed across methods. |
+| `episodeClusterStatus` | — | `OK` \| `ANOMALOUS` for a resolved episode, under `ALK-005`. Independent of `episodeStatus`: a resolved episode can be anomalous on its own same-method spread. |
+
+`obs.episode` (`ALK-V2-MODULE-DESIGN.md`) is the single producer. `obs.cluster` builds the
+same-method pool **inside** an episode and has no independent grouping authority; the two are
+one inference with one owner (`MASTER RULE 1`).
 
 Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
 member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention

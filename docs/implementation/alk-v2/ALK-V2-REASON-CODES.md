@@ -315,7 +315,7 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | `INFO` | One-off safety volume emitted although the maintenance increment is missing. | `correctionVolumeMl`, `P` |
 | `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` | `SAFETY` | Above `outerMax` with a `C_estimate` unusable for sizing on either side of the materiality boundary. The temporary safety rate is `max(0, D_established − R_down / P_selected)`. Not a maintenance estimate. | `A_now`, `outerMax`, `A_safe_high`, `rDownDkh`, `establishedDoseMlPerDay`, `P_selected`, `temporarySafetyRateAdvisoryMlPerDay`, `maintenanceEstimateStatus: UNRESOLVED`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
 | `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` | `SAFETY` | The sized temporary safety rate reached the zero floor because the established contribution could not absorb `R_down`. Zero is a floor, never a classification's choice. | `rDownDkh`, `rDownAsDoseMlPerDay`, `establishedDoseMlPerDay`, `ruleId: ALK-HIGH-BREACH-SAFETY-SIZING-001` |
-| `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` with `C_estimate >= 0`; the temporary safety **rate** path runs instead of the zero-dose pause. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
+| `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` with `C_estimate >= 0`; the temporary safety **rate** is sized from consumption rather than from the established-dose contribution. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
 | `SAFETY_HIGH_BREACH_SLOWER_DECLINE` | `INFO` | Zero dosing cannot achieve the desired decline; the achievable rate is reported. | `desiredRate`, `achievableRate`, `C_estimate` |
 | `SAFETY_RATE_RAIL_APPLIED` | `SAFETY` | 0.50 dKH/day physical-effect rail bound the change. | `uncappedEffect`, `railDkhPerDay: 0.50`, `cappedDeltaDose` |
 | `SAFETY_COMPOSITE_RAIL_APPLIED` | `SAFETY` | Combined intentional movement clamped to the rail. | `components[]`, `combinedDkh` |
@@ -449,11 +449,11 @@ failure.
 | Retired code | Replaced by | Freeze-5 decision |
 |---|---|---|
 | `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | F5-01 |
-| `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | `CLUSTER_SAME_TIMESTAMP_COALESCED` — F5-14 removes the tie by pooling rather than by choosing | F5-14 |
+| `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | F5-14 removed the tie by pooling rather than by choosing, emitting `CLUSTER_SAME_TIMESTAMP_COALESCED`, **itself retired by owner decision 17**; the live replacements are `EPISODE_MEASUREMENTS_POOLED` for a same-method episode and `EPISODE_CONTESTED_METHODS` where the episode cannot be resolved | F5-14, 17 |
 | `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` (renamed: the state is decided, not unavailable) | F5-02 |
 | `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | F5-03 |
-| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` (`C >= 0`), `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` (negative, not material) | F5-03, F5-13 |
-| `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` | `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` — F5-13 determined the band | F5-13 |
+| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | at Freeze 5: `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` (`C >= 0`), `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` (negative, not material). **Both of those first two replacements were themselves retired by owner decision 16**; the live replacements are `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` on either negative branch and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` at `C >= 0` | F5-03, F5-13, 16 |
+| `SAFETY_HIGH_BREACH_NARROW_BAND_UNDETERMINED` | F5-13 determined the band with `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED`, **itself retired by owner decision 16**; the live replacements are `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` for the classification and `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` for the delivered rate | F5-13, 16 |
 | `RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED` | `RETURN_OFFER_AVAILABLE` / `RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY` | F5-04 |
 | `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `MAINTENANCE_HOLD_TOWARD_RANGE` | F5-05 |
 | `MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED` | `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | F5-06 |
