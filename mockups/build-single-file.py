@@ -35,7 +35,9 @@ def screens():
 
 
 def slug(name: str) -> str:
-    return name[:-len(".html")]
+    """An id, not a filename. Prefixed because an id starting with a digit is
+    legal HTML and an invalid CSS selector, which is a trap worth not setting."""
+    return "s-" + name[:-len(".html")]
 
 
 def main() -> int:
@@ -63,7 +65,7 @@ def main() -> int:
 
         # In-file navigation: every link to another screen becomes a hash link.
         body = re.sub(r'href="(\d[0-9a-z-]*|index)\.html(#[^"]*)?"',
-                      lambda mm: 'href="#%s"' % mm.group(1), body)
+                      lambda mm: 'href="#s-%s"' % mm.group(1), body)
 
         title = TITLE.search(raw)
         title = html.unescape(title.group(1)) if title else path.name
