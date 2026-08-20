@@ -5644,12 +5644,10 @@
           },
           {
             "case": "NO_VALID_READING",
-            "episodeCount": 1,
-            "episodeStatus": "RESOLVED",
-            "combinedMeasurementCount": 0,
+            "episodeCount": 0,
             "episodeValueDkh": "NONE",
             "warn": false,
-            "note": "Every measurement is INVALID, so nothing resolves and there is no observation. Owner decision 29: the warning field is absent, which is NONE."
+            "note": "Every measurement is INVALID, so under Part II 4.3 nothing remains after exclusion and the episode yields NO OBSERVATION at all: there is no episode output, so no episodeStatus and no combinedMeasurementCount - ALK-TESTING-EPISODE-001 gives that count the domain integer >= 1, so 0 is outside it and this fixture asserts no value for it. What canon calls the state of an episode whose every member is INVALID is NOT stated and is recorded OPEN as OI-EPISODENOOBS-001. Owner decision 29 is what this case is for: with nothing resolved there is nothing to warn about, so advisoryConfidenceWarning is absent, which is NONE and not a third value."
           }
         ]
       },
@@ -5698,9 +5696,8 @@
           {
             "case": "NO_VALID_READING",
             "advisoryConfidenceWarning": "NONE",
-            "position": "NOT_RUN",
-            "outerBoundState": "NOT_RUN",
-            "note": "Position is NOT_RUN because there is no valid measurement at all - Part II 4.3 - not because two readings disagreed."
+            "position": "UNKNOWN",
+            "note": "position is UNKNOWN - the stated failure state when nothing resolves (ALK-V2-ALGORITHM-CONTRACT.md A13, POSITION_NO_VALID_MEASUREMENT) - and NOT_RUN is not in that field's vocabulary. outerBoundState is deliberately NOT asserted: its closed vocabulary is WITHIN_BOUNDS | BREACHED_LOW | BREACHED_HIGH | RECOVERING_INSIDE_BOUND, with no member for 'no measurement exists', and canon does not state what it takes when Part II 4.3 leaves nothing to classify. This fixture invents no value for it; the gap is recorded OPEN as OI-EPISODENOOBS-001."
           }
         ]
       },
@@ -5715,7 +5712,8 @@
         "OI-ADVISORYWARNSTATE-001 - RESOLVED by owner decision 29",
         "OI-METHODUNKNOWN-001 - RESOLVED by owner decision 27",
         "OI-EPISODESUSPECT-001 - OPEN: whether a SUSPECT member pools",
-        "OI-ANOMLATESTSAFETY-001 - OPEN: what the outer-bound safety path does beside an anomalous latest cluster"
+        "OI-ANOMLATESTSAFETY-001 - OPEN: what the outer-bound safety path does beside an anomalous latest cluster",
+        "OI-EPISODENOOBS-001 - OPEN: no canon state for an episode whose every measurement is INVALID"
       ],
       "forbidden": {
         "advisoryConfidenceWarning": "NOT_RUN",

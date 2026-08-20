@@ -6193,12 +6193,15 @@ A cluster should be considered internally inconsistent when:
 max(A_i)-min(A_i) > 0.20\ dKH
 \]
 
-unless a known testing method justifies another value.
+> **Superseded by owner decision 27, preserved rather than deleted.** The formula above
+> carried one trailing qualifier:
+> *"unless a known testing method justifies another value."*
 
-**Inoperative under owner decision 27**, and preserved above rather than deleted: the
-application does not record, ask for, infer or store the test method that produced a
-reading, so "a known testing method" is never available and the clause can never fire. The
-0.20 dKH threshold applies to every repeat cluster, with no exception route.
+**Inoperative under owner decision 27**, and preserved in the quotation above rather than
+deleted: the application does not record, ask for, infer or store the test method that
+produced a reading, so "a known testing method" is never available and the clause can never
+fire. The 0.20 dKH threshold applies to every repeat cluster, with **no exception route** —
+the comparison above is the whole rule, and it has no trailing clause.
 
 Reason:
 0.20 dKH is twice the shared Alk analytical uncertainty floor and is large enough that choosing one of the repeats could materially change a dose calculation.
@@ -6210,8 +6213,8 @@ This threshold is an engineering judgement, not a biological safety limit.
 `ALK-REPEAT-SPREAD-DOMAIN-001`
 
 **Owner decision 27 supersedes owner decision 18 here.** The `0.20 dKH` threshold above is
-a **repeat** threshold, and it applies to repeat measurements **as such**, with no method
-qualifier of any kind.
+a **repeat** threshold, and it applies to repeat measurements **as such**,
+with no method qualifier of any kind.
 
 **The application does not know what produced a reading.** It does not record, ask for,
 infer or store the test method, kit, device or instrument behind any measurement, so it has
@@ -6327,8 +6330,9 @@ relationship condition; the 30-minute window is the part that survives.
 
 `ALK-EPISODE-RESOLUTION-001`
 
-**Owner decision 27 supersedes owner decisions 17 and 18 here. There is no contested
-state.** An episode cannot be contested on method grounds, because method is not known
+**Owner decision 27 supersedes owner decisions 17 and 18 here.**
+**There is no contested state.**
+An episode cannot be contested on method grounds, because method is not known
 (`ALK-REPEAT-SPREAD-DOMAIN-001`).
 
 After the existing validity and status rules have been applied — `INVALID` measurements are
@@ -6401,10 +6405,13 @@ other consumer above, and does **nothing else**. Decision 21 had given it one na
 exception — a universal predicate over the members of a contested episode — because it
 needed to decide whether to **withhold advice**. Decision 24 stopped it withholding advice,
 so the question the predicate answered no longer arises and the predicate is retired with
-it. Where the episode is **contested** and no value resolves, there is no value to warn
-about and no recommendation for a warning to attach to; the ordinary contested handling
-governs unchanged, with `position`, `outerBoundState` and `rapidConfirmed` `NOT_RUN` and
-`REPEAT_NOW`. **This rule therefore has no exceptions, named or otherwise.**
+it. **This rule therefore has no exceptions, named or otherwise.**
+
+**Superseded, preserved:** the paragraph above continued *"Where the episode is contested
+and no value resolves, there is no value to warn about and no recommendation for a warning
+to attach to; the ordinary contested handling governs unchanged, with `position`,
+`outerBoundState` and `rapidConfirmed` `NOT_RUN` and `REPEAT_NOW`."* Owner decision 27
+retires the contested state, so that branch is unreachable.
 
 > **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision
 > 21 this passage read: "**Amended by owner decision 21 — one named exception, and only
@@ -6731,9 +6738,13 @@ backdated entries.
 equality** and pooled the underlying measurements of any clusters sharing a representative
 time, including measurements from incompatible methods. Both of those are superseded:
 
-- membership is now the **testing episode** of `ALK-TESTING-EPISODE-001` — explicit repeat
-  relationships, otherwise the existing 30-minute window — not exact timestamp equality. A
-  three-minute offset no longer reopens the problem this rule was written to close;
+- membership is now the **testing episode** of `ALK-TESTING-EPISODE-001` — measurements of
+  the same parameter **within 30 minutes of one another**, and nothing else — not exact
+  timestamp equality. A three-minute offset no longer reopens the problem this rule was
+  written to close. **Superseded, preserved:** under decisions 17 and 19 this bullet read
+  *"explicit repeat relationships, otherwise the existing 30-minute window"*; owner decision
+  28 makes proximity in time the whole membership test, so the explicit-relationship half is
+  retired;
 - **pooling is no longer keyed on the cluster's method.** Owner decision 27 retires the
   method distinction entirely: the application does not know what produced a reading, so
   every measurement inside an episode pools, and `ALK-005`'s 0.20 dKH threshold applies to
@@ -17013,8 +17024,8 @@ earlier Freeze-5 wording wherever they conflict**:
 | `ALK-HIGH-BREACH-UNRESOLVED-001`'s automatic pause to 0 mL/day | `ALK-HIGH-BREACH-SAFETY-SIZING-001` | zero is a floor reached by sizing, never a classification's choice |
 | `ALK-HIGH-BREACH-NO-PAUSE-001`'s HOLD of the established delivery rate | `ALK-HIGH-BREACH-SAFETY-SIZING-001` | the delivered rate is sized from `R_down` and the established dose |
 | `ALK-SAME-TIMESTAMP-COALESCE-001`'s exact-timestamp-only membership | `ALK-TESTING-EPISODE-001` | membership is the episode; a three-minute offset changes nothing |
-| `ALK-SAME-TIMESTAMP-COALESCE-001`'s pooling of incompatible methods | `ALK-EPISODE-RESOLUTION-001` | incompatible methods are contested, never averaged |
-| `ALK-005`'s 0.20 dKH applied across methods | `ALK-REPEAT-SPREAD-DOMAIN-001` | 0.20 dKH is a same-method repeat threshold only |
+| `ALK-SAME-TIMESTAMP-COALESCE-001`'s pooling of incompatible methods | `ALK-EPISODE-RESOLUTION-001` | *(as decided in 17–19; **further superseded by owner decision 27**, which retires method and the contested state — every measurement inside an episode now pools)* incompatible methods are contested, never averaged |
+| `ALK-005`'s 0.20 dKH applied across methods | `ALK-REPEAT-SPREAD-DOMAIN-001` | *(as decided in 17–19; **further superseded by owner decision 27**, which retires the same-method/cross-method distinction — 0.20 dKH applies to every measurement in the episode without qualification)* 0.20 dKH is a same-method repeat threshold only |
 | binary64 deciding a canonical decimal threshold | `ALK-DECIMAL-THRESHOLD-001` | exact decimal comparison; `0.20 > 0.20` is false |
 | any consumer choosing among raw measurements in one episode | `ALK-EPISODE-SINGLE-OUTPUT-001` | position, rapid, selection and forecast all read one resolved value |
 
@@ -17055,8 +17066,13 @@ and F5-15. The register items they opened — `OI-HIGHBREACHBAND-001`, `OI-CLUST
 and `OI-RETESTFLOOR-001` — are closed by those amendments.
 
 Owner decision 27 retires the contested-episode state, so **no Alk output is withheld
-anywhere in this freeze because two readings disagree.** The paragraph below is the
-pre-decision-27 statement and is preserved for history.
+anywhere in this freeze on the ground that an episode is contested.** Stated precisely, so
+it is not over-read: the contested branch and its withheld `position`, `outerBoundState` and
+`rapidConfirmed` are gone. Withholding on **other** grounds is untouched — in particular an
+episode whose pooled spread exceeds `ALK-005`'s 0.20 dKH is `ANOMALOUS` and takes Part II
+§48's path exactly as any anomalous cluster does, which is a shared-canon route that
+decision 27 neither reaches nor changes. The paragraph below is the pre-decision-27
+statement and is preserved for history.
 
 Nothing in F5-01 … F5-15 withholds an output for want of an owner decision. Decisions 17–19
 do withhold `position`, `outerBoundState` and `rapidConfirmed` on a contested episode — that

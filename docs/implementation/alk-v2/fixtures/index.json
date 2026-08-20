@@ -214,10 +214,7 @@
         "AD-ESC-003",
         "AD-REC-001",
         "AD-REC-002",
-    "AD-SAF-010",
-    "AD-EPI-005",
-    "AD-EPI-006",
-    "AD-EPI-007",
+        "AD-SAF-010",
         "AD-EPI-005",
         "AD-EPI-006",
         "AD-EPI-007"
@@ -226,7 +223,7 @@
     {
       "file": "invariants-and-governance.json",
       "corpusId": "alk-v2-invariants-and-governance",
-      "count": 21,
+      "count": 22,
       "fixtureIds": [
         "INV-CANON-001",
         "INV-CORE-ADVISORY-001",
@@ -248,16 +245,17 @@
         "INV-G13",
         "INV-G14",
         "INV-G15",
-        "INV-G16"
+        "INV-G16",
+        "INV-G17"
       ]
     }
   ],
   "totals": {
-    "fixtures": 203,
+    "fixtures": 204,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 72,
+    "CANON_DERIVED": 73,
     "CANON_QUALITATIVE": 29,
     "CANON_VERBATIM": 102
   },
@@ -464,7 +462,8 @@
     "INV-G13",
     "INV-G14",
     "INV-G15",
-    "INV-G16"
+    "INV-G16",
+    "INV-G17"
   ],
   "openIssueCoverage": {
     "OI-ADVISORYEXCEPTION-001": [
@@ -495,10 +494,7 @@
       "AD-MNT-008"
     ],
     "OI-BRANCHAREFUSAL-001": [
-      "AD-SAF-010",
-    "AD-EPI-005",
-    "AD-EPI-006",
-    "AD-EPI-007"
+      "AD-SAF-010"
     ],
     "OI-CLUSTERTIE-001": [
       "AD-SEG-007",
@@ -629,6 +625,23 @@
       "AD-POT-001",
       "ALK-G033",
       "WG-ALK-024"
+    ],
+    "OI-EPISODEMEMBERSHIP-001": [
+      "AD-EPI-005",
+      "AD-EPI-006",
+      "AD-EPI-007",
+      "AD-EPI-001"
+    ],
+    "OI-ADVISORYWARNSTATE-001": [
+      "AD-ESC-003",
+      "INV-G17"
+    ],
+    "OI-METHODUNKNOWN-001": [
+      "AD-EPI-002",
+      "AD-EPI-004",
+      "AD-VAL-002",
+      "AD-SEG-007",
+      "AD-SEG-008"
     ]
   },
   "duplicateFixtureIds": []

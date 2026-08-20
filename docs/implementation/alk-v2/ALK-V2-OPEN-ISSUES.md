@@ -3061,3 +3061,219 @@ replay.
 
 The eleven remaining `CANON_DEFECT` items degrade a specific optional analysis or record a
 documentation inconsistency; none withholds a controller output.
+
+---
+
+# A8. Findings OUTSIDE owner decisions 27–29 — RECORDED, NOT DECIDED
+
+Independent review of the decisions 27–29 encoding (`canon-conformance-auditor` and
+`breaker`, fresh context, against the pushed tree) reported findings that are **not** inside
+the three decisions. The owner's instruction for this pass was explicit: record them and
+leave them open. **None is fixed, decided or narrowed below.** Encoding mistakes in the
+three decisions themselves were corrected in the same pass and are not listed here.
+
+Six items opened by the same review already have entries in section A7 and are not repeated:
+`OI-EPISODEINTERVENTION-001`, `OI-EPISODEWINDOW-001`, `OI-EPISODEANCHOR-001`,
+`OI-EPISODESUSPECT-001`, `OI-ANOMLATESTSAFETY-001` and `OI-PII53METHOD-001`.
+
+---
+
+## OI-EPISODENOOBS-001 — canon states no outcome for an episode whose every member is `INVALID`
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
+- **Canon:** `ALK-EPISODE-RESOLUTION-001`; `ALK-TESTING-EPISODE-001`; Part II §4.3
+
+`ALK-EPISODE-RESOLUTION-001` resolves *"every episode holding at least one remaining
+measurement"* after `INVALID` exclusion. It does not say what an episode holding **none** is.
+Three fields have no member for the state: `episodeStatus` (`RESOLVED` is the only value),
+`combinedMeasurementCount` (domain `integer >= 1`, so `0` is outside it) and
+`outerBoundState` (`WITHIN_BOUNDS | BREACHED_LOW | BREACHED_HIGH | RECOVERING_INSIDE_BOUND`).
+
+**Failure scenario.** A keeper marks their only reading `INVALID`. An implementer must
+either invent a status, emit a count outside its stated domain, or emit an out-of-vocabulary
+`outerBoundState` — three different engines, three different records.
+
+`position` is **not** part of this gap: `UNKNOWN` with `POSITION_NO_VALID_MEASUREMENT` is
+stated (`ALK-V2-ALGORITHM-CONTRACT.md` A13). `AD-ESC-003`'s `NO_VALID_READING` case asserts
+`advisoryConfidenceWarning = NONE` and `position = UNKNOWN` and asserts **nothing** about the
+other three. **Not decided here.**
+
+---
+
+## OI-EPISODEMEDIANDECIMAL-001 — the even-count episode median is an operand of safety predicates and is outside the exact-decimal rule's stated scope
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
+- **Canon:** `ALK-DECIMAL-THRESHOLD-001`; `OI-MEDIAN-001`; Part II §5.4; `ALK-003A`
+
+`ALK-DECIMAL-THRESHOLD-001` fixes exact-decimal comparison for the canonical thresholds it
+names. Owner decision 28 makes even-member episodes ordinary, and `OI-MEDIAN-001` makes an
+even-count median the arithmetic mean of the two central readings — a value that is **not**
+one of the stored readings and that binary64 need not represent exactly. That median is then
+an operand of `A_now > OuterMax`, `A_now < OuterMin` and the safety-return completion test,
+none of which `ALK-DECIMAL-THRESHOLD-001` names.
+
+**Failure scenario.** Two readings whose exact-decimal mean lands exactly on a configured
+outer bound: exact decimal says not breached (`ALK-003A`'s comparisons are strict), binary64
+can say breached, and the two engines take opposite safety actions on the same input.
+
+The reviewer also observed that the committed gate compares such medians with a `1e-12`
+tolerance, on rules whose text says no epsilon. **Not decided here**, and no epsilon,
+rounding rule or operand list is added by this pass.
+
+---
+
+## OI-EPISODEDISAGREE-001 — an episode reports the same value however far its members disagree
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
+- **Canon:** `ALK-TESTING-EPISODE-001`; `ALK-005`; Part II §5.4, §48
+
+Two readings of 6.90 and 9.70 and two readings of 4.00 and 12.60 both resolve to 8.30, with
+`combinedMeasurementCount = 2` in each case. `ALK-005` marks both `ANOMALOUS`, and Part II
+§48's path is the same for both, so the resolved observation carries no signal about the
+scale of the disagreement beyond the `ANOMALOUS` flag itself.
+
+**Failure scenario.** A keeper whose kit failed badly and a keeper who mis-read a titration
+by one drop receive the identical resolved observation. Whether the engine should distinguish
+them, and how, is a product and chemistry question. **Not decided here**, and no
+second threshold, tier or classification is added.
+
+---
+
+## OI-RAPIDCONFIRMDISJUNCT-001 — `ALK-013`'s "repeated/confirmed" disjunct no longer names a distinct state
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
+- **Canon:** `ALK-013`; `ALK-RAPID-001`; `ALK-TESTING-EPISODE-001`
+
+`ALK-013` admits rapid confirmation when the latest cluster *"is internally consistent, or
+the latest result has been repeated/confirmed"*. Under owner decision 28 every repeat within
+30 minutes is already a member of the episode, so a repeat cannot exist outside the cluster
+whose consistency the first disjunct tests. The second disjunct is therefore either vacuous
+or refers to something canon does not define.
+
+**Failure scenario.** An episode with spread `0.35` fails the first disjunct. An implementer
+who reads the second as "a repeat exists" sets `rapidConfirmed = true` on an anomalous
+episode; one who reads it as vacuous does not. `rapidConfirmed` opens the exceptional 50%
+cap, so the two engines can differ by a factor on the recommended dose. **Not decided here.**
+
+---
+
+## OI-PII52EXPLICIT-001 — Part II §5.2's "explicit grouping wins" is live shared canon that alkalinity no longer honours
+
+- **Class:** `CANON_DEFECT` (shared)
+- **Status:** **OPEN.** Opened by owner decision 28; cited in canon before this section
+  existed and now recorded here.
+- **Canon:** Part II §5.2, under `SHARED_V2_FREEZE_2`; `ALK-TESTING-EPISODE-001`
+
+Part II §5.2 states that explicit repeat grouping wins over automatic grouping, and the
+measurement record carries `repeatGroupId`. Owner decision 28 makes proximity in time the
+whole membership test for alkalinity, so for alkalinity the field decides nothing. The Alk
+artefacts now mark it inoperative and forbid the engine reading it; the **shared** wording is
+left as it stands, because editing shared canon is outside this pass. A shared reissue should
+reconcile it. **Not done here.**
+
+---
+
+## OI-EPISODEDATEONLY-001 — a date-only measurement cannot be placed in a 30-minute window
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Cited by `ALK-TESTING-EPISODE-001` before this section existed and
+  now recorded here.
+- **Canon:** `ALK-TESTING-EPISODE-001`; `SHARED-LEGACY-TIME-001`; Part II §3
+
+Membership is decided entirely by elapsed time between measurements. A legacy or imported
+measurement carrying a date but no time of day has no position inside a 30-minute window.
+Whether such a measurement forms its own episode, joins the nearest, or is excluded from
+episode construction is unstated.
+
+**Failure scenario.** An import puts three date-only readings on one day. One engine makes
+them one episode of three, another makes three observations, and `ALK-008`'s independence
+count — and therefore whether a trend exists at all — differs. **Not decided here.**
+
+---
+
+## OI-FREEZEIDBEHAVIOUR-001 — behaviour changed repeatedly under one unchanged freeze identifier
+
+- **Class:** `CANON_DEFECT` (process)
+- **Status:** **OPEN.** Pre-existing pattern, reported again by review of the decisions 27–29
+  encoding.
+- **Canon:** `ALK_V2_FREEZE_5`; `MASTER RULE 4`; `CORE-CANON-COVERAGE-001`
+
+Owner decisions 16 through 29 changed frozen alkalinity behaviour while the freeze
+identifier stayed `ALK_V2_FREEZE_5`. Each decision is recorded, superseded wording is
+preserved, and the supersession tables name what changed — but two artefacts that both say
+"Freeze 5" can describe different behaviour, and a replay stamped `ALK_V2_FREEZE_5` does not
+say which. Canon §47 and §64 make the engine/canon version part of deterministic replay.
+
+Whether the identifier should have been reissued, and what it takes to reissue one, is
+governance rather than chemistry. `CLAUDE.md` records the same discrepancy deliberately for
+the handoff document's stale identifiers. **Not decided here**; the identifier is not
+changed by this pass.
+
+---
+
+## OI-GATEVOCABULARY-001 — the freeze gate scans vocabulary and cannot check that a behaviour is absent
+
+- **Class:** `CANON_DEFECT` (process)
+- **Status:** **OPEN.** Opened by review of the decisions 27–29 encoding.
+- **Artefact:** `docs/implementation/alk-v2/validate-freeze-5.py`
+
+The committed gate is a text scanner over canon and artefacts. It can check that a retired
+word does not appear and that a required sentence does appear. It cannot check that an
+engine does not branch on method, because there is no engine yet — the package is
+specification only. The reviewer demonstrated that a plain-English reversion of owner
+decision 27, written in wording the scanners do not match, passes the gate.
+
+Sentence-level scanning, an absence check for every retired concept, exemptions restricted
+to explicit supersession phrases, and a negative control for each scanner were added in this
+pass and cut the demonstrated bypasses. **The structural limit is not closed**: a scanner
+over prose certifies wording, not behaviour, and only executable conformance tests against a
+built engine close it. **Not decided here**, and no claim in this package should be read as
+saying the gate proves behaviour.
+
+---
+
+## OI-RETIREDCHAIN-001 — retirement rows from earlier decisions still name later-retired codes as live
+
+- **Class:** `CANON_DEFECT` (documentation)
+- **Status:** **OPEN.** Pre-existing; found while correcting the same defect inside decisions
+  27–29.
+- **Artefact:** `docs/implementation/alk-v2/ALK-V2-REASON-CODES.md`
+
+A retirement row says which code replaced the retired one. Where that replacement was itself
+retired by a later decision, the row still reads as an instruction to emit a retired code.
+One instance inside decisions 27–29 was corrected in this pass:
+`EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` named `EPISODE_MEASUREMENTS_POOLED` and
+`EPISODE_CONTESTED_METHODS`, both retired by decision 27, and now names
+`EPISODE_MEASUREMENTS_COMBINED`.
+
+At least one row from an earlier decision has the same shape:
+`SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED` names
+`SAFETY_TEMP_RATE_ADVISORY_EMITTED`, which owner decision 23 retired. The gate check added in
+this pass is deliberately scoped to decisions 27–29 rows for that reason.
+
+**Failure scenario.** An implementer following a retirement row emits a code the closed set
+no longer contains, and `INV-I7` — which checks that retired codes are gone — fails against
+their engine for a reason the specification told them to do. **Not decided or fixed here**;
+correcting rows from decisions 16–26 is outside this pass.
+
+---
+
+## What section A8 changes
+
+**Nothing.** Every item above is recorded, unfixed and undecided, exactly as the owner
+instructed for this pass. None withholds an output: each names either an unstated state that
+an implementer will meet (`OI-EPISODENOOBS-001`, `OI-EPISODEDATEONLY-001`), a comparison or
+disjunct whose reading can change a safety action or a dose
+(`OI-EPISODEMEDIANDECIMAL-001`, `OI-RAPIDCONFIRMDISJUNCT-001`), a product question
+(`OI-EPISODEDISAGREE-001`), or a process limit (`OI-PII52EXPLICIT-001`,
+`OI-FREEZEIDBEHAVIOUR-001`, `OI-GATEVOCABULARY-001`).
+
+`OI-SIZINGFLAT-001` is **not** in this section and was **not** touched by this pass: the
+owner ruled it an accepted edge case, and its statement and its reach stand as they were. One
+stale traceability row that still described it as bounded by `AdvisoryCeiling` — wording
+decision 21 introduced and decision 24 removed — was corrected to match canon, which
+**widens** the recorded reach back to what canon states rather than narrowing it.

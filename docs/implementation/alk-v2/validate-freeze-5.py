@@ -1021,14 +1021,22 @@ if f:
     for name,c in cin.items():
         # owner decision 27: no member carries a method, and nothing is contested
         if any('method' in r for r in c['readings']): bad.append((name,'a reading carries a method'))
-        if cev[name]['episodeStatus']!='RESOLVED': bad.append((name,'episodeStatus',cev[name]['episodeStatus']))
         valid=[r['alkDkh'] for r in c['readings'] if r.get('status')!='INVALID']
-        if cev[name]['combinedMeasurementCount']!=len(valid):
-            bad.append((name,'count',cev[name]['combinedMeasurementCount'],len(valid)))
         if not valid:
+            # No member survives Part II 4.3, so no episode output exists. episodeStatus has
+            # only RESOLVED and combinedMeasurementCount has the domain integer >= 1, so the
+            # fixture must assert NEITHER - that gap is OI-EPISODENOOBS-001, left OPEN.
+            if 'episodeStatus' in cev[name]: bad.append((name,'asserts episodeStatus with no observation'))
+            if 'combinedMeasurementCount' in cev[name]:
+                bad.append((name,'asserts a count with no observation'))
+            if 'outerBoundState' in cac[name]: bad.append((name,'asserts outerBoundState with no observation'))
+            if cac[name].get('position')!='UNKNOWN': bad.append((name,'position must be UNKNOWN'))
             # owner decision 29: nothing resolves -> the warning is ABSENT, not a third value
             if cac[name]['advisoryConfidenceWarning']!='NONE': bad.append((name,'absent warning must be NONE'))
             continue
+        if cev[name]['episodeStatus']!='RESOLVED': bad.append((name,'episodeStatus',cev[name]['episodeStatus']))
+        if cev[name]['combinedMeasurementCount']!=len(valid):
+            bad.append((name,'count',cev[name]['combinedMeasurementCount'],len(valid)))
         vals=sorted(valid)
         med=vals[len(vals)//2] if len(vals)%2 else (vals[len(vals)//2-1]+vals[len(vals)//2])/2
         if abs(cev[name]['episodeValueDkh']-med)>1e-9: bad.append((name,'median',cev[name]['episodeValueDkh'],med))
@@ -1847,6 +1855,8 @@ def _json_live(node):
     if isinstance(node,dict):
         for k,v in node.items():
             if k in SKIP: continue
+            yield k                # KEYS are scanned too: a reinstated `methodId` FIELD is a
+                                   # reversion even when its value says nothing
             for x in _json_live(v): yield x
     elif isinstance(node,list):
         for v in node:
@@ -2028,6 +2038,123 @@ if f:
     cases=[c['case'] for c in f['input']['cases']]
     check('AD-VAL-002 drops the cross-method case and adds the unqualified one',
           'CROSS_METHOD' not in cases and 'NO_QUALIFIER' in cases, str(cases))
+
+
+# ---------- 18g. presence checks, and a negative control for every scanner ----------
+# A vocabulary scanner cannot see a behaviour that was DELETED: remove the one paragraph that
+# makes a superseded clause inoperative and the clause is live again, with no retired word
+# anywhere. The checks below require each load-bearing sentence to be PRESENT. The structural
+# limit that remains - prose certifies wording, not behaviour - is recorded as
+# OI-GATEVOCABULARY-001 and is not closed by anything here.
+REQUIRED=[
+ ('canon: ALK-005 method escape clause is quarantined', CANON, 'Inoperative under owner decision 27'),
+ ('canon: the escape clause is preserved as history, not deleted', CANON,
+  'unless a known testing method justifies another value'),
+ ('canon: the contested state is retired in the resolution rule', CANON, 'There is no contested state.'),
+ ('canon: episode membership is proximity in time', CANON, 'within 30 minutes of one another'),
+ ('canon: the combined count has a stated domain', CANON, 'combinedMeasurementCount = <integer >= 1>'),
+ ('canon: the spread threshold carries no method qualifier', CANON, 'with no method qualifier of any kind'),
+ ('contract: proximity in time is the whole membership test', AC_TXT, 'proximity in time is the whole test'),
+ ('contract: the engine never records or branches on method', AC_TXT,
+  'NEVER: record, ask for, infer or store the test method'),
+ ('contract: the combined count is structured, not prose', AC_TXT, 'structured field'),
+ ('data contract: the advisory warning is two-valued', DC, 'Two states only'),
+]
+_missing=[lbl for lbl,txt,needle in REQUIRED if needle not in txt]
+check('every load-bearing decision-27/28/29 sentence is present', not _missing, str(_missing))
+# The preserved escape clause must be QUOTED history, never a live line.
+_esc=[l for l in CANON.split('\n') if 'unless a known testing method justifies another value' in l]
+check('the preserved method escape clause appears only as quoted history',
+      len(_esc)==1 and _esc[0].lstrip().startswith('>'), str(_esc)[:80])
+
+# NEGATIVE CONTROL for the presence scanner: MUT7 - delete the quarantining paragraph.
+_mut=CANON.replace('Inoperative under owner decision 27','')
+check('negative control MUT7: deleting the inoperative paragraph fails the presence check',
+      any(n not in t for _,t,n in [(0,_mut,'Inoperative under owner decision 27')]))
+# NEGATIVE CONTROL: MUT10 - un-quote the escape clause so it reads as live rule text.
+_mut2=[l.lstrip('> ') if 'unless a known testing method justifies another value' in l else l
+       for l in CANON.split('\n')]
+_esc2=[l for l in _mut2 if 'unless a known testing method justifies another value' in l]
+check('negative control MUT10: un-quoting the escape clause fails the quoted-history check',
+      not (len(_esc2)==1 and _esc2[0].lstrip().startswith('>')))
+
+# A retirement row must not name a RETIRED code as the live replacement. The sweep exempts
+# these rows by shape, so without this check MUT8 - point a retirement at another retired
+# code - passes silently.
+_rc=open(R+'docs/implementation/alk-v2/ALK-V2-REASON-CODES.md',encoding='utf-8').read()
+def _bad_replacements(text, scope=None):
+    """A retirement row whose replacement cell names a code that is ITSELF retired, without
+    saying so. Scoped by default to the rows this pass touched - decisions 27, 28 and 29 -
+    because the same shape exists on older rows from earlier decisions. That wider class is
+    recorded as a finding and left open, not fixed here."""
+    bad=[]
+    for line in text.split('\n'):
+        m=re.match(r'^\| `([A-Z][A-Z0-9_]+)` \| (.*?) \| ([^|]*)\|\s*$', line.strip())
+        if not m: continue
+        code, cell, dec = m.group(1), m.group(2), m.group(3)
+        if code not in retired: continue
+        if scope is not None and not any(d in dec for d in scope): continue
+        for m2 in re.finditer(r'`([A-Z][A-Z0-9_]{4,})`', cell):
+            named=m2.group(1)
+            if named not in retired: continue
+            # Exempt only where THIS code is said to be retired, judged by proximity - a
+            # blanket 'retired' anywhere in the cell let MUT8 through.
+            near=cell[max(0,m2.start()-160):m2.end()+160]
+            if re.search(r'retired|RETIRED|superseded|no longer', near): continue
+            bad.append((code,named))
+    return bad
+_DEC2729=('27','28','29')
+check('no decisions 27-29 retirement row names a retired code as its live replacement',
+      not _bad_replacements(_rc,_DEC2729), str(_bad_replacements(_rc,_DEC2729))[:120])
+# NEGATIVE CONTROL: MUT8 - point a retirement at a code that is itself retired.
+_mut3=_rc+'\n| `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `EPISODE_CONTESTED_METHODS` | 27 |\n'
+check('negative control MUT8: a retirement pointing at a retired code is caught',
+      bool(_bad_replacements(_mut3,_DEC2729)))
+
+# Plain-English reversions of decision 27 use none of the retired identifiers, so the sweeps
+# above cannot see them. These phrase needles close the wordings a reversion actually uses.
+REVERSION=['records the test method','record the test method, kit','asks for the test method',
+           'method compatibility','compatible-method','methods are compatible',
+           'same test method','different test method','different test kits read',
+           'the method that produced','method-conditional','by method, and']
+def _rev_scan(txt, fnm='x'):
+    """Line-scoped, with the SAME narrow exemptions the sweeps use: an explicit supersession
+    marker, a blockquote, a struck-through retirement bullet, or a line that states the
+    decision-27 position itself. A history-marked PARAGRAPH exempts its lines, because a
+    preserved quotation spans several."""
+    out=[]; lines=txt.split('\n')
+    blockmark=[False]*len(lines); i=0
+    for blk in txt.split('\n\n'):
+        marked=any(m in blk for m in HISTORY) or 'What this retires outright' in blk
+        for _ in blk.split('\n'):
+            if i<len(blockmark): blockmark[i]=marked
+            i+=1
+        i+=1
+    for _n,_l in enumerate(lines):
+        if any(m in _l for m in HISTORY) or _l.lstrip().startswith('>'): continue
+        if '~~' in _l: continue                      # a struck-through retirement bullet
+        if 'does not record' in _l or 'never known' in _l or 'not known' in _l: continue
+        if 'Inoperative' in _l or 'RETIRED' in _l or 'retire' in _l: continue
+        if 'inoperative' in _l or 'no method qualifier' in _l: continue
+        if blockmark[_n] if _n<len(blockmark) else False: continue
+        for _p in REVERSION:
+            if _p in _l: out.append((fnm,_p,_l.strip()[:60]))
+    return out
+_rev=[]
+for _fnm,_txt in (('canon',_canon_alk(CANON)),('contract',AC_TXT),('data contract',DC)):
+    _rev+=_rev_scan(_txt,_fnm)
+check('no plain-English reversion of decision 27 is stated as live behaviour',
+      not _rev, str(_rev[:4]))
+# NEGATIVE CONTROL: MUT9 - a full reversion written in ordinary English, using no retired word.
+_mut4='The engine records the test method for every reading, and pools by method.'
+check('negative control MUT9: a plain-English reversion sentence is caught, unexempted',
+      bool(_rev_scan(_mut4,'mutant')))
+# and the exemptions must not swallow it when it is dropped into real canon text
+check('negative control MUT9b: the same sentence inside live canon is caught',
+      bool(_rev_scan(_canon_alk(CANON)+'\n\n'+_mut4,'mutant')))
+# NEGATIVE CONTROL: MUT11 - reinstate the 45-minute window in the contract.
+check('negative control MUT11: changing the window in A3 is caught',
+      set(re.findall(r'(\d+) minutes', A3.replace('30 minutes','45 minutes')))!={'30'})
 
 print()
 print('%d checks failed' % len(fails))

@@ -680,21 +680,6 @@ Fixture bodies for the canon-named invariants are in
   `A_now`. It does not, at any level, and decision 24 **widened** that exposure by removing
   the ceiling that used to bound it. `OI-SIZINGFLAT-001` stays open.
 
-### INV-G14 — The advisory warning field has exactly two states
-- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decisions 24 and 29).
-- **Generator:** every reachable state of the advisory boundary — resolved values below, at
-  and beyond each boundary; a resolved value with no boundary configured; an episode whose
-  every measurement is `INVALID`, so no observation exists at all.
-- **Assert:** `advisoryConfidenceWarning` takes only `ATTACHED` or `NONE`, in every state and
-  every fixture. `NOT_RUN` never appears. Where nothing resolves, the field is `NONE` —
-  absent because there is nothing to describe — and the absence of an observation is not
-  represented as a third value of this field.
-- **Negative control:** reinstate `NOT_RUN` anywhere — the data-contract enumeration, a
-  fixture leaf, or the algorithm contract's failure state; `AD-ESC-003` must fail.
-- **Why it exists:** `OI-ADVISORYWARNSTATE-001` recorded that the third value's trigger set
-  was never stated in the rule that owns the field. Owner decision 29 removes the value
-  rather than specifying it.
-
 ### INV-G14 — `D_current` and `D_history` are never interchanged
 - **Canon:** `ALK-DELIVERY-RATE-BASIS-001` (owner decision 20);
   `ALK-CONSUMPTION-ESTIMATE-001`; `ALK-HIGH-BREACH-SAFETY-SIZING-001`.
@@ -765,6 +750,20 @@ Fixture bodies for the canon-named invariants are in
   did, and a whole layer of refusals, statuses and paired outputs existed to manage a
   connection that does not exist.
 
+### INV-G17 — The advisory warning field has exactly two states
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decisions 24 and 29).
+- **Generator:** every reachable state of the advisory boundary — resolved values below, at
+  and beyond each boundary; a resolved value with no boundary configured; an episode whose
+  every measurement is `INVALID`, so no observation exists at all.
+- **Assert:** `advisoryConfidenceWarning` takes only `ATTACHED` or `NONE`, in every state and
+  every fixture. `NOT_RUN` never appears. Where nothing resolves, the field is `NONE` —
+  absent because there is nothing to describe — and the absence of an observation is not
+  represented as a third value of this field.
+- **Negative control:** reinstate `NOT_RUN` anywhere — the data-contract enumeration, a
+  fixture leaf, or the algorithm contract's failure state; `AD-ESC-003` must fail.
+- **Why it exists:** `OI-ADVISORYWARNSTATE-001` recorded that the third value's trigger set
+  was never stated in the rule that owns the field. Owner decision 29 removes the value
+  rather than specifying it.
 
 ### INV-C15 — Repeats inside 30 minutes are one observation, and the count is stated
 - **Canon:** `ALK-TESTING-EPISODE-001` (owner decision 28); `ALK-008` (unchanged).
@@ -810,6 +809,11 @@ and letting storage order decide which cluster counts.
 `INV-C15` was added by owner decision 28, and `INV-C13` and `INV-C14` were amended by owner
 decision 27 — the contested-episode assertions in `INV-C13` and the method qualifier in
 `INV-C14` are both unreachable now that the engine never knows what produced a reading.
+`INV-G17` was added by owner decision 29 and pins the advisory warning field to two states.
+It is numbered `G17` and not `G14`: the decisions 27–29 encoding first gave it `INV-G14`,
+which owner decision 20 had already taken, and a duplicated identifier is a `MASTER RULE 4`
+defect — two invariants under one ID, one of them unreachable. The collision was found by
+review and corrected in the same pass; `INV-G14` remains decision 20's.
 
 Three more were added by owner decisions 16–19. `INV-G11` pins the high-breach safety rate
 to its formula so no classification can choose it. `INV-C13` pins one episode output for

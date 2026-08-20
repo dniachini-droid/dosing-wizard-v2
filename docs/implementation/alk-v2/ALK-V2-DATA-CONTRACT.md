@@ -139,7 +139,7 @@ One raw test result. Never a cluster, never a derived value.
 | `userEnteredPrecision` | — | `OPT` | Metadata only. **Never** automatically becomes uncertainty (Part II §3 comment). |
 | `baseUncertaintyDkh` | dKH | `REQ` | `SIGMA_ALK_BASE = 0.10` for Alk (`ALK-004`). Working analytical floor, not a kit accuracy claim, not a position tolerance. |
 | `source` | — | `REQ` | `MANUAL` \| `IMPORTED` \| `DEVICE`. |
-| `repeatGroupId` | — | `OPT` | Explicit repeat/confirmation relationship. Explicit grouping wins over automatic (Part II §5.2). |
+| `repeatGroupId` | — | `OPT` | Explicit repeat/confirmation relationship. **Inoperative for alkalinity under owner decision 28**: proximity in time is the whole membership test, so an explicit relationship neither creates an episode nor overrides the 30-minute window (`ALK-TESTING-EPISODE-001`). The field is retained because Part II §5.2 is shared canon and is not edited here; that wording is recorded open as `OI-PII52EXPLICIT-001`. Nothing in the Alk engine may read it. |
 | `prePostEventRelation` | — | `OPT` | `PRE_EVENT` \| `POST_EVENT`, relative to a named event. Absent means unknown, not "after". |
 | `status` | — | `REQ` | `ReadingQuality`. |
 | `invalidReason` | — | `REQ*` | Required when `status = INVALID`. |
@@ -177,7 +177,8 @@ cluster.
 
 ### `MeasurementCluster` `DERIVED`
 
-One testing episode. Prevents repeat testing from satisfying evidence counts
+The pooled set of measurements **inside** one testing episode — not the episode itself, which
+is the `TestingEpisode` record below. Prevents repeat testing from satisfying evidence counts
 (Part II §5, §6; `ALK-005`).
 
 | Field | Unit | Notes |
@@ -726,7 +727,7 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `currentDoseMlPerDay` (safety context) | mL/day | `D_current` — the delivery rate **the doser is configured to be delivering at the time of the recommendation**, and the quantity the high-breach sizing reduces. **Renamed from `establishedDoseMlPerDay` by owner decision 20**; the old name was also used for the interval-mean rate. Unknown ⇒ the safety rate and the recommendation are both `NOT_RUN` and **neither is `0`** (`ALK-DELIVERY-RATE-BASIS-001`). |
 | `advisoryCeilingDkh` | dKH | `outerMax + 1.0`. A boundary derived as an **offset** from the configured bound, not a pinned level (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 21). |
 | `advisoryFloorDkh` | dKH | `outerMin − 1.0`. Same construction, low side. |
-| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED`. **Two states only** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 29): present or absent. `NOT_RUN` is **retired** — where no reading resolves there is nothing to warn about and the field is absent, which is `NONE`, not a third value. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). `NOT_RUN` where no episode value resolves. Does **not** change `outerBoundState`. |
+| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED`. **Two states only** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 29): present or absent. `NOT_RUN` is **retired** — where no reading resolves there is nothing to warn about and the field is absent, which is `NONE`, not a third value. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). Does **not** change `outerBoundState`. |
 | `rDownDkh` | dKH | `min(A_now − A_safe,high, 0.50)`. The requested downward effect, rail-bounded. |
 | `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |

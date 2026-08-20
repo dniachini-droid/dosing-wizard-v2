@@ -70,7 +70,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
-| `CLUSTER_FORMED_EXPLICIT` | `INFO` | Grouped by explicit `repeatGroupId`. | `clusterId`, `readingIds[]` |
+| `CLUSTER_FORMED_EXPLICIT` | `INFO` | Grouped by explicit `repeatGroupId`. **Unreachable for alkalinity under owner decision 28** — proximity in time is the whole membership test, so no Alk cluster is ever formed this way and the Alk engine must not emit it. | `clusterId`, `readingIds[]` |
 | `CLUSTER_FORMED_AUTOMATIC` | `INFO` | Grouped by the 30-minute window. | `clusterId`, `readingIds[]`, `windowMinutes: 30` |
 | `CLUSTER_ANOMALOUS_SPREAD` | `GATING` | Repeat spread exceeds 0.20 dKH. | `clusterId`, `spreadDkh`, `limitDkh: 0.20`, `memberValues[]` |
 | `CLUSTER_REPEAT_NOT_INDEPENDENT` | `INFO` | Repeats inside one cluster do not add independent observations. | `clusterId`, `memberCount` |
@@ -444,7 +444,7 @@ failure.
 | Retired code | Replaced by | Freeze-5 decision |
 |---|---|---|
 | `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | F5-01 |
-| `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | F5-14 removed the tie by pooling rather than by choosing, emitting `CLUSTER_SAME_TIMESTAMP_COALESCED`, **itself retired by owner decision 17**; the live replacements are `EPISODE_MEASUREMENTS_POOLED` for a same-method episode and `EPISODE_CONTESTED_METHODS` where the episode cannot be resolved | F5-14, 17 |
+| `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` | F5-14 removed the tie by pooling rather than by choosing, emitting `CLUSTER_SAME_TIMESTAMP_COALESCED`, **itself retired by owner decision 17**; decision 17's replacements `EPISODE_MEASUREMENTS_POOLED` and `EPISODE_CONTESTED_METHODS` were in turn **retired by owner decision 27**, which removed both the method distinction and the contested state, so the live replacement is the single code `EPISODE_MEASUREMENTS_COMBINED` | F5-14, 17, 27 |
 | `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` (renamed: the state is decided, not unavailable) | F5-02 |
 | `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | F5-03 |
 | `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | at Freeze 5: `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (material branch), `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` (`C >= 0`), `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` (negative, not material). **Both of those first two replacements were themselves retired by owner decision 16**; the live replacements are `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE` (renamed from `SAFETY_HIGH_BREACH_RATE_FROM_ESTABLISHED_DOSE` by decision 20) on either negative branch and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` at `C >= 0` | F5-03, F5-13, 16 |

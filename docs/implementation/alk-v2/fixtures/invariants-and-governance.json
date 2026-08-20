@@ -585,6 +585,34 @@
         "AD-SAF-005",
         "WG-ALK-045"
       ]
+    },
+    {
+      "fixtureId": "INV-G17",
+      "title": "The advisory warning field has exactly two states",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-ADVISORY-RANGE-BOUNDARY-001"
+        ],
+        "note": "Owner decision 29. Numbered G17 and not G14: the decisions 27-29 encoding first gave this invariant INV-G14, which owner decision 20 had already taken. The duplicate was corrected in the same pass; INV-G14 remains decision 20's."
+      },
+      "kind": "PROPERTY",
+      "property": "advisoryConfidenceWarning is present or absent and there is no third value. It takes only ATTACHED or NONE, in every state and in every fixture. NOT_RUN does not exist.",
+      "generator": "Every reachable state of the advisory boundary: resolved values below, at and beyond AdvisoryCeiling and AdvisoryFloor; a resolved value with no outer bound configured; and an episode whose every measurement is INVALID, so no observation resolves at all.",
+      "mustHold": [
+        "advisoryConfidenceWarning is ATTACHED or NONE and never any third value",
+        "NOT_RUN does not appear in the data-contract enumeration, in any fixture leaf, in the algorithm contract's failure state, or in any rule text that sets the field",
+        "where no reading resolves there is nothing to warn about, so the field is NONE - absent - and the absence of an observation is not represented as a third value of this field",
+        "the absence of a warning is not itself an output: no reason code, retest change or dose change follows from NONE"
+      ],
+      "negativeControl": "Reinstate NOT_RUN anywhere - the data-contract enumeration, a fixture leaf, or the algorithm contract's failure state - and AD-ESC-003 must fail. Set the field to NOT_RUN on the NO_VALID_READING state and AD-ESC-003 must fail.",
+      "whyItExists": "OI-ADVISORYWARNSTATE-001 recorded that the third value's trigger set was never stated in the rule that owns the field. Owner decision 29 removes the value rather than specifying it.",
+      "openIssues": [
+        "OI-ADVISORYWARNSTATE-001 - resolved by owner decision 29"
+      ],
+      "fixtures": [
+        "AD-ESC-003"
+      ]
     }
   ]
 }

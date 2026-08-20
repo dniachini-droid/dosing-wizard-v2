@@ -40,11 +40,19 @@ Phase 0 — Preserve and found V2
   `docs/implementation/alk-v2/`. It is specification only: no application runtime, no
   framework, no database, no dependencies.
 - `ALK_V2_FREEZE_5` closed every blocking item in that package's open-issue register.
-  Nineteen owner decisions were written into the canon: F5-01 … F5-12, then the three
+  Twenty-nine owner decisions have been written into the canon: F5-01 … F5-12, the three
   amendments F5-13 … F5-15 that independent review of the first encoding made necessary,
-  then decisions 16 … 19, which resolve the six findings review of those amendments
-  escalated and **supersede the earlier Freeze-5 wording wherever they conflict**.
-  Eighteen new stable rule IDs exist and several rules are amended.
+  then decisions 16 … 19, 20 … 22, 23 … 26 and finally 27 … 29 — each round resolving the
+  findings that independent review of the previous encoding escalated, and each
+  **superseding the earlier Freeze-5 wording wherever they conflict**. Superseded wording is
+  preserved as marked history rather than deleted, and each round's supersession table names
+  what it displaced. New stable rule IDs exist and several rules are amended; the package
+  now inventories **283** normative rules.
+  Decisions 27 … 29 are the final canon pass before implementation: the application does not
+  record, ask for, infer or store the test method behind a reading (so method compatibility
+  and the contested-episode state are retired outright); measurements of one parameter within
+  30 minutes of one another are one observation carrying a `combinedMeasurementCount`; and
+  `advisoryConfidenceWarning` is present or absent, with no third value.
   **No Alk output is blocked by an open issue.**
   Eleven non-blocking canon defects remain open and are listed in the Freeze-5
   declaration's *Deliberately left open* section.
@@ -129,11 +137,14 @@ Recorded rather than silently resolved. Neither the canon nor the handoff has be
 edited; both are byte-for-byte copies.
 
 0. **The canon's recorded defects — twenty-one closed, eleven still open.**
-   The Alk implementation package inventories all normative canon rules (279 after
+   The Alk implementation package inventories all normative canon rules (283 after
    Freeze 5 and its later decisions) and classifies every ambiguity found. Twenty-four
-   were genuine canon defects, eleven of them blocking a dependent output. Review of the
-   encoding then opened eight more items, all of which the owner has since decided
-   (F5-13 … F5-15, then decisions 16 … 19; register sections A2 and A3).
+   were genuine canon defects, eleven of them blocking a dependent output. Review of each
+   encoding round opened further items; the owner has decided every one that blocked an
+   output (F5-13 … F5-15, then decisions 16 … 29; register sections A2 … A7). Section A8
+   records the findings from review of the decisions 27 … 29 encoding, which the owner
+   directed to be **recorded and left open** rather than fixed in that pass. None of them
+   withholds an output.
 
    `ALK_V2_FREEZE_5` closed thirteen of the original register — every blocking one, plus
    `OI-RAPIDBASIS-001` and `OI-CONFIDENCE-001` — and the eight review-opened items, through the governed

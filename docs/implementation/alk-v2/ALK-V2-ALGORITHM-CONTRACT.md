@@ -94,18 +94,26 @@ and delivery events; `asOf`.
 ```text
 1. Group readings r_i, r_{i+1} when ALL hold:                 [ALK-TESTING-EPISODE-001]
      same parameter
-     elapsedDays(r_i.measuredAt, r_{i+1}.measuredAt) <= 30 minutes
+     elapsed(r_i.measuredAt, r_{i+1}.measuredAt) <= 30 minutes
+     NOTE: the pairwise form above is NOT a decision that the window chains rather than
+     anchors on the episode's first measurement. Canon does not say which, and it is
+     recorded OPEN as OI-EPISODEANCHOR-001. An implementer must not read consecutive-pair
+     wording here as settling it.                       [OPEN: OI-EPISODEANCHOR-001]
      no intervention, correction, water change or delivery anomaly between them
+                                                    [OPEN: OI-EPISODEINTERVENTION-001]
    Owner decisions 27 and 28: there is NO method condition (the method is never known)
    and NO explicit-relationship requirement (proximity in time is the whole test).
    PII-5.3's "same or compatible method" clause is shared canon and is inoperative here.
-3. Cluster fields:
+   PII-5.3's intervention condition is carried unchanged and is NOT decided by decision 28;
+   whether "proximity in time is the whole test" displaces it is recorded OPEN as
+   OI-EPISODEINTERVENTION-001 and must be read the same way in A3 and in A4 STEP 0.
+2. Cluster fields:
      representativeValueDkh = median(rawValueDkh of VALID members)
      representativeAt       = median(measuredAt of members)
      spreadDkh              = max - min over VALID members
      madDkh                 = median(|x_i - median(x)|)
      sigmaClusterDkh        = max(0.10, 1.4826 * madDkh)
-4. clusterStatus = ANOMALOUS  when spreadDkh > 0.20 dKH   [ALK-005]
+3. clusterStatus = ANOMALOUS  when spreadDkh > 0.20 dKH   [ALK-005]
                  = OK         otherwise
 ```
 
@@ -122,8 +130,11 @@ history.
 
 **TESTS** `CLU-001` three readings 10 min apart form one cluster; `CLU-002` repeats do not
 increase independent count; `CLU-003` spread 0.25 ⇒ `ANOMALOUS`; `CLU-004` intervention
-between readings prevents grouping; `CLU-005` explicit `repeatGroupId` overrides the
-window.
+between readings prevents grouping (open, per `OI-EPISODEINTERVENTION-001`).
+`CLU-005` — *"explicit `repeatGroupId` overrides the window"* — is **RETIRED by owner
+decision 28**: proximity in time is the whole membership test, so there is no explicit
+relationship to override anything with. It is preserved here as history and must not be
+implemented.
 
 ## A4 — Independent-cluster selection
 
@@ -143,6 +154,8 @@ STEP 0, before selection      [ALK-TESTING-EPISODE-001, ALK-EPISODE-RESOLUTION-0
         no method condition, no explicit-relationship requirement:
             proximity in time is the whole test
         > 30 minutes apart -> SEPARATE observations, into ordinary trend logic
+        PII-5.3's intervention condition is carried unchanged from A3 and is NOT
+        decided by decision 28          [OPEN: OI-EPISODEINTERVENTION-001]
 
     exclude INVALID measurements (PII-4.3), then per episode:
         pool the COMBINED underlying measurements
@@ -535,7 +548,12 @@ ALL must hold:
   elapsedDays between their representative times >= 1.0 (24 h)
   |S_pair| >= 0.30 dKH/day                          [basis: latest independent pair,
                                                      ALK-RAPID-BASIS-001]
-  latest cluster is internally consistent (spread <= 0.20) OR has been repeated/confirmed
+  latest episode is internally consistent (spread <= 0.20) OR has been repeated/confirmed
+     the second disjunct is ALK-013's own wording and is carried unchanged. Under owner
+     decision 28 every repeat inside 30 minutes is already IN the episode, so "has been
+     repeated/confirmed" no longer names a distinct state and its meaning is unstated.
+     It can decide rapidConfirmed. Recorded OPEN as OI-RAPIDCONFIRMDISJUNCT-001 and NOT
+     decided here.                            [OPEN: OI-RAPIDCONFIRMDISJUNCT-001]
   no known correction, water change or delivery event already explains the movement
   the direction is relevant to a maintenance or safety decision
 ```
@@ -567,12 +585,16 @@ stays Theil–Sen).
 
 ## A13 — Position and outer-bound state
 
-**INPUTS** latest valid cluster representative value, target range, outer bounds.
+**INPUTS** the **resolved value of the latest testing episode** (`episodeValueDkh`,
+`ALK-EPISODE-SINGLE-OUTPUT-001`), target range, outer bounds. Position reads the episode's
+one canonical value, never a member of it and never a cluster chosen from inside it — that
+is the whole point of owner decision 19, carried forward by decisions 27 and 28.
 
 **FORMULA**
 
 ```text
-A_now = latest VALID cluster representativeValueDkh          [CORE-POSITION-001, ALK-010]
+A_now = latest resolved episodeValueDkh                      [CORE-POSITION-001, ALK-010,
+                                                             ALK-EPISODE-SINGLE-OUTPUT-001]
 
 A_now <  outerMin           -> ALERT_LOW,    outerBoundState = BREACHED_LOW
 A_now >  outerMax           -> ALERT_HIGH,   outerBoundState = BREACHED_HIGH
@@ -591,9 +613,12 @@ the range (Part II §7.3).
 While a safety return is active and `A_now` has re-entered the envelope but not reached
 the buffered destination: `outerBoundState = RECOVERING_INSIDE_BOUND`.
 
-**OUTPUT** `{position, outerBoundState, A_now, latestValidClusterId}`.
+**OUTPUT** `{position, outerBoundState, A_now, latestEpisodeId}`.
 
-**FAILURE STATE** no valid cluster ⇒ `position = UNKNOWN`, `POSITION_NO_VALID_MEASUREMENT`.
+**FAILURE STATE** no episode resolves — every measurement `INVALID` under Part II §4.3 ⇒
+`position = UNKNOWN`, `POSITION_NO_VALID_MEASUREMENT`. What `outerBoundState` takes in that
+state is **not stated by canon** and is recorded open as `OI-EPISODENOOBS-001`; its closed
+vocabulary has no member for "nothing to classify". Do not invent one.
 
 **TESTS** `ALK-G001`, `WG-ALK-028`, `WG-ALK-053`, `AD-POS-001` (edge equality).
 

@@ -37,10 +37,7 @@
    "VALIDATION": 23
   },
   "byFinding": {
-   "NO_PROBLEM (RESOLVED by owner decision 17)": 1,
-   "NO_PROBLEM (RESOLVED by owner decision 18)": 2,
-   "NO_PROBLEM (RESOLVED by owner decision 19)": 1,
-   "NO_PROBLEM (RESOLVED by owner decisions 17 and 18)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 18)": 1,
    "CANON_DEFECT": 5,
    "CANON_DEFECT (OI-EXPOSURE-001 only; scheduler fields RESOLVED F5-09)": 1,
    "CANON_DEFECT (documentation)": 1,
@@ -63,18 +60,22 @@
    "NO_PROBLEM (RESOLVED F5-09, F5-15)": 1,
    "NO_PROBLEM (RESOLVED F5-10)": 3,
    "NO_PROBLEM (RESOLVED F5-12)": 2,
-   "NO_PROBLEM (RESOLVED F5-14)": 1,
    "NO_PROBLEM (accepted residual, F5-02)": 1,
    "NO_PROBLEM (RESOLVED F5-03; sizing superseded by owner decision 16)": 1,
    "NO_PROBLEM (interval quantity named D_history by owner decision 20)": 1,
    "NO_PROBLEM (RESOLVED F5-13; delivered rate superseded by owner decision 16)": 1,
-   "NO_PROBLEM (RESOLVED by owner decision 16; sizing input renamed by owner decision 20)": 1,
    "NO_PROBLEM (RESOLVED by owner decision 22)": 1,
    "NO_PROBLEM (RETIRED by owner decision 23)": 2,
    "NO_PROBLEM (RESOLVED by owner decision 20; refusal made a pre-branch precondition by owner decision 25)": 1,
    "NO_PROBLEM (RESOLVED by owner decision 21, superseded by owner decision 24)": 1,
    "NO_PROBLEM (RESOLVED by owner decision 23)": 1,
-   "NO_PROBLEM (actuator limb RETIRED by owner decision 23)": 1
+   "NO_PROBLEM (actuator limb RETIRED by owner decision 23)": 1,
+   "NO_PROBLEM (RESOLVED F5-14; membership superseded by owner decisions 17 and 28)": 1,
+   "OI-SIZINGFLAT-001 OPEN (RESOLVED by owner decision 16; sizing input renamed by owner decision 20; the flat region is accepted as an edge case by the owner and left as it stands)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 18, method domain retired by owner decision 27)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 17, membership superseded by owner decision 28)": 1,
+   "NO_PROBLEM (RESOLVED by owner decisions 17 and 18, contested state retired by owner decision 27)": 1,
+   "NO_PROBLEM (RESOLVED by owner decision 19, contested branch retired by owner decision 27)": 1
   },
   "byActivity": {
    "ACTIVE": 258,
@@ -3762,15 +3763,15 @@
      "canon": "ALK-003A",
      "title": "High-breach temporary safety rate is sized from the configured delivery rate",
      "owner": "SAFETY",
-     "inputs": "OuterMax < A_now < AdvisoryCeiling; A_safe,high; D_current; P_selected; C_estimate < 0",
+     "inputs": "A_now > OuterMax, at any level and with NO upper limit (owner decision 24 removed the AdvisoryCeiling bound decision 21 had placed here); A_safe,high; D_current; P_selected; C_estimate < 0",
      "output": "temporary safety rate in mL/day; zero only by the floor",
      "equation": "R_down = min(A_now - A_safe,high, 0.50); D_safety,temp = max(0, D_current - R_down / P_selected)",
      "reasonCodes": "SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE, SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO, SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN",
      "fixtures": "AD-SAF-007, AD-SAF-008, AD-CON-002, WG-ALK-051, AD-DHS-001, AD-DHS-002",
-     "boundaries": "C_estimate never enters the sizing; materiality never selects 0 versus a held rate; the rate varies with A_now until the 0.50 rail binds and moves one increment per increment of D_current; D_history may NOT be substituted for D_current; D_current unknown REFUSES - no rate, no command, and not 0 mL/day; evaluated only below AdvisoryCeiling",
+     "boundaries": "C_estimate never enters the sizing; materiality never selects 0 versus a held rate; the rate varies with A_now until the 0.50 rail binds and moves one increment per increment of D_current; D_history may NOT be substituted for D_current; D_current unknown REFUSES - no rate, no command, and not 0 mL/day; evaluated at EVERY level above OuterMax - owner decision 24 removed decision 21's AdvisoryCeiling bound, so R_down saturates at the 0.50 dKH/day rail and the sized rate stops responding to A_now from A_safe,high + 0.50 upward without limit. That is OI-SIZINGFLAT-001, which is OPEN, is NOT narrowed and is NOT compensated for",
      "dependencies": "ALK-OUTER-BOUND-ACTION-001, ALK-DELIVERY-RATE-BASIS-001, ALK-ADVISORY-RANGE-BOUNDARY-001, ALK-SAFETY-TEMP-RATE-RESOLUTION-001, ALK-046, ALK-COMPOSITE-RAIL-001, ALK-LIQUID-VOLUME-GUARD-001, ALK-ROUNDING-001",
      "activeInAlkOnlyV2": "ACTIVE",
-     "finding": "NO_PROBLEM (RESOLVED by owner decision 16; sizing input renamed by owner decision 20)"
+     "finding": "OI-SIZINGFLAT-001 OPEN (RESOLVED by owner decision 16; sizing input renamed by owner decision 20; the flat region is accepted as an edge case by the owner and left as it stands)"
     },
     {
      "id": "ALK-REPEAT-SPREAD-DOMAIN-001",

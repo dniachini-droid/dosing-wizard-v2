@@ -83,7 +83,7 @@ a calcium calculation").
 | Module | Owner | In → Out | Purity |
 |---|---|---|---|
 | `obs.episode` | `SEGMENTATION` | readings + policy → `TestingEpisode[]` with `episodeValueDkh`, `episodeAt` and `combinedMeasurementCount` | pure total |
-| `obs.cluster` | `SEGMENTATION` | readings + policy → `MeasurementCluster[]` | pure total |
+| `obs.cluster` | `SEGMENTATION` | `TestingEpisode[]` from `obs.episode` → the pooled `MeasurementCluster[]` **inside** each episode. It has **no independent grouping authority**: it never re-groups readings and never decides membership (`MASTER RULE 1`; `ALK-V2-DATA-CONTRACT.md`). | pure total |
 | `obs.independence` | `SEGMENTATION` | clusters + policy → independent subset \| `NotRun` | pure total |
 | `obs.position` | `VALIDATION` | latest valid cluster + config → `Position`, `outerBoundState` | pure total |
 
