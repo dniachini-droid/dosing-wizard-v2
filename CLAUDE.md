@@ -14,7 +14,7 @@ second copy of anything. Detail lives in the documents it points at.
 ## Authority
 
 - Frozen behavioural canon is `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md`.
-- Current freezes are `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_4`.
+- Current freezes are `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_5`.
 - `docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md` is preserved
   history. Its freeze identifiers `SHARED_V2_FREEZE_1` and `ALK_V2_FREEZE_3`
   are **stale**. Use it as process and implementation guidance only, and only

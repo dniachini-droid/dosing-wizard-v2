@@ -4,6 +4,12 @@ Three independent review passes over this package, each taking a different adver
 stance. Findings are reported, not silently repaired; where a pass exposed a genuine canon
 defect it was added to `ALK-V2-OPEN-ISSUES.md` rather than resolved by improvisation.
 
+> **Read as of `ALK_V2_FREEZE_4`.** This document is the record of the review that produced
+> the open-issue register. `ALK_V2_FREEZE_5` subsequently decided all eight of the owner
+> judgements listed in §B/§C below, plus `OI-SUSPECT-001`, `OI-MADFLOOR-001`,
+> `OI-RETEST-001`, `OI-WATERCHANGE-001` and `OI-SAFETYRATE-001`. The *findings* stand; the
+> *interim behaviours* quoted throughout are superseded. See the closing section.
+
 ---
 
 # Review A — Canon review
@@ -109,7 +115,7 @@ controller's uncertainty by nothing. Both contributing rules are individually co
 frozen; the canon's own defence is the suspicious-reading layer, which alkalinity never
 parameterised. `OI-MADFLOOR-001` + `OI-SUSPECT-001`; fixture `AD-TRD-004`.
 
-**B-6 — Independent-cluster selection changes the actuator command.** Clusters at
+**B-6 — Independent-cluster selection changes the recommendation.** Clusters at
 0.0 / 0.5 / 2.0 / 4.0 days give `sigma_S` of 0.035355, 0.040269 or 0.032129 depending on
 which defensible traversal is used. Not a rounding difference — a different dose.
 `OI-INDEPENDENCE-001`; fixture `AD-SEG-001`.
@@ -185,7 +191,7 @@ explicitly as *not authority*.
 
 | Remaining judgement | Why it is the owner's | Interim behaviour |
 |---|---|---|
-| `OI-INDEPENDENCE-001` — which cluster is dropped under 24 h spacing | Changes `sigma_S` and therefore the actuator command | `INSUFFICIENT` + refusal |
+| `OI-INDEPENDENCE-001` — which cluster is dropped under 24 h spacing | Changes `sigma_S` and therefore the recommendation | `INSUFFICIENT` + refusal |
 | `OI-NEGCONS-001` — the slight/material negative-consumption boundary | Decides whether the engine recommends **pausing alkalinity dosing** | HOLD (identical on both branches); the zero-dose fail-safe is gated |
 | `OI-RETURNOFFER-001` — what "stable" means for a return-plan offer | Under one reading a below-range tank is never offered a plan at all | Offer `NOT_RUN`; maintenance unaffected |
 | `OI-BELOWRISING-001` — the two withheld matrix cells | Decides whether maintenance opposes a trajectory carrying the level toward the target | HOLD |
@@ -205,7 +211,7 @@ hold that cannot move a real tank in a direction the owner has not chosen.
   (`DECISIONS.md` records no selection; `ROADMAP.md` Phase 1 is unstarted).
 - **A test runner and a property-test library.** The invariants specify generators and
   assertions but no harness.
-- **Setup UI for the required capture fields** — `actuatorIncrementMlPerDay`, precise
+- **Setup UI for the required capture fields** — `recommendationPrecisionMlPerDay`, precise
   `measuredAt`, dose-event `effectiveAt` and its confidence, solution and delivery context
   ids. `ALK-V2-DATA-CONTRACT.md` gives the shapes; the capture flow is product design.
 - **A canonical serialization** for the `ledgerDigest` used by `OI-DETERMINISM-001`.
@@ -237,3 +243,32 @@ substitutes a default.
 
 Open issues grew from 33 to **40** during review. That is the intended direction: a review
 that found nothing would have meant the review was not adversarial.
+
+---
+
+# Disposition at `ALK_V2_FREEZE_5`
+
+Every judgement this review surfaced as the owner's has been decided. The interim
+behaviours quoted above are **superseded** and must not be implemented.
+
+| Review finding | Owner's decision | Encoded as |
+|---|---|---|
+| `OI-INDEPENDENCE-001` | forward-greedy from the earliest eligible cluster | `ALK-INDEPENDENT-SELECTION-001` |
+| `OI-NEGCONS-001` | `C_estimate + 1.28·sigma_S < 0`; no `sigma_P`, no `sigma_D` | `ALK-NEGATIVE-MATERIALITY-001` |
+| `OI-RETURNOFFER-001` | a separate, weaker eligibility predicate; `STABLE` unchanged | `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` |
+| `OI-BELOWRISING-001` | HOLD — maintenance does not oppose a supported trajectory toward range | `ALK-TOWARD-RANGE-HOLD-001` |
+| `OI-LIQUIDGUARD-001` | yes, it binds maintenance; exceeding withholds the command; rechecked after rounding | `ALK-LIQUID-VOLUME-GUARD-001` (amended) |
+| `OI-CONFIDENCE-001` | `UNSPECIFIED`; surface the evidence facts instead | `ALK-CONFIDENCE-OUTPUT-001` (amended) |
+| `OI-RAPIDBASIS-001` | latest independent pair; sizing stays Theil–Sen | `ALK-RAPID-BASIS-001` |
+| `OI-RETURNDURINGSAFETY-001` | **terminate**, not suspend; `SUSPENDED_PENDING_SAFETY` rejected | `ALK-RETURN-TERMINATED-BY-SAFETY-001` |
+
+Two of the review's proposals were **not** adopted, which is the point of marking a
+proposal as not authority:
+
+- `OI-RETURNDURINGSAFETY-001` proposed suspension with a new `SUSPENDED_PENDING_SAFETY`
+  phase. The owner chose termination with no automatic resume.
+- `OI-CONFIDENCE-001` proposed a descriptive deterministic mapping to `LOW`/`MODERATE`/
+  `HIGH`. The owner declined to classify at all in Freeze 5.
+
+Review C.4's answer is now stronger than it was: build-sequence steps 1 through 16 are
+fully determined, and `OI-INDEPENDENCE-001` no longer sits at step 2 with a refusal path.

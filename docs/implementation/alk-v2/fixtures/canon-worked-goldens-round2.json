@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-canon-worked-goldens-round2",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "canonSection": "PART III - WORKED NUMERICAL GOLDEN SUITE - ROUND 2",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [
@@ -110,10 +110,10 @@
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-028", "AUDIT-030", "ALK-G039"] },
       "rulesExercised": ["ALK-066", "SHARED-CONFIG-VERSION-001"],
       "input": { "before": { "targetRange": [8.2, 8.8], "latestAlkDkh": 8.30, "observedSlopeDkhPerDay": 0, "supportedSlopeDkhPerDay": 0, "doseMlPerDay": 9.0, "position": "IN_RANGE" }, "edit": { "targetRange": [8.4, 9.0] } },
-      "expectedAction": { "position": "BELOW_RANGE", "unchanged": ["observedSlope", "supportedSlope", "consumption", "selectedPotency", "maintenanceDoseEstimate", "historicalRecommendations"], "automaticResult": "HOLD_CURRENT_DOSE", "returnPlanOffer": "AVAILABLE when evidence requirements are met" },
-      "expectedReasonCodes": ["CONFIG_TARGET_RANGE_CHANGED"],
+      "expectedAction": { "position": "BELOW_RANGE", "unchanged": ["observedSlope", "supportedSlope", "consumption", "selectedPotency", "maintenanceDoseEstimate", "historicalRecommendations"], "automaticResult": "HOLD_CURRENT_DOSE", "returnPlanOffer": "AVAILABLE - the pre-edit evidence already satisfies ALK-RETURN-ELIGIBLE-TRAJECTORY-001 (S_observed = 0, S_supported = 0); the edit changes only position" },
+      "expectedReasonCodes": ["CONFIG_TARGET_RANGE_CHANGED", "RETURN_OFFER_AVAILABLE"],
       "forbidden": { "note": "A target edit is not a biological demand event." },
-      "openIssues": ["OI-RETURNOFFER-001 gates the offer branch"]
+      "openIssues": ["OI-RETURNOFFER-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-04)"]
     },
     {
       "fixtureId": "WG-ALK-029",

@@ -1,7 +1,7 @@
 # ALK V2 — IMPLEMENTATION CONTRACT
 
 **Authority:** `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` under `SHARED_V2_FREEZE_2`
-and `ALK_V2_FREEZE_4`.
+and `ALK_V2_FREEZE_5`.
 **Status:** implementation specification. Non-authoritative over canon.
 **Scope:** the alkalinity domain of the first V2 runtime — Alk advisory controller ACTIVE,
 Calcium and Magnesium measurement-only and inert (`MIGRATION-ALK-ONLY-001`).
@@ -27,7 +27,7 @@ LAYER 2  OBSERVED TRAJECTORY
 
 LAYER 3  SUPPORTED TRAJECTORY
          The part of the observed movement that is separated from uncertainty
-         far enough to size an actuator change.
+         far enough to size a recommended change.
          S_supported. Deliberately biased toward zero.
          NEVER used for physical demand, risk forecast, or position.
 
@@ -88,7 +88,7 @@ and not derived from it by a canonical equation is a defect.
 | `ALK_RATE_RAIL` | 0.50 | dKH/day | `ALK-046`, `ALK-COMPOSITE-RAIL-001` |
 | `ORDINARY_STEP_CAP` | 0.25 | fraction | `ALK-STEP-CAP-001` |
 | `EXCEPTIONAL_STEP_CAP` | 0.50 | fraction | `ALK-STEP-CAP-001` |
-| `STEP_CAP_MEANINGFUL_MULTIPLE` | 4 | × increment | `ALK-STEP-CAP-001` (`D_current ≥ 4 R_pump`) |
+| `STEP_CAP_MEANINGFUL_MULTIPLE` | 4 | × increment | `ALK-STEP-CAP-001` (`D_current ≥ 4 R_precision`) |
 | `LIQUID_GUARD_FRACTION` | 0.02 | of net volume / 24 h | `ALK-LIQUID-VOLUME-GUARD-001` |
 | `UNKNOWN_WC_ASSUMED_MISMATCH` | 2.0 | dKH | `ALK-WATERCHANGE-UNKNOWN-001` |
 | `WC_UNKNOWN_BREAK_FRACTION` | 0.05 | fraction | `ALK-WATERCHANGE-UNKNOWN-001` (derived: 0.10 / 2.0) |
@@ -118,23 +118,36 @@ and not derived from it by a canonical equation is a defect.
 These are **absent**, not zero and not inheritable. See `ALK-V2-OPEN-ISSUES.md`.
 
 ```text
-K_detect                        Part II §52   -> OI-RETEST-001
-RequiredMovement (T_signal)     Part II §53   -> OI-RETEST-001
-boundarySafetyMargin            Part II §54   -> OI-RETEST-001
-minimumUsefulInterval           Part II §66   -> OI-RETEST-001
-maximumObservationInterval      Part II §66   -> OI-RETEST-001
-minimumExposure (Alk)           Part II §30   -> OI-EXPOSURE-001
-suspicious-reading threshold    Part II §47   -> OI-SUSPECT-001
-replacement-water confidence tier required for normalization
-                                Part II §45   -> OI-WATERCHANGE-001
-consumption-uncertainty model (sigma_C)
-                                ALK-031       -> OI-NEGCONS-001
-recommendationConfidence derivation
-                                ALK-071       -> OI-CONFIDENCE-001
+K_detect                        Part II §52   -> canonically NOT_RUN  (F5-09)
+suspicious-reading threshold    Part II §47   -> canonically NOT_RUN  (F5-02)
+return-plan arrival cadence     Part II §51   -> canonically NOT_RUN  (F5-09)
+recommendationConfidence classification
+                                ALK-071       -> UNSPECIFIED           (F5-12)
+minimumExposure (Alk)           Part II §30   -> OI-EXPOSURE-001, still absent
+normalization uncertainty model Part II §9.4  -> OI-NORMUNCERT-001, still absent
 ```
 
 An implementation **must not** supply any of these from a neighbouring parameter, from
 V1, or from a plausible default (Part I §56, Part II §7.4, `CORE-INFORM-PROCEED-001`).
+
+A **canonically `NOT_RUN`** entry is a decided state, not a gap: `ALK_V2_FREEZE_5` declined
+to invent the constant, and the engine emits the named `NOT_RUN` with its reason code.
+
+### Part II fields `ALK_V2_FREEZE_5` supplied from existing constants
+
+These are no longer absent. Each reuses a value the canon already froze; **none is a new
+constant** (`ALK-053A`, `ALK-031`, `ALK-033`, `ALK-008`).
+
+```text
+RequiredMovement (T_signal)     Part II §53   = 0.10 dKH          (sigma_Alk_base)
+boundarySafetyMargin            Part II §54   = 1.0 day           (ALK-052 cadence)
+minimumUsefulInterval           Part II §66   = 24 h, ordinary observation only (ALK-008)
+maximumObservationInterval      Part II §66   = 96 h              (ALK-053 Day-4 window)
+negative-consumption materiality
+                                ALK-031       = C + 1.28*sigma_S < 0  (ALK_SLOPE_SUPPORT_K)
+replacement-water tier for normalization
+                                Part II §45   = MEASURED_SAME_BATCH only
+```
 
 ---
 
@@ -192,7 +205,9 @@ Stages run in this order. A later stage never rewrites an earlier stage's output
                               -> Part II §12-16, ALK-007, ALK-033, ALK-034
 
  6  INDEPENDENCE               select independent clusters (>= 24 h spacing)
-                              -> ALK-008                     [see OI-INDEPENDENCE-001]
+                              forward-greedy from the earliest eligible cluster;
+                              anchor = last ACCEPTED cluster
+                              -> ALK-008, ALK-INDEPENDENT-SELECTION-001
 
  7  TREND (observed)           Theil-Sen slope, intercept, residuals
                               -> ALK-009, Part II §19
@@ -242,9 +257,10 @@ Stages run in this order. A later stage never rewrites an earlier stage's output
 
 ## 5. Maintenance recommendation pipeline
 
-Canonical order from `ALK-049`, with the constraints listed in `ALK-044`. Steps marked
-`[unplaced]` are constraints the canon requires but whose position `ALK-049` does not
-state; see `ALK-V2-OPEN-ISSUES.md` → `OI-PIPELINE-001`.
+Canonical order from `ALK-049`, with the constraints listed in `ALK-044`. `ALK_V2_FREEZE_5`
+placed the liquid-volume guard inside `ALK-ROUNDING-001` step 6 (F5-06). The composite
+rail's position remains derived rather than stated; see `ALK-V2-OPEN-ISSUES.md` →
+`OI-PIPELINE-001`.
 
 ```text
 P0  evidence gate
@@ -256,6 +272,13 @@ P1  uncertainty-limited gate
                              -> HOLD  TRAJECTORY_UNCERTAINTY_LIMITED
       S_supported == 0 and S_observed == 0
                              -> HOLD  TRAJECTORY_STABLE
+      either case, out of range -> RETURN_OFFER_AVAILABLE
+                             (ALK-RETURN-ELIGIBLE-TRAJECTORY-001; opt-in, not maintenance)
+P1b position x trajectory gate (ALK-TOWARD-RANGE-HOLD-001)
+      below range + supported RISING, no active plan
+                             -> HOLD  MAINTENANCE_HOLD_TOWARD_RANGE
+      above range + supported FALLING, no active plan
+                             -> HOLD  MAINTENANCE_HOLD_TOWARD_RANGE
 P2  intervention lock
       SAFETY_RETURN active   -> DEFER MAINTENANCE_DEFERRED_BY_SAFETY_RETURN
       unassessable ordinary intervention and post-change regime not yet
@@ -270,17 +293,23 @@ P4  continuous action candidate
 P5  physical rate rail (ALK-046)
       |P_selected · dD| <= 0.50 dKH/day  -> clamp; SAFETY_RATE_RAIL_APPLIED
 P6  dose-step cap (ALK-STEP-CAP-001)
-      if D_current >= 4·R_pump: |dD| <= cap · D_current, cap = 0.25 or 0.50
+      if D_current >= 4·R_precision: |dD| <= cap · D_current, cap = 0.25 or 0.50
       else: BASELINE_ESTABLISHMENT, percentage cap inactive
 P7  empirical bracket (ALK-032)  advisory only; never changes the number
 P8  non-negative clamp          D >= 0
-P9  [unplaced] gross liquid-volume guard (ALK-LIQUID-VOLUME-GUARD-001)  -> OI-LIQUIDGUARD-001
+P9  gross liquid-volume guard (ALK-LIQUID-VOLUME-GUARD-001)
+      continuous candidate > 0.02 * 1000 * V_L mL/day
+                             -> rechecked again at P11 after discretisation
 P10 [unplaced] composite rail allocation (ALK-COMPOSITE-RAIL-001)       -> OI-PIPELINE-001
-P11 actuator rounding (ALK-ROUNDING-001)
-      requires R_pump; missing -> REFUSE ACTUATOR_INCREMENT_REQUIRED (M-1)
-      nearest -> tie toward D_current -> tie lower -> recheck hard constraints ->
-      step toward D_current until feasible -> if back at D_current: HOLD
-                                              MAINTENANCE_ACTUATOR_RESOLUTION
+P11 recommendation rounding (ALK-ROUNDING-001)
+      R_precision is a DISPLAY convention (owner decision 23); where none is
+      configured the full-precision recommendation is stated. Nothing is withheld
+      for want of it, and no device increment exists to be missing.
+      nearest -> tie toward D_current -> tie lower -> recheck hard constraints
+      (rate rail AND liquid guard) -> step toward D_current until feasible ->
+      if back at D_current: HOLD MAINTENANCE_ROUNDS_TO_CURRENT_DOSE
+      if no feasible command and D_current itself violates the guard:
+                             -> WITHHOLD  MAINTENANCE_LIQUID_GUARD_EXCEEDED
 P12 recompute predicted post slope from the FINAL command (ALK-PREDICTED-POST-SLOPE-001)
       S_pred_post = S_observed + P_selected · (D_recommended - D_current)
 P13 emit recommendation + reason codes + confidence label
@@ -319,14 +348,27 @@ Canon Part II §64, `ALK-G040`, `WG-ALK-040`.
 3. No iteration-order dependence: sort by `(instant, eventOrdinal, eventId)` before any
    ordered computation.
 4. No locale, timezone-of-the-viewer, or display-rounding dependence.
-5. Full stored precision throughout; rounding happens only at the actuator step and at
+5. Full stored precision throughout; rounding happens only at the recommendation step and at
    presentation (Part II §2.3, `ALK-002`).
+5a. **Canonical threshold predicates compare exact decimals** (`ALK-DECIMAL-THRESHOLD-001`,
+   owner decision 18). Where both operands are exact decimals — a stored or normalized
+   decimal measurement value, a difference of such values, and a frozen decimal canon
+   constant — the comparison is performed on the exact decimal values, at the entered or
+   normalized precision, with **no** pre-rounding and **no** epsilon. A scaled-integer or
+   decimal representation is required for these operands; binary64 subtraction must not
+   decide the side. In scope: `ALK-005`'s repeat spread, `ALK-004`'s range edges,
+   `ALK-003A`'s outer-bound and safety-return-completion comparisons. Out of scope and
+   unchanged: every predicate over a derived quantity — `S_observed`, `sigma_resid`,
+   `sigma_point`, `sigma_S`, `S_supported`, `C_estimate`, `T_signal`, potency SNR and the
+   caps computed from them — which remain binary64 under items 3 and 6.
 6. Same ledger + same configuration versions + same `asOf` + same engine/canon version
    ⇒ byte-identical `EngineResult`.
 
 Floating-point tolerance for fixture comparison: absolute `1e-9` on dKH and mL
 quantities, `1e-12` on dimensionless ratios, exact equality on enums, reason codes and
-counts. Actuator commands compare exactly after rounding.
+counts. Recommendations compare exactly after rounding. These tolerances govern **fixture
+comparison** only; the canonical threshold predicates of item 5a are exact-decimal
+comparisons at runtime and carry no tolerance at all.
 
 ---
 
@@ -337,7 +379,7 @@ independently testable against the fixture corpus.
 
 ```text
  1  time + validation + measurement model            fixtures: VAL-*, TIME-*
- 2  clustering                                       fixtures: CLU-*
+ 2  testing episodes + clustering                     fixtures: CLU-*, AD-EPI-*, AD-VAL-002
  3  event ledger + configuration versioning          fixtures: CFG-*
  4  segmentation + normalization                     fixtures: SEG-*, WC-*, COR-*
  5  trend + uncertainty + support                    fixtures: TRD-*, WG-ALK-001..004, 062
@@ -375,7 +417,11 @@ Alk V2 is conformant only when all of the following hold. Compiling is not confo
    fixture;
 8. every open issue in `ALK-V2-OPEN-ISSUES.md` is either closed by an owner decision or
    has its dependent output explicitly emitting `NOT_RUN` / `REFUSE` with the stated
-   reason code — never a silently chosen default.
+   reason code — never a silently chosen default;
+9. no reason code listed under "Retired by `ALK_V2_FREEZE_5`" is emitted (`INV-I7`);
+10. every `ALK_V2_FREEZE_5` decision has a passing positive fixture and a passing
+    negative-control assertion (`INV-I8`).
 
 Condition 8 is the important one. **An unclosed open issue is implemented as a refusal,
-not as a guess.**
+not as a guess.** Conditions 9 and 10 are its converse: **a closed open issue is
+implemented as the decided behaviour, and a refusal in its place is equally a failure.**

@@ -384,7 +384,8 @@ As of this writing:
 | Identifier | Status |
 |---|---|
 | `SHARED_V2_FREEZE_2` | **CURRENT** — shared architecture |
-| `ALK_V2_FREEZE_4` | **CURRENT** — alkalinity behaviour |
+| `ALK_V2_FREEZE_5` | **CURRENT** — alkalinity behaviour |
+| `ALK_V2_FREEZE_4` | **HISTORICAL** — superseded by `ALK_V2_FREEZE_5` |
 | `SHARED_V2_FREEZE_1` | **HISTORICAL** — superseded by `SHARED_V2_FREEZE_2` |
 | `ALK_V2_FREEZE_3` | **HISTORICAL** — superseded by `ALK_V2_FREEZE_4` |
 

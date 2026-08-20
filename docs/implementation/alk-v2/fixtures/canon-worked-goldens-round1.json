@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-canon-worked-goldens-round1",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "canonSection": "PART III - WORKED NUMERICAL GOLDEN SUITE - ROUND 1",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [
@@ -84,7 +84,7 @@
       },
       "expectedReasonCodes": ["MAINTENANCE_INCREASE_RECOMMENDED"],
       "forbidden": { "action": "HOLD_CURRENT_DOSE", "note": "No second must-be-visible-in-48h detectability gate may exist." },
-      "openIssues": ["OI-INDEPENDENCE-001 not triggered: all spacings are 48 h"]
+      "openIssues": ["OI-INDEPENDENCE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-01); not triggered here, all spacings are 48 h"]
     },
     {
       "fixtureId": "WG-ALK-004",
@@ -122,10 +122,10 @@
       "rulesExercised": ["ALK-ROUNDING-001"],
       "input": {
         "cases": [
-          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 10.25, "actuatorIncrementMlPerDay": 0.10,
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 10.25, "recommendationPrecisionMlPerDay": 0.10,
             "adjacent": [10.2, 10.3], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.2, 1.3],
             "expectedRecommendedDoseMlPerDay": 10.2 },
-          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 7.75, "actuatorIncrementMlPerDay": 0.10,
+          { "currentDoseMlPerDay": 9.0, "continuousFeasibleDoseMlPerDay": 7.75, "recommendationPrecisionMlPerDay": 0.10,
             "adjacent": [7.7, 7.8], "distanceToContinuous": [0.05, 0.05], "distanceToCurrent": [1.3, 1.2],
             "expectedRecommendedDoseMlPerDay": 7.8 }
         ]
@@ -264,13 +264,13 @@
       "fixtureId": "WG-ALK-011",
       "title": "Known material water change is normalized",
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-011", "AUDIT-015"] },
-      "rulesExercised": ["ALK-033"],
-      "input": { "tankAlkBeforeDkh": 8.40, "replacementAlkalinityDkh": 9.40, "changedFraction": 0.10 },
-      "expectedIntermediateEvidence": { "expectedStepDkh": 0.10, "materialityFloorDkh": 0.10, "materialityClass": "MATERIAL_KNOWN" },
+      "rulesExercised": ["ALK-033", "ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001"],
+      "input": { "tankAlkBeforeDkh": 8.40, "replacementAlkalinityDkh": 9.40, "changedFraction": 0.10, "replacementAlkalinityConfidence": "MEASURED_SAME_BATCH" },
+      "expectedIntermediateEvidence": { "expectedStepDkh": 0.10, "materialityFloorDkh": 0.10, "materialityClass": "MATERIAL_KNOWN", "requiredConfidence": "MEASURED_SAME_BATCH", "normalizationPermitted": true },
       "expectedAction": { "normalizationDkh": -0.10, "appliedTo": "subsequent analytical points", "rawMeasurementsPreserved": true, "eventPreserved": true, "segmentBreak": false },
       "expectedReasonCodes": ["SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED"],
-      "forbidden": { "note": "The +0.10 dKH external input must not be treated as biological change." },
-      "openIssues": ["OI-WATERCHANGE-001 - this fixture does not state the replacement confidence tier; it is executable only under MEASURED_SAME_BATCH"]
+      "forbidden": { "note": "The +0.10 dKH external input must not be treated as biological change. Normalizing without a MEASURED_SAME_BATCH tier is separately forbidden.", "reasonCodes": ["SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE"] },
+      "openIssues": ["OI-WATERCHANGE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-10); executable because the tier is MEASURED_SAME_BATCH. AD-SEG-006 is the same arithmetic at MANUFACTURER_NOMINAL and breaks the segment instead"]
     },
     {
       "fixtureId": "WG-ALK-012",
@@ -292,9 +292,9 @@
       "fixtureId": "WG-ALK-013",
       "title": "Negative consumption does not create a dose reduction",
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-013", "AUDIT-019", "ALK-G028"] },
-      "rulesExercised": ["ALK-NEGATIVE-CONSUMPTION-001", "ALK-CONSUMPTION-ESTIMATE-001"],
-      "input": { "potencyTimesDoseDkhPerDay": 0.60, "observedSlopeDkhPerDay": 0.80 },
-      "expectedIntermediateEvidence": { "consumptionDkhPerDay": -0.20 },
+      "rulesExercised": ["ALK-NEGATIVE-CONSUMPTION-001", "ALK-CONSUMPTION-ESTIMATE-001", "ALK-NEGATIVE-MATERIALITY-001"],
+      "input": { "potencyTimesDoseDkhPerDay": 0.60, "observedSlopeDkhPerDay": 0.80, "independentClusters": 3, "spanDays": 4.0, "sigmaSDkhPerDay": 0.035355339059 },
+      "expectedIntermediateEvidence": { "consumptionDkhPerDay": -0.20, "materialityMarginDkhPerDay": 0.045254833996, "cPlusKSigma": -0.154745166004, "materiallyNegative": true },
       "expectedAction": {
         "consumptionClassification": "NON_PHYSICAL_OR_UNEXPLAINED_GAIN",
         "maintenanceRecommendation": "HOLD_CURRENT_DOSE",
@@ -303,27 +303,31 @@
       },
       "expectedReasonCodes": ["CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN", "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE"],
       "forbidden": { "note": "No protective dose reduction may be calculated from -0.20. The value must not be clamped to zero and then treated as a real maintenance target." },
-      "openIssues": ["OI-NEGCONS-001 - this magnitude is material under every defensible reading, so the fixture does not discriminate the boundary"]
+      "openIssues": ["OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03); this magnitude is material under the frozen boundary. AD-CON-002 discriminates the boundary itself"]
     },
     {
       "fixtureId": "WG-ALK-014",
       "title": "Stable below range offers a return plan without changing maintenance",
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-014"] },
-      "rulesExercised": ["CORE-STABILISE-001", "ALK-024", "ALK-054", "ALK-055"],
-      "input": { "targetRange": [8.2, 8.8], "latestAlkDkh": 7.80, "observedSlopeDkhPerDay": "approximately 0", "supportedSlopeDkhPerDay": 0, "currentDoseMlPerDay": 9.0 },
+      "rulesExercised": ["CORE-STABILISE-001", "ALK-024", "ALK-054", "ALK-055", "ALK-RETURN-ELIGIBLE-TRAJECTORY-001"],
+      "input": { "targetRange": [8.2, 8.8], "latestAlkDkh": 7.80, "observedSlopeDkhPerDay": "approximately 0, non-zero", "supportedSlopeDkhPerDay": 0, "movementEvidence": "UNCERTAINTY_LIMITED", "currentDoseMlPerDay": 9.0 },
       "expectedAction": {
         "automaticMaintenance": "HOLD_CURRENT_DOSE",
+        "returnPlanEligibleTrajectory": true,
+        "analyticalTrajectory": "UNCERTAINTY_LIMITED",
+        "isSTABLEUnderALK_STABLE_001": false,
         "note": "No automatic increase merely because 7.80 is below range.",
         "optionalReturnPlan": {
           "aimPointLevelDkh": 8.50,
           "pace": "STEADY", "plannedSlopeDkhPerDay": 0.25,
-          "temporaryDoseMlPerDay": 12.6075042, "roundedTemporaryDoseMlPerDay": 12.6,
+          "temporaryDoseMlPerDay": 12.607503608, "roundedTemporaryDoseMlPerDay": 12.6,
           "levelDistanceDkh": 0.70, "idealizedDurationDays": 2.8,
-          "optIn": true
+          "offer": "AVAILABLE", "optIn": true
         }
       },
-      "expectedReasonCodes": ["MAINTENANCE_HOLD_OUT_OF_RANGE_STABLE"],
-      "openIssues": ["OI-RETURNOFFER-001 - 'approximately 0' observed with zero supported slope is UNCERTAINTY_LIMITED under ALK-STABLE-001, so the offer branch is currently NOT_RUN pending an owner decision"]
+      "expectedReasonCodes": ["MAINTENANCE_HOLD_OUT_OF_RANGE_STABLE", "RETURN_OFFER_AVAILABLE"],
+      "forbidden": { "reasonCodes": ["RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED", "TRAJECTORY_STABLE"], "note": "The offer must not be withheld, and the tank must not be relabelled STABLE to justify it. ALK-STABLE-001 is unchanged." },
+      "openIssues": ["OI-RETURNOFFER-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-04); eligibility is ALK-RETURN-ELIGIBLE-TRAJECTORY-001, not ALK-STABLE-001, so the offer branch runs"]
     },
     {
       "fixtureId": "WG-ALK-015",

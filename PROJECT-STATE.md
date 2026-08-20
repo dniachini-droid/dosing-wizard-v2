@@ -30,7 +30,7 @@ Phase 0 — Preserve and found V2
 - `PRODUCT-VISION.md` exists.
 - `ROADMAP.md` exists.
 - Shared V2 architecture is frozen.
-- Alk V2 canon is frozen.
+- Alk V2 canon is frozen, and reissued as `ALK_V2_FREEZE_5`.
 - V1 salvage reconnaissance is complete.
 - The V1 agent/routine salvage audit is complete and recorded in
   `docs/process/V1-AGENT-SALVAGE-AUDIT.md`.
@@ -39,6 +39,23 @@ Phase 0 — Preserve and found V2
 - An implementation-specification package for the Alk V2 domain exists under
   `docs/implementation/alk-v2/`. It is specification only: no application runtime, no
   framework, no database, no dependencies.
+- `ALK_V2_FREEZE_5` closed every blocking item in that package's open-issue register.
+  Twenty-nine owner decisions have been written into the canon: F5-01 … F5-12, the three
+  amendments F5-13 … F5-15 that independent review of the first encoding made necessary,
+  then decisions 16 … 19, 20 … 22, 23 … 26 and finally 27 … 29 — each round resolving the
+  findings that independent review of the previous encoding escalated, and each
+  **superseding the earlier Freeze-5 wording wherever they conflict**. Superseded wording is
+  preserved as marked history rather than deleted, and each round's supersession table names
+  what it displaced. New stable rule IDs exist and several rules are amended; the package
+  now inventories **283** normative rules.
+  Decisions 27 … 29 are the final canon pass before implementation: the application does not
+  record, ask for, infer or store the test method behind a reading (so method compatibility
+  and the contested-episode state are retired outright); measurements of one parameter within
+  30 minutes of one another are one observation carrying a `combinedMeasurementCount`; and
+  `advisoryConfidenceWarning` is present or absent, with no third value.
+  **No Alk output is blocked by an open issue.**
+  Eleven non-blocking canon defects remain open and are listed in the Freeze-5
+  declaration's *Deliberately left open* section.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 
@@ -49,7 +66,7 @@ Phase 0 — Preserve and found V2
 The following are authoritative and must not be silently altered:
 
 - `SHARED_V2_FREEZE_2`
-- `ALK_V2_FREEZE_4`
+- `ALK_V2_FREEZE_5`
 - `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` (copied into this repository from the
   read-only V1 reference repository, byte-for-byte)
 
@@ -119,21 +136,33 @@ repository and have been copied into `docs/canon/` with verified SHA-256 equalit
 Recorded rather than silently resolved. Neither the canon nor the handoff has been
 edited; both are byte-for-byte copies.
 
-0. **The frozen canon contains 24 recorded defects.**
-   The Alk implementation package inventories all 261 normative canon rules and classifies
-   every ambiguity found. Twenty-four are genuine canon defects — eleven of them blocking
-   a dependent output. They are recorded in
-   `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md`, not repaired. Repair belongs to a
-   governed Alk Freeze 5 (or a shared freeze where the defect is shared), per the Freeze-4
-   reopening rule.
+0. **The canon's recorded defects — twenty-one closed, eleven still open.**
+   The Alk implementation package inventories all normative canon rules (283 after
+   Freeze 5 and its later decisions) and classifies every ambiguity found. Twenty-four
+   were genuine canon defects, eleven of them blocking a dependent output. Review of each
+   encoding round opened further items; the owner has decided every one that blocked an
+   output (F5-13 … F5-15, then decisions 16 … 29; register sections A2 … A7). Section A8
+   records the findings from review of the decisions 27 … 29 encoding, which the owner
+   directed to be **recorded and left open** rather than fixed in that pass. None of them
+   withholds an output.
+
+   `ALK_V2_FREEZE_5` closed thirteen of the original register — every blocking one, plus
+   `OI-RAPIDBASIS-001` and `OI-CONFIDENCE-001` — and the eight review-opened items, through the governed
+   reissue path the Freeze-4 reopening rule requires. Eleven non-blocking defects remain, recorded in
+   `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md` and not repaired: `OI-STABLE-001`,
+   `OI-DAY4-001`, `OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
+   `OI-POTENCYSNAP-001`, `OI-WG024-001`, `OI-ANOMCLUSTER-001`, `OI-OVERSHOOT-001`,
+   `OI-PIPELINE-001`, `OI-PLANTARGETEDIT-001`. Repair belongs to a governed Alk Freeze 6
+   (or a shared freeze where the defect is shared), per the Freeze-5 reopening rule.
 
 1. **Handoff freeze identifiers are stale relative to canon.**
    `docs/canon/CLAUDE-CODE-ALK-V2-IMPLEMENTATION-HANDOFF.md` states current freezes
    `SHARED_V2_FREEZE_1` / `ALK_V2_FREEZE_3`. The canon document supersedes both:
    it declares `SHARED_V2_FREEZE_1` historical ("Current authority is
-   `SHARED_V2_FREEZE_2`") and `ALK_V2_FREEZE_3` as "superseded by `ALK_V2_FREEZE_4`".
-   The canon is the sole behavioural authority, so the operative freezes are
-   `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_4`. The handoff's process guidance remains
+   `SHARED_V2_FREEZE_2`") and `ALK_V2_FREEZE_3` as superseded, ultimately by
+   `ALK_V2_FREEZE_5`. The canon is the sole behavioural authority, so the operative
+   freezes are `SHARED_V2_FREEZE_2` and `ALK_V2_FREEZE_5`. The gap is now two Alk
+   reissues wide, which makes the handoff's identifiers more misleading, not less. The handoff's process guidance remains
    usable; only its freeze identifiers are out of date. Resolution belongs to a governed
    handoff reissue, not to an edit made here.
 

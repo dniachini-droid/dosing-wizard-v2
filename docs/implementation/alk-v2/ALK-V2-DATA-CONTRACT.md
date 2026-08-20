@@ -1,6 +1,6 @@
 # ALK V2 — DOMAIN DATA CONTRACT
 
-**Authority:** canon under `SHARED_V2_FREEZE_2` / `ALK_V2_FREEZE_4`.
+**Authority:** canon under `SHARED_V2_FREEZE_2` / `ALK_V2_FREEZE_5`.
 **Form:** implementation-neutral. No language, framework, ORM or database is assumed.
 
 ---
@@ -58,7 +58,7 @@ and a documented meaning is forbidden.
 
 All stored numerics are full precision. Display rounding never enters calculation
 (Part II §2.3, `ALK-002`). Any rounded quantity is a separate `DERIVED` field whose name
-says so (`recommendedDoseMlPerDay` is the rounded actuator command;
+says so (`recommendedDoseMlPerDay` is the rounded recommendation;
 `continuousActionCandidateMlPerDay` is its unrounded input).
 
 ---
@@ -136,11 +136,10 @@ One raw test result. Never a cluster, never a derived value.
 | `rawValueDkh` | dKH | `REQ` `IMMUT` | The value as entered. Never overwritten by a rounded, median, fitted or normalized value (Part II §3.1). |
 | `canonicalUnit` | — | `REQ` | `dKH` for Alk. Entry in meq/L converts at `1 meq/L = 2.8 dKH` and stores both the original entry and the canonical value. |
 | `enteredValue` / `enteredUnit` | — | `OPT` | Preserved exactly as typed, for audit. |
-| `methodId` | — | `OPT` | Test kit / method identity. |
 | `userEnteredPrecision` | — | `OPT` | Metadata only. **Never** automatically becomes uncertainty (Part II §3 comment). |
 | `baseUncertaintyDkh` | dKH | `REQ` | `SIGMA_ALK_BASE = 0.10` for Alk (`ALK-004`). Working analytical floor, not a kit accuracy claim, not a position tolerance. |
 | `source` | — | `REQ` | `MANUAL` \| `IMPORTED` \| `DEVICE`. |
-| `repeatGroupId` | — | `OPT` | Explicit repeat/confirmation relationship. Explicit grouping wins over automatic (Part II §5.2). |
+| `repeatGroupId` | — | `OPT` | Explicit repeat/confirmation relationship. **Inoperative for alkalinity under owner decision 28**: proximity in time is the whole membership test, so an explicit relationship neither creates an episode nor overrides the 30-minute window (`ALK-TESTING-EPISODE-001`). The field is retained because Part II §5.2 is shared canon and is not edited here; that wording is recorded open as `OI-PII52EXPLICIT-001`. Nothing in the Alk engine may read it. |
 | `prePostEventRelation` | — | `OPT` | `PRE_EVENT` \| `POST_EVENT`, relative to a named event. Absent means unknown, not "after". |
 | `status` | — | `REQ` | `ReadingQuality`. |
 | `invalidReason` | — | `REQ*` | Required when `status = INVALID`. |
@@ -171,13 +170,15 @@ would destroy exactly the readings the safety layer exists for.
 | `INVALID` | Known not to represent a usable measurement. Retained, excluded from analysis. | yes | no |
 | `SUPERSEDED` | Explicitly replaced while retained for audit. A repeat that merely differs does **not** supersede — use a cluster. | yes | no |
 
-`SUSPECT` cannot currently be derived automatically for alkalinity — see
-`OI-SUSPECT-001`. It is set from explicit user marking, a known device/test fault event,
-or an internally inconsistent cluster.
+`SUSPECT` is never derived from an automatic statistical test for alkalinity: that
+detection is canonically `NOT_RUN` (`ALK-SUSPECT-DETECTION-001`, F5-02). It is set from
+explicit user marking, a known device/test fault event, or an internally inconsistent
+cluster.
 
 ### `MeasurementCluster` `DERIVED`
 
-One testing episode. Prevents repeat testing from satisfying evidence counts
+The pooled set of measurements **inside** one testing episode — not the episode itself, which
+is the `TestingEpisode` record below. Prevents repeat testing from satisfying evidence counts
 (Part II §5, §6; `ALK-005`).
 
 | Field | Unit | Notes |
@@ -189,13 +190,47 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `spreadDkh` | dKH | `max − min` over members. |
 | `madDkh` | dKH | `median(|x_i − median(x)|)`. |
 | `sigmaClusterDkh` | dKH | `max(SIGMA_ALK_BASE, 1.4826 · madDkh)`. **Never** divided by `√n` (Part II §5.6). |
-| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`). |
-| `independent` | — | `true` when selected as an independent observation — see `OI-INDEPENDENCE-001`. |
+| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`), compared as **exact decimals** (`ALK-DECIMAL-THRESHOLD-001`): an exact spread of `0.20` is `OK`. Applies to every repeat member, with **no method qualifier** (`ALK-REPEAT-SPREAD-DOMAIN-001`, owner decision 27). |
+| `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
+| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling measurements inside one testing episode (`ALK-TESTING-EPISODE-001`). The source clusters are retained for audit; the resolved episode value is what selection sees. |
+| `episodeId` | — | The `TestingEpisode` this cluster belongs to (`ALK-TESTING-EPISODE-001`). A cluster is the pooled set **inside** an episode; it is not the episode. |
 
-Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
-member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention
-between them. The window is an internal data-model constant, **not** a Setup question and
-not a chemistry threshold.
+### `TestingEpisode`
+
+One owner constructs the episode and every Alk consumer reads its output
+(`ALK-EPISODE-SINGLE-OUTPUT-001`). It is a **distinct record**, not a field on
+`MeasurementCluster`: the episode owns the count of what was combined and the cluster does
+not.
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `episodeId` | — | Identity. Content-derived like every other id (`OI-DETERMINISM-001`). |
+| `memberMeasurementIds[]` | — | Every measurement in the episode, `INVALID` members included and marked. Nothing is deleted, hidden or down-weighted. |
+| `episodeStatus` | — | `RESOLVED` (`ALK-EPISODE-RESOLUTION-001`). The only value: every episode holding at least one valid measurement resolves. |
+| `combinedMeasurementCount` | count | How many measurements were combined into this observation (`ALK-TESTING-EPISODE-001`, owner decision 28). `1` for a lone measurement. A **structured field** the interface renders plainly — "3 tests combined" — never engine-authored prose. |
+| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads. |
+| `episodeAt` | — | The one canonical episode time, under Part II §5.5. |
+| `clusterIds[]` | — | The pooled set inside the episode. Exactly one. |
+| `episodeSpreadDkh` | dKH | Spread of the pooled readings, under Part II §5.6. |
+| `episodeClusterStatus` | — | `OK` \| `ANOMALOUS`, under `ALK-005`, over the pooled readings with **no method qualifier**. An anomalous episode is an ordinary anomalous cluster and takes Part II §48's path. |
+
+**Superseded by owner decisions 27 and 28**, preserved here rather than deleted: this record
+formerly carried `episodeMethods[]` — *"the distinct methods present after `INVALID`
+exclusion. More than one, with no canon compatibility classification, is what makes an
+episode contested"* — and `episodeStatus` took the value `CONTESTED_METHODS`, on which
+`episodeValueDkh` and `episodeAt` were `NOT_RUN`. `Reading.methodId` is removed with them:
+the application does not record, ask for, infer or store what produced a measurement.
+
+`obs.episode` (`ALK-V2-MODULE-DESIGN.md`) is the single producer. `obs.cluster` builds the
+pooled set **inside** an episode and has no independent grouping authority; the two are one
+inference with one owner (`MASTER RULE 1`).
+
+Automatic grouping requires: same parameter; member `measuredAt` within
+`REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention between them. Part II §5.3 also
+lists "same or compatible method"; that condition is **inoperative for alkalinity** under
+owner decision 27, and the shared wording is recorded as an open item rather than edited
+here. The window is an internal data-model constant, **not** a Setup question and not a
+chemistry threshold.
 
 ---
 
@@ -216,11 +251,11 @@ new record; history is never overwritten (Part I §9.2).
 | `effectiveAtEarliest` / `Latest` | `Instant` | `REQ*` | Required when `effectiveAtConfidence = UNCERTAIN`. Bounds the unknown boundary; a clean segment resumes only after `effectiveAtLatest`. |
 | `recordedAt` | `Instant` | `REQ` | **Never** equated with `effectiveAt` for a late external entry (`M-5`). |
 | `source` | — | `REQ` | `IN_APP` \| `EXTERNAL_USER_LOG` \| `IMPORTED_TELEMETRY`. |
-| `origin` | — | `REQ` | `MANUAL` \| `RECOMMENDATION_ACCEPTED`. With `RECOMMENDATION_ACCEPTED`, also store `recommendedDoseMlPerDay` — the recommended and actual values are separate fields (Part II §38). |
+| `origin` | — | `REQ` | `MANUAL` \| `RECOMMENDATION_ACCEPTED`. With `RECOMMENDATION_ACCEPTED`, also store `recommendedDoseMlPerDay` — the recommended and actual values are separate fields (Part II §38). "Accepted" means the **keeper** acted on the recommendation and told the app so; the app changes nothing itself (`ALK-RECOMMEND-ONLY-001`). |
 | `solutionContextId` | — | `REQ` `UNK-OK` | `M-2`. |
 | `deliveryContextId` | — | `REQ` `UNK-OK` | `M-3`. |
 | `deliverySchedule` | — | `OPT` | e.g. hourly, N doses/day. Needed for exposure and mixed-interval integration (`ALK-035`). |
-| `actuatorIncrementMlPerDay` | mL/day | `REQ` `UNK-OK` | `M-1`. Absent ⇒ `REFUSE` final maintenance rate; **no hidden 0.1 default**. |
+| `recommendationPrecisionMlPerDay` | mL/day | `OPT` | `M-1`. A **display convention**, not a device capability (`ALK-RECOMMEND-ONLY-001`, owner decision 23). Configured and > 0 ⇒ round to it. Configured and ≤ 0 ⇒ `REFUSE`, `VALIDATION_RECOMMENDATION_PRECISION_INVALID`. **Absent ⇒ state the full-precision recommendation; nothing is withheld and nothing is `NOT_RUN`.** **No hidden 0.1 default** in any state. |
 
 ### `EffectiveDoseInterval` `DERIVED`
 
@@ -277,7 +312,7 @@ Equipment and delivery events that break or confound analysis (Part I §9.6, Par
 | `changedFraction` | 0..1 | `REQ` | `f` in `ΔA_WC = f (A_replacement − A_tank)`. |
 | `volumeL` | L | `OPT` | |
 | `replacementAlkalinityDkh` | dKH | `OPT` | Absent ⇒ unknown branch (`M-4`). |
-| `replacementAlkalinityConfidence` | — | `REQ*` | Required when the value is present: `MEASURED_SAME_BATCH` \| `USER_CONFIGURED_SALT_PROFILE` \| `MANUFACTURER_NOMINAL`. See `OI-WATERCHANGE-001`. |
+| `replacementAlkalinityConfidence` | — | `REQ*` | Required when the value is present: `MEASURED_SAME_BATCH` \| `USER_CONFIGURED_SALT_PROFILE` \| `MANUFACTURER_NOMINAL`. **Only `MEASURED_SAME_BATCH` permits normalization** (`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001`); every other value takes the unknown branch. |
 | `materialityClass` | — | `DERIVED` | `NEGLIGIBLE` \| `MATERIAL_KNOWN` \| `MATERIAL_UNKNOWN` \| `NOT_APPLICABLE`. |
 | `expectedStepDkh` | dKH | `DERIVED` | `f (A_replacement − A_tank)`, only in the known branch. |
 
@@ -321,7 +356,7 @@ demand was constant.
 | `netVolumeL` | L | `REQ` `UNK-OK` | |
 | `targetRangeMinDkh` / `MaxDkh` | dKH | `REQ` | Validation: `min < max`; both within `[outerMin, outerMax]` (`ALK-003`). |
 | `outerMinDkh` / `outerMaxDkh` | dKH | `REQ` | Defaults 7.0 / 11.0 (`ALK-OUTER-BOUNDS-001`). |
-| `actuatorIncrementMlPerDay` | mL/day | `REQ` `UNK-OK` | |
+| `recommendationPrecisionMlPerDay` | mL/day | `REQ` `UNK-OK` | |
 | `enabledParameters[]` | — | `REQ` | Alk-only runtime: Alk controller active; Ca/Mg measurement-only. |
 
 There is **no** stored ideal-alkalinity point. `aimPointLevelDkh` is always
@@ -445,7 +480,7 @@ trend segment yet still disqualify potency learning (`AUDIT-018`, `WG-ALK-022`).
 | `supportSubtractionDkhPerDay` | dKH/day | `1.28 · σ_S`. |
 | `limitedByUncertainty` | — | `true` when `S_supported = 0` and `S_observed ≠ 0`. |
 
-**Hard rule.** `supportedSlopeDkhPerDay` is consumed by the maintenance actuator sizing
+**Hard rule.** `supportedSlopeDkhPerDay` is consumed by the maintenance recommendation sizing
 and by nothing else. It may not appear in a consumption estimate
 (`ALK-CONSUMPTION-ESTIMATE-001`), in a boundary forecast (`ALK-FORECAST-SLOPE-001`), in
 a position statement, or in a response-classification benchmark.
@@ -481,18 +516,29 @@ not widen the range: 8.19 against a lower edge of 8.20 is below range (`ALK-004`
 
 | Field | Unit | Notes |
 |---|---|---|
-| `consumptionDkhPerDay` | dKH/day | `C = P_selected · D − S_observed`. **Observed** slope, never supported (`ALK-CONSUMPTION-ESTIMATE-001`). |
-| `doseBasisMlPerDay` | mL/day | `D` — `D_current` for a constant-dose segment, `D_eff` for an integrable mixed interval. |
+| `consumptionDkhPerDay` | dKH/day | `C = P_selected · D_history − S_observed`. **Observed** slope, never supported (`ALK-CONSUMPTION-ESTIMATE-001`). `D_history`, never `D_current` (`ALK-DELIVERY-RATE-BASIS-001`, owner decision 20). |
+| `doseHistoryMeanMlPerDay` | mL/day | `D_history` — the **time-weighted mean delivery rate actually delivered across the analysed interval**: `D_eff` for an integrable mixed interval, and the constant rate for a constant-dose segment, where it equals `D_current` numerically without being the same quantity. **Renamed from `doseBasisMlPerDay` by owner decision 20**, whose old name did not say which of the two delivery rates it carried. `NOT_RUN` where the interval is not integrable ⇒ consumption `UNRESOLVED`. |
 | `deliveryBasis` | — | From `EffectiveDoseInterval`. |
 | `selectedPotencyDkhPerMl` | dKH/mL | The `P` actually used. |
 | `sourceSegmentId` | — | |
-| `physicality` | — | `INTERPRETABLE` \| `UNCERTAIN_NEAR_ZERO` \| `NON_PHYSICAL_OR_UNEXPLAINED_GAIN` \| `UNRESOLVED`. |
+| `physicality` | — | `INTERPRETABLE` \| `UNCERTAIN_NON_RESOLVABLE` \| `NON_PHYSICAL_OR_UNEXPLAINED_GAIN`. |
+| `materialityMarginDkhPerDay` | dKH/day | `DERIVED`. `ALK_SLOPE_SUPPORT_K · sigma_S`; the boundary is `C_estimate + margin < 0`. |
 | `eligibility` | — | `RUN` \| `NOT_RUN` + reason. |
 | `warnings[]` | — | |
 
-`physicality = UNRESOLVED` is the state required by `OI-NEGCONS-001` while the
-slight/material boundary is undefined. A negative arithmetic result is **never** clamped
-to zero and then treated as a real zero-consumption target (`ALK-031`).
+`physicality` is fully determined by `ALK-NEGATIVE-MATERIALITY-001`:
+
+```text
+C_estimate >= 0                                    -> INTERPRETABLE
+C_estimate <  0 and C_estimate + 1.28*sigma_S <  0 -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN
+C_estimate <  0 and C_estimate + 1.28*sigma_S >= 0 -> UNCERTAIN_NON_RESOLVABLE
+```
+
+`UNRESOLVED` and `UNCERTAIN_NEAR_ZERO` were the pre-Freeze-5 values and are **retired**;
+`UNCERTAIN_NON_RESOLVABLE` is `ALK-031`'s own wording for the non-material branch. Both
+negative branches HOLD maintenance and both are uninterpretable for the high-breach
+fail-safe. A negative arithmetic result is **never** clamped to zero and then treated as a
+real zero-consumption target (`ALK-031`).
 
 ### `DoseRecommendation` `DERIVED` — Layer 4
 
@@ -502,8 +548,8 @@ Seven distinct quantities that `ALK-VARIABLE-SEMANTICS-001` forbids collapsing:
 |---|---|---|
 | `currentDoseMlPerDay` | mL/day | What is running now. |
 | `maintenanceEstimateMlPerDay` | mL/day | `C/P` — the dose that would give zero slope if the observed estimate were exact. Audit/explanation. |
-| `continuousActionCandidateMlPerDay` | mL/day | `D_current − S_supported/P`, before physical and actuator limits. |
-| `recommendedDoseMlPerDay` | mL/day | The final feasible, rounded, implementable command. |
+| `continuousActionCandidateMlPerDay` | mL/day | `D_current − S_supported/P`, before physical limits and rounding. |
+| `recommendedDoseMlPerDay` | mL/day | The final feasible, rounded recommendation for a human being — never a command, because there is no execution path to the tank (`ALK-RECOMMEND-ONLY-001`, owner decision 23). `WITHHELD` where no feasible recommendation exists — a first-class value, never `null` and never omitted. Also `WITHHELD`, never `NOT_RUN` and never `0`, where `D_current` is unknown (owner decision 20). **It is NOT withheld at an advisory boundary**: under owner decision 24 the ordinary rules produce the ordinary figure at and beyond `AdvisoryCeiling` / `AdvisoryFloor`, and the boundary only attaches `advisoryConfidenceWarning`. |
 | `deltaDoseMlPerDay` | mL/day | `recommended − current`. |
 | `deltaEffectDkhPerDay` | dKH/day | `P · deltaDose` — the physical effect of the final command. |
 | `predictedPostSlopeDkhPerDay` | dKH/day | `S_observed + P · deltaDose`. **Normally non-zero.** |
@@ -517,7 +563,7 @@ Plus:
 | `doseStepRegime` | `ORDINARY` \| `BASELINE_ESTABLISHMENT`. |
 | `capApplied` | `NONE` \| `ORDINARY_25` \| `EXCEPTIONAL_50`. |
 | `bracketStatus` | `NOT_RUN` \| `CONSISTENT` \| `CONFLICT` — advisory only (`OI-BRACKETEFFECT-001`). |
-| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY`. |
+| `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds a recommendation rather than affirming the current dose. |
 | `reasonCodes[]` | |
 
 `RecommendationAction` closed vocabulary: `NO_CHANGE` \| `HOLD_CURRENT_DOSE` \|
@@ -650,10 +696,17 @@ Opt-in deliberate level movement. Never silently embedded in maintenance
 | `achievabilityNote` | — | Set when a downward pace exceeds `−C` at zero dose (`WG-ALK-035`). |
 
 `ReturnPlanPhase`: `OFFERED` \| `ACTIVE` \| `ASSESSMENT_DUE` \| `CONFIRMATION_PENDING` \|
-`COMPLETE` \| `EXPIRED_OVERRUN` \| `INTERRUPTED` \| `SUSPENDED_PENDING_SAFETY`
+`COMPLETE` \| `EXPIRED_OVERRUN` \| `INTERRUPTED` \| `TERMINATED_BY_SAFETY_RETURN`
 
-`SUSPENDED_PENDING_SAFETY` is **not a canon value**; it exists only under
-`OI-RETURNDURINGSAFETY-001` and requires owner confirmation.
+`TERMINATED_BY_SAFETY_RETURN` is a canon value (`ALK-RETURN-TERMINATED-BY-SAFETY-001`). It
+is **terminal**: a plan in this phase never returns to `ACTIVE`, and a new plan needs fresh
+`returnPlanEligibleTrajectory` eligibility plus a fresh opt-in. The proposed
+`SUSPENDED_PENDING_SAFETY` value was **not** adopted and must not appear.
+
+`returnPlanEligibleTrajectory` `DERIVED` `boolean` —
+`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`: ordinary minimum evidence satisfied **and**
+`S_supported = 0`. It is not `ALK-STABLE-001`'s `STABLE`, and the two must not share a
+field.
 
 The temporary movement component stops on the **first** measured reach or pass of the aim
 point. Confirmation is a separate later stage and never justifies keeping the temporary
@@ -668,9 +721,15 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `bSafetyDkh` | dKH | `0.20`, fixed. **Never** recomputed from the current kit, residual scatter or `sigma_point` (`ALK-SAFETY-BUFFER-001` Freeze-2 interpretation). |
 | `desiredMovementDkh` | dKH | `min(A_safe,low − A_now, 0.50)` low; `min(A_now − A_safe,high, 0.50)` high. |
 | `safetyCorrectionVolumeMl` | mL | `ΔA_safety / P_selected`. Low breach only. **A volume.** |
-| `safetyTemporaryDoseMlPerDay` | mL/day | High breach with interpretable consumption. **A rate.** See `OI-SAFETYRATE-001`. |
-| `safetyDoseRecommendationMlPerDay` | mL/day | `0` under `ALK-HIGH-BREACH-UNRESOLVED-001`. |
-| `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE`. |
+| `temporarySafetyRateContinuousMlPerDay` | mL/day | **An auditable intermediate, not an output.** High breach at any level above `outerMax`, with no upper limit (owner decision 24): from consumption where `C_estimate >= 0` (branch A), and from `D_current` where `C_estimate` is negative (branch B) or not computable at all (branch B′, `ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001`). **A rate**, at full precision, and an advisory target rather than something a device executes. `NOT_RUN` where the high-breach precondition refuses because `D_current` is unknown (owner decisions 20 and 25) — and then **not** `0`. **It is NOT `NOT_RUN` at an advisory boundary.** |
+| `temporarySafetyRateRecommendationMlPerDay` | mL/day | **THE output** — the single recommended safety rate (`ALK-RECOMMEND-ONLY-001`, owner decision 23). Produced by `ALK-ROUNDING-001` where a display precision is configured, and stated at full precision where none is. It is `NOT_RUN` in exactly **one** state: the high-breach precondition refused because `D_current` is unknown (owner decisions 20 and 25), and then it is **never `0`**. It is **not** `NOT_RUN` for a missing precision, and **not** `NOT_RUN` at an advisory boundary. The field above is an intermediate beside it, not a second answer: **the two-output split of `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` is retired**. |
+| `safetyDoseRecommendationMlPerDay` | mL/day | **Superseded by owner decision 16.** The high-breach delivered figure is now `temporarySafetyRateContinuousMlPerDay`, sized as `max(0, D_current − R_down / P_selected)` on branches B and B′ (`ALK-HIGH-BREACH-SAFETY-SIZING-001`; the sizing input was renamed from `D_established` by owner decision 20). Zero appears only when that expression floors. |
+| `currentDoseMlPerDay` (safety context) | mL/day | `D_current` — the delivery rate **the doser is configured to be delivering at the time of the recommendation**, and the quantity the high-breach sizing reduces. **Renamed from `establishedDoseMlPerDay` by owner decision 20**; the old name was also used for the interval-mean rate. Unknown ⇒ the safety rate and the recommendation are both `NOT_RUN` and **neither is `0`** (`ALK-DELIVERY-RATE-BASIS-001`). |
+| `advisoryCeilingDkh` | dKH | `outerMax + 1.0`. A boundary derived as an **offset** from the configured bound, not a pinned level (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 21). |
+| `advisoryFloorDkh` | dKH | `outerMin − 1.0`. Same construction, low side. |
+| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED`. **Two states only** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 29): present or absent. `NOT_RUN` is **retired** — where no reading resolves there is nothing to warn about and the field is absent, which is `NONE`, not a third value. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). Does **not** change `outerBoundState`. |
+| `rDownDkh` | dKH | `min(A_now − A_safe,high, 0.50)`. The requested downward effect, rail-bounded. |
+| `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |
 | `interventionLockOwner` | — | `NONE` \| `SAFETY_RETURN` \| `ORDINARY_INTERVENTION`. |
 | `compositeMovementDkhPer24h` | dKH | Signed sum of all simultaneously recommended intentional components; `|·| ≤ 0.50`. |
@@ -691,9 +750,14 @@ RetestDecision {
   earliestUsefulAt    Instant
   recommendedAt       Instant
   latestSafeAt        Instant   OPT
-  reasonCode          RetestReason
+  reasonCode          RetestReason      the selected candidate's code
+  tiedReasonCodes[]   RetestReason[]    every OTHER candidate tying on the selected
+                                        time; reason codes are additive, so a tie is
+                                        recorded rather than broken (ALK-053A)
   candidateTimes[]    { candidateClass, at, included|excluded, reason }
-  candidatesNotRun[]  reason codes for candidates whose Alk policy is unavailable
+  candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
+                      (T_detect, return-plan arrival cadence)
+  clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED | RETEST_SIGNAL_FLOOR_APPLIED
   assumptions[]
 }
 ```
@@ -719,7 +783,7 @@ disposition):
 
 | Capability | Missing behaviour |
 |---|---|
-| `M-1` actuator increment | `REFUSE` final maintenance mL/day. **Exempt:** one-off `SAFETY_RETURN` volume. |
+| `M-1` recommendation precision | `REFUSE` final maintenance mL/day **only where a CONFIGURED value is ≤ 0**. Where none is configured, state the full-precision recommendation and withhold nothing. **No exemption list, because there is no absent-value refusal to be exempt from** (owner decision 23). |
 | `M-2` solution context | Core continues on theoretical potency; potency learner `NOT_RUN`. |
 | `M-3` delivery context | Core continues on confirmed programmed dose; potency learner `NOT_RUN`. |
 | `M-4` replacement-water Alk | `DEGRADE` to the deterministic unknown-WC branch. |
@@ -745,7 +809,7 @@ EngineResult {
   assessmentAsOf            Instant        explicit; never a clock read
   parameter                 ALK
   engineVersion             REQ
-  canonVersion              REQ            "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4"
+  canonVersion              REQ            "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5"
   configVersionId           REQ            resolved at assessmentAsOf
 
   position                  Position
@@ -770,7 +834,10 @@ EngineResult {
   capabilities[]            CapabilityState
   forecast                  { tRangeLowDays, tRangeHighDays,
                               tOuterLowDays, tOuterHighDays }   each NOT_APPLICABLE-able
-  recommendationConfidence  LOW | MODERATE | HIGH | UNSPECIFIED
+  recommendationConfidence  UNSPECIFIED            frozen value; ALK-CONFIDENCE-OUTPUT-001
+  evidenceFacts             { independentClusters, spanDays, sigmaS,
+                              supportRatio?, confounders[], potencyConfidence,
+                              deliveryBasis }         surfaced in place of a label
   reasonCodes[]             ReasonCode
   auditTraceId              REQ
 }

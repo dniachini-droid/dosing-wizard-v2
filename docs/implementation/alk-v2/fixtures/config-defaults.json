@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-config-defaults",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "configurations": {
     "CANON_DEFAULT": {
       "$comment": "The default example configuration of PART III - WORKED NUMERICAL GOLDEN SUITE. Reproduced verbatim.",
@@ -9,7 +9,7 @@
       "sigmaAlkBaseDkh": 0.10,
       "alkSlopeSupportK": 1.28,
       "alkResponseK": 1.28,
-      "actuatorIncrementMlPerDay": 0.10,
+      "recommendationPrecisionMlPerDay": 0.10,
       "ordinaryStepCapFraction": 0.25,
       "exceptionalStepCapFraction": 0.50,
       "alkRateRailDkhPerDay": 0.50,

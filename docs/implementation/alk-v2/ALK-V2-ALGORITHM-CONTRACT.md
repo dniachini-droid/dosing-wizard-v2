@@ -40,7 +40,8 @@ refuses; `WG-ALK-066`.
 
 ## A2 — Ingest validation
 
-**INPUTS** raw entry `{value, unit, measuredAt, parameter, method?}`.
+**INPUTS** raw entry `{value, unit, measuredAt, parameter}`. **No method, kit, device or
+instrument field is accepted, inferred or stored** (owner decision 27).
 
 **PRECONDITIONS** none.
 
@@ -68,7 +69,7 @@ targetRangeMinDkh >= targetRangeMaxDkh          -> REJECT VALIDATION_TARGET_RANG
 targetRange not inside [outerMin, outerMax]     -> REJECT VALIDATION_TARGET_OUTSIDE_OUTER_BOUNDS
 outerMinDkh >= outerMaxDkh                      -> REJECT VALIDATION_OUTER_BOUNDS_INVERTED
 netVolumeL <= 0                                 -> REJECT VALIDATION_NET_VOLUME_INVALID
-actuatorIncrementMlPerDay <= 0                  -> REJECT VALIDATION_ACTUATOR_INCREMENT_INVALID
+recommendationPrecisionMlPerDay <= 0                  -> REJECT VALIDATION_RECOMMENDATION_PRECISION_INVALID
 ```
 
 **OUTPUT** accepted `Reading`, or a rejection with a reason code.
@@ -91,19 +92,28 @@ and delivery events; `asOf`.
 **DECISION TREE**
 
 ```text
-1. Explicit grouping wins: readings sharing repeatGroupId form one cluster.
-2. Otherwise group consecutive readings r_i, r_{i+1} when ALL hold:
+1. Group readings r_i, r_{i+1} when ALL hold:                 [ALK-TESTING-EPISODE-001]
      same parameter
-     same or compatible methodId
-     elapsedDays(r_i.measuredAt, r_{i+1}.measuredAt) <= 30 minutes
+     elapsed(r_i.measuredAt, r_{i+1}.measuredAt) <= 30 minutes
+     NOTE: the pairwise form above is NOT a decision that the window chains rather than
+     anchors on the episode's first measurement. Canon does not say which, and it is
+     recorded OPEN as OI-EPISODEANCHOR-001. An implementer must not read consecutive-pair
+     wording here as settling it.                       [OPEN: OI-EPISODEANCHOR-001]
      no intervention, correction, water change or delivery anomaly between them
-3. Cluster fields:
+                                                    [OPEN: OI-EPISODEINTERVENTION-001]
+   Owner decisions 27 and 28: there is NO method condition (the method is never known)
+   and NO explicit-relationship requirement (proximity in time is the whole test).
+   PII-5.3's "same or compatible method" clause is shared canon and is inoperative here.
+   PII-5.3's intervention condition is carried unchanged and is NOT decided by decision 28;
+   whether "proximity in time is the whole test" displaces it is recorded OPEN as
+   OI-EPISODEINTERVENTION-001 and must be read the same way in A3 and in A4 STEP 0.
+2. Cluster fields:
      representativeValueDkh = median(rawValueDkh of VALID members)
      representativeAt       = median(measuredAt of members)
      spreadDkh              = max - min over VALID members
      madDkh                 = median(|x_i - median(x)|)
      sigmaClusterDkh        = max(0.10, 1.4826 * madDkh)
-4. clusterStatus = ANOMALOUS  when spreadDkh > 0.20 dKH   [ALK-005]
+3. clusterStatus = ANOMALOUS  when spreadDkh > 0.20 dKH   [ALK-005]
                  = OK         otherwise
 ```
 
@@ -120,47 +130,130 @@ history.
 
 **TESTS** `CLU-001` three readings 10 min apart form one cluster; `CLU-002` repeats do not
 increase independent count; `CLU-003` spread 0.25 ⇒ `ANOMALOUS`; `CLU-004` intervention
-between readings prevents grouping; `CLU-005` explicit `repeatGroupId` overrides the
-window.
+between readings prevents grouping (open, per `OI-EPISODEINTERVENTION-001`).
+`CLU-005` — *"explicit `repeatGroupId` overrides the window"* — is **RETIRED by owner
+decision 28**: proximity in time is the whole membership test, so there is no explicit
+relationship to override anything with. It is preserved here as history and must not be
+implemented.
 
 ## A4 — Independent-cluster selection
 
-**INPUTS** `MeasurementCluster[]` within the selected segment.
+**INPUTS** `Measurement[]` within the selected segment (step 0 runs on measurements and
+emits `TestingEpisode[]`; a `MeasurementCluster` is the pooled set inside an episode).
 
-**PRECONDITIONS** clusters built; segment bounds known.
+**PRECONDITIONS** segment bounds known.
 
-**DECISION TREE**
+**ALGORITHM** — step 0 first: testing episodes are constructed *before* any of the selection
+below runs (**owner decisions 27 and 28**; this supersedes both the exact-timestamp
+coalescing step Freeze 5 first specified and the method-split episode of decisions 17–19).
 
 ```text
-A cluster is NOT an independent ordinary maintenance-trend observation when its
-representativeAt is less than 24 h after the previous independent cluster's
-representativeAt.                                                        [ALK-008]
+STEP 0, before selection      [ALK-TESTING-EPISODE-001, ALK-EPISODE-RESOLUTION-001]
+    group measurements into TESTING EPISODES:
+        same parameter, within 30 minutes of one another   (the EXISTING window)
+        no method condition, no explicit-relationship requirement:
+            proximity in time is the whole test
+        > 30 minutes apart -> SEPARATE observations, into ordinary trend logic
+        PII-5.3's intervention condition is carried unchanged from A3 and is NOT
+        decided by decision 28          [OPEN: OI-EPISODEINTERVENTION-001]
 
-Such a cluster MAY still:
-  - establish current position
-  - confirm an anomaly
-  - contribute to ALK-RAPID-001
+    exclude INVALID measurements (PII-4.3), then per episode:
+        pool the COMBINED underlying measurements
+        rebuild ONE value from the pool using the existing rules:
+            PII-5.4 representative value   = median(pooled raw readings)
+            PII-5.5 representative timestamp
+            PII-5.6 internal spread, and ALK-005      (no method qualifier)
+        episodeStatus            = RESOLVED
+        combinedMeasurementCount = count of pooled measurements
+        EPISODE_RESOLVED (+ EPISODE_MEASUREMENTS_COMBINED when the count > 1)
+
+        an episode whose every measurement is INVALID yields no observation (PII-4.3)
+        an episode whose pooled spread > 0.20 dKH is ANOMALOUS (ALK-005) and takes
+            PII-48's path - an ordinary, already-frozen outcome
+
+    selection then runs over ONE CANDIDATE PER EPISODE, so ordering is total
+
+    NEVER: choose one member of an episode by event order, ID order, insertion order,
+    database ordering or implementation sorting - that makes the recommendation a
+    property of how the rows were stored.
+    NEVER: average two cluster medians - the episode value is the median of the POOLED
+    raw readings.
+    NEVER: let pooling hide an inconsistency - a pool spanning > 0.20 dKH is ANOMALOUS
+    under ALK-005 and takes PII-48's path.
+    NEVER: record, ask for, infer or store the test method, or branch on it.
+```
+
+`combinedMeasurementCount` is a **structured field**. The interface renders it plainly
+("3 tests combined"); the engine does not author that sentence.
+
+Then forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`) over the
+resulting one-per-episode sequence (`ALK-SAME-TIMESTAMP-COALESCE-001`, amended).
+
+```text
+candidates = resolved episode outputs in the selected segment, ascending by representativeAt
+             (unique times by construction after step 0; every episode supplies exactly
+              one candidate)
+accepted   = []
+anchor     = null
+
+for c in candidates:
+    if anchor is null:
+        accepted.append(c); anchor = c                              # earliest eligible
+    elif hours(c.representativeAt - anchor.representativeAt) >= 24:
+        accepted.append(c); anchor = c                              # inclusive at 24 h
+    else:
+        notAccepted.append(c)                                       # anchor UNCHANGED
+
+return accepted
+```
+
+Three properties this shape guarantees, each of which a naive implementation loses:
+
+```text
+1. the anchor is the LAST ACCEPTED cluster, never the last candidate examined
+2. appending a cluster AFTER the latest accepted one never changes an earlier acceptance
+3. the >= 24 h comparison is inclusive at exactly 24 h           [ALK-008, ALK-RAPID-001]
+```
+
+Property 2 is bounded to appended data. A cluster backdated to before the current earliest
+candidate re-runs selection from the new earliest and may accept a different set. That is
+required by `ALK-065` / `WG-ALK-029` — a backdated valid measurement changes the present
+analysis — and the historical assessment record stays immutable regardless.
+
+
+A cluster that is not accepted is **not excluded, invalidated or hidden**. It MAY still:
+
+```text
+  - establish current position                                    [ALK-010]
+  - confirm an anomaly                                            [ALK-005, PII-48]
+  - contribute to ALK-RAPID-001 as the latest independent pair    [ALK-RAPID-BASIS-001]
   - contribute to an explicitly time-resolved intervention calculation
-
-WHICH cluster is dropped is NOT SPECIFIED BY CANON.                      [OI-INDEPENDENCE-001]
 ```
 
-**OUTPUT** `independentClusterIds[]`, or a refusal.
+**OUTPUT** `independentClusterIds[]`, `notAcceptedClusterIds[]`.
 
-**REASON CODE** `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` with
-`{conflictingClusterIds[], separationHours}`.
+**REASON CODE** `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` with
+`{acceptedClusterIds[], notAcceptedClusterIds[], separationHours[]}` whenever at least one
+candidate was not accepted.
 
-**FAILURE STATE** if any two candidate clusters in the segment are separated by less than
-24 h:
+**FAILURE STATE** none from selection itself. If the accepted set then falls below
+`ALK-MOVEMENT-001`'s minimum, the ordinary `EVIDENCE_INSUFFICIENT_CLUSTERS` /
+`EVIDENCE_INSUFFICIENT_SPAN` path runs — the same path as any sparse series.
 
-```text
-movementEvidence           = INSUFFICIENT
-automaticMaintenanceAction = WITHHELD
-```
+**FORBIDDEN** backward-greedy selection; keep-all-and-mark; re-anchoring on a rejected
+cluster; any selection whose result depends on the newest reading.
 
-Position, safety, retest and history continue normally.
-
-**TESTS** `AD-SEG-001` (same-day tests); `EVD-002` all spacings ≥ 24 h proceeds normally.
+**TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (appended
+cluster does not change selection; backdated-earlier case asserted separately);
+`AD-SEG-007` (two clusters at one sampling moment ⇒ pooled, not chosen between);
+`AD-SEG-008` (a pool spanning > 0.20 dKH stays `ANOMALOUS`);
+`AD-EPI-001` (three repeats are one episode, one independent observation, count 3);
+`AD-EPI-002` (two readings that were formerly contested now combine by ordinary logic;
+identical output under a three-minute offset and under reversed insertion order);
+`AD-EPI-005` (5 minutes apart ⇒ one observation, count 2);
+`AD-EPI-006` (45 minutes apart ⇒ two separate observations);
+`AD-EPI-007` (the 30-minute boundary, at and either side of it);
+`EVD-002` all spacings ≥ 24 h proceeds normally.
 
 ## A5 — Segment construction
 
@@ -263,11 +356,12 @@ replacementAlkalinityDkh KNOWN and confidence = MEASURED_SAME_BATCH:
     |deltaA_WC| >= 0.10  -> MATERIAL_KNOWN   -> normalize (A6)
     |deltaA_WC| <  0.10  -> NEGLIGIBLE       -> retain in segment, no subtraction
 
-replacementAlkalinityDkh KNOWN, confidence = USER_CONFIGURED_SALT_PROFILE
-                                          or MANUFACTURER_NOMINAL:
-    NORMALIZATION TIER UNDEFINED                                  [OI-WATERCHANGE-001]
-    -> fall through to the unknown branch below
-    -> reason SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED
+replacementAlkalinityDkh KNOWN, confidence != MEASURED_SAME_BATCH
+  (USER_CONFIGURED_SALT_PROFILE, MANUFACTURER_NOMINAL, unknown tier, or lower):
+    NOT NORMALIZABLE          [ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001]
+    -> fall through to the unknown branch below, using that branch in full
+    -> reason SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE
+    -> the stated replacement value is retained for audit and is NOT subtracted
 
 replacementAlkalinityDkh UNKNOWN or ABSENT:                       [ALK-WATERCHANGE-UNKNOWN-001]
     potential unknown step = f * 2.0 dKH
@@ -285,13 +379,14 @@ replacementAlkalinityDkh UNKNOWN or ABSENT:                       [ALK-WATERCHAN
 
 **REASON CODE** `SEGMENT_WC_NEGLIGIBLE`, `SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED`,
 `SEGMENT_WC_UNKNOWN_SUBFLOOR`, `SEGMENT_WC_UNKNOWN_BOUNDARY`,
-`SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED`.
+`SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE`.
 
 **FAILURE STATE** none — every branch is defined; the tier question degrades rather than
 refusing (`M-4`, `WG-ALK-048`).
 
-**TESTS** `WG-ALK-011`, `WG-ALK-012` (4% vs 5%), `WG-ALK-048`, `ALK-G021`-`G023`,
-`AD-WC-001`.
+**TESTS** `WG-ALK-011` (`MEASURED_SAME_BATCH`, normalized), `WG-ALK-012` (4% vs 5%),
+`WG-ALK-048`, `ALK-G021`-`G023`, `AD-WC-001`, `AD-SEG-006` (`MANUFACTURER_NOMINAL` at the
+same numbers falls through to a hard boundary — the negative control for the tier gate).
 
 ---
 
@@ -368,7 +463,9 @@ uncertainty from perfectly linear data.
 
 **TESTS** `WG-ALK-062` is mandatory — it is the golden that distinguishes the `Sxx` form
 from an endpoint-only form (`0.015811` vs the forbidden `0.017678`).
-`AD-TRD-005` exercises `sigma_resid > 0.10`. `AD-TRD-004` documents `OI-MADFLOOR-001`.
+`AD-TRD-005` exercises `sigma_resid > 0.10`. `AD-TRD-004` records the accepted residual
+exposure of `OI-MADFLOOR-001`: `ALK-SUSPECT-DETECTION-001` leaves automatic detection
+`NOT_RUN`, and **no compensating uncertainty-inflation term may be added**.
 
 ## A10 — Supported slope — `ALK-SUPPORTED-SLOPE-001`
 
@@ -392,7 +489,7 @@ independentClusters}`.
 
 **FAILURE STATE** none; `S_supported = 0` is a valid, meaningful result.
 
-**Prohibitions.** `S_supported` sizes the maintenance actuator and nothing else. It is
+**Prohibitions.** `S_supported` sizes the maintenance recommendation and nothing else. It is
 never substituted into `C = P·D − S`, never used for a boundary forecast, never used as a
 position, and is **never** multiplied by a confidence label (`X-INV-010`).
 
@@ -439,7 +536,9 @@ dead-end label (`IX-005`).
 
 ## A12 — Rapid override — `ALK-RAPID-001`
 
-**INPUTS** the latest independent pair of clusters, known events in the interval.
+**INPUTS** the latest cluster in the segment and the most recent **candidate** cluster at
+least 24 h before it — not only accepted clusters, because `ALK-008` grants a non-accepted
+cluster the right to contribute to the rapid rule. Plus known events in the interval.
 
 **DECISION TREE**
 
@@ -448,8 +547,13 @@ ALL must hold:
   at least two independent testing episodes
   elapsedDays between their representative times >= 1.0 (24 h)
   |S_pair| >= 0.30 dKH/day                          [basis: latest independent pair,
-                                                     OI-RAPIDBASIS-001]
-  latest cluster is internally consistent (spread <= 0.20) OR has been repeated/confirmed
+                                                     ALK-RAPID-BASIS-001]
+  latest episode is internally consistent (spread <= 0.20) OR has been repeated/confirmed
+     the second disjunct is ALK-013's own wording and is carried unchanged. Under owner
+     decision 28 every repeat inside 30 minutes is already IN the episode, so "has been
+     repeated/confirmed" no longer names a distinct state and its meaning is unstated.
+     It can decide rapidConfirmed. Recorded OPEN as OI-RAPIDCONFIRMDISJUNCT-001 and NOT
+     decided here.                            [OPEN: OI-RAPIDCONFIRMDISJUNCT-001]
   no known correction, water change or delivery event already explains the movement
   the direction is relevant to a maintenance or safety decision
 ```
@@ -461,8 +565,12 @@ exceptional 50% cap when outer-bound risk also holds.
 It **does not** bypass: potency validity; dose-history requirements; the 0.50 dKH/day
 rail; the non-negative dose floor; outer safety logic; the composite rail.
 
-Sizing slope selection is unchanged: `ALK-011A` uses the multi-point formula whenever
-`n ≥ 3` eligible clusters exist; the two-point formula only when `n = 2`.
+Sizing slope selection is unchanged (`ALK-RAPID-BASIS-001`): `ALK-011A` uses the
+multi-point formula whenever `n ≥ 3` eligible clusters exist; the two-point formula only
+when `n = 2`. `S_pair` is the rapid **test** statistic and is never written to
+`S_observed`, to the consumption input, or to the forecast slope.
+
+`rapidConfirmed` changes pathway, cadence and cap eligibility only.
 
 **OUTPUT** `{rapidConfirmed, rapidBasis: LATEST_INDEPENDENT_PAIR, pairSlope, pairSpanDays}`.
 
@@ -472,16 +580,21 @@ elapsedHours}`.
 **FAILURE STATE** not confirmed ⇒ ordinary path only.
 
 **TESTS** `ALK-G005`, `WG-ALK-006`, `WG-ALK-043`, `AUDIT-012`, `AD-RAP-001`
-(`OI-RAPIDBASIS-001` discriminator).
+(the discriminator: Theil–Sen −0.15 is not rapid, the latest pair −0.35 is, and sizing
+stays Theil–Sen).
 
 ## A13 — Position and outer-bound state
 
-**INPUTS** latest valid cluster representative value, target range, outer bounds.
+**INPUTS** the **resolved value of the latest testing episode** (`episodeValueDkh`,
+`ALK-EPISODE-SINGLE-OUTPUT-001`), target range, outer bounds. Position reads the episode's
+one canonical value, never a member of it and never a cluster chosen from inside it — that
+is the whole point of owner decision 19, carried forward by decisions 27 and 28.
 
 **FORMULA**
 
 ```text
-A_now = latest VALID cluster representativeValueDkh          [CORE-POSITION-001, ALK-010]
+A_now = latest resolved episodeValueDkh                      [CORE-POSITION-001, ALK-010,
+                                                             ALK-EPISODE-SINGLE-OUTPUT-001]
 
 A_now <  outerMin           -> ALERT_LOW,    outerBoundState = BREACHED_LOW
 A_now >  outerMax           -> ALERT_HIGH,   outerBoundState = BREACHED_HIGH
@@ -500,9 +613,12 @@ the range (Part II §7.3).
 While a safety return is active and `A_now` has re-entered the envelope but not reached
 the buffered destination: `outerBoundState = RECOVERING_INSIDE_BOUND`.
 
-**OUTPUT** `{position, outerBoundState, A_now, latestValidClusterId}`.
+**OUTPUT** `{position, outerBoundState, A_now, latestEpisodeId}`.
 
-**FAILURE STATE** no valid cluster ⇒ `position = UNKNOWN`, `POSITION_NO_VALID_MEASUREMENT`.
+**FAILURE STATE** no episode resolves — every measurement `INVALID` under Part II §4.3 ⇒
+`position = UNKNOWN`, `POSITION_NO_VALID_MEASUREMENT`. What `outerBoundState` takes in that
+state is **not stated by canon** and is recorded open as `OI-EPISODENOOBS-001`; its closed
+vocabulary has no member for "nothing to classify". Do not invent one.
 
 **TESTS** `ALK-G001`, `WG-ALK-028`, `WG-ALK-053`, `AD-POS-001` (edge equality).
 
@@ -545,11 +661,11 @@ controller (`WG-ALK-047`).
 
 **FAILURE STATE** `NOT_RUN` ⇒ segmentation instead of an invented `D_eff`.
 
-**TESTS** `WG-ALK-047`, `AD-DEL-001` (missed dose), `AD-DEL-002` (partial-day change).
+**TESTS** `WG-ALK-047`, `AD-DEL-001` (missed dose), `DEL-002` (partial-day change, unit-test slot).
 
 ## A15 — Consumption estimate — `ALK-CONSUMPTION-ESTIMATE-001`
 
-**INPUTS** `P_selected`, `D` from `A14`, `S_observed` from `A8`.
+**INPUTS** `P_selected`, `D_history` from `A14`, `S_observed` from `A8`.
 
 **PRECONDITIONS** segment eligible for `CONSUMPTION`; `P_selected` valid; delivery basis
 eligible; trend evidence sufficient for the parameter.
@@ -557,8 +673,19 @@ eligible; trend evidence sufficient for the parameter.
 **FORMULA**
 
 ```text
-C_estimate = P_selected * D - S_observed              [dKH/day]
+C_estimate = P_selected * D_history - S_observed      [dKH/day]
 ```
+
+`D_history` is the **time-weighted mean delivery rate actually delivered across the analysed
+interval** (`ALK-DELIVERY-RATE-BASIS-001`, owner decision 20) — `D_eff` on an integrable
+mixed interval, the constant rate on a constant-dose clean segment. It is **not**
+`D_current`, the rate the doser is configured to be delivering now, even though the two are
+numerically equal on a constant-dose segment. Substituting `D_current` for `D_history` on a
+mixed interval silently mis-states consumption by the amount the dose moved.
+
+`D_history` unavailable -> `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`, consumption
+`UNRESOLVED` under the existing unresolved-consumption handling. Safety sizing is unaffected
+and still runs when `D_current` is known.
 
 **`S_observed`, never `S_supported`.** Substituting the supported slope "to be
 conservative" is explicitly forbidden — it would corrupt a physical mass balance with a
@@ -567,15 +694,37 @@ controller bias.
 **PHYSICALITY DECISION TREE**
 
 ```text
-C_estimate >  0                       -> INTERPRETABLE
-C_estimate <= 0:
-    the boundary between "slight negative within uncertainty" and
-    "materially negative" requires a propagated sigma_C that the canon
-    does not define for alkalinity                     [OI-NEGCONS-001]
-    -> physicality = UNRESOLVED
-    -> maintenanceAction = HOLD  (identical on both canon branches)
-    -> CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED
+C_estimate >= 0                       -> INTERPRETABLE
+C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY-001]
+
+    materiallyNegative  <=>  C_estimate + 1.28 * sigma_S < 0      # strict
+      1.28 is ALK_SLOPE_SUPPORT_K; sigma_S is ALK-SLOPE-UNCERTAINTY-001
+      NO sigma_P and NO sigma_D exist or may be introduced
+
+    materiallyNegative:
+        -> physicality = NON_PHYSICAL_OR_UNEXPLAINED_GAIN
+        -> maintenanceAction = HOLD
+        -> CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN
+    otherwise:
+        -> physicality = UNCERTAIN_NON_RESOLVABLE
+        -> maintenanceAction = HOLD
+        -> CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED
+
+    high-breach consequence above OuterMax:        [ALK-HIGH-BREACH-SAFETY-SIZING-001]
+        BOTH negative branches    -> C_estimate is NOT usable for safety-dose sizing
+                                     D_safety_temp = max(0, D_current
+                                                            - R_down / P_selected)
+                                     outer-bound state, SAFETY_RETURN and the ~24 h
+                                       cadence all continue unchanged
+                                     maintenanceEstimateStatus = UNRESOLVED
+                                     SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+        the materiality classification does NOT choose the delivered rate
+          (owner decision 16; supersedes the F5-13 split of 0 mL/day versus HOLD)
+    the MAINTENANCE ESTIMATE is HOLD on both branches either way; a held estimate is NOT
+    a claim that biological consumption is zero
 ```
+
+At exactly `C_estimate + 1.28 * sigma_S = 0` the result is **not** materially negative.
 
 Under **no** branch may a negative `C_estimate`:
 
@@ -589,14 +738,15 @@ validity of the broken estimate.
 **OUTPUT** `ConsumptionEstimate`.
 
 **REASON CODE** `CONSUMPTION_ESTIMATED`, `CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN`,
-`CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`,
+`CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`,
 `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`.
 
 **FAILURE STATE** missing potency, missing dose history or missing net volume ⇒
 `NOT_RUN`; position and trend are unaffected (Part II §70.1-70.3).
 
-**TESTS** `WG-ALK-013`, `ALK-G026`-`G028`, `AUDIT-019`, `AD-CON-001`
-(missing dose context per `DATA-PROVENANCE.md`).
+**TESTS** `WG-ALK-013` (material), `ALK-G026` (uncertainty-limited), `ALK-G027`, `ALK-G028`,
+`AUDIT-019`, `AD-CON-001` (missing dose context per `DATA-PROVENANCE.md`),
+`AD-CON-002` (boundary straddle: one recommendation precision flips the classification).
 
 ## A16 — Maintenance semantics — `ALK-MAINTENANCE-SEMANTICS-001`
 
@@ -614,13 +764,41 @@ continuousActionCandidate    = D_current - S_supported / P_selected
 These are **different fields** and may legitimately differ (e.g. 11.2 vs 10.5 mL/day).
 They must never share one field named `maintenanceDose`.
 
+**POSITION × TRAJECTORY GATE** — `ALK-070`, `ALK-TOWARD-RANGE-HOLD-001`
+
+Evaluated on the `continuousActionCandidate` before any rail, cap or rounding:
+
+```text
+position = BELOW_RANGE and trajectory = RISING     and S_supported != 0
+    and no active deliberate level-movement plan
+        -> action = HOLD_CURRENT_DOSE
+           MAINTENANCE_HOLD_TOWARD_RANGE
+
+position = ABOVE_RANGE and trajectory = FALLING    and S_supported != 0
+    and no active deliberate level-movement plan
+        -> action = HOLD_CURRENT_DOSE
+           MAINTENANCE_HOLD_TOWARD_RANGE
+
+every other position x trajectory cell            -> ALK-070 as written
+```
+
+The gate requires a **supported** trajectory. `UNCERTAINTY_LIMITED` is not one: it is held
+by `MAINTENANCE_HOLD_UNCERTAINTY_LIMITED` under `ALK-011` and never reaches this gate.
+Once the level is inside the preferred range the in-range rows resume unchanged, and an
+outer-bound breach is owned by `ALK-OUTER-BOUND-ACTION-001` regardless of direction.
+
+The card still shows `maintenanceEstimate`, `S_observed`, `S_supported` and the forecast
+range-entry time — they explain the HOLD; they do not size an action.
+
 **OUTPUT** both quantities.
 
 **FAILURE STATE** `C_estimate` not `INTERPRETABLE` ⇒ `maintenanceEstimate = NOT_RUN`;
 `continuousActionCandidate` still computes from `S_supported` when movement evidence is
 sufficient, because it does not depend on `C_estimate`.
 
-**TESTS** `WG-ALK-001`, `ALK-G008`, `ALK-G009`.
+**TESTS** `WG-ALK-001`, `ALK-G008`, `ALK-G009`, `AD-MNT-006` (below + supported rising),
+`AD-MNT-007` (above + supported falling), `AD-MNT-008` (below + uncertainty-limited lean —
+the gate must **not** fire).
 
 ## A17 — Physical rate rail — `ALK-046`
 
@@ -643,13 +821,13 @@ cappedDeltaDoseMlPerDay}`.
 
 ## A18/A19 — Dose-step cap and baseline establishment — `ALK-STEP-CAP-001`
 
-**INPUTS** `D_current`, `R_pump = actuatorIncrementMlPerDay`, `rapidConfirmed`,
+**INPUTS** `D_current`, `R_precision = recommendationPrecisionMlPerDay`, `rapidConfirmed`,
 outer-bound state, outer-bound forecast.
 
 **DECISION TREE**
 
 ```text
-if D_current < 4 * R_pump  (including D_current = 0):
+if D_current < 4 * R_precision  (including D_current = 0):
         doseStepRegime = BASELINE_ESTABLISHMENT
         percentage cap INACTIVE                       [not a rescue mode]
         evidence, rail, non-negative clamp, potency and rounding all remain active
@@ -670,8 +848,8 @@ else:
 Being merely outside the **preferred target range** never unlocks 50% (`AUDIT-008`). The
 target band and the outer operating bounds are different concepts.
 
-The `4 R_pump` threshold is a deterministic consequence of the 25% cap and actuator
-resolution — `0.25 · D_current ≥ R_pump` — not a chosen tank-size threshold.
+The `4 R_precision` threshold is a deterministic consequence of the 25% cap and recommendation
+resolution — `0.25 · D_current ≥ R_precision` — not a chosen tank-size threshold.
 
 **REASON CODE** `MAINTENANCE_STEP_CAP_ORDINARY`, `MAINTENANCE_STEP_CAP_EXCEPTIONAL`,
 `MAINTENANCE_BASELINE_ESTABLISHMENT`, `MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED`.
@@ -689,38 +867,56 @@ D_candidate = max(0, D_candidate)
 Negative dosing is never recommended (`AUDIT-022`, `WG-ALK-035`). Reason code
 `MAINTENANCE_NON_NEGATIVE_CLAMP`.
 
-## A21 — Actuator rounding — `ALK-ROUNDING-001`
+## A21 — Recommendation rounding — `ALK-ROUNDING-001`
 
-**INPUTS** `D_continuous_feasible`, `D_current`, `R_pump`.
+**INPUTS** `D_continuous_feasible`, `D_current`, `R_precision`.
 
-**PRECONDITIONS** `R_pump` known and `> 0`; the continuous candidate has already passed
+**PRECONDITIONS** `R_precision` known and `> 0`; the continuous candidate has already passed
 evidence, rail, step cap, bracket and non-negative rules.
 
 **DECISION TREE**
 
 ```text
-1. lo = floor(D_cont / R_pump) * R_pump ;  hi = lo + R_pump
+1. lo = floor(D_cont / R_precision) * R_precision ;  hi = lo + R_precision
 2. choose the nearer of lo, hi to D_cont
 3. exact midpoint -> choose the tied setting closer to D_current
 4. still tied     -> choose the lower setting
 5. recompute deltaD = D_rounded - D_current and effect = P_selected * deltaD
 6. recheck every hard constraint affected by discretisation:
-       rate rail, step cap, non-negative, liquid-volume guard  [OI-LIQUIDGUARD-001]
+       rate rail, step cap, non-negative, liquid-volume guard
+                                            [ALK-LIQUID-VOLUME-GUARD-001, ALK-049]
+   the guard was already applied to the CONTINUOUS candidate at ALK-049 step 8, so any
+   guard violation seen here was caused by discretisation alone, which is exactly
+   step 7's precondition
 7. if a hard constraint is violated only because rounding moved the command further
-   from D_current, step by R_pump TOWARD D_current until feasible
+   from D_current, step by R_precision TOWARD D_current until feasible
 8. if the feasible command equals D_current:
        recommendation = HOLD
-       reason         = MAINTENANCE_ACTUATOR_RESOLUTION
+       reason         = MAINTENANCE_ROUNDS_TO_CURRENT_DOSE
 ```
 
 Never force a one-increment change merely to avoid returning `HOLD`.
 
 **OUTPUT** `recommendedDoseMlPerDay`.
 
-**FAILURE STATE** `R_pump` unknown ⇒ `REFUSE` the final maintenance rate,
-`CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` (`M-1`, `WG-ALK-045`). Observed slope, supported
-slope and the continuous candidate are still emitted. **No hidden 0.1 mL/day default.**
-The one-off `SAFETY_RETURN` correction volume is exempt (`A39`).
+**FAILURE STATE** — three states, and only the middle one refuses
+(`ALK-RECOMMEND-ONLY-001`, owner decision 23; `M-1`; `ALK-ROUNDING-001`):
+
+```text
+R_precision CONFIGURED and > 0   -> round, as steps 1-8 above
+R_precision CONFIGURED and <= 0  -> REFUSE the final maintenance rate
+                                    VALIDATION_RECOMMENDATION_PRECISION_INVALID
+R_precision NOT CONFIGURED       -> STATE THE FULL-PRECISION RECOMMENDATION
+                                    nothing is withheld, nothing is NOT_RUN,
+                                    no reason code is emitted for it,
+                                    step 6's hard-constraint recheck STILL RUNS
+```
+
+Observed slope, supported slope and the continuous candidate are emitted in all three.
+**No hidden 0.1 mL/day default.** There is **no exempt class of output** and no
+advisory-versus-executable split: the one-off `SAFETY_RETURN` correction volume and the
+temporary high-breach safety rate follow the same three states as everything else, because
+nothing anywhere is withheld for want of an increment.
 
 **TESTS** `WG-ALK-005` (both tie directions: `10.25 → 10.2`, `7.75 → 7.8`),
 `WG-ALK-063` (rail recheck: `16.4 → 16.3`), `WG-ALK-045`, `AD-MNT-001` /
@@ -728,13 +924,13 @@ The one-off `SAFETY_RETURN` correction volume is exempt (`A39`).
 
 ## A22 — Minimum useful dose change — `ALK-MINIMUM-ACTION-001`
 
-**INPUTS** rounded command, `D_current`, `R_pump`, `P_selected`.
+**INPUTS** rounded command, `D_current`, `R_precision`, `P_selected`.
 
 **RULE**
 
 ```text
-after all continuous constraints:  |deltaD_recommended| >= R_pump
-after rounding: if D_rounded == D_current -> HOLD, MAINTENANCE_ACTUATOR_RESOLUTION
+after all continuous constraints:  |deltaD_recommended| >= R_precision
+after rounding: if D_rounded == D_current -> HOLD, MAINTENANCE_ROUNDS_TO_CURRENT_DOSE
 
 If the rounded change is non-zero but its expected 48 h effect is too small to
 distinguish:
@@ -1327,6 +1523,25 @@ learned value does not carry over as equally valid.
 
 **PRECONDITIONS** `A_now < outerMin` from the latest valid cluster.
 
+**ACCOMPANYING CHECK, which gates nothing** — `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner
+decision 21, **rewritten by owner decision 24**, `A40b`) is evaluated on the resolved episode
+value alongside this step. At or beyond `AdvisoryFloor = outerMin − 1.0 dKH` **this whole
+step still runs, by the same arithmetic**: `V_safety` is computed and stated, the
+recommendation is produced by the ordinary rules, and the boundary only adds
+`advisoryConfidenceWarning = ATTACHED`. Nothing is withheld, nothing is `NOT_RUN`, and
+nothing is zeroed by the boundary. `outerBoundState = BREACHED_LOW` and the shortened retest
+continue as they always did. There is **no exception list**, because there is nothing to
+except from; `OI-ADVISORYEXCEPTION-001` is **RESOLVED by owner decision 24**.
+
+> **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision 21
+> this paragraph read: "`ALK-ADVISORY-RANGE-BOUNDARY-001` is evaluated on the resolved
+> episode value **before** this step. At or beyond `AdvisoryFloor = outerMin − 1.0 dKH` the
+> engine's own sized delivery guidance in mL/day is withheld — `recommendedDoseMlPerDay =
+> WITHHELD`, `temporarySafetyRateContinuousMlPerDay` and
+> `temporarySafetyRateExecutableMlPerDay` `NOT_RUN`, and **not zero**. The one-off correction
+> **volume** `V_safety` below is named in decision 21's exception list and **continues** to
+> be emitted … Whether that exception list is closed is `OI-ADVISORYEXCEPTION-001`, OPEN."
+
 **FORMULA**
 
 ```text
@@ -1345,17 +1560,20 @@ recalculated from the current test kit, per-reading precision, residual scatter,
 current trend's `sigma_point`, or a keeper-specific uncertainty. Making it adaptive would
 require a new Alk freeze.
 
-**Actuator-increment exemption** — `ALK-SAFETY-CORRECTION-RESOLUTION-001`:
+**No increment exemption is needed, because there is no increment refusal**
+(`ALK-RECOMMEND-ONLY-001`, owner decision 23):
 
 ```text
-M-1's REFUSE / ACTUATOR_INCREMENT_REQUIRED applies to final actionable MAINTENANCE
-mL/day. It does NOT block the one-off SAFETY_RETURN correction VOLUME.
+RETIRED: ALK-SAFETY-CORRECTION-RESOLUTION-001, and with it M-1's
+         REFUSE / ACTUATOR_INCREMENT_REQUIRED limb. Neither is live authority.
 
-actuatorIncrementMlPerDay missing:
-    safetyCorrectionStatus            = ACTIONABLE
-    maintenanceRateRoundingCapability = MAY_REMAIN_MISSING
-    retain full-precision V_safety internally
-    do not invent a pour increment
+recommendationPrecisionMlPerDay NOT CONFIGURED:
+    V_safety is STATED at full precision. Nothing is withheld, on this path or
+      any other, so the correction volume needs no exemption to be emitted.
+    do not invent a pour increment, and do not assume 0.1
+
+recommendationPrecisionMlPerDay CONFIGURED and > 0:
+    V_safety is rounded to it for legibility (ALK-ROUNDING-001)
 ```
 
 The **potency requirement remains load-bearing**: if `P_selected` is unavailable or
@@ -1374,45 +1592,337 @@ Magnesium data is **not a required input** for the Alk safety action. Ordinary
 non-safety Alk/Ca correction logic may still respect the Mg gate; this exception belongs
 only to the Alk outer-bound safety return.
 
-**TESTS** `WG-ALK-041`, `WG-ALK-055`, `WG-ALK-061`, `X-GOV-003`.
+**TESTS** `WG-ALK-041`, `WG-ALK-055`, `WG-ALK-061`, `X-GOV-003`, `AD-ESC-002` (the advisory
+floor: `V_safety` is computed identically inside, at and beyond it; only the warning is
+added).
 
 ## A40 — Outer-bound safety return, high breach
 
-**PRECONDITIONS** `A_now > outerMax`.
+**PRECONDITIONS** `A_now > outerMax`, with **no upper limit** (owner decision 24). At and
+beyond `AdvisoryCeiling` this step **still runs, by the same arithmetic**; `A40b` attaches a
+confidence warning beside its answer and withholds nothing.
 
-**DECISION TREE**
+**PRE-BRANCH PRECONDITION** (owner decision 25, `ALK-DELIVERY-RATE-BASIS-001`) — evaluated
+**before** the tree below, and it applies to A, B and B′ identically:
 
 ```text
-consumption INTERPRETABLE:
+D_current UNKNOWN or NOT CONFIGURED:
+    -> branch selection DOES NOT RUN; NO branch is selected
+       preconditionPassed = false
+       branchSelected     = NOT_RUN
+       temporarySafetyRateContinuousMlPerDay     = NOT_RUN
+       temporarySafetyRateRecommendationMlPerDay = NOT_RUN
+       NOT 0 mL/day - zero is a computed floor, never a stand-in for an unknown input
+       SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN
+    -> this applies to branch A even though A's formula
+         max(0, (C_estimate + S_safety) / P_selected)
+       does not contain D_current. The precondition is about the STATE, not about
+       which symbols a formula uses.
+    -> ordinary maintenance sizing/capping/rounding take D_current directly:
+         recommendedDoseMlPerDay = WITHHELD
+    -> surface the measured state and the reason; request doser configuration through
+         the EXISTING anomaly/confirmation machinery
+    -> outer-bound state, SAFETY_RETURN and the shortened cadence continue unchanged
+    -> consumption is UNAFFECTED where D_history is available
+```
+
+**DECISION TREE** (reached only when the precondition above passes)
+
+```text
+consumption INTERPRETABLE  (C_estimate >= 0):
     R_down        = min(A_now - A_safe_high, 0.50)
     S_safety      = -R_down
     D_safety_temp = max(0, (C_estimate + S_safety) / P_selected)      [mL/day]
     if zero dosing cannot achieve the desired decline, report the slower
     physically achievable decline; NEVER invent negative dosing
 
-    actuatorIncrementMlPerDay missing -> the exemption does not name this RATE
-                                         [OI-SAFETYRATE-001]
-                                      -> highBreachTemporaryRate = WITHHELD
-                                         safetyDirection = REDUCE_ALK_DOSING
+    OUTPUT SHAPE, in every precision state:  [ALK-RECOMMEND-ONLY-001, decision 23]
+        temporarySafetyRateContinuousMlPerDay     = D_safety_temp   # auditable intermediate
+        temporarySafetyRateRecommendationMlPerDay = ALK-ROUNDING-001 of the above
+                                                                    # THE single output
+        safetyDirection                           = REDUCE_ALK_DOSING
+        ONE output, not two. There is no pump command, no actuator increment, and
+          nothing is withheld for want of one. Where no recommendation precision is
+          configured the full-precision figure is stated; rounding is for a human
+          reader, not for hardware.
+        rails and guards still apply: ALK-046, ALK-COMPOSITE-RAIL-001,
+          ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
+        P_selected invalid -> no mL/day figure; state the required dKH movement only
 
-consumption PHYSICALLY UNINTERPRETABLE:                [ALK-HIGH-BREACH-UNRESOLVED-001]
+consumption NEGATIVE - EITHER side of the materiality boundary,      [branch B]
+  OR computable but otherwise physically uninterpretable:
+                                              [ALK-HIGH-BREACH-SAFETY-SIZING-001]
+    the uninterpretable disjunct is ALK-HIGH-BREACH-UNRESOLVED-001's own wording -
+      "negative, on either side of the boundary, OR otherwise physically
+      uninterpretable" - and it is carried here so branch A's "and physically
+      interpretable" conjunct cannot leave a state matching no branch
+    C_estimate is NOT usable for safety-dose sizing
+    R_down        = min(A_now - A_safe_high, 0.50)
+    D_safety_temp = max(0, D_current - R_down / P_selected)           [mL/day]
     stop any separately temporary upward correction/return component
-    safetyDoseRecommendation  = 0 mL/day
-    safetyDoseReason          = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
+    safetyDoseReason          = HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING
     maintenanceEstimateStatus = UNRESOLVED
-    do NOT label 0 mL/day a newly inferred permanent maintenance requirement
+    SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+    D_current <= R_down / P_selected -> the rate FLOORS at 0 mL/day
+        SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO
+    do NOT label the rate a newly inferred permanent maintenance requirement
     preserve the established maintenance estimate/history separately
     retest ~24 h, or sooner if a rapid/suspicious rule requires it
-    -> currently NOT_RUN pending OI-NEGCONS-001
+
+    the output shape, the rails, the guard and the rounding are exactly those of the
+    interpretable branch above - one recommended rate, never two
+
+    REQUIRED, and checkable ABOVE THE ZERO FLOOR (D_current > R_down/P_selected):
+        the rate DECREASES as A_now rises, until R_down saturates at the 0.50 rail
+        the rate moves ONE recommendation precision per increment of D_current,
+          including across the materiality boundary
+        AT OR BELOW the floor the rate is 0 and varies with nothing - that is the floor
+    REQUIRED EVERYWHERE:
+        the materiality classification changes wording and evidence state only
+
+consumption NOT COMPUTABLE AT ALL:                                   [branch B']
+                              [ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001]
+    insufficient history, first-ever test, unknown dose history - the mass balance
+      cannot be EVALUATED, as distinct from evaluating to a number
+    D_safety_temp = max(0, D_current - R_down / P_selected)           [mL/day]
+    maintenanceEstimateStatus = UNRESOLVED, with the reason surfaced
+    SAFETY_HIGH_BREACH_CONSUMPTION_NOT_COMPUTABLE
+      + SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE
+    everything else - rails, guard, rounding, single-output shape,
+      SAFETY_RETURN integration, ~24 h cadence - exactly as branch B
+
+P_selected UNAVAILABLE or INVALID - on ANY branch:
+    D_safety_temp is not calculable; state the required dKH movement and direction
+      only, under CORE-INFORM-PROCEED-001. This is the PRE-EXISTING potency clause of
+      ALK-HIGH-BREACH-SAFETY-SIZING-001, not a fourth branch. Note it also makes
+      C_estimate uncomputable, so the branch selected is B'.
 ```
 
-The zero-dose pause is a fail-safe response to an invalid model, not a claim that
-biological consumption is zero. It is **not** pushed through the ordinary rail
-calculation, because there is no modelled trajectory to rail (`ALK-046` high-breach
-clause). If the app cannot control the pump it says pausing is *recommended* and does not
-mark dosing as actually paused until implementation is confirmed.
+**RESOLVED by owner decision 25 — this was `OI-BRANCHAREFUSAL-001`.** Branch A's formula
+`max(0, (C_estimate + S_safety) / P_selected)` does **not** take `D_current`, so with
+`D_current` unknown and `D_history` available every input branch A needs is present. Owner
+decision 20 stated the refusal without naming a branch, and on `A_now` 11.5,
+`C_estimate` +0.60, `P` 0.0693 the two readings gave **1.44 mL/day** and **`NOT_RUN`** for
+the same state. Owner decision 25 settles it: the refusal is a **precondition evaluated
+before branch selection**, stated under **PRE-BRANCH PRECONDITION** above, and it applies
+identically to A, B and B′. **1.44 mL/day is not emitted.**
 
-**TESTS** `WG-ALK-051`, `AD-SAF-002`.
+**Branch selection is total and disjoint over the states that REACH it.** Over
+`A_now > outerMax` — the whole region, with no upper limit (decision 24) — and **given that
+the pre-branch precondition passed**, exactly one of A (`C_estimate >= 0` **and** physically
+interpretable), B (`C_estimate < 0` **or** computable-but-uninterpretable) and B′
+(`C_estimate` not computable at all) is selected. There is no fourth branch.
+
+The two "no rate" states are **not the same shape**, and this is the distinction decision 25
+created:
+
+```text
+D_current unknown   -> the PRECONDITION refuses, BEFORE selection
+                       branchSelected = NOT_RUN, preconditionPassed = false
+                       (not a fourth branch: it is the gate in front of the tree)
+P_selected invalid  -> the precondition PASSED, a branch IS selected (B', because an
+                       invalid potency also makes C_estimate uncomputable), and the
+                       pre-existing potency clause withholds the mL figure while
+                       stating the required dKH movement and direction
+```
+
+`INV-G12` asserts the partition over the states that reach selection; `INV-G15` asserts the
+gate in front of it. They are complementary, not competing readings.
+
+`C_estimate >= 0` is `INTERPRETABLE` and sizes from consumption. Any negative
+`C_estimate` — on either side of `ALK-NEGATIVE-MATERIALITY-001`'s boundary — is unusable for
+sizing and takes the `D_current` form instead (**owner decision 16**, input renamed by
+**decision 20**). Both branches leave the **maintenance estimate** `UNRESOLVED`, and neither
+infers zero biological consumption.
+
+**ACCOMPANYING CHECK, which gates nothing** — `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner
+decision 21, **rewritten by owner decision 24**) is evaluated on the resolved episode value
+alongside this tree. At or beyond `AdvisoryCeiling = outerMax + 1.0 dKH` (or at or beyond
+`AdvisoryFloor = outerMin − 1.0 dKH` on the low side) **all of A, B and B′ still run,
+unchanged**, and the boundary adds `advisoryConfidenceWarning = ATTACHED` beside whatever
+they produced. Nothing is withheld, nothing is `NOT_RUN` and nothing is zeroed by the
+boundary. See `A40b`.
+
+> **Superseded, preserved rather than deleted.** Under owner decisions 20 and 21 this
+> section read: **PRECONDITIONS** "`outerMax < A_now < AdvisoryCeiling`. At or beyond
+> `AdvisoryCeiling` this whole step is not reached — see `A40b`."; the `D_current` unknown
+> case sat **inside** the decision tree as a fourth arm, with "A does not take `D_current` at
+> all … pending the owner's decision A is ALSO `NOT_RUN`"; and the **PRECEDING CHECK** read
+> "none of A, B, B′ runs: no dose recommendation, no temporary safety rate, no executable
+> command, and **not zero**." Owner decision 24 removed the upper bound and owner decision 25
+> moved the refusal ahead of branch selection.
+
+**Superseded, preserved:** this section previously split the two negative branches, arming a
+0 mL/day pause on the materially-negative side and holding the established dose on the
+other. That split produced a one-increment discontinuity and produced no safety rate at all
+on the middle branch.
+
+The temporary safety rate is a fail-safe response to an invalid model, not a claim about
+biological consumption. It is **not** pushed through the ordinary rail calculation, because
+there is no modelled trajectory to rail (`ALK-046` high-breach clause). \(R_{down}\) is
+rail-bounded, so the **continuous** rate cannot breach `ALK-046`; the **discretised** command
+can, because rounding down increases the delivered reduction, so `ALK-ROUNDING-001`'s step-6
+recheck stays load-bearing here. The app never controls the pump: it states the rate as a
+**recommendation** and does not mark it implemented until the keeper confirms they
+implemented it.
+
+**TESTS** `WG-ALK-051` (materially negative ⇒ sized, not paused), `AD-SAF-005` (negative
+control: one output in every precision state, and no increment is invented), `AD-SAF-007` (`A_now` sweep, rail saturation,
+zero floor, materiality straddle), `AD-SAF-008` (negative control: continuity across the
+materiality boundary), `AD-CON-002` (both variants receive the same delivered rate),
+`AD-SAF-009` (branch B′: first-ever test, `C_estimate` not computable, `D_current` known),
+`AD-DHS-001` (`D_current` versus `D_history` on a mixed-dose interval, both directions),
+`AD-DHS-002` (negative control: `D_current` unknown ⇒ the pre-branch precondition refuses,
+`branchSelected` `NOT_RUN`, no rate, **not** zero),
+`AD-SAF-010` (decision 25: the precondition applied to A, B and B′ alike),
+`AD-REC-001` (decision 23: one output, in every precision state),
+`AD-DHS-003` (`D_history` unavailable ⇒ consumption `UNRESOLVED`, sizing still available),
+`INV-G12` (branch exhaustiveness).
+
+## A40b — Advisory range boundary — `ALK-ADVISORY-RANGE-BOUNDARY-001`
+
+**Owner decision 21, REWRITTEN BY OWNER DECISION 24: this is a WARNING, not a refusal.**
+Evaluated on the **resolved episode value**, after `ALK-EPISODE-RESOLUTION-001`, **alongside**
+`A40`'s high-breach tree and `A39`'s low breach. It **gates neither of them**: they run
+unchanged at every level, and this step adds a warning beside their answer.
+
+**INPUTS** resolved episode value `A_now`, `outerMin`, `outerMax`.
+
+```text
+AdvisoryCeiling = outerMax + 1.0        [dKH]     # the only new constant; an OFFSET
+AdvisoryFloor   = outerMin - 1.0        [dKH]     # from the CONFIGURED bounds
+
+warn  <=>  A_now >= AdvisoryCeiling  OR  A_now <= AdvisoryFloor
+           inclusive at the boundary; exact decimal comparison
+           (ALK-DECIMAL-THRESHOLD-001). NO epsilon exists or may be added.
+
+warn:
+    THE ORDINARY RULES PRODUCE THE ORDINARY OUTPUT, UNCHANGED.
+      recommendedDoseMlPerDay                   = whatever A21/A22 produced
+      temporarySafetyRateContinuousMlPerDay     = whatever A40 produced
+      temporarySafetyRateRecommendationMlPerDay = whatever A40 produced
+      maintenanceEstimateStatus                 = whatever the ordinary rules set
+    + advisoryConfidenceWarning = ATTACHED
+    + SAFETY_ADVISORY_CONFIDENCE_WARNING
+
+    NOTHING here is WITHHELD, NOT_RUN or zeroed BY THE BOUNDARY. A field may still be
+      NOT_RUN for its OWN reason (unknown D_current, invalid P_selected) - that is the
+      ordinary rule speaking, not this one. The contested episode is no longer one of
+      those reasons: owner decision 27 retires it.
+
+    advisoryConfidenceWarning HAS TWO STATES  [owner decision 29]:
+      ATTACHED  - present: the resolved value is at or beyond a boundary
+      NONE      - absent:  it is not, or no reading resolved at all
+      There is no third value. NOT_RUN is RETIRED from this field.
+
+    the warning states, all five and none optional:
+      the measured value; that the reading is beyond the range the engine is
+      CONFIDENT IN; that the reading should be confirmed by a second test; that the
+      dosing setup should be checked for fault or overdose; that correction at this
+      level warrants experienced judgement about the specific system
+
+    THE WARNING MUST NOT ALTER ANYTHING IT ACCOMPANIES:
+      not the recommended rate, not the trajectory, not the consumption estimate,
+      not the retest schedule, not the outer-bound classification, not the evidence
+      state, and not any rail or guard.
+
+    RETEST - ONE ANSWER, NOT TWO  [owner decision 26]:
+      ALK-RETEST-SCHEDULER-001 is the SINGLE authority on retest timing (X-INV-004).
+      The warning RENDERS whatever interval the scheduler produced and states NO
+      interval of its own. It adds no candidate and computes no next-test time.
+        warningRetestIntervalHours == schedulerRetestIntervalHours, always
+      "Confirm with a second test" is a statement about confidence in the reading,
+      not a schedule.
+
+    PRESERVED, and REQUIRED, exactly as below the boundary:
+               outerBoundState (BREACHED_HIGH / BREACHED_LOW - NOT reclassified);
+               the shortened / reprioritised retest the scheduler already owned;
+               every raw measurement and audit record;
+               ALK-RETURN-TERMINATED-BY-SAFETY-001 and the intervention lock;
+               ALK-SAFETY-RETURN-INTEGRATION-001, the composite rail, the liquid
+                 guard, ALK-SAFETY-MG-OVERRIDE-001, and the one-off low-breach
+                 correction volume of ALK-OUTER-BOUND-ACTION-001
+
+    NO EXCEPTION LIST EXISTS, because nothing is withheld for an exception to
+      except from. Decision 21's list is retired with the withholding it served.
+
+EPISODES  [owner decision 27]:
+    every episode resolves - the application does not know what produced a reading,
+      so two readings inside one episode cannot contest each other. The warning
+      attaches to the combined observation like any other consumer of it.
+    two readings 12 min apart at 10.4 and 12.9 dKH are ONE observation of 11.65 dKH
+      whose spread exceeds 0.20 -> an ordinary ANOMALOUS cluster on PII-48's path.
+      The warning attaches according to where 11.65 falls, like any other value.
+    NO reading resolves at all (every measurement INVALID) -> nothing to warn about
+      -> advisoryConfidenceWarning = NONE (absent), never NOT_RUN.
+    the member-wise predicate of decision 21 ("every member at or beyond the
+      boundary -> ESCALATE") is RETIRED: it existed to decide whether to WITHHOLD,
+      and nothing is withheld any more. Member statuses decide nothing here.
+```
+
+> **Superseded by owner decision 24, preserved rather than deleted.** Under owner decision 21
+> the block above read `escalate` in place of `warn`, and set
+> `recommendedDoseMlPerDay = WITHHELD`, `temporarySafetyRateContinuousMlPerDay = NOT_RUN`,
+> `temporarySafetyRateExecutableMlPerDay = NOT_RUN`, `maintenanceEstimateStatus = UNRESOLVED`,
+> "NOT zero - withheld, not set. Zero is a delivery instruction." It carried an `EXCEPTION`
+> list naming `ALK-SAFETY-CORRECTION-RESOLUTION-001`'s one-off correction volume,
+> `ALK-SAFETY-RETURN-INTEGRATION-001`, the composite rail, the liquid guard and
+> `ALK-SAFETY-MG-OVERRIDE-001`, and stated "this rule withholds the engine's OWN sized
+> delivery guidance and nothing else". For a contested episode it read "every member at or
+> beyond the boundary -> ESCALATE". It also stated, as a worked number: "11.9 dKH commands
+> 1.8 mL/day; 12.0 dKH commands nothing, so the pump continues at 9.0 mL/day" — reasoning
+> owner decision 23 identifies as being about a mechanism that does not exist, since the app
+> has no connection to any doser and withholding advice changes no delivery.
+
+**SCOPE** This narrows **nothing** and resolves **nothing** about `OI-SIZINGFLAT-001`.
+Decision 21 narrowed that item by bounding the region the sizing rule governed; **decision 24
+removed the bound**, so `R_down` saturates at the 0.50 dKH/day rail from
+`A_now >= A_safe,high + 0.50` — `outerMax + 0.30` for the owner's bounds — **upward without
+limit**, and the sized rate stops responding to `A_now` from there on. The item's reach is
+**wider** under decision 24 than it was under decision 21. It stays open, unnarrowed.
+
+**EXPOSURES RESOLVED HERE** — each was a `RECORDED EXPOSURE` block and is now a `RESOLVED`
+block in the canon rule and a register entry:
+
+```text
+OI-ADVISORYEXCEPTION-001  RESOLVED by decision 24: there is no exception list, because
+                          nothing is withheld. The high-side SAFETY_RETURN's temporary
+                          rate CONTINUES at and beyond AdvisoryCeiling, by the ordinary
+                          arithmetic.
+OI-ADVISORYMEMBERS-001    RESOLVED by decision 24: the member-wise predicate is retired,
+                          so whether a SUSPECT member counts as a member decides nothing.
+OI-ADVISORYRETEST-001     RESOLVED by decision 26: the scheduler is the single retest
+                          authority; the warning renders its answer and adds no candidate.
+OI-ADVISORYRETURN-001     RESOLVED by decision 24: nothing terminates an in-flight
+                          downward return plan at the boundary, so no reduction is
+                          stopped and no replacement is needed.
+```
+
+**Consequence of "warn rather than withhold", stated as a number.** On `AD-ESC-001`'s inputs
+(`P` 0.0693, `A_safe,high` 10.8, `D_current` 9.0, precision 0.1): 11.9 dKH recommends
+**1.8 mL/day**; 12.0 dKH recommends **1.8 mL/day**; 12.5 dKH recommends **1.8 mL/day**. The
+figure is identical because `R_down` is already saturated at the 0.50 rail at all three —
+which is precisely `OI-SIZINGFLAT-001`, and precisely why decision 24 does not narrow it.
+`outerBoundState` is `BREACHED_HIGH` at all three, and `advisoryConfidenceWarning` is
+`ATTACHED` at the last two only. `ALK-046` and `ALK-LIQUID-VOLUME-GUARD-001` bind on the
+recommendation at every level, because there is a recommendation at every level.
+
+**OUTPUT** `advisoryConfidenceWarning`, beside — never instead of — the ordinary output.
+
+**REASON CODE** `SAFETY_ADVISORY_CONFIDENCE_WARNING`.
+
+**FAILURE STATE** `outerMin` / `outerMax` unavailable ⇒ the boundary is not computable and
+**this check does not run**; the outer-bound machinery is already unavailable in that state,
+so there is no classification for a warning to accompany and `advisoryConfidenceWarning` is
+absent (`NONE`). Owner decision 29 leaves the field two-valued: the check not running is a
+statement about the check, not a third value of the field.
+
+**TESTS** `AD-ESC-001` (ceiling: the **same** recommendation immediately below, exactly at
+and above the boundary, with the warning added at and above; two configured bound pairs; a
+decimal-straddling pair), `AD-ESC-002` (the same against the floor, plus the
+`OuterMin = 8.2` / `A_now = 7.2` case where binary64 and exact decimal disagree),
+`AD-ESC-003` (contested episode: the retired member-wise predicate, and no warning without a
+resolved value), `AD-REC-002` (withholding has no physical effect), `INV-G13`, `INV-G16`.
 
 ## A41 — Safety-return completion and integration
 
@@ -1442,21 +1952,33 @@ on completion: end SAFETY_RETURN; resume ordinary maintenance/stability sequenci
       amount or time unknown  -> CONFOUNDED; invent nothing
 4 any interval materially affected -> potencyLearningEligible = false,
       reason SAFETY_RETURN_CONFOUND; the safety return is never a calibration intervention
-5 SAFETY_RETURN owns the Alk intervention lock for NEW actuator changes:
+5 SAFETY_RETURN owns the Alk intervention lock for NEW dose-change recommendations:
       no new maintenance-dose change implemented
       no ordinary return plan started
       no second Alk correction layered on top
    the engine may still observe, recompute position, recompute a provisional maintenance
    estimate, shorten retesting, and stop/modify the safety return on new evidence
+5b an ALREADY RUNNING ordinary return plan is TERMINATED, not suspended:
+                                       [ALK-RETURN-TERMINATED-BY-SAFETY-001]
+      returnPlanPhase              = TERMINATED_BY_SAFETY_RETURN
+      recommendedTemporaryMovement = STOP_PENDING_USER_ACTION
+      actualDose                   = last confirmed/logged value, or UNKNOWN
+      RETURN_TERMINATED_BY_SAFETY_RETURN
+   the SAFETY_RETURN then owns the SINGLE intentional movement component, so
+   ALK-COMPOSITE-RAIL-001 has one term; opposing components are never layered
+   the terminated plan keeps its id, destination, duration, expiry and history;
+   termination is an EVENT, not a rewrite
+   it CANNOT resume automatically. After safety completion, ordinary sequencing
+   resumes at HOLD; a new plan needs fresh ALK-RETURN-ELIGIBLE-TRAJECTORY-001
+   eligibility AND a fresh opt-in
+      RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY
 10 the lock is a RECOMMENDATION lock. It never asserts the keeper cannot change a pump.
    An external change during a safety return is recorded, re-segmented and re-evaluated.
 ```
 
-An in-flight **return plan** meeting a breach is not covered by the canon — see
-`OI-RETURNDURINGSAFETY-001`.
-
 **TESTS** `WG-ALK-053`, `WG-ALK-056`, `WG-ALK-057`, `WG-ALK-058`, `WG-ALK-059`,
-`WG-ALK-060`.
+`WG-ALK-060`, `AD-RTN-004` (in-flight plan terminated by a breach),
+`AD-RTN-005` (negative control: no automatic resume after safety completion).
 
 ## A42 — Composite rail — `ALK-COMPOSITE-RAIL-001`
 
@@ -1476,9 +1998,10 @@ allocation when components point the same way and would exceed the rail:
 Never issue `+0.604 dKH/day` as two independently legal recommendations.
 
 In the Alk-only runtime this rail has **no reachable multi-term case**: integration rule
-§1 defers any new maintenance change unconditionally while a safety return is active, and
-a stable out-of-range return-plan offer is mutually exclusive with a supported non-zero
-slope. Implement it as a post-assembly assertion that fails loudly if more than one
+§1 defers any new maintenance change unconditionally while a safety return is active,
+clause 5b terminates any in-flight return plan on entry to `SAFETY_RETURN` rather than
+layering an opposing component, and a return-plan offer requires `S_supported = 0`, which
+is mutually exclusive with a supported non-zero slope. Implement it as a post-assembly assertion that fails loudly if more than one
 intentional component is simultaneously recommended (`OI-PIPELINE-001`).
 
 When both deferral conditions hold, emit **both** reason codes — the action is identical
@@ -1492,10 +2015,34 @@ and both statements are true (`OI-DEFERREASON-001`).
 V_system_mL   = 1000 * netVolumeL
 V_alk_max_24h = 0.02 * V_system_mL          2% of net system water per 24 h
 
-if a deliberate correction / return-plan execution would exceed it:
-    do not issue that one-day liquid volume
-    lengthen/stage the execution until BOTH the guard and the 0.50 dKH/day rail hold
-    report the longer duration
+SCOPE: ALL engine-generated Alk delivery                [ALK-LIQUID-VOLUME-GUARD-001]
+  - ordinary maintenance mL/day
+  - return-plan and one-off correction execution
+  - SAFETY_RETURN correction volume and temporary safety delivery
+  - the permitted COMBINED total for the same rolling 24 h
+
+if a recommended 24 h delivery would exceed V_alk_max_24h:
+    recommendedDoseMlPerDay  = WITHHELD
+    NEVER cap the command to V_alk_max_24h and present that as the recommendation
+    keep every unaffected output              [CORE-INFORM-PROCEED-001]
+    if it is a correction / return-plan execution (duration is the engine's to choose):
+        lengthen/stage until BOTH the guard and the 0.50 dKH/day rail hold
+        report the longer duration; only the offending single-day command is withheld
+
+POSITION: hard constraint, binding at BOTH positions:
+  1 continuous candidate, ALK-049 step 8. Exceeds -> WITHHELD, stop.
+    ALK-ROUNDING-001 is NOT entered, so its step 7 "violates only because rounding
+    moved the command" precondition is never reached with a false premise.
+  2 rounded command, ALK-ROUNDING-001 step 6. A compliant continuous candidate that
+    rounds ABOVE the guard -> step 7 steps toward D_current until feasible;
+    if nothing feasible remains -> WITHHELD.
+
+NEVER emit a command numerically equal to V_alk_max_24h, at either position, whether
+reached by capping or by stepping: it is indistinguishable from a capped command.
+
+The guard constrains ENGINE-GENERATED delivery. A keeper's pre-existing dose above the
+guard is not an engine-generated command; report the exceedance and withhold any new
+command that would also exceed it.
 ```
 
 The 0.50 dKH/day rail remains **independently** binding. A stronger solution reduces
@@ -1505,12 +2052,14 @@ Reachability: the guard binds only when `P < ΔA / (20 · V_L)` dKH/mL. For a 0.
 movement in a 77 L system that is `P < 0.000325 dKH/mL` — about 213× weaker than the
 canon's 0.0693 dKH/mL reference solution.
 
-Scope for ordinary maintenance and pipeline position are disputed —
-`OI-LIQUIDGUARD-001`. Until closed: apply to corrections, return-plan execution and
-safety-return volumes; for a maintenance command that would exceed the guard, withhold
-with `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED`.
+**REASON CODE** `SAFETY_LIQUID_GUARD_APPLIED` when staging resolves it;
+`SAFETY_LIQUID_GUARD_EXCEEDED` / `MAINTENANCE_LIQUID_GUARD_EXCEEDED` when the recommended
+command is withheld.
 
-**TESTS** `WG-ALK-067`, `AD-SAF-003`.
+**TESTS** `WG-ALK-067`, `AD-SAF-003` (staging), `AD-SAF-004` (a compliant continuous
+candidate rounds above the guard; the post-rounding recheck steps back — this is the case a
+pre-rounding-only check cannot catch), `AD-SAF-006` (continuous candidate already over the
+guard ⇒ withheld at step 8, never issued at the guard value).
 
 ---
 
@@ -1521,12 +2070,25 @@ with `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED`.
 **OFFER** — `ALK-024`, `ALK-054`, `CORE-STABILISE-001`
 
 ```text
-required: level is out of the preferred range AND the trajectory is "stable"
-the meaning of "stable" here is NOT deterministic          [OI-RETURNOFFER-001]
-    -> returnPlanOffer = NOT_RUN
-       RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED
-Automatic maintenance is unaffected (HOLD on either reading).
+required, both:                       [ALK-RETURN-ELIGIBLE-TRAJECTORY-001]
+    position != IN_RANGE
+    returnPlanEligibleTrajectory:
+        ALK-011 ordinary minimum evidence satisfied
+          i.e. movementEvidence in { SUFFICIENT, UNCERTAINTY_LIMITED }
+        AND S_supported = 0
+          i.e. trajectory in { STABLE, UNCERTAINTY_LIMITED }
+
+eligible      -> RETURN_OFFER_AVAILABLE (opt-in; the keeper decides)
+not eligible  -> RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY
+                 movementEvidence = INSUFFICIENT      -> no established evidence
+                 S_supported != 0                     -> something is already moving
+
+ALK-STABLE-001 is UNCHANGED and is NOT this predicate: STABLE still requires
+S_supported = 0 AND S_observed = 0. A non-zero observed lean with zero supported
+slope is UNCERTAINTY_LIMITED, is NOT STABLE, and IS return-plan eligible.
 ```
+
+Automatic maintenance is unaffected — HOLD on both eligible trajectories.
 
 **ARITHMETIC** — `ALK-054`, `ALK-055`
 
@@ -1584,8 +2146,11 @@ a test and must **not** infer that the aim point was reached (`WG-ALK-031`).
 evidence that maintenance is wrong, and consumption estimation during a plan must account
 for the plan's known temporary input (Part II §40).
 
-**TESTS** `WG-ALK-014`, `WG-ALK-015`, `WG-ALK-031`, `WG-ALK-032`, `WG-ALK-035`,
-`ALK-G029`-`G032`, `AUDIT-021`, `AUDIT-022`.
+**TESTS** `WG-ALK-014` (approximately-zero observed, zero supported ⇒ offer),
+`WG-ALK-015`, `WG-ALK-028`, `WG-ALK-031`, `WG-ALK-032`, `WG-ALK-035`, `ALK-G006`,
+`ALK-G029`-`G032`, `AUDIT-021`, `AUDIT-022`, `AD-RTN-003` (negative control: insufficient
+evidence and supported movement are both ineligible),
+`AD-RTN-004`/`AD-RTN-005` (termination by safety return; no automatic resume).
 
 ---
 
@@ -1628,41 +2193,83 @@ unlocked).
 **One scheduler owns final next-test timing** (`X-INV-004`). No card, notice or
 notification computes a date.
 
-**CANDIDATES available in Alk V2**
+**CANDIDATES** — `ALK-RETEST-SCHEDULER-001`
 
 ```text
-REPEAT_NOW                latest cluster suspicious/anomalous and materially affects
-                          advice; a result would trigger a large intervention but is
-                          unconfirmed                       [trigger limited, OI-SUSPECT-001]
+REPEAT_NOW                latest cluster SUSPECT/ANOMALOUS from one of the three
+                          operative sources and materially affects advice; or a result
+                          would trigger a large intervention but is unconfirmed
+                                                      [ALK-051, ALK-SUSPECT-DETECTION-001]
 SAFETY_RETURN_ACTIVE      ~24 h; anchored to confirmed implementation if known,
                           otherwise to the qualifying breach assessment
 HIGH_BREACH_FAILSAFE      ~24 h
 RAPID_MOVEMENT            ~24 h
+FORECAST_BOUNDARY_RISK    T_boundary = T_outer - 1.0 days      (24 h safety lead)
+                          T_outer from ALK-062 using S_observed, NEVER S_supported
+                          T_boundary <= 0 -> REPEAT_NOW semantics
+                          NOT SUBMITTED once outerBoundState is BREACHED_LOW/HIGH:
+                          there is no crossing left to forecast, ALK-062 clamps T_outer
+                          to 0, and without this exclusion the scheduler would hold at
+                          REPEAT_NOW forever and make the ~24 h safety cadence
+                          unreachable in the state it was written for
 POST_CHANGE_FIRST         ~48 h after the actual dose change
-POST_CHANGE_SECOND        ~48 h after the first
-RETURN_PLAN_ASSESSMENT    at the plan's stored assessment point / expiry
+POST_CHANGE_SECOND        ~48 h after the first  (~Day 4)
+SIGNAL_ACCUMULATION       T_signal = max(1 day, 0.10 / |S_supported|)   days
+                          the 24 h floor is INSIDE this candidate's formula and applies
+                          to NO other candidate
+                          NOT_RUN when S_supported = 0 or evidence is INSUFFICIENT,
+                          which includes a post-change regime that has not yet reached
+                          ordinary sufficiency
+RETURN_PLAN_EXPIRY        the plan's stored expiry, T_expiry = 2*T_plan + 2
 ROUTINE_CADENCE           48 h
 ```
 
-**CANDIDATES that cannot be computed** — Alk policy constants absent
-(`OI-RETEST-001`): `T_detect` (needs `K_detect`), `T_signal` (needs `RequiredMovement`),
-forecast-boundary crossing (needs `boundarySafetyMargin`), return-plan cadence. Each is
-reported in `candidatesNotRun[]` with its reason code. The `minimumUsefulInterval` clamp
-is likewise `NOT_RUN`.
+**CANDIDATES canonically `NOT_RUN`** — Freeze 5 declined to invent the constants:
+`T_detect` (`K_detect` absent) and the return-plan **arrival cadence**. Both are reported
+in `candidatesNotRun[]` with `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
+`RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`. This is a decided state, not a gap.
+
+**CLAMPS**
+
+```text
+ceiling  96 h   ordinary observation candidates    RETEST_OBSERVATION_CEILING_APPLIED
+                the existing ~Day-4 window
+
+floor    24 h   the SIGNAL_ACCUMULATION candidate ONLY, inside its own formula
+                RETEST_SIGNAL_FLOOR_APPLIED
+                |S_supported| > 0.10 dKH/day -> raw T_signal < 24 h -> floored
+
+EXEMPT from the floor, and may schedule earlier or return TEST_NOW when warranted:
+    REPEAT_NOW, RAPID_MOVEMENT, SAFETY_RETURN_ACTIVE, HIGH_BREACH_FAILSAFE,
+    FORECAST_BOUNDARY_RISK
+PRESERVED unchanged: POST_CHANGE_FIRST ~48 h, POST_CHANGE_SECOND ~Day 4,
+    ROUTINE_CADENCE 48 h, the ~Day-4 ordinary ceiling, and one authoritative
+    scheduler choosing the earliest applicable candidate.
+```
 
 **SELECTION**
 
 ```text
-selected = earliest applicable candidate
-           (the minimum-useful-interval clamp is NOT_RUN)
-preserve the understandable ~48 h human rhythm under ordinary conditions rather
-than presenting spurious precision such as "test in 31 hours"
+selected = earliest applicable candidate, after the clamp
+REPEAT_NOW outranks ordinary scheduling                              [PII-55]
+TIES: where candidates share the earliest time, emit EVERY tied candidate's reason code
+      and record all of them in candidateTimes[]. Reason codes are additive, so no
+      precedence is invented and the audit record does not depend on evaluation order.
+      Reachable: T_signal at 24.0 h vs RAPID_MOVEMENT, or at 48.0 h vs ROUTINE_CADENCE.
+preserve the understandable ~48 h human rhythm in RENDERING; the stored timestamp
+is exact
 ```
 
-**OUTPUT** `RetestDecision` with every candidate, the selection reason, and the not-run
-list.
+**OUTPUT** `RetestDecision` with every candidate, its computed time, the selection reason,
+and the not-run list.
 
-**TESTS** `WG-ALK-060`, `ALK-G010`, `ALK-G011`, `RET-001`…`RET-004`.
+**TESTS** `WG-ALK-060`, `WG-ALK-001` (post-change first, 48 h), `WG-ALK-006` (rapid, 24 h),
+`ALK-G010`, `ALK-G011`, `AD-RET-001` (raw `T_signal` 22.913 h floored to 24 h and selected),
+`AD-RET-002` (`T_signal` above the ceiling; routine cadence still earlier),
+`AD-RET-003` (forecast boundary lead selects 40 h),
+`AD-RET-004` (crossing inside the lead ⇒ test now),
+`AD-RET-005` (already breached ⇒ the forecast candidate is not submitted and the ~24 h
+safety cadence governs).
 
 ## A47 — Capability gate — `ALK-CAPABILITY-CONTRACT-001`
 
@@ -1697,8 +2304,13 @@ less likely, inform and proceed.
 ```text
 1 emit EVERY field; NOT_RUN / WITHHELD / NONE are values, not omissions
 2 every withheld or degraded output carries at least one reason code
-3 recommendationConfidence = UNSPECIFIED until OI-CONFIDENCE-001 closes;
+3 recommendationConfidence = UNSPECIFIED by frozen decision      [ALK-CONFIDENCE-OUTPUT-001]
+  no numeric LOW/MODERATE/HIGH classification exists and none may be invented
+  the evidence facts are surfaced in its place: independentClusters, spanDays,
+  sigma_S, |S_supported|/|S_observed| (omitted when S_observed = 0), confounders[],
+  potencyConfidence, deliveryBasis
   it can never participate in arithmetic                       [X-INV-010]
+  OUTPUT_CONFIDENCE_UNSPECIFIED
 4 the seven dose/slope quantities are separate named fields    [ALK-VARIABLE-SEMANTICS-001]
 5 reason codes are emitted in owner order:
       VALIDATION_, TIME_, CONFIG_, CLUSTER_, SEGMENT_, DELIVERY_, EVIDENCE_,
@@ -1714,7 +2326,7 @@ less likely, inform and proceed.
 every analysis function takes an explicit asOf; none reads a clock
 no randomness, no unseeded sampling, no bootstrap
 sort by (absoluteInstant, eventOrdinal, eventId) before any ordered computation
-full stored precision; rounding only at the actuator step and at presentation
+full stored precision; rounding only at the recommendation step and at presentation
 write an AuditTrace with every actionable assessment
 
 historical assessments are NEVER rewritten:
