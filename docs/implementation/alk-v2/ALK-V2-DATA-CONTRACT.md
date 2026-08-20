@@ -1,6 +1,6 @@
 # ALK V2 — DOMAIN DATA CONTRACT
 
-**Authority:** canon under `SHARED_V2_FREEZE_2` / `ALK_V2_FREEZE_4`.
+**Authority:** canon under `SHARED_V2_FREEZE_2` / `ALK_V2_FREEZE_5`.
 **Form:** implementation-neutral. No language, framework, ORM or database is assumed.
 
 ---
@@ -277,7 +277,7 @@ Equipment and delivery events that break or confound analysis (Part I §9.6, Par
 | `changedFraction` | 0..1 | `REQ` | `f` in `ΔA_WC = f (A_replacement − A_tank)`. |
 | `volumeL` | L | `OPT` | |
 | `replacementAlkalinityDkh` | dKH | `OPT` | Absent ⇒ unknown branch (`M-4`). |
-| `replacementAlkalinityConfidence` | — | `REQ*` | Required when the value is present: `MEASURED_SAME_BATCH` \| `USER_CONFIGURED_SALT_PROFILE` \| `MANUFACTURER_NOMINAL`. See `OI-WATERCHANGE-001`. |
+| `replacementAlkalinityConfidence` | — | `REQ*` | Required when the value is present: `MEASURED_SAME_BATCH` \| `USER_CONFIGURED_SALT_PROFILE` \| `MANUFACTURER_NOMINAL`. **Only `MEASURED_SAME_BATCH` permits normalization** (`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001`); every other value takes the unknown branch. |
 | `materialityClass` | — | `DERIVED` | `NEGLIGIBLE` \| `MATERIAL_KNOWN` \| `MATERIAL_UNKNOWN` \| `NOT_APPLICABLE`. |
 | `expectedStepDkh` | dKH | `DERIVED` | `f (A_replacement − A_tank)`, only in the known branch. |
 
@@ -486,13 +486,24 @@ not widen the range: 8.19 against a lower edge of 8.20 is below range (`ALK-004`
 | `deliveryBasis` | — | From `EffectiveDoseInterval`. |
 | `selectedPotencyDkhPerMl` | dKH/mL | The `P` actually used. |
 | `sourceSegmentId` | — | |
-| `physicality` | — | `INTERPRETABLE` \| `UNCERTAIN_NEAR_ZERO` \| `NON_PHYSICAL_OR_UNEXPLAINED_GAIN` \| `UNRESOLVED`. |
+| `physicality` | — | `INTERPRETABLE` \| `UNCERTAIN_NON_RESOLVABLE` \| `NON_PHYSICAL_OR_UNEXPLAINED_GAIN`. |
+| `materialityMarginDkhPerDay` | dKH/day | `DERIVED`. `ALK_SLOPE_SUPPORT_K · sigma_S`; the boundary is `C_estimate + margin < 0`. |
 | `eligibility` | — | `RUN` \| `NOT_RUN` + reason. |
 | `warnings[]` | — | |
 
-`physicality = UNRESOLVED` is the state required by `OI-NEGCONS-001` while the
-slight/material boundary is undefined. A negative arithmetic result is **never** clamped
-to zero and then treated as a real zero-consumption target (`ALK-031`).
+`physicality` is fully determined by `ALK-NEGATIVE-MATERIALITY-001`:
+
+```text
+C_estimate >= 0                                    -> INTERPRETABLE
+C_estimate <  0 and C_estimate + 1.28*sigma_S <  0 -> NON_PHYSICAL_OR_UNEXPLAINED_GAIN
+C_estimate <  0 and C_estimate + 1.28*sigma_S >= 0 -> UNCERTAIN_NON_RESOLVABLE
+```
+
+`UNRESOLVED` and `UNCERTAIN_NEAR_ZERO` were the pre-Freeze-5 values and are **retired**;
+`UNCERTAIN_NON_RESOLVABLE` is `ALK-031`'s own wording for the non-material branch. Both
+negative branches HOLD maintenance and both are uninterpretable for the high-breach
+fail-safe. A negative arithmetic result is **never** clamped to zero and then treated as a
+real zero-consumption target (`ALK-031`).
 
 ### `DoseRecommendation` `DERIVED` — Layer 4
 
@@ -650,10 +661,17 @@ Opt-in deliberate level movement. Never silently embedded in maintenance
 | `achievabilityNote` | — | Set when a downward pace exceeds `−C` at zero dose (`WG-ALK-035`). |
 
 `ReturnPlanPhase`: `OFFERED` \| `ACTIVE` \| `ASSESSMENT_DUE` \| `CONFIRMATION_PENDING` \|
-`COMPLETE` \| `EXPIRED_OVERRUN` \| `INTERRUPTED` \| `SUSPENDED_PENDING_SAFETY`
+`COMPLETE` \| `EXPIRED_OVERRUN` \| `INTERRUPTED` \| `TERMINATED_BY_SAFETY_RETURN`
 
-`SUSPENDED_PENDING_SAFETY` is **not a canon value**; it exists only under
-`OI-RETURNDURINGSAFETY-001` and requires owner confirmation.
+`TERMINATED_BY_SAFETY_RETURN` is a canon value (`ALK-RETURN-TERMINATED-BY-SAFETY-001`). It
+is **terminal**: a plan in this phase never returns to `ACTIVE`, and a new plan needs fresh
+`returnPlanEligibleTrajectory` eligibility plus a fresh opt-in. The proposed
+`SUSPENDED_PENDING_SAFETY` value was **not** adopted and must not appear.
+
+`returnPlanEligibleTrajectory` `DERIVED` `boolean` —
+`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`: ordinary minimum evidence satisfied **and**
+`S_supported = 0`. It is not `ALK-STABLE-001`'s `STABLE`, and the two must not share a
+field.
 
 The temporary movement component stops on the **first** measured reach or pass of the aim
 point. Confirmation is a separate later stage and never justifies keeping the temporary
@@ -693,7 +711,9 @@ RetestDecision {
   latestSafeAt        Instant   OPT
   reasonCode          RetestReason
   candidateTimes[]    { candidateClass, at, included|excluded, reason }
-  candidatesNotRun[]  reason codes for candidates whose Alk policy is unavailable
+  candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
+                      (T_detect, return-plan arrival cadence)
+  clampsApplied[]     RETEST_OBSERVATION_FLOOR_APPLIED | RETEST_OBSERVATION_CEILING_APPLIED
   assumptions[]
 }
 ```
@@ -745,7 +765,7 @@ EngineResult {
   assessmentAsOf            Instant        explicit; never a clock read
   parameter                 ALK
   engineVersion             REQ
-  canonVersion              REQ            "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4"
+  canonVersion              REQ            "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5"
   configVersionId           REQ            resolved at assessmentAsOf
 
   position                  Position
@@ -770,7 +790,10 @@ EngineResult {
   capabilities[]            CapabilityState
   forecast                  { tRangeLowDays, tRangeHighDays,
                               tOuterLowDays, tOuterHighDays }   each NOT_APPLICABLE-able
-  recommendationConfidence  LOW | MODERATE | HIGH | UNSPECIFIED
+  recommendationConfidence  UNSPECIFIED            frozen value; ALK-CONFIDENCE-OUTPUT-001
+  evidenceFacts             { independentClusters, spanDays, sigmaS,
+                              supportRatio?, confounders[], potencyConfidence,
+                              deliveryBasis }         surfaced in place of a label
   reasonCodes[]             ReasonCode
   auditTraceId              REQ
 }

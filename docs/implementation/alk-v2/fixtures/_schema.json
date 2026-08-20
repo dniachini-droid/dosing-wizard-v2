@@ -2,7 +2,7 @@
   "$comment": "Fixture schema for the Alk V2 golden corpus. Implementation-neutral. Not JSON Schema draft-strict; it is the documented shape every fixture file follows.",
   "fixtureFileShape": {
     "corpusId": "string",
-    "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+    "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
     "defaultConfigRef": "config-defaults.json#/configurations/<id>",
     "fixtures": "Fixture[]"
   },

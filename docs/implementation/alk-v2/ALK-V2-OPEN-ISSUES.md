@@ -7,7 +7,7 @@ classified using the four categories required by the preparation brief:
 
 | Class | Meaning | Implementation instruction |
 |---|---|---|
-| `CANON_DEFECT` | The frozen canon is incomplete, self-contradictory, or ambiguous on a point that changes behaviour. | Do **not** invent behaviour. Emit the stated refusal/degradation. Escalate under the Freeze-4 reopening rule. |
+| `CANON_DEFECT` | The frozen canon is incomplete, self-contradictory, or ambiguous on a point that changes behaviour. | Do **not** invent behaviour. Emit the stated refusal/degradation. Escalate under the current freeze's reopening rule. |
 | `OWNER_DECISION_REQUIRED` | A genuine product/chemistry judgement remains. | Stop. The owner decides. A proposal may be recorded but is not authority. |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | The canon determines the answer, possibly only by combining rules or applying its own precedence machinery. | Implement the pinned reading. No owner input needed. |
 | `NO_PROBLEM` | Investigated; no defect. Recorded so it is not re-investigated. | Proceed. |
@@ -19,19 +19,79 @@ An item may carry two classes when the defect is real *and* the decision is the 
 every unaffected conclusion. An unclosed issue ships as a `REFUSE` / `NOT_RUN` with an
 explicit reason code — never as a silently chosen default.
 
-Nothing here has been written back into the canon. Resolution belongs to a governed Alk
-Freeze 5 (or a shared freeze where the defect is shared), per the Freeze-4 reopening
-rule.
+## Status after `ALK_V2_FREEZE_5`
+
+`ALK_V2_FREEZE_5` closed thirteen of these items — every blocking item, plus
+`OI-RAPIDBASIS-001` and `OI-CONFIDENCE-001` — by writing twelve owner decisions into the
+canon under the Freeze-4 reopening rule.
+
+A closed item is marked with a **RESOLVED by `ALK_V2_FREEZE_5`** box naming the owner
+decision and the canon rule that encodes it, followed by a **Freeze-5 resolution** section.
+Everything after that is the original analysis, kept deliberately: it is the record of why
+the decision was needed, and a reviewer must be able to check the decision against the
+failure scenario that motivated it. **The pre-Freeze-5 "Until closed" behaviour in a
+resolved item is superseded and must not be implemented.**
+
+Items with no such box remain open, and their "Until closed" behaviour still governs.
+
+| Freeze-5 decision | Closes | Canon rule |
+|---|---|---|
+| F5-01 | `OI-INDEPENDENCE-001` | `ALK-INDEPENDENT-SELECTION-001` |
+| F5-02 | `OI-SUSPECT-001`, `OI-MADFLOOR-001` | `ALK-SUSPECT-DETECTION-001` |
+| F5-03 | `OI-NEGCONS-001` | `ALK-NEGATIVE-MATERIALITY-001` |
+| F5-04 | `OI-RETURNOFFER-001` | `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` |
+| F5-05 | `OI-BELOWRISING-001` | `ALK-TOWARD-RANGE-HOLD-001` |
+| F5-06 | `OI-LIQUIDGUARD-001` | `ALK-LIQUID-VOLUME-GUARD-001` (amended) |
+| F5-07 | `OI-RAPIDBASIS-001` | `ALK-RAPID-BASIS-001` |
+| F5-08 | `OI-RETURNDURINGSAFETY-001` | `ALK-RETURN-TERMINATED-BY-SAFETY-001` |
+| F5-09 | `OI-RETEST-001` | `ALK-RETEST-SCHEDULER-001` |
+| F5-10 | `OI-WATERCHANGE-001` | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` |
+| F5-11 | `OI-SAFETYRATE-001` | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` |
+| F5-12 | `OI-CONFIDENCE-001` | `ALK-CONFIDENCE-OUTPUT-001` (amended) |
+
+`OI-MADFLOOR-001` is closed as an **accepted residual**: its dependency was decided by
+declining to add a threshold, so the behaviour is unchanged and the exposure is now named
+rather than open.
+
+Twenty-seven items remain. Resolution of any of them belongs to a governed Alk Freeze 6 (or
+a shared freeze where the defect is shared), per the Freeze-5 reopening rule.
 
 ---
 
-# A. Blocking — must be closed before the dependent output can be emitted
+# A. Formerly blocking — all closed by `ALK_V2_FREEZE_5`
+
+Every item in this section blocked a dependent output under `ALK_V2_FREEZE_4`. None does
+now. The section keeps its original ordering and content so the decisions can be read
+against the analysis that produced them.
 
 ## OI-INDEPENDENCE-001 — Independent-cluster selection is not specified
 
 - **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
 - **Canon:** `ALK-008`; Part II §6; `ALK-MOVEMENT-001`
 - **Owner module:** `SEGMENTATION`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-01.**
+>
+> Encoded as `ALK-INDEPENDENT-SELECTION-001` (canon, under `ALK-008`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+Forward-greedy chronological selection from the earliest eligible cluster. After accepting
+a cluster, the next accepted cluster is the earliest one at least 24 h after the **last
+accepted** cluster. Later data never retroactively alters an earlier acceptance. A rejected
+candidate keeps every non-trend use `ALK-008` already grants it and is never marked
+`SUSPECT` or `INVALID`.
+
+The failure scenario above resolves to `{0.0, 2.0, 4.0}`, `Sxx = 8`,
+`sigma_S = 0.035355339059`. Backward-greedy and keep-all-and-mark are now **forbidden**.
+
+**Fixtures:** `AD-SEG-001` (positive), `AD-SEG-005` (negative control: a later cluster does
+not change the earlier selection; the backward-greedy alternative is asserted forbidden).
+
 
 `ALK-008` states that a cluster less than 24 hours after the previous independent cluster
 "does not ordinarily count as a new full-strength maintenance-trend observation", and
@@ -45,10 +105,15 @@ surviving set is.
 **Failure scenario.** Clusters at t = 0.0, 0.5, 2.0, 4.0 days.
 
 - Forward-greedy from the earliest: keep {0.0, 2.0, 4.0}. `Sxx = 8`, `sigma_S = 0.035355`.
-- Backward-greedy from the latest: keep {4.0, 2.0, 0.5} (0.0 is 0.5 d before 0.5).
-  Actually keep {4.0, 2.0, 0.5}, drop 0.0. `t̄ = 2.1667`, `Sxx = 6.3889`,
-  `sigma_S = 0.039556`.
-- Keep-all-but-mark: `Sxx = 10.25`, `sigma_S = 0.031235`.
+- Backward-greedy from the latest: keep {0.5, 2.0, 4.0}, drop 0.0 (it is 0.5 d before 0.5).
+  `t̄ = 2.1667`, `Sxx = 6.1667`, `sigma_S = 0.040269`.
+- Keep-all-but-mark: `t̄ = 1.625`, `Sxx = 9.6875`, `sigma_S = 0.032129`.
+
+*(Freeze-5 correction: the backward-greedy and keep-all figures originally recorded here
+were `Sxx = 6.3889 / 10.25` and `sigma_S = 0.039556 / 0.031235`, which do not follow from
+the stated cluster times. `AD-SEG-001` carries the correct values and is authoritative. The
+argument the scenario makes — three defensible readings, three different `sigma_S` — is
+unaffected.)*
 
 Three defensible readings, three different `sigma_S`, therefore three different
 `S_supported` and potentially three different recommended doses. This is not a rounding
@@ -56,7 +121,7 @@ difference; it changes the actuator command.
 
 **What must not be done.** Do not pick a traversal direction because it is easier.
 
-**Until closed.** Where any candidate cluster in the selected current-control segment
+**Until closed (superseded by Freeze 5; historical).** Where any candidate cluster in the selected current-control segment
 falls within 24 h of another candidate cluster, emit:
 
 ```text
@@ -67,7 +132,7 @@ automaticMaintenanceAction = WITHHELD
 
 Position, history and safety logic are unaffected and continue normally.
 
-**Proposal for the owner (not authority).** Forward-greedy from the earliest eligible
+**Proposal put to the owner (historical; the owner's actual decision is in the Freeze-5 resolution above).** Forward-greedy from the earliest eligible
 cluster in the segment is the only order that is stable under the arrival of new data:
 adding a newer reading never retroactively changes which older clusters were independent.
 Backward-greedy makes the historical selection depend on the present, which conflicts
@@ -81,6 +146,28 @@ with deterministic replay expectations.
 - **Canon:** Part II §47, §48, §49 (explicitly defers the threshold: "The shared
   architecture does not set the final threshold"); `ALK-051`; `ALK-G024`; `ALK-G025`
 - **Owner module:** `VALIDATION`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-02.**
+>
+> Encoded as `ALK-SUSPECT-DETECTION-001` (canon, `ALK-005A`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+No Alk-specific automatic statistical `SUSPECT` threshold is invented. Automatic
+statistical suspect detection is **canonically `NOT_RUN`** until separately validated and
+canonised — a decided state, not a gap. The canon-defined `SUSPECT` sources remain
+operative and are the complete set: explicit user marking, a recorded test/device fault,
+and the existing `ALK-005` repeat-test spread mechanism. An unusual reading may prompt
+repeat testing **without being silently discarded**.
+
+**Fixtures:** `AD-VAL-001` (all three operative sources, plus the negative control that a
+statistically unusual reading alone produces nothing), `ALK-G024`, `ALK-G025`,
+`AD-TRD-004`.
+
 
 Part II §47 defines a candidate standardized residual
 `Z_i = |r_i| / max(sigma_i, sigma_r, epsilon)` and states that a parameter canon "may use
@@ -96,7 +183,7 @@ Consequences:
 - `ALK-G024` / `ALK-G025` (suspicious latest result disproved / confirmed) cannot be
   driven from measurement data alone.
 
-**Until closed.** Automatic suspicion detection is `NOT_RUN`:
+**Until closed (superseded by Freeze 5; historical).** Automatic suspicion detection is `NOT_RUN`:
 
 ```text
 suspicionDetection = NOT_RUN
@@ -125,6 +212,28 @@ convention (Part II §7.4, Part I §56).
 - **Canon:** `ALK-SLOPE-UNCERTAINTY-001` step 3-4; Part II §19.4, §47
 - **Owner module:** `UNCERTAINTY`
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-02.**
+>
+> Encoded as no new rule — dependency decided.
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+The dependency `OI-SUSPECT-001` is closed by declining to add a threshold, so the intended
+defence stays deferred. The interaction is unchanged and is now an **accepted, named
+residual** rather than an open defect: a lone aberrant point that the residual MAD cannot
+see does not raise `sigma_S`.
+
+`ALK-SUSPECT-DETECTION-001` states explicitly that **no compensating uncertainty-inflation
+term may be added**. The exposure is recorded in the Freeze 5 declaration's *Deliberately
+left open* list and is a named future-canon item.
+
+**Fixture:** `AD-TRD-004`, retitled as the accepted-residual record.
+
+
 `sigma_resid = 1.4826 · MAD(r_i)` and `sigma_point = max(0.10, sigma_resid)`.
 
 **Failure scenario (fixture `AD-TRD-004`).** Five clusters at t = 0, 2, 4, 6, 8 with
@@ -140,7 +249,7 @@ This is a *correct* consequence of two individually correct frozen rules (MAD ro
 is intended; the floor is intended). The canon's own defence against it is Part II §47's
 suspicious-reading layer — which alkalinity never parameterised (`OI-SUSPECT-001`).
 
-**Until closed.** No change to `sigma_point`; the formula is frozen. Record the
+**Until closed (superseded by Freeze 5; historical).** No change to `sigma_point`; the formula is frozen. Record the
 interaction and close `OI-SUSPECT-001`, which restores the intended defence. Implementers
 must not add a compensating uncertainty inflation term.
 
@@ -151,6 +260,36 @@ must not add a compensating uncertainty inflation term.
 - **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
 - **Canon:** `ALK-031`; `ALK-NEGATIVE-CONSUMPTION-001`; `ALK-HIGH-BREACH-UNRESOLVED-001`
 - **Owner module:** `CONSUMPTION`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-03.**
+>
+> Encoded as `ALK-NEGATIVE-MATERIALITY-001` (canon, in `ALK-031`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+Materially negative consumption is defined as
+
+```text
+C_estimate + ALK_SLOPE_SUPPORT_K * sigma_S < 0        (strict, K = 1.28)
+```
+
+Otherwise the negative estimate is uncertainty-limited/uninterpretable and cannot by itself
+reduce established maintenance dosing. **No `sigma_P` and no `sigma_D` are introduced.**
+
+Because the owner's decision labels the non-material branch uninterpretable too, a negative
+`C_estimate` satisfies `ALK-HIGH-BREACH-UNRESOLVED-001`'s "physically uninterpretable"
+condition on **both** branches. The high-breach zero-dose fail-safe is therefore no longer
+gated: `C_estimate < 0` arms it, `C_estimate >= 0` takes the temporary-safety-rate path.
+
+**Fixtures:** `WG-ALK-013` (material), `ALK-G026` (uncertainty-limited, now determinate),
+`AD-CON-002` (boundary straddle above `OuterMax`: doses 1.5 and 1.6 mL/day sit either side
+of the boundary and are asserted with each other's classification forbidden),
+`WG-ALK-051` (fail-safe un-gated).
+
 
 `ALK-031` splits negative inferred consumption into two branches:
 
@@ -179,7 +318,7 @@ under `k = 0` (any negative is material) it is material — and the tank, if sim
 above `OuterMax`, is told to stop dosing. Different defensible readings, opposite safety
 actions.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 consumptionPhysicality = UNRESOLVED
@@ -195,7 +334,7 @@ unaffected. Only the high-breach zero-dose fail-safe is gated. `WG-ALK-013` and
 defensible reading classifies as material, so both canonical fixtures remain executable;
 they are marked in the corpus as *not* discriminating the boundary.
 
-**Proposal for the owner (not authority).** Alkalinity already owns a controller
+**Proposal put to the owner (historical; the owner's actual decision is in the Freeze-5 resolution above).** Alkalinity already owns a controller
 uncertainty constant and an uncertainty proxy. A boundary of the form
 `C_estimate + ALK_SLOPE_SUPPORT_K · sigma_S < 0 ⇒ materially negative` reuses both, needs
 no new constant, and treats `sigma_P` and `sigma_D` as zero — which is conservative in the
@@ -210,6 +349,44 @@ whether that direction of conservatism is the intended one.
 - **Class:** `CANON_DEFECT`
 - **Canon:** Part II §51, §52, §53, §54, §66; `ALK-050`-`ALK-053`; `X-INV-004`
 - **Owner module:** `RETEST`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-09.**
+>
+> Encoded as `ALK-RETEST-SCHEDULER-001` (canon, `ALK-053A`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+One authoritative Alk scheduler, parameterised:
+
+```text
+routine                 48 h                              ALK-050
+repeat now              now                               ALK-051
+rapid                   ~24 h, earlier on outer-bound risk ALK-052
+post-change             ~48 h, then ~Day 4                ALK-053
+safety return           ~24 h                             integration §9
+high-breach fail-safe   ~24 h                             ALK-HIGH-BREACH-UNRESOLVED-001
+confidence-building     T_signal = 0.10 / |S_supported|   F5-09
+forecast boundary       T_boundary = T_outer - 1.0 day    F5-09
+                        T_boundary <= 0 -> test now
+expiry                  2*T_plan + 2                      ALK-RETURN-EXPIRY-001
+
+ordinary observation clamped to [24 h, 96 h]              ALK-008 / ALK-053
+selection = earliest applicable candidate
+```
+
+`T_detect` and the return-plan arrival cadence are **canonically `NOT_RUN`**: the owner
+declined to invent `K_detect` or a distinct plan cadence merely to fill a generic slot.
+No new constant was introduced — every operand above is already frozen canon.
+
+**Fixtures:** `AD-RET-001` (`T_signal` clamped up to the floor and selected),
+`AD-RET-002` (`T_signal` above the ceiling; routine cadence still earlier),
+`AD-RET-003` (boundary lead selects 40 h; forecasting from `S_supported` is asserted
+forbidden), `AD-RET-004` (crossing inside the lead ⇒ test now).
+
 
 Part II §51 lists nine retest candidate classes. Part III supplies concrete values for
 only some of them:
@@ -233,7 +410,7 @@ Part II §51 says the final recommendation is "the earliest relevant candidate t
 not violate a minimum useful interval" — and the minimum useful interval is one of the
 absent values.
 
-**Until closed.** The scheduler runs with the candidate set the canon *does* define, and
+**Until closed (superseded by Freeze 5; historical).** The scheduler runs with the candidate set the canon *does* define, and
 explicitly reports the ones it cannot compute:
 
 ```text
@@ -268,6 +445,34 @@ single scheduler owns the reduced candidate set. No card may add a candidate.
   `WG-ALK-034`
 - **Owner module:** `RETURN`
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-04.**
+>
+> Encoded as `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` (canon, in `ALK-054`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+Reading (b), with an explicitly named predicate. `ALK-STABLE-001`'s analytical definition
+is **unchanged**:
+
+```text
+returnPlanEligibleTrajectory
+  = (ALK-011 ordinary minimum evidence satisfied) and (S_supported = 0)
+  = trajectory in { STABLE, UNCERTAINTY_LIMITED }
+```
+
+A return plan may be offered when the observed slope is non-zero but uncertainty leaves no
+supported movement. `movementEvidence = INSUFFICIENT` is not eligible. `WG-ALK-014` is
+executable.
+
+**Fixtures:** `WG-ALK-014`, `WG-ALK-028`, `ALK-G006`, `AD-MNT-008`,
+`AD-RTN-003` (negative control: insufficient evidence and supported movement are both
+ineligible; the `UNCERTAINTY_LIMITED` case is eligible while explicitly not `STABLE`).
+
+
 `ALK-STABLE-001` defines `STABLE` with two exact conditions: `S_supported = 0` **and**
 `S_observed = 0`. It explicitly rules out calling an uncertainty-limited lean stable.
 
@@ -294,7 +499,7 @@ four days. Theil-Sen slope is −0.0025 dKH/day (not zero). `S_supported = 0`. U
 return plan is ever offered and the keeper's tank sits below range indefinitely with the
 engine reporting HOLD. Under (b) the return plan is offered as `WG-ALK-014` requires.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 returnPlanOffer = NOT_RUN
@@ -307,7 +512,7 @@ conservative direction: `CORE-STABILISE-001` makes deliberate level movement opt
 non-urgent by design, and `ALK-OUTER-BOUND-ACTION-001` already owns every urgent
 out-of-range case independently of the return plan.
 
-**Proposal for the owner (not authority).** Reading (b) with an explicit
+**Proposal put to the owner (historical; the owner's actual decision is in the Freeze-5 resolution above).** Reading (b) with an explicit
 `returnPlanEligibleTrajectory` predicate — `movementEvidence ∈ {SUFFICIENT,
 UNCERTAINTY_LIMITED}` and `S_supported = 0` — matches `WG-ALK-014`, keeps
 `ALK-STABLE-001` untouched as the narrower analytical claim, and requires only a new
@@ -320,6 +525,37 @@ named predicate rather than a changed threshold.
 - **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
 - **Canon:** `ALK-029`; `ALK-030`; `ALK-070`; `CORE-STABILISE-001`
 - **Owner module:** `MAINTENANCE`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-05.**
+>
+> Encoded as `ALK-TOWARD-RANGE-HOLD-001` (canon, `ALK-030A`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+The owner confirmed the matrix's asymmetry is deliberate:
+
+```text
+below preferred range + supported RISING   =>  HOLD maintenance
+above preferred range + supported FALLING  =>  HOLD maintenance
+```
+
+Automatic maintenance must not oppose a supported trajectory already carrying alkalinity
+toward the preferred range. Intentional level movement stays with the return-plan
+mechanism. The rule requires a **supported** trajectory: an `UNCERTAINTY_LIMITED` lean is
+held by `ALK-011`'s own branch and never reaches this gate.
+
+**Fixtures:** `AD-MNT-006` (below + supported rising; the 7.5 mL/day strict-stabilise-first
+dose is asserted forbidden), `AD-MNT-007` (mirror; 10.5 mL/day forbidden),
+`AD-MNT-008` (negative control: `UNCERTAINTY_LIMITED` must not fire this rule).
+
+Both `AD-MNT-006` and `AD-MNT-007` carried input series that produced `S_TS = ±0.075`
+while their expectations stated `±0.15`. The inputs were corrected to `7.3, 7.6, 7.9` and
+`9.7, 9.4, 9.1`, which reproduce the stated slopes exactly.
+
 
 The `ALK-070` recommendation matrix names an action for seven of its nine
 position × trajectory cells. Two cells name only a prohibition:
@@ -356,7 +592,7 @@ The mirror case — Above + Falling with a supported falling slope and no active
 has the same structure: strict stabilise-first would *increase* the dose of a tank that
 is above range and coming down.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 maintenanceAction = HOLD
@@ -368,7 +604,7 @@ for explanation. HOLD is the conservative option: it is the only action both rea
 permit, it cannot move the level in the direction the keeper does not want, and canon
 Part I §30 makes HOLD a full recommendation rather than a failure to answer.
 
-**Proposal for the owner (not authority).** These two cells are exactly where
+**Proposal put to the owner (historical; the owner's actual decision is in the Freeze-5 resolution above).** These two cells are exactly where
 "stabilise first" and "do not act on an uninterpretable cause" collide. The matrix's
 asymmetry looks deliberate rather than accidental — the two withheld cells are precisely
 the two where the supported trajectory is carrying the level *toward* the target range,
@@ -386,6 +622,26 @@ opposite reading (symmetric stabilise-first) is equally consistent with
 - **Class:** `CANON_DEFECT`
 - **Canon:** Part II §45; `ALK-033`; `M-4`
 - **Owner module:** `SEGMENTATION`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-10.**
+>
+> Encoded as `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` (canon, in `ALK-033`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+Only `MEASURED_SAME_BATCH` qualifies for automatic water-change normalization.
+`USER_CONFIGURED_SALT_PROFILE`, `MANUFACTURER_NOMINAL`, an unknown tier and any lower
+confidence fall through to `ALK-WATERCHANGE-UNKNOWN-001`'s fully specified branch. This is
+the stricter of the two readings and matches Part II §45's explicit warning.
+
+**Fixtures:** `WG-ALK-011` and `ALK-G022`, now stating `MEASURED_SAME_BATCH`;
+`AD-SEG-006` (negative control: the same arithmetic at `MANUFACTURER_NOMINAL` breaks the
+segment instead of normalizing, and normalizing is asserted forbidden).
+
 
 Part II §45 enumerates replacement-chemistry confidence tiers —
 `MEASURED_SAME_BATCH`, `USER_CONFIGURED_SALT_PROFILE`, `MANUFACTURER_NOMINAL`,
@@ -411,7 +667,7 @@ Segment break versus no segment break changes the cluster count, `Sxx`, `sigma_S
 often the recommendation itself. `WG-ALK-011` does not state its confidence tier, so it
 does not settle the question.
 
-**Until closed.** Normalize only where the tier is unambiguously "measured/reliable" in
+**Until closed (superseded by Freeze 5; historical).** Normalize only where the tier is unambiguously "measured/reliable" in
 `ALK-033`'s own words — `MEASURED_SAME_BATCH`. For `USER_CONFIGURED_SALT_PROFILE` and
 `MANUFACTURER_NOMINAL`:
 
@@ -434,6 +690,33 @@ the two readings, matching Part II §45's explicit warning.
 - **Canon:** `ALK-LIQUID-VOLUME-GUARD-001`; `ALK-060`; `ALK-049`; `WG-ALK-067`
 - **Owner module:** `SAFETY`
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-06.**
+>
+> Encoded as `ALK-LIQUID-VOLUME-GUARD-001` (canon, amended in `ALK-061`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+**Scope.** The guard applies to all engine-generated Alk delivery — maintenance,
+return/correction/safety delivery, and their permitted combined 24-hour total. The rule
+body and `WG-ALK-067`'s wording now agree.
+
+**Enforcement.** Exceeding it **withholds the executable dosing command**. Capping to the
+2% figure and presenting that as the recommendation is forbidden. A correction or
+return-plan execution, whose duration the engine may choose, is still staged until every
+single-day command satisfies the guard.
+
+**Position.** A hard constraint, rechecked after actuator rounding/discretisation in
+`ALK-ROUNDING-001` step 6 beside the rate rail. `ALK-049` now names both.
+
+**Fixtures:** `WG-ALK-067`, `AD-SAF-003` (staging), `AD-SAF-004` (maintenance command;
+rounding up crosses the guard and the recheck steps back toward `D_current`; the variant
+where `D_current` itself exceeds the guard withholds rather than affirming it).
+
+
 Two direct textual conflicts.
 
 **Scope.** `ALK-LIQUID-VOLUME-GUARD-001` limits "Alk dosing-solution volume delivered
@@ -454,7 +737,7 @@ when `ΔA / P > 0.02 · 1000 · V_L`, i.e. when
 `P < 0.000325 dKH/mL` — roughly 213× weaker than the canon's own 0.0693 dKH/mL reference
 solution. It is nonetheless reachable, and `WG-ALK-067` constructs it deliberately.
 
-**Until closed.** Apply the guard to `SAFETY_RETURN` correction volumes, one-off
+**Until closed (superseded by Freeze 5; historical).** Apply the guard to `SAFETY_RETURN` correction volumes, one-off
 corrections and return-plan temporary components — the scope the rule body states — and
 for ordinary maintenance emit:
 
@@ -481,6 +764,34 @@ rather than invented.
 - **Class:** `CANON_DEFECT`
 - **Canon:** `M-1`; `ALK-SAFETY-CORRECTION-RESOLUTION-001`; `ALK-003A` high breach
 - **Owner module:** `SAFETY` / `CAPABILITY`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-11.**
+>
+> Encoded as `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` (canon, in `ALK-003A`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+The `M-1` exemption is extended to the temporary high-breach safety rate. The exact
+calculated rate is emitted as an **advisory** rate when the actuator increment is unknown.
+Two outputs stay distinct:
+
+```text
+temporarySafetyRateAdvisoryMlPerDay = D_safety,temp    exact, full precision
+temporarySafetyPumpCommandMlPerDay  = NOT_RUN          while the increment is absent
+```
+
+All other hard rails and guards remain applicable. Potency stays load-bearing: without a
+valid `P_selected` neither figure is emitted and only the required dKH movement and
+direction are stated.
+
+**Fixtures:** `AD-SAF-002` (advisory 1.443001443 mL/day emitted, pump command `NOT_RUN`),
+`AD-SAF-005` (negative control across three capability cases; merging the two fields or
+inventing a 0.1 mL/day increment is asserted forbidden).
+
 
 `M-1` refuses a final actionable **maintenance-rate recommendation in mL/day** when
 `actuatorIncrementMlPerDay` is missing. `ALK-SAFETY-CORRECTION-RESOLUTION-001` carves out
@@ -510,7 +821,7 @@ Note the adjacent case is already determined: when consumption is *uninterpretab
 `ALK-HIGH-BREACH-UNRESOLVED-001` recommends exactly `0 mL/day`, which needs no increment
 and is unaffected.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 highBreachTemporaryRate = WITHHELD
@@ -530,6 +841,31 @@ information, the `SAFETY_RETURN` state and the 24-hour retest are all still emit
 - **Canon:** `ALK-SAFETY-RETURN-INTEGRATION-001` §5; `ALK-COMPOSITE-RAIL-001`;
   `ALK-056`; `ALK-058`
 - **Owner module:** `SAFETY` / `RETURN`
+
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-08.**
+>
+> Encoded as `ALK-RETURN-TERMINATED-BY-SAFETY-001` (canon, `ALK-SAFETY-RETURN-INTEGRATION-001` §5).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+Entering `SAFETY_RETURN` **immediately terminates** any active return plan. It is not
+suspended, and opposing intentional components are never layered. The proposed
+`SUSPENDED_PENDING_SAFETY` phase value is **not** adopted; `TERMINATED_BY_SAFETY_RETURN`
+replaces it.
+
+A terminated plan cannot automatically resume. After safety resolution a new plan requires
+fresh `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` eligibility and a fresh user opt-in. The plan
+keeps its identity, stored destination, duration, expiry and history; termination is
+recorded as an event.
+
+**Fixtures:** `AD-RTN-004` (the failure scenario above; two simultaneous intentional
+components and the `SUSPENDED_PENDING_SAFETY` phase are asserted forbidden),
+`AD-RTN-005` (negative control: no automatic resume once the safety return completes).
+
 
 `ALK-SAFETY-RETURN-INTEGRATION-001` §5 states that while `SAFETY_RETURN` is active "no
 ordinary Alk return plan is **started**; no second Alk correction plan is **layered on
@@ -553,7 +889,7 @@ prohibition on layering.
 The mirror (upward plan running, Alk breaches `OuterMax`) has the same shape and is the
 case `AUDIT-020` gestures at without resolving for the outer-bound path.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 returnPlanPhase       = SUSPENDED_PENDING_SAFETY
@@ -605,7 +941,13 @@ deliberately removed.
 
 **Consequence to record.** `STABLE` is a rare state on real data. Every out-of-range
 resting tank will normally sit in `UNCERTAINTY_LIMITED` with `S_supported = 0`. This is
-what makes `OI-RETURNOFFER-001` load-bearing rather than academic.
+what made `OI-RETURNOFFER-001` load-bearing rather than academic.
+
+**Freeze-5 note.** F5-04 explicitly declined to change `ALK-STABLE-001` and instead created
+the separate `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` predicate, which covers exactly the
+`UNCERTAINTY_LIMITED` case above. This item therefore stays **open** as a documentation
+defect — the illustrative examples remain wrong — but it is no longer load-bearing for the
+return-plan offer.
 
 ---
 
@@ -726,6 +1068,31 @@ canon-consistent choice; the defect is that the residual risk is undocumented.
 - **Canon:** `ALK-071` / `ALK-CONFIDENCE-OUTPUT-001`; Part I §48; `X-INV-010`
 - **Owner module:** `OUTPUT`
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-12.**
+>
+> Encoded as `ALK-CONFIDENCE-OUTPUT-001` (canon, amended in `ALK-071`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+No numeric `LOW`/`MODERATE`/`HIGH` thresholds are invented. Until separately specified:
+
+```text
+recommendationConfidence = UNSPECIFIED
+```
+
+and the underlying evidence facts are surfaced in its place — `independentClusters`,
+`spanDays`, `sigma_S`, `|S_supported| / |S_observed|`, confounders, potency confidence and
+delivery basis. Confidence remains explanatory only and must never participate in dosing
+arithmetic. The proposal recorded below was **not** adopted.
+
+**Fixture:** `AD-OUT-001`, asserting the surfaced facts and forbidding any three-valued
+label or arithmetic path.
+
+
 `ALK-071` defines `LOW` / `MODERATE` / `HIGH` by example lists only ("two-point
 provisional trend", "robust recent trend", "small `sigma_S` relative to observed slope"),
 with no thresholds and no combination rule. Part I §48 lists candidate inputs, also
@@ -735,7 +1102,7 @@ The safety consequence is nil by construction: `ALK-CONFIDENCE-OUTPUT-001` and
 `X-INV-010` forbid confidence from participating in any calculation, and
 `INV-ALK-CONFIDENCE-001` is the fixture that proves it. Confidence is a pure label.
 
-**Until closed.**
+**Until closed (superseded by Freeze 5; historical).**
 
 ```text
 recommendationConfidence = UNSPECIFIED
@@ -747,7 +1114,7 @@ and surface the underlying evidence facts (`independentClusters`, `spanDays`,
 all individually determinate. A card can be honest and useful without the three-valued
 label; it cannot be honest with a label whose derivation is invented.
 
-**Proposal for the owner (not authority).** Because `X-INV-010` guarantees the label
+**Proposal put to the owner (historical; the owner's actual decision is in the Freeze-5 resolution above).** Because `X-INV-010` guarantees the label
 cannot leak into arithmetic, a purely descriptive deterministic mapping is safe to adopt,
 e.g. `HIGH` when ordinary evidence is `SUFFICIENT`, no confounders, potency
 `CALIBRATED` or better, and `|S_supported| ≥ 0.5 · |S_observed|`; `LOW` on a two-point
@@ -935,6 +1302,26 @@ so the derivation is visible and correctable.
 - **Canon:** `ALK-RAPID-001`; `ALK-009`; `ALK-011A`
 - **Owner module:** `TREND`
 
+> **RESOLVED by `ALK_V2_FREEZE_5` — owner decision F5-07.**
+>
+> Encoded as `ALK-RAPID-BASIS-001` (canon, in `ALK-013`).
+>
+> Everything below this box is the pre-Freeze-5 analysis, preserved as the record of
+> why the decision was needed. Its "Until closed" behaviour is **superseded** and must
+> not be implemented.
+
+### Freeze-5 resolution
+
+`rapidConfirmed` is determined from the **latest independent pair** using the existing
+0.30 dKH/day threshold. With three or more clusters, Theil–Sen remains the ordinary
+trajectory and the dose-sizing basis. Rapid confirmation changes pathway, cadence and cap
+eligibility; it never substitutes the latest-pair slope as the ordinary sizing slope, the
+consumption input or the forecast slope.
+
+**Fixture:** `AD-RAP-001`, with both wrong readings asserted forbidden — using −0.35 to
+size, and testing the Theil–Sen −0.15 against the threshold.
+
+
 `ALK-RAPID-001` requires `|S| ≥ 0.30 dKH/day` with "at least two independent testing
 episodes; at least 24 hours elapsed between their representative times". When only two
 clusters exist, `S` is unambiguously the two-point rate. When **three or more** clusters
@@ -946,7 +1333,7 @@ between the latest pair.
 `(8.15 − 8.50)/1 = −0.35` (rapid). Rapid confirmation controls a 24-hour retest and the
 gateway to the exceptional 50% step cap, so the two readings differ materially.
 
-**Until closed.** Evaluate the rapid condition on the **latest independent pair**, which
+**Until closed (superseded by Freeze 5; historical).** Evaluate the rapid condition on the **latest independent pair**, which
 is what `ALK-RAPID-001`'s own wording describes ("two independent testing episodes … 24
 hours elapsed between their representative times"), and record it explicitly:
 
@@ -987,6 +1374,14 @@ The liquid guard's placement is handled under `OI-LIQUIDGUARD-001`.
 assertion over all recommended intentional components (fail loudly if more than one is
 simultaneously active), and place the liquid guard per `OI-LIQUIDGUARD-001`. Record both
 as pipeline positions derived rather than stated.
+
+**Freeze-5 note — partially closed.** F5-06 put the liquid guard into the canon's own
+ordering: `ALK-ROUNDING-001` step 6 now names it beside the rate rail, and `ALK-049` names
+both the guard recheck and the composite-rail assertion. The guard limb of this item is
+**closed**. The composite rail's position remains a derived post-assembly assertion, and
+F5-08 removed the one case that could have made it multi-term — an in-flight return plan
+meeting a breach is now terminated rather than layered. This item stays open for the
+composite rail only.
 
 ---
 
@@ -1288,21 +1683,42 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 
 # D. Summary
 
-| Class | Count | IDs |
+### Status at `ALK_V2_FREEZE_5`
+
+| Status | Count | IDs |
 |---|---|---|
-| `CANON_DEFECT` (blocking) | 11 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001 |
-| `CANON_DEFECT` (non-blocking) | 13 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-CONFIDENCE-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-RAPIDBASIS-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
-| `OWNER_DECISION_REQUIRED` | 8 | OI-INDEPENDENCE-001, OI-NEGCONS-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-LIQUIDGUARD-001, OI-CONFIDENCE-001, OI-RAPIDBASIS-001, OI-RETURNDURINGSAFETY-001 |
+| **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
+| `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |
+| `OWNER_DECISION_REQUIRED` still open | 0 | — |
 | `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 | OI-MEDIAN-001, OI-EVIDENCEVOCAB-001, OI-RAPIDEVIDENCE-001, OI-FORECASTHORIZON-001, OI-DEFERREASON-001, OI-CONSUMPTIONLOOKBACK-001, OI-BRACKETEFFECT-001, OI-CHANGEPOINT-001, OI-POSITIONCLUSTER-001, OI-ANCHOR-001, OI-BOUNDARIES-001, OI-MAINTDURINGPLAN-001, OI-DETERMINISM-001 |
 | `NO_PROBLEM` | 3 | OI-CAMG-001, OI-HANDOFF-001, OI-SEGMENTPICK-001 |
 
-40 distinct issue IDs (11 + 13 + 13 + 3). The `OWNER_DECISION_REQUIRED` row overlaps the
-two `CANON_DEFECT` rows: eight items carry both classes, because the defect is real *and*
-the resolution is a product or chemistry judgement rather than a reading of the text.
+40 distinct issue IDs (13 + 11 + 13 + 3). **Nothing is blocking.** All eight items that
+carried `OWNER_DECISION_REQUIRED` were decided by Freeze 5.
 
-**What is *not* blocked by any of the above.** Current position, outer-bound state, the
-`SAFETY_RETURN` low-breach correction volume, clustering, segmentation on the branches the
-canon fully specifies, Theil-Sen trend, `sigma_S`, `S_supported`, the ordinary maintenance
-pipeline including rails, caps and rounding, the formal response classifier, the
-prediction-snapshot machinery, the capability contract, audit and replay — all are fully
-determined and buildable today.
+`OI-PIPELINE-001` remains open only for the composite rail's position; its liquid-guard
+limb is closed by F5-06. `OI-STABLE-001` is confirmed rather than closed: F5-04 explicitly
+left `ALK-STABLE-001` unchanged, so its illustrative examples are still wrong and its
+normative text still governs.
+
+### Class counts as originally recorded (historical)
+
+| Class | Count |
+|---|---|
+| `CANON_DEFECT` (blocking) | 11 |
+| `CANON_DEFECT` (non-blocking) | 13 |
+| `OWNER_DECISION_REQUIRED` | 8 |
+| `IMPLEMENTATION_DETAIL_ALREADY_DETERMINED` | 13 |
+| `NO_PROBLEM` | 3 |
+
+**What is buildable.** Everything. After Freeze 5 no open item blocks a dependent output:
+current position, outer-bound state, the whole `SAFETY_RETURN` path including the temporary
+high-breach rate, clustering and independent selection, segmentation, Theil-Sen trend,
+`sigma_S`, `S_supported`, consumption and its materiality classification, the ordinary
+maintenance pipeline including rails, caps, the liquid guard and rounding, the recommendation
+matrix, the return-plan offer and its termination by safety, the retest scheduler, the formal
+response classifier, the prediction-snapshot machinery, the capability contract, audit and
+replay.
+
+The eleven remaining `CANON_DEFECT` items degrade a specific optional analysis or record a
+documentation inconsistency; none withholds a controller output.

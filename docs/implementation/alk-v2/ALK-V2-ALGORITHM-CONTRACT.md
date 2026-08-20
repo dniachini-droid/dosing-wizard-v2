@@ -129,38 +129,56 @@ window.
 
 **PRECONDITIONS** clusters built; segment bounds known.
 
-**DECISION TREE**
+**ALGORITHM** forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`).
 
 ```text
-A cluster is NOT an independent ordinary maintenance-trend observation when its
-representativeAt is less than 24 h after the previous independent cluster's
-representativeAt.                                                        [ALK-008]
+candidates = clusters in the selected segment, sorted ascending by representativeAt
+accepted   = []
+anchor     = null
 
-Such a cluster MAY still:
-  - establish current position
-  - confirm an anomaly
-  - contribute to ALK-RAPID-001
+for c in candidates:
+    if anchor is null:
+        accepted.append(c); anchor = c                              # earliest eligible
+    elif hours(c.representativeAt - anchor.representativeAt) >= 24:
+        accepted.append(c); anchor = c                              # inclusive at 24 h
+    else:
+        notAccepted.append(c)                                       # anchor UNCHANGED
+
+return accepted
+```
+
+Three properties this shape guarantees, each of which a naive implementation loses:
+
+```text
+1. the anchor is the LAST ACCEPTED cluster, never the last candidate examined
+2. appending a newer cluster never changes an earlier acceptance  (replay stability)
+3. the >= 24 h comparison is inclusive at exactly 24 h           [ALK-008, ALK-RAPID-001]
+```
+
+A cluster that is not accepted is **not excluded, invalidated or hidden**. It MAY still:
+
+```text
+  - establish current position                                    [ALK-010]
+  - confirm an anomaly                                            [ALK-005, PII-48]
+  - contribute to ALK-RAPID-001 as the latest independent pair    [ALK-RAPID-BASIS-001]
   - contribute to an explicitly time-resolved intervention calculation
-
-WHICH cluster is dropped is NOT SPECIFIED BY CANON.                      [OI-INDEPENDENCE-001]
 ```
 
-**OUTPUT** `independentClusterIds[]`, or a refusal.
+**OUTPUT** `independentClusterIds[]`, `notAcceptedClusterIds[]`.
 
-**REASON CODE** `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` with
-`{conflictingClusterIds[], separationHours}`.
+**REASON CODE** `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` with
+`{acceptedClusterIds[], notAcceptedClusterIds[], separationHours[]}` whenever at least one
+candidate was not accepted.
 
-**FAILURE STATE** if any two candidate clusters in the segment are separated by less than
-24 h:
+**FAILURE STATE** none from selection itself. If the accepted set then falls below
+`ALK-MOVEMENT-001`'s minimum, the ordinary `EVIDENCE_INSUFFICIENT_CLUSTERS` /
+`EVIDENCE_INSUFFICIENT_SPAN` path runs — the same path as any sparse series.
 
-```text
-movementEvidence           = INSUFFICIENT
-automaticMaintenanceAction = WITHHELD
-```
+**FORBIDDEN** backward-greedy selection; keep-all-and-mark; re-anchoring on a rejected
+cluster; any selection whose result depends on the newest reading.
 
-Position, safety, retest and history continue normally.
-
-**TESTS** `AD-SEG-001` (same-day tests); `EVD-002` all spacings ≥ 24 h proceeds normally.
+**TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (later arrival
+does not retroactively change selection); `EVD-002` all spacings ≥ 24 h proceeds normally.
 
 ## A5 — Segment construction
 
@@ -263,11 +281,12 @@ replacementAlkalinityDkh KNOWN and confidence = MEASURED_SAME_BATCH:
     |deltaA_WC| >= 0.10  -> MATERIAL_KNOWN   -> normalize (A6)
     |deltaA_WC| <  0.10  -> NEGLIGIBLE       -> retain in segment, no subtraction
 
-replacementAlkalinityDkh KNOWN, confidence = USER_CONFIGURED_SALT_PROFILE
-                                          or MANUFACTURER_NOMINAL:
-    NORMALIZATION TIER UNDEFINED                                  [OI-WATERCHANGE-001]
-    -> fall through to the unknown branch below
-    -> reason SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED
+replacementAlkalinityDkh KNOWN, confidence != MEASURED_SAME_BATCH
+  (USER_CONFIGURED_SALT_PROFILE, MANUFACTURER_NOMINAL, unknown tier, or lower):
+    NOT NORMALIZABLE          [ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001]
+    -> fall through to the unknown branch below, using that branch in full
+    -> reason SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE
+    -> the stated replacement value is retained for audit and is NOT subtracted
 
 replacementAlkalinityDkh UNKNOWN or ABSENT:                       [ALK-WATERCHANGE-UNKNOWN-001]
     potential unknown step = f * 2.0 dKH
@@ -285,13 +304,14 @@ replacementAlkalinityDkh UNKNOWN or ABSENT:                       [ALK-WATERCHAN
 
 **REASON CODE** `SEGMENT_WC_NEGLIGIBLE`, `SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED`,
 `SEGMENT_WC_UNKNOWN_SUBFLOOR`, `SEGMENT_WC_UNKNOWN_BOUNDARY`,
-`SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED`.
+`SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE`.
 
 **FAILURE STATE** none — every branch is defined; the tier question degrades rather than
 refusing (`M-4`, `WG-ALK-048`).
 
-**TESTS** `WG-ALK-011`, `WG-ALK-012` (4% vs 5%), `WG-ALK-048`, `ALK-G021`-`G023`,
-`AD-WC-001`.
+**TESTS** `WG-ALK-011` (`MEASURED_SAME_BATCH`, normalized), `WG-ALK-012` (4% vs 5%),
+`WG-ALK-048`, `ALK-G021`-`G023`, `AD-WC-001`, `AD-SEG-006` (`MANUFACTURER_NOMINAL` at the
+same numbers falls through to a hard boundary — the negative control for the tier gate).
 
 ---
 
@@ -368,7 +388,9 @@ uncertainty from perfectly linear data.
 
 **TESTS** `WG-ALK-062` is mandatory — it is the golden that distinguishes the `Sxx` form
 from an endpoint-only form (`0.015811` vs the forbidden `0.017678`).
-`AD-TRD-005` exercises `sigma_resid > 0.10`. `AD-TRD-004` documents `OI-MADFLOOR-001`.
+`AD-TRD-005` exercises `sigma_resid > 0.10`. `AD-TRD-004` records the accepted residual
+exposure of `OI-MADFLOOR-001`: `ALK-SUSPECT-DETECTION-001` leaves automatic detection
+`NOT_RUN`, and **no compensating uncertainty-inflation term may be added**.
 
 ## A10 — Supported slope — `ALK-SUPPORTED-SLOPE-001`
 
@@ -448,7 +470,7 @@ ALL must hold:
   at least two independent testing episodes
   elapsedDays between their representative times >= 1.0 (24 h)
   |S_pair| >= 0.30 dKH/day                          [basis: latest independent pair,
-                                                     OI-RAPIDBASIS-001]
+                                                     ALK-RAPID-BASIS-001]
   latest cluster is internally consistent (spread <= 0.20) OR has been repeated/confirmed
   no known correction, water change or delivery event already explains the movement
   the direction is relevant to a maintenance or safety decision
@@ -461,8 +483,12 @@ exceptional 50% cap when outer-bound risk also holds.
 It **does not** bypass: potency validity; dose-history requirements; the 0.50 dKH/day
 rail; the non-negative dose floor; outer safety logic; the composite rail.
 
-Sizing slope selection is unchanged: `ALK-011A` uses the multi-point formula whenever
-`n ≥ 3` eligible clusters exist; the two-point formula only when `n = 2`.
+Sizing slope selection is unchanged (`ALK-RAPID-BASIS-001`): `ALK-011A` uses the
+multi-point formula whenever `n ≥ 3` eligible clusters exist; the two-point formula only
+when `n = 2`. `S_pair` is the rapid **test** statistic and is never written to
+`S_observed`, to the consumption input, or to the forecast slope.
+
+`rapidConfirmed` changes pathway, cadence and cap eligibility only.
 
 **OUTPUT** `{rapidConfirmed, rapidBasis: LATEST_INDEPENDENT_PAIR, pairSlope, pairSpanDays}`.
 
@@ -472,7 +498,8 @@ elapsedHours}`.
 **FAILURE STATE** not confirmed ⇒ ordinary path only.
 
 **TESTS** `ALK-G005`, `WG-ALK-006`, `WG-ALK-043`, `AUDIT-012`, `AD-RAP-001`
-(`OI-RAPIDBASIS-001` discriminator).
+(the discriminator: Theil–Sen −0.15 is not rapid, the latest pair −0.35 is, and sizing
+stays Theil–Sen).
 
 ## A13 — Position and outer-bound state
 
@@ -545,7 +572,7 @@ controller (`WG-ALK-047`).
 
 **FAILURE STATE** `NOT_RUN` ⇒ segmentation instead of an invented `D_eff`.
 
-**TESTS** `WG-ALK-047`, `AD-DEL-001` (missed dose), `AD-DEL-002` (partial-day change).
+**TESTS** `WG-ALK-047`, `AD-DEL-001` (missed dose), `DEL-002` (partial-day change, unit-test slot).
 
 ## A15 — Consumption estimate — `ALK-CONSUMPTION-ESTIMATE-001`
 
@@ -567,15 +594,27 @@ controller bias.
 **PHYSICALITY DECISION TREE**
 
 ```text
-C_estimate >  0                       -> INTERPRETABLE
-C_estimate <= 0:
-    the boundary between "slight negative within uncertainty" and
-    "materially negative" requires a propagated sigma_C that the canon
-    does not define for alkalinity                     [OI-NEGCONS-001]
-    -> physicality = UNRESOLVED
-    -> maintenanceAction = HOLD  (identical on both canon branches)
-    -> CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED
+C_estimate >= 0                       -> INTERPRETABLE
+C_estimate <  0:                                       [ALK-NEGATIVE-MATERIALITY-001]
+
+    materiallyNegative  <=>  C_estimate + 1.28 * sigma_S < 0      # strict
+      1.28 is ALK_SLOPE_SUPPORT_K; sigma_S is ALK-SLOPE-UNCERTAINTY-001
+      NO sigma_P and NO sigma_D exist or may be introduced
+
+    materiallyNegative:
+        -> physicality = NON_PHYSICAL_OR_UNEXPLAINED_GAIN
+        -> maintenanceAction = HOLD
+        -> CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN
+    otherwise:
+        -> physicality = UNCERTAIN_NON_RESOLVABLE
+        -> maintenanceAction = HOLD
+        -> CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED
+
+    both branches are uninterpretable for maintenance sizing, so where
+    A_now > OuterMax both arm ALK-HIGH-BREACH-UNRESOLVED-001 (0 mL/day pause)
 ```
+
+At exactly `C_estimate + 1.28 * sigma_S = 0` the result is **not** materially negative.
 
 Under **no** branch may a negative `C_estimate`:
 
@@ -589,14 +628,15 @@ validity of the broken estimate.
 **OUTPUT** `ConsumptionEstimate`.
 
 **REASON CODE** `CONSUMPTION_ESTIMATED`, `CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN`,
-`CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`,
+`CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED`, `CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE`,
 `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`.
 
 **FAILURE STATE** missing potency, missing dose history or missing net volume ⇒
 `NOT_RUN`; position and trend are unaffected (Part II §70.1-70.3).
 
-**TESTS** `WG-ALK-013`, `ALK-G026`-`G028`, `AUDIT-019`, `AD-CON-001`
-(missing dose context per `DATA-PROVENANCE.md`).
+**TESTS** `WG-ALK-013` (material), `ALK-G026` (uncertainty-limited), `ALK-G027`, `ALK-G028`,
+`AUDIT-019`, `AD-CON-001` (missing dose context per `DATA-PROVENANCE.md`),
+`AD-CON-002` (boundary straddle: one actuator increment flips the classification).
 
 ## A16 — Maintenance semantics — `ALK-MAINTENANCE-SEMANTICS-001`
 
@@ -614,13 +654,41 @@ continuousActionCandidate    = D_current - S_supported / P_selected
 These are **different fields** and may legitimately differ (e.g. 11.2 vs 10.5 mL/day).
 They must never share one field named `maintenanceDose`.
 
+**POSITION × TRAJECTORY GATE** — `ALK-070`, `ALK-TOWARD-RANGE-HOLD-001`
+
+Evaluated on the `continuousActionCandidate` before any rail, cap or rounding:
+
+```text
+position = BELOW_RANGE and trajectory = RISING     and S_supported != 0
+    and no active deliberate level-movement plan
+        -> action = HOLD_CURRENT_DOSE
+           MAINTENANCE_HOLD_TOWARD_RANGE
+
+position = ABOVE_RANGE and trajectory = FALLING    and S_supported != 0
+    and no active deliberate level-movement plan
+        -> action = HOLD_CURRENT_DOSE
+           MAINTENANCE_HOLD_TOWARD_RANGE
+
+every other position x trajectory cell            -> ALK-070 as written
+```
+
+The gate requires a **supported** trajectory. `UNCERTAINTY_LIMITED` is not one: it is held
+by `MAINTENANCE_HOLD_UNCERTAINTY_LIMITED` under `ALK-011` and never reaches this gate.
+Once the level is inside the preferred range the in-range rows resume unchanged, and an
+outer-bound breach is owned by `ALK-OUTER-BOUND-ACTION-001` regardless of direction.
+
+The card still shows `maintenanceEstimate`, `S_observed`, `S_supported` and the forecast
+range-entry time — they explain the HOLD; they do not size an action.
+
 **OUTPUT** both quantities.
 
 **FAILURE STATE** `C_estimate` not `INTERPRETABLE` ⇒ `maintenanceEstimate = NOT_RUN`;
 `continuousActionCandidate` still computes from `S_supported` when movement evidence is
 sufficient, because it does not depend on `C_estimate`.
 
-**TESTS** `WG-ALK-001`, `ALK-G008`, `ALK-G009`.
+**TESTS** `WG-ALK-001`, `ALK-G008`, `ALK-G009`, `AD-MNT-006` (below + supported rising),
+`AD-MNT-007` (above + supported falling), `AD-MNT-008` (below + uncertainty-limited lean —
+the gate must **not** fire).
 
 ## A17 — Physical rate rail — `ALK-046`
 
@@ -705,7 +773,8 @@ evidence, rail, step cap, bracket and non-negative rules.
 4. still tied     -> choose the lower setting
 5. recompute deltaD = D_rounded - D_current and effect = P_selected * deltaD
 6. recheck every hard constraint affected by discretisation:
-       rate rail, step cap, non-negative, liquid-volume guard  [OI-LIQUIDGUARD-001]
+       rate rail, step cap, non-negative, liquid-volume guard
+                                            [ALK-LIQUID-VOLUME-GUARD-001, ALK-049]
 7. if a hard constraint is violated only because rounding moved the command further
    from D_current, step by R_pump TOWARD D_current until feasible
 8. if the feasible command equals D_current:
@@ -720,7 +789,9 @@ Never force a one-increment change merely to avoid returning `HOLD`.
 **FAILURE STATE** `R_pump` unknown ⇒ `REFUSE` the final maintenance rate,
 `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` (`M-1`, `WG-ALK-045`). Observed slope, supported
 slope and the continuous candidate are still emitted. **No hidden 0.1 mL/day default.**
-The one-off `SAFETY_RETURN` correction volume is exempt (`A39`).
+The one-off `SAFETY_RETURN` correction volume is exempt (`A39`), and the temporary
+high-breach safety **rate** is emitted as an advisory rate with its pump command separately
+`NOT_RUN` (`A40`, `ALK-SAFETY-TEMP-RATE-RESOLUTION-001`).
 
 **TESTS** `WG-ALK-005` (both tie directions: `10.25 → 10.2`, `7.75 → 7.8`),
 `WG-ALK-063` (rail recheck: `16.4 → 16.3`), `WG-ALK-045`, `AD-MNT-001` /
@@ -1390,12 +1461,18 @@ consumption INTERPRETABLE:
     if zero dosing cannot achieve the desired decline, report the slower
     physically achievable decline; NEVER invent negative dosing
 
-    actuatorIncrementMlPerDay missing -> the exemption does not name this RATE
-                                         [OI-SAFETYRATE-001]
-                                      -> highBreachTemporaryRate = WITHHELD
-                                         safetyDirection = REDUCE_ALK_DOSING
+    actuatorIncrementMlPerDay missing:      [ALK-SAFETY-TEMP-RATE-RESOLUTION-001]
+        temporarySafetyRateAdvisoryMlPerDay = D_safety_temp     # exact, full precision
+        temporarySafetyPumpCommandMlPerDay  = NOT_RUN           # two DISTINCT fields
+        safetyDirection                     = REDUCE_ALK_DOSING
+        SAFETY_TEMP_RATE_ADVISORY_EMITTED
+        + CAPABILITY_ACTUATOR_INCREMENT_REQUIRED
+        rails and guards still apply to both: ALK-046, ALK-COMPOSITE-RAIL-001,
+        ALK-LIQUID-VOLUME-GUARD-001, and the max(0, .) already inside D_safety_temp
+        P_selected invalid -> neither field; state the required dKH movement only
 
-consumption PHYSICALLY UNINTERPRETABLE:                [ALK-HIGH-BREACH-UNRESOLVED-001]
+consumption PHYSICALLY UNINTERPRETABLE  (C_estimate < 0, either branch of
+ALK-NEGATIVE-MATERIALITY-001):                         [ALK-HIGH-BREACH-UNRESOLVED-001]
     stop any separately temporary upward correction/return component
     safetyDoseRecommendation  = 0 mL/day
     safetyDoseReason          = HIGH_BREACH_CONSUMPTION_UNINTERPRETABLE
@@ -1403,8 +1480,11 @@ consumption PHYSICALLY UNINTERPRETABLE:                [ALK-HIGH-BREACH-UNRESOLV
     do NOT label 0 mL/day a newly inferred permanent maintenance requirement
     preserve the established maintenance estimate/history separately
     retest ~24 h, or sooner if a rapid/suspicious rule requires it
-    -> currently NOT_RUN pending OI-NEGCONS-001
 ```
+
+`C_estimate >= 0` is `INTERPRETABLE` and takes the first branch;
+`C_estimate < 0` is uninterpretable on **both** materiality branches and takes the second
+(`ALK-NEGATIVE-MATERIALITY-001`). The fail-safe is no longer gated.
 
 The zero-dose pause is a fail-safe response to an invalid model, not a claim that
 biological consumption is zero. It is **not** pushed through the ordinary rail
@@ -1412,7 +1492,9 @@ calculation, because there is no modelled trajectory to rail (`ALK-046` high-bre
 clause). If the app cannot control the pump it says pausing is *recommended* and does not
 mark dosing as actually paused until implementation is confirmed.
 
-**TESTS** `WG-ALK-051`, `AD-SAF-002`.
+**TESTS** `WG-ALK-051`, `AD-SAF-002` (advisory rate emitted, pump command `NOT_RUN`),
+`AD-SAF-005` (negative control: the two fields must not be merged and no increment is
+invented), `AD-CON-002` (materiality straddle above `outerMax`).
 
 ## A41 — Safety-return completion and integration
 
@@ -1448,15 +1530,27 @@ on completion: end SAFETY_RETURN; resume ordinary maintenance/stability sequenci
       no second Alk correction layered on top
    the engine may still observe, recompute position, recompute a provisional maintenance
    estimate, shorten retesting, and stop/modify the safety return on new evidence
+5b an ALREADY RUNNING ordinary return plan is TERMINATED, not suspended:
+                                       [ALK-RETURN-TERMINATED-BY-SAFETY-001]
+      returnPlanPhase              = TERMINATED_BY_SAFETY_RETURN
+      recommendedTemporaryMovement = STOP_PENDING_USER_ACTION
+      actualDose                   = last confirmed/logged value, or UNKNOWN
+      RETURN_TERMINATED_BY_SAFETY_RETURN
+   the SAFETY_RETURN then owns the SINGLE intentional movement component, so
+   ALK-COMPOSITE-RAIL-001 has one term; opposing components are never layered
+   the terminated plan keeps its id, destination, duration, expiry and history;
+   termination is an EVENT, not a rewrite
+   it CANNOT resume automatically. After safety completion, ordinary sequencing
+   resumes at HOLD; a new plan needs fresh ALK-RETURN-ELIGIBLE-TRAJECTORY-001
+   eligibility AND a fresh opt-in
+      RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY
 10 the lock is a RECOMMENDATION lock. It never asserts the keeper cannot change a pump.
    An external change during a safety return is recorded, re-segmented and re-evaluated.
 ```
 
-An in-flight **return plan** meeting a breach is not covered by the canon — see
-`OI-RETURNDURINGSAFETY-001`.
-
 **TESTS** `WG-ALK-053`, `WG-ALK-056`, `WG-ALK-057`, `WG-ALK-058`, `WG-ALK-059`,
-`WG-ALK-060`.
+`WG-ALK-060`, `AD-RTN-004` (in-flight plan terminated by a breach),
+`AD-RTN-005` (negative control: no automatic resume after safety completion).
 
 ## A42 — Composite rail — `ALK-COMPOSITE-RAIL-001`
 
@@ -1476,9 +1570,10 @@ allocation when components point the same way and would exceed the rail:
 Never issue `+0.604 dKH/day` as two independently legal recommendations.
 
 In the Alk-only runtime this rail has **no reachable multi-term case**: integration rule
-§1 defers any new maintenance change unconditionally while a safety return is active, and
-a stable out-of-range return-plan offer is mutually exclusive with a supported non-zero
-slope. Implement it as a post-assembly assertion that fails loudly if more than one
+§1 defers any new maintenance change unconditionally while a safety return is active,
+clause 5b terminates any in-flight return plan on entry to `SAFETY_RETURN` rather than
+layering an opposing component, and a return-plan offer requires `S_supported = 0`, which
+is mutually exclusive with a supported non-zero slope. Implement it as a post-assembly assertion that fails loudly if more than one
 intentional component is simultaneously recommended (`OI-PIPELINE-001`).
 
 When both deferral conditions hold, emit **both** reason codes — the action is identical
@@ -1492,10 +1587,25 @@ and both statements are true (`OI-DEFERREASON-001`).
 V_system_mL   = 1000 * netVolumeL
 V_alk_max_24h = 0.02 * V_system_mL          2% of net system water per 24 h
 
-if a deliberate correction / return-plan execution would exceed it:
-    do not issue that one-day liquid volume
-    lengthen/stage the execution until BOTH the guard and the 0.50 dKH/day rail hold
-    report the longer duration
+SCOPE: ALL engine-generated Alk delivery                [ALK-LIQUID-VOLUME-GUARD-001]
+  - ordinary maintenance mL/day
+  - return-plan and one-off correction execution
+  - SAFETY_RETURN correction volume and temporary safety delivery
+  - the permitted COMBINED total for the same rolling 24 h
+
+if a recommended 24 h delivery would exceed V_alk_max_24h:
+    executableDosingCommand = WITHHELD
+    NEVER cap the command to V_alk_max_24h and present that as the recommendation
+    keep every unaffected output              [CORE-INFORM-PROCEED-001]
+    if it is a correction / return-plan execution (duration is the engine's to choose):
+        lengthen/stage until BOTH the guard and the 0.50 dKH/day rail hold
+        report the longer duration; only the offending single-day command is withheld
+
+POSITION: hard constraint. Evaluated on the continuous candidate AND rechecked after
+          actuator discretisation in ALK-ROUNDING-001 step 6, beside the rate rail.
+          A rounded command that violates it -> ALK-ROUNDING-001 steps 7-8 (step toward
+          D_current); if nothing feasible remains, the withheld state above.
+          If D_current ITSELF exceeds the guard, withhold rather than affirm D_current.
 ```
 
 The 0.50 dKH/day rail remains **independently** binding. A stronger solution reduces
@@ -1505,12 +1615,12 @@ Reachability: the guard binds only when `P < ΔA / (20 · V_L)` dKH/mL. For a 0.
 movement in a 77 L system that is `P < 0.000325 dKH/mL` — about 213× weaker than the
 canon's 0.0693 dKH/mL reference solution.
 
-Scope for ordinary maintenance and pipeline position are disputed —
-`OI-LIQUIDGUARD-001`. Until closed: apply to corrections, return-plan execution and
-safety-return volumes; for a maintenance command that would exceed the guard, withhold
-with `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED`.
+**REASON CODE** `SAFETY_LIQUID_GUARD_APPLIED` when staging resolves it;
+`SAFETY_LIQUID_GUARD_EXCEEDED` / `MAINTENANCE_LIQUID_GUARD_EXCEEDED` when the executable
+command is withheld.
 
-**TESTS** `WG-ALK-067`, `AD-SAF-003`.
+**TESTS** `WG-ALK-067`, `AD-SAF-003` (staging), `AD-SAF-004` (maintenance command withheld,
+not capped, with the post-rounding recheck).
 
 ---
 
@@ -1521,12 +1631,25 @@ with `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED`.
 **OFFER** — `ALK-024`, `ALK-054`, `CORE-STABILISE-001`
 
 ```text
-required: level is out of the preferred range AND the trajectory is "stable"
-the meaning of "stable" here is NOT deterministic          [OI-RETURNOFFER-001]
-    -> returnPlanOffer = NOT_RUN
-       RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED
-Automatic maintenance is unaffected (HOLD on either reading).
+required, both:                       [ALK-RETURN-ELIGIBLE-TRAJECTORY-001]
+    position != IN_RANGE
+    returnPlanEligibleTrajectory:
+        ALK-011 ordinary minimum evidence satisfied
+          i.e. movementEvidence in { SUFFICIENT, UNCERTAINTY_LIMITED }
+        AND S_supported = 0
+          i.e. trajectory in { STABLE, UNCERTAINTY_LIMITED }
+
+eligible      -> RETURN_OFFER_AVAILABLE (opt-in; the keeper decides)
+not eligible  -> RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY
+                 movementEvidence = INSUFFICIENT      -> no established evidence
+                 S_supported != 0                     -> something is already moving
+
+ALK-STABLE-001 is UNCHANGED and is NOT this predicate: STABLE still requires
+S_supported = 0 AND S_observed = 0. A non-zero observed lean with zero supported
+slope is UNCERTAINTY_LIMITED, is NOT STABLE, and IS return-plan eligible.
 ```
+
+Automatic maintenance is unaffected — HOLD on both eligible trajectories.
 
 **ARITHMETIC** — `ALK-054`, `ALK-055`
 
@@ -1584,8 +1707,11 @@ a test and must **not** infer that the aim point was reached (`WG-ALK-031`).
 evidence that maintenance is wrong, and consumption estimation during a plan must account
 for the plan's known temporary input (Part II §40).
 
-**TESTS** `WG-ALK-014`, `WG-ALK-015`, `WG-ALK-031`, `WG-ALK-032`, `WG-ALK-035`,
-`ALK-G029`-`G032`, `AUDIT-021`, `AUDIT-022`.
+**TESTS** `WG-ALK-014` (approximately-zero observed, zero supported ⇒ offer),
+`WG-ALK-015`, `WG-ALK-028`, `WG-ALK-031`, `WG-ALK-032`, `WG-ALK-035`, `ALK-G006`,
+`ALK-G029`-`G032`, `AUDIT-021`, `AUDIT-022`, `AD-RTN-003` (negative control: insufficient
+evidence and supported movement are both ineligible),
+`AD-RTN-004`/`AD-RTN-005` (termination by safety return; no automatic resume).
 
 ---
 
@@ -1628,41 +1754,62 @@ unlocked).
 **One scheduler owns final next-test timing** (`X-INV-004`). No card, notice or
 notification computes a date.
 
-**CANDIDATES available in Alk V2**
+**CANDIDATES** — `ALK-RETEST-SCHEDULER-001`
 
 ```text
-REPEAT_NOW                latest cluster suspicious/anomalous and materially affects
-                          advice; a result would trigger a large intervention but is
-                          unconfirmed                       [trigger limited, OI-SUSPECT-001]
+REPEAT_NOW                latest cluster SUSPECT/ANOMALOUS from one of the three
+                          operative sources and materially affects advice; or a result
+                          would trigger a large intervention but is unconfirmed
+                                                      [ALK-051, ALK-SUSPECT-DETECTION-001]
 SAFETY_RETURN_ACTIVE      ~24 h; anchored to confirmed implementation if known,
                           otherwise to the qualifying breach assessment
 HIGH_BREACH_FAILSAFE      ~24 h
 RAPID_MOVEMENT            ~24 h
+FORECAST_BOUNDARY_RISK    T_boundary = T_outer - 1.0 days      (24 h safety lead)
+                          T_outer from ALK-062 using S_observed, NEVER S_supported
+                          T_boundary <= 0 -> REPEAT_NOW semantics
+                          not subject to the ordinary-observation floor
 POST_CHANGE_FIRST         ~48 h after the actual dose change
-POST_CHANGE_SECOND        ~48 h after the first
-RETURN_PLAN_ASSESSMENT    at the plan's stored assessment point / expiry
+POST_CHANGE_SECOND        ~48 h after the first  (~Day 4)
+SIGNAL_ACCUMULATION       T_signal = 0.10 / |S_supported|   days
+                          NOT_RUN when S_supported = 0 or evidence is INSUFFICIENT,
+                          which includes every post-change regime before Day +6
+RETURN_PLAN_EXPIRY        the plan's stored expiry, T_expiry = 2*T_plan + 2
 ROUTINE_CADENCE           48 h
 ```
 
-**CANDIDATES that cannot be computed** — Alk policy constants absent
-(`OI-RETEST-001`): `T_detect` (needs `K_detect`), `T_signal` (needs `RequiredMovement`),
-forecast-boundary crossing (needs `boundarySafetyMargin`), return-plan cadence. Each is
-reported in `candidatesNotRun[]` with its reason code. The `minimumUsefulInterval` clamp
-is likewise `NOT_RUN`.
+**CANDIDATES canonically `NOT_RUN`** — Freeze 5 declined to invent the constants:
+`T_detect` (`K_detect` absent) and the return-plan **arrival cadence**. Both are reported
+in `candidatesNotRun[]` with `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
+`RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`. This is a decided state, not a gap.
+
+**CLAMPS on ordinary observation candidates only**
+
+```text
+floor    24 h   ALK-008 independence minimum       RETEST_OBSERVATION_FLOOR_APPLIED
+ceiling  96 h   the existing ~Day-4 window         RETEST_OBSERVATION_CEILING_APPLIED
+
+the floor NEVER delays REPEAT_NOW, RAPID_MOVEMENT, SAFETY_RETURN_ACTIVE,
+HIGH_BREACH_FAILSAFE or FORECAST_BOUNDARY_RISK
+```
 
 **SELECTION**
 
 ```text
-selected = earliest applicable candidate
-           (the minimum-useful-interval clamp is NOT_RUN)
-preserve the understandable ~48 h human rhythm under ordinary conditions rather
-than presenting spurious precision such as "test in 31 hours"
+selected = earliest applicable candidate, after the clamps
+REPEAT_NOW outranks ordinary scheduling                              [PII-55]
+preserve the understandable ~48 h human rhythm in RENDERING; the stored timestamp
+is exact
 ```
 
-**OUTPUT** `RetestDecision` with every candidate, the selection reason, and the not-run
-list.
+**OUTPUT** `RetestDecision` with every candidate, its computed time, the selection reason,
+and the not-run list.
 
-**TESTS** `WG-ALK-060`, `ALK-G010`, `ALK-G011`, `RET-001`…`RET-004`.
+**TESTS** `WG-ALK-060`, `WG-ALK-001` (post-change first, 48 h), `WG-ALK-006` (rapid, 24 h),
+`ALK-G010`, `ALK-G011`, `AD-RET-001` (`T_signal` clamped up to the 24 h floor and selected),
+`AD-RET-002` (`T_signal` above the ceiling; routine cadence still earlier),
+`AD-RET-003` (forecast boundary lead selects 40 h),
+`AD-RET-004` (crossing inside the lead ⇒ test now).
 
 ## A47 — Capability gate — `ALK-CAPABILITY-CONTRACT-001`
 
@@ -1697,8 +1844,13 @@ less likely, inform and proceed.
 ```text
 1 emit EVERY field; NOT_RUN / WITHHELD / NONE are values, not omissions
 2 every withheld or degraded output carries at least one reason code
-3 recommendationConfidence = UNSPECIFIED until OI-CONFIDENCE-001 closes;
+3 recommendationConfidence = UNSPECIFIED by frozen decision      [ALK-CONFIDENCE-OUTPUT-001]
+  no numeric LOW/MODERATE/HIGH classification exists and none may be invented
+  the evidence facts are surfaced in its place: independentClusters, spanDays,
+  sigma_S, |S_supported|/|S_observed| (omitted when S_observed = 0), confounders[],
+  potencyConfidence, deliveryBasis
   it can never participate in arithmetic                       [X-INV-010]
+  OUTPUT_CONFIDENCE_UNSPECIFIED
 4 the seven dose/slope quantities are separate named fields    [ALK-VARIABLE-SEMANTICS-001]
 5 reason codes are emitted in owner order:
       VALIDATION_, TIME_, CONFIG_, CLUSTER_, SEGMENT_, DELIVERY_, EVIDENCE_,

@@ -85,10 +85,14 @@ Fixture bodies for the canon-named invariants are in
 - **Negative control:** recompute a slope inside a card module.
 
 ### INV-B5 — Confidence is a label with no arithmetic path
-- **Canon:** `ALK-CONFIDENCE-OUTPUT-001`; `X-INV-010`; `INV-ALK-CONFIDENCE-001`.
+- **Canon:** `ALK-CONFIDENCE-OUTPUT-001`; `X-INV-010`; `INV-ALK-CONFIDENCE-001`; `AD-OUT-001`.
 - **Generator:** fix all numeric inputs; vary `recommendationConfidence` over
   `{LOW, MODERATE, HIGH, UNSPECIFIED}`.
-- **Assert:** `recommendedDoseMlPerDay` identical in all cases.
+- **Assert:** `recommendedDoseMlPerDay` identical in all cases. The emitted value is always
+  `UNSPECIFIED` (`ALK-CONFIDENCE-OUTPUT-001` as frozen by `ALK_V2_FREEZE_5`); the other
+  three exist only as mutations for this test.
+- **Negative control:** multiply the continuous candidate by a confidence-derived factor;
+  `AD-OUT-001` and `INV-ALK-CONFIDENCE-001` must fail.
 
 ### INV-B6 — No staging or confidence multiplier exists
 - **Canon:** `ALK-STAGING-001`; `X-INV-008`; `ALK-072` item 8.
@@ -181,12 +185,15 @@ Fixture bodies for the canon-named invariants are in
   and trajectories, including above range and rising.
 - **Assert:** `recommendedDoseMlPerDay == currentDoseMlPerDay` on every such case; the
   negative value never appears in any dose arithmetic; it is never clamped to zero and then
-  used as a maintenance target.
+  used as a maintenance target. This holds on **both** branches of
+  `ALK-NEGATIVE-MATERIALITY-001`, so the maintenance outcome does not vary across the
+  materiality boundary.
 - **Negative control:** clamp `C` to 0 and size a dose from it; `WG-ALK-013` and
   `ALK-G028` must fail.
 
 ### INV-D2 — A stable out-of-range level alone never changes maintenance
-- **Canon:** `ALK-024`; `WG-ALK-014`; `WG-ALK-034`; `ALK-073` item 4.
+- **Canon:** `ALK-024`; `ALK-RETURN-ELIGIBLE-TRAJECTORY-001`; `WG-ALK-014`; `WG-ALK-034`;
+  `ALK-073` item 4.
 - **Generator:** stable series at levels spanning `outerMin … outerMax`.
 - **Assert:** while inside the outer envelope, `recommendedDose == currentDose` for every
   level. Symmetric above and below.
@@ -434,11 +441,33 @@ Fixture bodies for the canon-named invariants are in
 
 ### INV-I6 — Open issues surface as refusals, never as defaults
 - **Canon:** this package's conformance gate item 8; `CORE-INFORM-PROCEED-001`.
-- **Generator:** construct the trigger condition for each blocking open issue.
+- **Generator:** construct the trigger condition for each still-open issue whose "Until
+  closed" behaviour withholds or degrades an output — `OI-EXPOSURE-001`,
+  `OI-NORMUNCERT-001`, `OI-ANOMCLUSTER-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`.
 - **Assert:** the dependent output is `NOT_RUN` / `WITHHELD` with the stated reason code
   and open-issue id; no numeric default appears.
-- **Negative control:** pick a traversal direction for `OI-INDEPENDENCE-001` and emit a
-  dose; `AD-SEG-001` must fail.
+- **Negative control:** supply a `minimumExposure` value for `OI-EXPOSURE-001` and let the
+  gate run; the exposure fixture must fail.
+- **Freeze-5 note:** the thirteen issues `ALK_V2_FREEZE_5` closed are no longer in this
+  generator's set. Their behaviour is now determined, and a `NOT_RUN` emitted for one of
+  them is a conformance failure, not a refusal. The retired reason codes listed in
+  `ALK-V2-REASON-CODES.md` are the mechanical check for that.
+
+### INV-I7 — No retired reason code is emitted
+- **Canon:** `ALK-V2-REASON-CODES.md` "Retired by `ALK_V2_FREEZE_5`"; rule 1 of that
+  catalogue (closed set).
+- **Generator:** every fixture in the corpus, plus the trigger conditions of all thirteen
+  Freeze-5 decisions.
+- **Assert:** no emitted code appears in the retired table.
+- **Negative control:** emit `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` from the `A4`
+  selection path; the check must fail.
+
+### INV-I8 — Every Freeze-5 decision is pinned by a positive and a negative fixture
+- **Canon:** `CORE-CANON-COVERAGE-001`; the Freeze-5 declaration's decision table.
+- **Generator:** for each of `F5-01` … `F5-12`, read the canon rule it created or amended.
+- **Assert:** at least one fixture asserts the decided behaviour, and at least one fixture
+  asserts a `forbidden` entry naming the alternative the owner rejected.
+- **Negative control:** delete the `forbidden` block from `AD-MNT-006`; the check must fail.
 
 ---
 
@@ -454,8 +483,11 @@ Fixture bodies for the canon-named invariants are in
 | F — Potency | 4 |
 | G — Safety | 9 |
 | H — History and provenance | 5 |
-| I — Ownership and output contract | 6 |
-| **Total** | **60** |
+| I — Ownership and output contract | 8 |
+| **Total** | **62** |
+
+`INV-I7` and `INV-I8` were added by `ALK_V2_FREEZE_5`: one mechanical check that the
+retired reason codes are gone, one that every owner decision is pinned in both directions.
 
 All twelve invariants named in the preparation brief are covered:
 

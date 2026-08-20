@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-config-defaults",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "configurations": {
     "CANON_DEFAULT": {
       "$comment": "The default example configuration of PART III - WORKED NUMERICAL GOLDEN SUITE. Reproduced verbatim.",

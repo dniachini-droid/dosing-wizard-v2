@@ -1,7 +1,7 @@
 {
   "corpusId": "alk-v2-fixture-index",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
-  "note": "Generated index of the Alk V2 fixture corpus. Every fixture id here must resolve to exactly one fixture body, and every rule in ALK-V2-RULE-TRACEABILITY.md must appear in at least one fixture reference.",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
+  "note": "Generated index of the Alk V2 fixture corpus. Every fixture id here must resolve to exactly one fixture body, and every rule in ALK-V2-RULE-TRACEABILITY.md must appear in at least one fixture reference. Open-issue references marked RESOLVED are retained deliberately: an issue closed by a governed freeze keeps its coverage so a reviewer can find the fixture that pins the decision.",
   "files": [
     {
       "file": "canon-worked-goldens-round1.json",
@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 34,
+      "count": 48,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -179,7 +179,21 @@
         "AD-CAP-001",
         "AD-POS-001",
         "AD-RAP-001",
-        "AD-RET-001"
+        "AD-RET-001",
+        "AD-SEG-005",
+        "AD-SEG-006",
+        "AD-VAL-001",
+        "AD-CON-002",
+        "AD-MNT-008",
+        "AD-RTN-003",
+        "AD-RTN-004",
+        "AD-RTN-005",
+        "AD-SAF-004",
+        "AD-SAF-005",
+        "AD-RET-002",
+        "AD-RET-003",
+        "AD-RET-004",
+        "AD-OUT-001"
       ]
     },
     {
@@ -207,12 +221,12 @@
     }
   ],
   "totals": {
-    "fixtures": 160,
+    "fixtures": 174,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 33,
-    "CANON_QUALITATIVE": 25,
+    "CANON_DERIVED": 44,
+    "CANON_QUALITATIVE": 28,
     "CANON_VERBATIM": 102
   },
   "fixtureIds": [
@@ -360,6 +374,20 @@
     "AD-POS-001",
     "AD-RAP-001",
     "AD-RET-001",
+    "AD-SEG-005",
+    "AD-SEG-006",
+    "AD-VAL-001",
+    "AD-CON-002",
+    "AD-MNT-008",
+    "AD-RTN-003",
+    "AD-RTN-004",
+    "AD-RTN-005",
+    "AD-SAF-004",
+    "AD-SAF-005",
+    "AD-RET-002",
+    "AD-RET-003",
+    "AD-RET-004",
+    "AD-OUT-001",
     "INV-CANON-001",
     "INV-CORE-ADVISORY-001",
     "INV-NONADHERENCE-001",
@@ -386,11 +414,15 @@
     ],
     "OI-BELOWRISING-001": [
       "AD-MNT-006",
-      "AD-MNT-007"
+      "AD-MNT-007",
+      "AD-MNT-008"
+    ],
+    "OI-CONFIDENCE-001": [
+      "AD-OUT-001"
     ],
     "OI-DAY4-001": [
-      "ALK-G011",
-      "AD-SEG-003"
+      "AD-SEG-003",
+      "ALK-G011"
     ],
     "OI-DEFERREASON-001": [
       "WG-ALK-052"
@@ -399,19 +431,23 @@
       "WG-ALK-042"
     ],
     "OI-INDEPENDENCE-001": [
-      "WG-ALK-003",
-      "AD-SEG-001"
+      "AD-SEG-001",
+      "AD-SEG-005",
+      "WG-ALK-003"
     ],
     "OI-LIQUIDGUARD-001": [
+      "AD-SAF-003",
+      "AD-SAF-004",
       "WG-ALK-067"
     ],
     "OI-MADFLOOR-001": [
       "AD-TRD-004"
     ],
     "OI-NEGCONS-001": [
+      "AD-CON-002",
+      "ALK-G026",
       "WG-ALK-013",
-      "WG-ALK-051",
-      "ALK-G026"
+      "WG-ALK-051"
     ],
     "OI-OVERSHOOT-001": [
       "ALK-G016"
@@ -420,29 +456,41 @@
       "AD-RAP-001"
     ],
     "OI-RETEST-001": [
-      "AD-RET-001"
+      "AD-RET-001",
+      "AD-RET-002",
+      "AD-RET-003",
+      "AD-RET-004"
+    ],
+    "OI-RETURNDURINGSAFETY-001": [
+      "AD-RTN-004",
+      "AD-RTN-005"
     ],
     "OI-RETURNOFFER-001": [
+      "AD-MNT-008",
+      "AD-RTN-003",
+      "ALK-G006",
       "WG-ALK-014",
-      "WG-ALK-028",
-      "ALK-G006"
+      "WG-ALK-028"
     ],
     "OI-SAFETYRATE-001": [
-      "AD-SAF-002"
+      "AD-SAF-002",
+      "AD-SAF-005"
     ],
     "OI-SUSPECT-001": [
+      "AD-TRD-004",
+      "AD-VAL-001",
       "ALK-G024",
-      "ALK-G025",
-      "AD-TRD-004"
+      "ALK-G025"
     ],
     "OI-WATERCHANGE-001": [
-      "WG-ALK-011",
-      "ALK-G022"
+      "AD-SEG-006",
+      "ALK-G022",
+      "WG-ALK-011"
     ],
     "OI-WG024-001": [
-      "WG-ALK-024",
+      "AD-POT-001",
       "ALK-G033",
-      "AD-POT-001"
+      "WG-ALK-024"
     ]
   },
   "duplicateFixtureIds": []

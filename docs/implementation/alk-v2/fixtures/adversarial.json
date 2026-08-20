@@ -1,7 +1,7 @@
 {
   "corpusId": "alk-v2-adversarial",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
-  "note": "Adversarial and ordinary scenarios required by the preparation brief that the canon states qualitatively or not at all. Every expectation here is computed by applying frozen canonical formulas (Theil-Sen, ALK-SLOPE-UNCERTAINTY-001, ALK-SUPPORTED-SLOPE-001, ALK-STEP-CAP-001, ALK-046, ALK-ROUNDING-001, ALK-RESPONSE-CLASSIFIER-001) to the stated inputs. No expectation is derived from V1 runtime behaviour (DEC-013).",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
+  "note": "Adversarial and ordinary scenarios required by the preparation brief that the canon states qualitatively or not at all. Every expectation here is computed by applying frozen canonical formulas (Theil-Sen, ALK-SLOPE-UNCERTAINTY-001, ALK-SUPPORTED-SLOPE-001, ALK-STEP-CAP-001, ALK-046, ALK-ROUNDING-001, ALK-RESPONSE-CLASSIFIER-001) to the stated inputs. No expectation is derived from V1 runtime behaviour (DEC-013). Fourteen fixtures added by ALK_V2_FREEZE_5 (F5-01 to F5-12) as positive and negative controls for the owner decisions.",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [
     {
@@ -179,18 +179,19 @@
     },
     {
       "fixtureId": "AD-TRD-004",
-      "title": "Single outlier is absorbed by Theil-Sen and invisible to MAD",
+      "title": "Single outlier is absorbed by Theil-Sen and invisible to MAD - accepted residual",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "Part II \u00a719.2",
+          "Part II §19.2",
           "ALK-SLOPE-UNCERTAINTY-001"
         ],
-        "note": "Documents OI-MADFLOOR-001."
+        "note": "Records the residual exposure accepted by Freeze 5 F5-02. Behaviour is unchanged; what changed is that the exposure is now a decided state rather than an open defect."
       },
       "rulesExercised": [
-        "Part II \u00a719.2",
-        "ALK-SLOPE-UNCERTAINTY-001"
+        "Part II §19.2",
+        "ALK-SLOPE-UNCERTAINTY-001",
+        "ALK-SUSPECT-DETECTION-001"
       ],
       "input": {
         "timesDays": [
@@ -231,17 +232,24 @@
         "movementEvidence": "SUFFICIENT"
       },
       "expectedAction": {
-        "note": "The slope is robust and correct. The uncertainty is NOT raised by the outlier, because the median absolute residual is zero."
+        "note": "The slope is robust and correct. The uncertainty is NOT raised by the outlier, because the median absolute residual is zero. Automatic statistical suspicion detection is canonically NOT_RUN, so nothing marks the t=4 point.",
+        "automaticStatisticalSuspicionDetection": "NOT_RUN",
+        "measurementStatusOfOutlier": "VALID",
+        "outlierExcludedFromTrend": false
       },
       "expectedReasonCodes": [
-        "UNCERTAINTY_FLOOR_APPLIED"
+        "UNCERTAINTY_FLOOR_APPLIED",
+        "VALIDATION_SUSPICION_DETECTION_NOT_RUN"
       ],
       "openIssues": [
-        "OI-MADFLOOR-001",
-        "OI-SUSPECT-001"
+        "OI-MADFLOOR-001 - dependency RESOLVED by ALK_V2_FREEZE_5 (F5-02); the residual exposure is accepted, named and un-compensated",
+        "OI-SUSPECT-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-02)"
       ],
       "forbidden": {
-        "note": "Do not add a compensating uncertainty inflation term. The formula is frozen; the defence is the suspicious-reading layer, which alkalinity has not parameterised."
+        "note": "Do not add a compensating uncertainty inflation term. Do not derive SUSPECT from a residual test. Do not exclude, hide or down-weight the t=4 reading.",
+        "reasonCodes": [
+          "VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE"
+        ]
       }
     },
     {
@@ -309,13 +317,13 @@
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "Part II \u00a72.2",
+          "Part II §2.2",
           "ALK-SLOPE-UNCERTAINTY-001"
         ]
       },
       "rulesExercised": [
         "A1",
-        "Part II \u00a719.2",
+        "Part II §19.2",
         "ALK-SLOPE-UNCERTAINTY-001",
         "ALK-ROUNDING-001"
       ],
@@ -364,17 +372,21 @@
     },
     {
       "fixtureId": "AD-SEG-001",
-      "title": "Same-day tests - independent-cluster selection is undefined",
+      "title": "Same-day tests - forward-greedy independent-cluster selection",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "ALK-008"
+          "ALK-008",
+          "ALK-INDEPENDENT-SELECTION-001"
         ],
-        "note": "Constructed specifically to expose OI-INDEPENDENCE-001. The three defensible readings give three different sigma_S."
+        "note": "Freeze 5 F5-01. The canon's own worked instance. The two rejected selections are retained as forbidden alternatives because each yields a different sigma_S and therefore a different actuator command."
       },
       "rulesExercised": [
         "ALK-008",
-        "ALK-MOVEMENT-001"
+        "ALK-INDEPENDENT-SELECTION-001",
+        "ALK-MOVEMENT-001",
+        "ALK-SLOPE-UNCERTAINTY-001",
+        "ALK-SUPPORTED-SLOPE-001"
       ],
       "input": {
         "clusterTimesDays": [
@@ -388,20 +400,55 @@
           8.55,
           8.3,
           8.0
-        ]
+        ],
+        "currentDoseMlPerDay": 9.0
       },
       "expectedIntermediateEvidence": {
-        "candidateReadings": [
-          {
-            "selection": "forward-greedy from earliest",
-            "kept": [
-              0.0,
-              2.0,
-              4.0
-            ],
-            "sxxDay2": 8,
-            "sigmaSDkhPerDay": 0.035355339059
-          },
+        "acceptedClusterTimesDays": [
+          0.0,
+          2.0,
+          4.0
+        ],
+        "notAcceptedClusterTimesDays": [
+          0.5
+        ],
+        "notAcceptedSeparationHours": [
+          12.0
+        ],
+        "anchorAfterRejection": 0.0,
+        "independentClusters": 3,
+        "spanDays": 4.0,
+        "observedSlopeDkhPerDay": -0.15,
+        "sigmaResidDkh": 0.0,
+        "sigmaPointDkh": 0.1,
+        "tBarDays": 2.0,
+        "sxxDay2": 8.0,
+        "sigmaSDkhPerDay": 0.035355339059
+      },
+      "expectedAction": {
+        "automaticMaintenanceAction": "EVALUATED_NORMALLY",
+        "rejectedClusterRetainedFor": [
+          "POSITION",
+          "ANOMALY_CONFIRMATION",
+          "ALK-RAPID-001",
+          "TIME_RESOLVED_INTERVENTION"
+        ],
+        "rejectedClusterStatus": "VALID",
+        "positionSafetyRetestHistory": "unaffected"
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INDEPENDENT_SELECTION_APPLIED",
+        "EVIDENCE_SUFFICIENT",
+        "TRAJECTORY_FALLING"
+      ],
+      "openIssues": [
+        "OI-INDEPENDENCE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-01)"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED"
+        ],
+        "alternativeSelections": [
           {
             "selection": "backward-greedy from latest",
             "kept": [
@@ -410,10 +457,10 @@
               4.0
             ],
             "sxxDay2": 6.1666666667,
-            "sigmaSDkhPerDay": 0.0402693633
+            "sigmaSDkhPerDay": 0.040269363313
           },
           {
-            "selection": "keep all",
+            "selection": "keep all and mark",
             "kept": [
               0.0,
               0.5,
@@ -421,23 +468,15 @@
               4.0
             ],
             "sxxDay2": 9.6875,
-            "sigmaSDkhPerDay": 0.0321287732
+            "sigmaSDkhPerDay": 0.032128773156
           }
-        ]
+        ],
+        "note": "Either forbidden selection produces a different sigma_S, a different S_supported and a different actuator command. Marking the rejected cluster SUSPECT or INVALID is also forbidden."
       },
-      "expectedAction": {
-        "movementEvidence": "INSUFFICIENT",
-        "automaticMaintenanceAction": "WITHHELD",
-        "positionSafetyRetestHistory": "unaffected"
-      },
-      "expectedReasonCodes": [
-        "EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED"
-      ],
-      "openIssues": [
-        "OI-INDEPENDENCE-001"
-      ],
-      "forbidden": {
-        "note": "Do not pick a traversal direction because it is easier to implement."
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.104745166004,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
       }
     },
     {
@@ -494,12 +533,12 @@
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-007",
-          "Part II \u00a711.2"
+          "Part II §11.2"
         ]
       },
       "rulesExercised": [
         "ALK-007",
-        "Part II \u00a713",
+        "Part II §13",
         "ALK-MOVEMENT-001"
       ],
       "input": {
@@ -548,15 +587,15 @@
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-005",
-          "Part II \u00a75.7",
-          "Part II \u00a724",
-          "Part II \u00a749"
+          "Part II §5.7",
+          "Part II §24",
+          "Part II §49"
         ],
         "note": "Documents OI-ANOMCLUSTER-001."
       },
       "rulesExercised": [
         "ALK-005",
-        "Part II \u00a724"
+        "Part II §24"
       ],
       "input": {
         "clusters": [
@@ -610,7 +649,7 @@
         "canonSource": [
           "SHARED-LEGACY-TIME-001",
           "M-13",
-          "DATA-PROVENANCE.md \u00a72"
+          "DATA-PROVENANCE.md §2"
         ]
       },
       "rulesExercised": [
@@ -662,14 +701,14 @@
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "DATA-PROVENANCE.md \u00a73",
+          "DATA-PROVENANCE.md §3",
           "DEC-010",
-          "Part II \u00a770.1"
+          "Part II §70.1"
         ]
       },
       "rulesExercised": [
         "ALK-CONSUMPTION-ESTIMATE-001",
-        "Part II \u00a770.1"
+        "Part II §70.1"
       ],
       "input": {
         "readings": "genuine historical Alk series",
@@ -703,13 +742,13 @@
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "Part II \u00a713",
+          "Part II §13",
           "SHARED-DELIVERY-BASIS-001"
         ]
       },
       "rulesExercised": [
         "SHARED-DELIVERY-BASIS-001",
-        "Part II \u00a713"
+        "Part II §13"
       ],
       "input": {
         "events": [
@@ -1041,18 +1080,20 @@
     },
     {
       "fixtureId": "AD-MNT-006",
-      "title": "Below range and rising with no active plan is undetermined",
+      "title": "Below range with a supported rise holds maintenance",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-029",
-          "ALK-070"
+          "ALK-070",
+          "ALK-TOWARD-RANGE-HOLD-001"
         ],
-        "note": "Constructed to expose OI-BELOWRISING-001."
+        "note": "Freeze 5 F5-05. Inputs give S_TS = +0.15 exactly on a perfect line, so sigma_resid = 0 and the 0.10 dKH floor applies. The strict-stabilise-first dose is retained as the forbidden alternative."
       },
       "rulesExercised": [
         "ALK-029",
         "ALK-070",
+        "ALK-TOWARD-RANGE-HOLD-001",
         "CORE-STABILISE-001"
       ],
       "input": {
@@ -1062,12 +1103,15 @@
           4
         ],
         "alkDkh": [
+          7.3,
           7.6,
-          7.75,
           7.9
         ],
         "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1,
         "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
         "activePlan": null,
         "correction": null,
         "waterChange": null,
@@ -1076,44 +1120,61 @@
       "expectedIntermediateEvidence": {
         "position": "BELOW_RANGE",
         "observedSlopeDkhPerDay": 0.15,
+        "sigmaPointDkh": 0.1,
+        "sxxDay2": 8.0,
         "sigmaSDkhPerDay": 0.035355339059,
-        "supportedSlopeDkhPerDay": 0.10474516599,
+        "supportedSlopeDkhPerDay": 0.104745166004,
         "trajectory": "RISING",
-        "maintenanceEstimateMlPerDay": 6.83549,
-        "strictStabiliseFirstWouldRecommendMlPerDay": 7.5
+        "movementEvidence": "SUFFICIENT",
+        "consumptionDkhPerDay": 0.4737,
+        "maintenanceEstimateMlPerDay": 6.835497835
       },
       "expectedAction": {
         "action": "HOLD_CURRENT_DOSE",
+        "recommendedDoseMlPerDay": 9.0,
         "maintenanceActionStatus": "HELD",
+        "returnPlanOffer": "NOT_ELIGIBLE",
         "fullCardShows": [
           "observedSlope",
           "supportedSlope",
-          "maintenanceEstimate"
+          "maintenanceEstimate",
+          "forecastRangeEntry"
         ]
       },
       "expectedReasonCodes": [
-        "MAINTENANCE_MATRIX_CELL_UNDETERMINED"
+        "EVIDENCE_SUFFICIENT",
+        "TRAJECTORY_RISING",
+        "MAINTENANCE_HOLD_TOWARD_RANGE",
+        "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY"
       ],
       "openIssues": [
-        "OI-BELOWRISING-001"
+        "OI-BELOWRISING-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-05)"
       ],
       "forbidden": {
-        "note": "Do not silently choose between HOLD and a 1.5 mL/day reduction of a tank that is below range and climbing back toward it."
+        "recommendedDoseMlPerDay": 7.5,
+        "note": "Strict stabilise-first would size 9.0 - 0.104745166/0.0693 = 7.488526 -> 7.5 mL/day, reducing the dose of a tank that is below range and climbing back toward it. Freeze 5 forbids it.",
+        "reasonCodes": [
+          "MAINTENANCE_MATRIX_CELL_UNDETERMINED",
+          "MAINTENANCE_DECREASE_RECOMMENDED"
+        ]
       }
     },
     {
       "fixtureId": "AD-MNT-007",
-      "title": "Above range and falling with no active plan is undetermined (mirror)",
+      "title": "Above range with a supported fall holds maintenance (mirror)",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-030",
-          "ALK-070"
-        ]
+          "ALK-070",
+          "ALK-TOWARD-RANGE-HOLD-001"
+        ],
+        "note": "Freeze 5 F5-05, mirror of AD-MNT-006. Inputs give S_TS = -0.15 exactly."
       },
       "rulesExercised": [
         "ALK-030",
-        "ALK-070"
+        "ALK-070",
+        "ALK-TOWARD-RANGE-HOLD-001"
       ],
       "input": {
         "timesDays": [
@@ -1122,32 +1183,49 @@
           4
         ],
         "alkDkh": [
+          9.7,
           9.4,
-          9.25,
           9.1
         ],
         "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "actuatorIncrementMlPerDay": 0.1,
+        "targetRangeMinDkh": 8.2,
         "targetRangeMaxDkh": 8.8,
+        "outerMaxDkh": 11.0,
         "activePlan": null,
         "outerBoundBreach": false
       },
       "expectedIntermediateEvidence": {
         "position": "ABOVE_RANGE",
         "observedSlopeDkhPerDay": -0.15,
-        "supportedSlopeDkhPerDay": -0.10474516599,
-        "trajectory": "FALLING"
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportedSlopeDkhPerDay": -0.104745166004,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
       },
       "expectedAction": {
-        "action": "HOLD_CURRENT_DOSE"
+        "action": "HOLD_CURRENT_DOSE",
+        "recommendedDoseMlPerDay": 9.0,
+        "maintenanceActionStatus": "HELD",
+        "returnPlanOffer": "NOT_ELIGIBLE"
       },
       "expectedReasonCodes": [
-        "MAINTENANCE_MATRIX_CELL_UNDETERMINED"
+        "EVIDENCE_SUFFICIENT",
+        "TRAJECTORY_FALLING",
+        "MAINTENANCE_HOLD_TOWARD_RANGE",
+        "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY"
       ],
       "openIssues": [
-        "OI-BELOWRISING-001"
+        "OI-BELOWRISING-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-05)"
       ],
       "forbidden": {
-        "note": "Symmetry requirement: this mirror must resolve the same way as AD-MNT-006, whichever way the owner decides."
+        "recommendedDoseMlPerDay": 10.5,
+        "note": "Strict stabilise-first would size 9.0 + 0.104745166/0.0693 = 10.511474 -> 10.5 mL/day, increasing the dose of a tank that is above range and coming down. Symmetry with AD-MNT-006 is required.",
+        "reasonCodes": [
+          "MAINTENANCE_MATRIX_CELL_UNDETERMINED",
+          "MAINTENANCE_INCREASE_RECOMMENDED"
+        ]
       }
     },
     {
@@ -1225,7 +1303,7 @@
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-043",
-          "Part I \u00a77.6A",
+          "Part I §7.6A",
           "ALK-RESPONSE-CLASSIFIER-001"
         ]
       },
@@ -1355,17 +1433,19 @@
     },
     {
       "fixtureId": "AD-SAF-002",
-      "title": "High breach with interpretable consumption yields a temporary rate, not a one-off volume",
+      "title": "High breach with interpretable consumption emits an advisory rate, not a pump command",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-OUTER-BOUND-ACTION-001",
-          "ALK-SAFETY-CORRECTION-RESOLUTION-001"
+          "ALK-SAFETY-CORRECTION-RESOLUTION-001",
+          "ALK-SAFETY-TEMP-RATE-RESOLUTION-001"
         ],
-        "note": "Constructed to expose OI-SAFETYRATE-001."
+        "note": "Freeze 5 F5-11."
       },
       "rulesExercised": [
         "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-SAFETY-TEMP-RATE-RESOLUTION-001",
         "M-1"
       ],
       "input": {
@@ -1383,20 +1463,35 @@
         "dSafetyTempMlPerDay": 1.443001443
       },
       "expectedAction": {
-        "highBreachTemporaryRate": "WITHHELD",
+        "temporarySafetyRateAdvisoryMlPerDay": 1.443001443,
+        "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
         "safetyDirection": "REDUCE_ALK_DOSING",
+        "safetyTargetSlopeDkhPerDay": -0.5,
         "outerBoundState": "BREACHED_HIGH",
-        "nextTestApproxHours": 24
+        "safetyDestinationDkh": 10.8,
+        "nextTestApproxHours": 24,
+        "railsStillApplied": [
+          "ALK-046",
+          "ALK-COMPOSITE-RAIL-001",
+          "ALK-LIQUID-VOLUME-GUARD-001"
+        ]
       },
       "expectedReasonCodes": [
         "SAFETY_OUTER_BOUND_BREACHED_HIGH",
-        "SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED"
+        "SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE",
+        "SAFETY_TEMP_RATE_ADVISORY_EMITTED",
+        "CAPABILITY_ACTUATOR_INCREMENT_REQUIRED",
+        "RETEST_SAFETY_RETURN_ACTIVE"
       ],
       "openIssues": [
-        "OI-SAFETYRATE-001"
+        "OI-SAFETYRATE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-11)"
       ],
       "forbidden": {
-        "note": "The M-1 exemption names only the one-off SAFETY_RETURN correction VOLUME. A temporary mL/day RATE is neither that nor an ordinary maintenance rate."
+        "note": "The advisory rate and the executable pump command are two distinct fields and must never be merged. No actuator increment may be invented, and there is no 0.1 mL/day default.",
+        "reasonCodes": [
+          "SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED"
+        ],
+        "temporarySafetyPumpCommandMlPerDay": 1.4
       }
     },
     {
@@ -1408,11 +1503,12 @@
           "ALK-LIQUID-VOLUME-GUARD-001",
           "WG-ALK-067"
         ],
-        "note": "The canon states the requirement without arithmetic. The guard binds only when P < deltaA / (20 x V_L)."
+        "note": "The canon states the requirement without arithmetic. The guard binds only when P < deltaA / (20 x V_L). Freeze 5 F5-06 sets the scope, the withholding semantics and the post-rounding recheck; staging remains available here because the delivery is a correction execution with a duration the engine may choose."
       },
       "rulesExercised": [
         "ALK-LIQUID-VOLUME-GUARD-001",
-        "ALK-046"
+        "ALK-046",
+        "ALK-ROUNDING-001"
       ],
       "input": {
         "netVolumeL": 100,
@@ -1431,14 +1527,20 @@
       "expectedAction": {
         "issueAsOne24hCommand": false,
         "stagedOverDays": 2,
-        "reportsLongerDuration": true
+        "reportsLongerDuration": true,
+        "executableDosingCommandForTheOffendingDay": "WITHHELD",
+        "cappedToGuardAndPresented": false
       },
       "expectedReasonCodes": [
         "SAFETY_LIQUID_GUARD_APPLIED"
       ],
       "forbidden": {
-        "note": "Satisfying the 0.50 dKH/day rail does not satisfy the liquid-volume guard. For a 77 L system with a 0.50 dKH movement the guard binds only below P = 0.000325 dKH/mL, about 213x weaker than the canon reference solution."
-      }
+        "note": "Satisfying the 0.50 dKH/day rail does not satisfy the liquid-volume guard. For a 77 L system with a 0.50 dKH movement the guard binds only below P = 0.000325 dKH/mL, about 213x weaker than the canon reference solution. Issuing 2000 mL (the guard value) as the recommendation is forbidden.",
+        "issuedVolumeMl": 2000
+      },
+      "openIssues": [
+        "OI-LIQUIDGUARD-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-06)"
+      ]
     },
     {
       "fixtureId": "AD-RTN-001",
@@ -1447,7 +1549,7 @@
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-INTERVENTION-EXTERNAL-CHANGE-001",
-          "Part II \u00a739",
+          "Part II §39",
           "ALK-058"
         ]
       },
@@ -1787,17 +1889,20 @@
     },
     {
       "fixtureId": "AD-RAP-001",
-      "title": "Rapid basis discriminator - Theil-Sen slope versus latest independent pair",
+      "title": "Rapid basis is the latest independent pair; sizing stays Theil-Sen",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
-          "ALK-RAPID-001"
+          "ALK-RAPID-001",
+          "ALK-RAPID-BASIS-001"
         ],
-        "note": "Constructed to expose OI-RAPIDBASIS-001."
+        "note": "Freeze 5 F5-07."
       },
       "rulesExercised": [
         "ALK-RAPID-001",
-        "Part II \u00a719.2"
+        "ALK-RAPID-BASIS-001",
+        "ALK-011A",
+        "Part II §19.2"
       ],
       "input": {
         "timesDays": [
@@ -1820,81 +1925,1186 @@
         "theilSenSlopeDkhPerDay": -0.15,
         "latestIndependentPairSlopeDkhPerDay": -0.35,
         "rapidThresholdDkhPerDay": 0.3,
-        "underTheilSenBasis": "NOT rapid",
-        "underLatestPairBasis": "RAPID"
+        "underTheilSenBasis": "NOT rapid - forbidden basis",
+        "underLatestPairBasis": "RAPID - the canonical basis"
       },
       "expectedAction": {
         "rapidBasis": "LATEST_INDEPENDENT_PAIR",
         "rapidConfirmed": true,
         "sizingSlopeBasis": "THEIL_SEN",
-        "note": "ALK-011A selects the multi-point formula whenever 3+ eligible clusters exist; rapid only unlocks early action, a shorter retest and the 50%-cap gateway."
+        "sizingSlopeDkhPerDay": -0.15,
+        "rapidChanges": [
+          "PATHWAY",
+          "CADENCE",
+          "CAP_ELIGIBILITY"
+        ],
+        "note": "ALK-RAPID-BASIS-001: rapid confirmation changes pathway, cadence and 50%-cap eligibility. It never substitutes the latest-pair rate for S_observed in dose sizing, consumption estimation or forecasting."
       },
       "expectedReasonCodes": [
-        "TRAJECTORY_RAPID_CONFIRMED"
+        "TRAJECTORY_RAPID_CONFIRMED",
+        "RETEST_RAPID_MOVEMENT"
       ],
       "openIssues": [
-        "OI-RAPIDBASIS-001"
-      ]
+        "OI-RAPIDBASIS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-07)"
+      ],
+      "forbidden": {
+        "sizingSlopeDkhPerDay": -0.35,
+        "note": "Using the latest-pair rate -0.35 as the sizing slope, the consumption input or the forecast slope is forbidden. Testing the Theil-Sen -0.15 against the 0.30 threshold is equally forbidden - it would report NOT rapid."
+      }
     },
     {
       "fixtureId": "AD-RET-001",
-      "title": "Retest scheduler runs a reduced candidate set and reports what it could not compute",
+      "title": "Retest scheduler: T_signal is clamped up to the 24 h observation floor and selected",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
+          "ALK-RETEST-SCHEDULER-001",
           "PII-51",
-          "PII-52",
           "PII-53",
           "PII-54",
-          "PII-66",
           "ALK-050",
-          "ALK-052",
-          "ALK-POSTCHANGE-RETEST-001"
+          "ALK-008"
         ],
-        "note": "Constructed to expose OI-RETEST-001: the shared scheduler's generic candidates need Alk policy constants that Part III never supplies."
+        "note": "Freeze 5 F5-09. Same state as AD-MNT-006, so no intervention exists and the ordinary observation candidates govern. T_signal = 0.10 / 0.104745166004 = 0.954698 d = 22.9128 h, below the 24 h independence floor."
       },
       "rulesExercised": [
-        "PII-51",
-        "PII-52",
-        "PII-53",
-        "PII-54",
-        "PII-66",
+        "ALK-RETEST-SCHEDULER-001",
         "ALK-050",
-        "ALK-POSTCHANGE-RETEST-001",
-        "ALK-FORECAST-SLOPE-001"
+        "ALK-008",
+        "ALK-062",
+        "X-INV-004"
       ],
       "input": {
-        "state": "ordinary maintenance monitoring, no intervention, no anomaly, sufficient evidence, falling trend approaching the outer bound in 6 days"
+        "state": "ordinary monitoring; below range with a supported rise; maintenance HELD by ALK-TOWARD-RANGE-HOLD-001; no intervention, no anomaly, no breach",
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.3,
+          7.6,
+          7.9
+        ],
+        "asOfDay": 4,
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8
       },
       "expectedRetest": {
         "candidateTimes": [
           {
             "candidateClass": "ROUTINE_CADENCE",
-            "approxHours": 48,
+            "approxHours": 48.0,
+            "included": true
+          },
+          {
+            "candidateClass": "SIGNAL_ACCUMULATION",
+            "rawHours": 22.912751887,
+            "clampedHours": 24.0,
+            "included": true,
+            "note": "T_signal = 0.10 / |S_supported| = 0.10 / 0.104745166004 days"
+          },
+          {
+            "candidateClass": "FORECAST_BOUNDARY_RISK",
+            "included": false,
+            "note": "rising away from OuterMin and 3.1 dKH below OuterMax; no crossing inside the forecast horizon"
+          }
+        ],
+        "candidatesNotRun": [
+          "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
+          "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
+        ],
+        "observationFloorHours": 24.0,
+        "observationCeilingHours": 96.0,
+        "selectedApproxHours": 24.0,
+        "selectedReasonCode": "RETEST_SIGNAL_ACCUMULATION"
+      },
+      "expectedReasonCodes": [
+        "RETEST_SIGNAL_ACCUMULATION",
+        "RETEST_OBSERVATION_FLOOR_APPLIED",
+        "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
+        "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
+      ],
+      "openIssues": [
+        "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)"
+      ],
+      "forbidden": {
+        "note": "No K_detect and no return-plan arrival cadence may be supplied from another parameter, from V1 or from a plausible default; both candidate classes are canonically NOT_RUN. The 22.9128 h raw T_signal must not be emitted below the 24 h floor.",
+        "selectedApproxHours": 22.912751887,
+        "reasonCodes": [
+          "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
+          "RETEST_BOUNDARY_MARGIN_UNAVAILABLE",
+          "RETEST_MINIMUM_INTERVAL_UNAVAILABLE"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-005",
+      "title": "Later data never retroactively changes an earlier independent selection",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-INDEPENDENT-SELECTION-001",
+          "Part II §64"
+        ],
+        "note": "Freeze 5 F5-01 negative control. AD-SEG-001's series plus one later cluster at t = 4.5, which is 12 h after the accepted t = 4.0. Forward-greedy is unchanged; backward-greedy is not."
+      },
+      "rulesExercised": [
+        "ALK-INDEPENDENT-SELECTION-001",
+        "ALK-008",
+        "ALK-SLOPE-UNCERTAINTY-001"
+      ],
+      "input": {
+        "clusterTimesDays": [
+          0.0,
+          0.5,
+          2.0,
+          4.0,
+          4.5
+        ],
+        "alkDkh": [
+          8.6,
+          8.55,
+          8.3,
+          8.0,
+          7.925
+        ],
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "acceptedClusterTimesDays": [
+          0.0,
+          2.0,
+          4.0
+        ],
+        "notAcceptedClusterTimesDays": [
+          0.5,
+          4.5
+        ],
+        "notAcceptedSeparationHours": [
+          12.0,
+          12.0
+        ],
+        "selectionIdenticalToAD_SEG_001": true,
+        "sxxDay2": 8.0,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "observedSlopeDkhPerDay": -0.15
+      },
+      "expectedSupportedResult": {
+        "supportedSlopeDkhPerDay": -0.104745166004,
+        "trajectory": "FALLING",
+        "movementEvidence": "SUFFICIENT"
+      },
+      "expectedAction": {
+        "replayStability": "the accepted set for the prefix t <= 4.0 is identical to AD-SEG-001",
+        "note": "The t = 4.5 cluster still sets current position under ALK-010 and still supplies the latest independent pair candidate under ALK-RAPID-BASIS-001 only if it were itself accepted - here it is not, so the latest accepted pair remains (2.0, 4.0)."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INDEPENDENT_SELECTION_APPLIED",
+        "EVIDENCE_SUFFICIENT"
+      ],
+      "openIssues": [
+        "OI-INDEPENDENCE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-01)"
+      ],
+      "forbidden": {
+        "acceptedClusterTimesDays": [
+          0.5,
+          2.0,
+          4.5
+        ],
+        "note": "Backward-greedy from t = 4.5 would accept {0.5, 2.0, 4.5}, Sxx = 8.1667, sigma_S = 0.034992711 - a different uncertainty from the same history, produced only by the arrival of a new reading. That is the failure this fixture exists to catch."
+      }
+    },
+    {
+      "fixtureId": "AD-SEG-006",
+      "title": "MANUFACTURER_NOMINAL replacement Alk does not normalize a water change",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-033",
+          "ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001",
+          "ALK-WATERCHANGE-UNKNOWN-001",
+          "Part II §45"
+        ],
+        "note": "Freeze 5 F5-10 negative control. Numerically identical to WG-ALK-011 except for the confidence tier, so the tier alone flips the outcome from a normalized continuous segment to a hard segment boundary."
+      },
+      "rulesExercised": [
+        "ALK-033",
+        "ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001",
+        "ALK-WATERCHANGE-UNKNOWN-001"
+      ],
+      "input": {
+        "tankAlkBeforeDkh": 8.4,
+        "replacementAlkalinityDkh": 9.4,
+        "changedFraction": 0.1,
+        "replacementAlkalinityConfidence": "MANUFACTURER_NOMINAL"
+      },
+      "expectedIntermediateEvidence": {
+        "requiredConfidence": "MEASURED_SAME_BATCH",
+        "normalizationPermitted": false,
+        "fallsThroughTo": "ALK-WATERCHANGE-UNKNOWN-001",
+        "potentialUnknownStepDkh": 0.2,
+        "changedFraction": 0.1,
+        "unknownBoundaryThresholdFraction": 0.05
+      },
+      "expectedAction": {
+        "normalizationDkh": null,
+        "segmentBreak": true,
+        "materialityClass": "MATERIAL_UNKNOWN",
+        "straddlingResponseAttribution": "CONFOUNDED",
+        "potencyLearningEligible": false,
+        "rawMeasurementsPreserved": true,
+        "eventPreserved": true,
+        "statedReplacementValueRetainedForAudit": true
+      },
+      "expectedReasonCodes": [
+        "SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE",
+        "SEGMENT_WC_UNKNOWN_BOUNDARY"
+      ],
+      "openIssues": [
+        "OI-WATERCHANGE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-10)"
+      ],
+      "forbidden": {
+        "normalizationDkh": -0.1,
+        "segmentBreak": false,
+        "reasonCodes": [
+          "SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED",
+          "SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED"
+        ],
+        "note": "Normalizing -0.10 dKH here is exactly WG-ALK-011's outcome and is forbidden: the number is identical, the confidence is not. An unverified salt label must not become a precise correction merely because a formula exists."
+      }
+    },
+    {
+      "fixtureId": "AD-VAL-001",
+      "title": "The three operative SUSPECT sources, and nothing else",
+      "provenance": {
+        "class": "CANON_QUALITATIVE",
+        "canonSource": [
+          "ALK-SUSPECT-DETECTION-001",
+          "ALK-005",
+          "ALK-051",
+          "Part II §47",
+          "Part II §49"
+        ],
+        "note": "Freeze 5 F5-02. Positive control for the sources that remain operative and negative control for the one that does not."
+      },
+      "rulesExercised": [
+        "ALK-SUSPECT-DETECTION-001",
+        "ALK-005",
+        "ALK-051",
+        "ALK-MOVEMENT-001"
+      ],
+      "input": {
+        "cases": [
+          {
+            "case": "EXPLICIT_USER_MARK",
+            "reading": "user marks the latest reading suspect"
+          },
+          {
+            "case": "RECORDED_DEVICE_FAULT",
+            "reading": "a test-kit expiry / device fault event covers the reading"
+          },
+          {
+            "case": "REPEAT_SPREAD",
+            "clusterReadingsDkh": [
+              8.6,
+              8.85
+            ],
+            "spreadDkh": 0.25
+          },
+          {
+            "case": "STATISTICALLY_UNUSUAL_ONLY",
+            "clusterReadingsDkh": [
+              7.9
+            ],
+            "residualFromLineDkh": -0.5,
+            "internallyConsistent": true,
+            "explicitMark": false,
+            "deviceFault": false
+          }
+        ]
+      },
+      "expectedAction": {
+        "EXPLICIT_USER_MARK": {
+          "measurementStatus": "SUSPECT",
+          "ordinaryDoseEscalation": "WITHHELD",
+          "repeat": "REPEAT_NOW"
+        },
+        "RECORDED_DEVICE_FAULT": {
+          "measurementStatus": "SUSPECT",
+          "repeat": "REPEAT_NOW"
+        },
+        "REPEAT_SPREAD": {
+          "clusterStatus": "ANOMALOUS",
+          "allReadingsPreserved": true,
+          "medianConclusionManufactured": false,
+          "repeat": "REPEAT_NOW"
+        },
+        "STATISTICALLY_UNUSUAL_ONLY": {
+          "automaticStatisticalSuspicionDetection": "NOT_RUN",
+          "measurementStatus": "VALID",
+          "participatesInTrend": true,
+          "silentlyDiscarded": false,
+          "note": "An unusual reading may still prompt repeat testing through ALK-006 or an explicit user mark. What it may not do is disappear."
+        }
+      },
+      "expectedReasonCodes": [
+        "VALIDATION_SUSPICION_DETECTION_NOT_RUN"
+      ],
+      "openIssues": [
+        "OI-SUSPECT-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-02)"
+      ],
+      "forbidden": {
+        "note": "No Z threshold, jump-size rule or suspicious multiple may be imported from another parameter, from V1 or from statistical convention. The STATISTICALLY_UNUSUAL_ONLY case must not produce SUSPECT, must not be excluded, and must not be down-weighted.",
+        "reasonCodes": [
+          "VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-CON-002",
+      "title": "Negative-consumption materiality straddle - one actuator increment flips the class",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-031",
+          "ALK-NEGATIVE-MATERIALITY-001",
+          "ALK-HIGH-BREACH-UNRESOLVED-001"
+        ],
+        "note": "Freeze 5 F5-03. Perfect line 10.6, 10.9, 11.2 at t = 0, 2, 4 gives S_TS = +0.15, sigma_resid = 0, sigma_point = 0.10, Sxx = 8, sigma_S = 0.035355339059, 1.28*sigma_S = 0.045254833996. The materiality boundary sits at C = -0.045254833996, between the two doses below."
+      },
+      "rulesExercised": [
+        "ALK-CONSUMPTION-ESTIMATE-001",
+        "ALK-NEGATIVE-MATERIALITY-001",
+        "ALK-NEGATIVE-CONSUMPTION-001",
+        "ALK-HIGH-BREACH-UNRESOLVED-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          10.6,
+          10.9,
+          11.2
+        ],
+        "selectedPotencyDkhPerMl": 0.0693,
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "actuatorIncrementMlPerDay": 0.1,
+        "doseVariants": [
+          1.5,
+          1.6
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": 0.15,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "materialityMarginDkhPerDay": 0.045254833996,
+        "position": "BREACHED_HIGH",
+        "variants": [
+          {
+            "currentDoseMlPerDay": 1.5,
+            "pTimesD": 0.10395,
+            "consumptionDkhPerDay": -0.04605,
+            "cPlusKSigma": -0.000795166004,
+            "materiallyNegative": true
+          },
+          {
+            "currentDoseMlPerDay": 1.6,
+            "pTimesD": 0.11088,
+            "consumptionDkhPerDay": -0.03912,
+            "cPlusKSigma": 0.006134833996,
+            "materiallyNegative": false
+          }
+        ]
+      },
+      "expectedAction": {
+        "variant_1_5": {
+          "consumptionPhysicality": "NON_PHYSICAL_OR_UNEXPLAINED_GAIN",
+          "maintenanceAction": "HOLD",
+          "safetyDoseRecommendationMlPerDay": 0,
+          "maintenanceEstimateStatus": "UNRESOLVED",
+          "nextTestApproxHours": 24
+        },
+        "variant_1_6": {
+          "consumptionPhysicality": "UNCERTAIN_NON_RESOLVABLE",
+          "maintenanceAction": "HOLD",
+          "safetyDoseRecommendationMlPerDay": 0,
+          "maintenanceEstimateStatus": "UNRESOLVED",
+          "nextTestApproxHours": 24
+        },
+        "note": "The maintenance action is HOLD on both sides, and a negative C_estimate is uninterpretable on both, so the high-breach zero-dose pause arms in both. What the boundary decides is the recorded classification and the wording."
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH",
+        "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE",
+        "MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE",
+        "RETEST_HIGH_BREACH_FAILSAFE"
+      ],
+      "openIssues": [
+        "OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03)"
+      ],
+      "forbidden": {
+        "note": "No sigma_P and no sigma_D may be introduced. The comparison is strict: at exactly C + 1.28*sigma_S = 0 the result is NOT materially negative. Neither variant may size a maintenance change, and neither may clamp C to zero and treat zero as a real target.",
+        "reasonCodes": [
+          "CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED",
+          "SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED"
+        ],
+        "variantSpecific": {
+          "variant_1_5_reasonCodes": [
+            "CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED"
+          ],
+          "variant_1_6_reasonCodes": [
+            "CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN"
+          ]
+        }
+      }
+    },
+    {
+      "fixtureId": "AD-MNT-008",
+      "title": "Below range with an uncertainty-limited lean does not reach the toward-range hold",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-TOWARD-RANGE-HOLD-001",
+          "ALK-MOVEMENT-001",
+          "ALK-011"
+        ],
+        "note": "Freeze 5 F5-05 negative control. Perfect line 7.90, 7.94, 7.98 gives S_TS = +0.02; 1.28*sigma_S = 0.045255 > 0.02, so S_supported = 0 exactly and the trajectory is UNCERTAINTY_LIMITED, not RISING."
+      },
+      "rulesExercised": [
+        "ALK-MOVEMENT-001",
+        "ALK-SUPPORTED-SLOPE-001",
+        "ALK-TOWARD-RANGE-HOLD-001",
+        "ALK-RETURN-ELIGIBLE-TRAJECTORY-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.9,
+          7.94,
+          7.98
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "activePlan": null,
+        "outerBoundBreach": false
+      },
+      "expectedIntermediateEvidence": {
+        "position": "BELOW_RANGE",
+        "observedSlopeDkhPerDay": 0.02,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportSubtractionDkhPerDay": 0.045254833996,
+        "supportedSlopeDkhPerDay": 0.0,
+        "trajectory": "UNCERTAINTY_LIMITED",
+        "movementEvidence": "UNCERTAINTY_LIMITED"
+      },
+      "expectedAction": {
+        "action": "HOLD_CURRENT_DOSE",
+        "recommendedDoseMlPerDay": 9.0,
+        "towardRangeHoldApplied": false,
+        "returnPlanOffer": "AVAILABLE",
+        "note": "S_supported = 0, so ALK-TOWARD-RANGE-HOLD-001 does not fire; ALK-011's uncertainty-limited branch holds instead. The same S_supported = 0 makes the tank return-plan eligible under ALK-RETURN-ELIGIBLE-TRAJECTORY-001, which the supported-rising case of AD-MNT-006 is not."
+      },
+      "expectedReasonCodes": [
+        "TRAJECTORY_UNCERTAINTY_LIMITED",
+        "MAINTENANCE_HOLD_UNCERTAINTY_LIMITED",
+        "RETURN_OFFER_AVAILABLE"
+      ],
+      "openIssues": [
+        "OI-BELOWRISING-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-05)",
+        "OI-RETURNOFFER-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-04)"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "MAINTENANCE_HOLD_TOWARD_RANGE",
+          "TRAJECTORY_RISING",
+          "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY"
+        ],
+        "note": "The final action is HOLD either way, so a wrong path here is only visible through the reason code and the return-plan offer. That is exactly why both are asserted: a wrong rule path producing the same number is a fixture failure."
+      }
+    },
+    {
+      "fixtureId": "AD-RTN-003",
+      "title": "Return-plan eligibility rejects insufficient evidence and supported movement",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RETURN-ELIGIBLE-TRAJECTORY-001",
+          "ALK-STABLE-001",
+          "ALK-054",
+          "ALK-024"
+        ],
+        "note": "Freeze 5 F5-04 negative control. Three cases against one predicate."
+      },
+      "rulesExercised": [
+        "ALK-RETURN-ELIGIBLE-TRAJECTORY-001",
+        "ALK-STABLE-001",
+        "ALK-MOVEMENT-001"
+      ],
+      "input": {
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "currentDoseMlPerDay": 9.0,
+        "cases": [
+          {
+            "case": "INSUFFICIENT_EVIDENCE",
+            "timesDays": [
+              0,
+              2
+            ],
+            "alkDkh": [
+              7.8,
+              7.8
+            ]
+          },
+          {
+            "case": "SUPPORTED_RISING",
+            "timesDays": [
+              0,
+              2,
+              4
+            ],
+            "alkDkh": [
+              7.3,
+              7.6,
+              7.9
+            ]
+          },
+          {
+            "case": "UNCERTAINTY_LIMITED",
+            "timesDays": [
+              0,
+              2,
+              4
+            ],
+            "alkDkh": [
+              7.9,
+              7.94,
+              7.98
+            ]
+          }
+        ]
+      },
+      "expectedAction": {
+        "INSUFFICIENT_EVIDENCE": {
+          "movementEvidence": "INSUFFICIENT",
+          "supportedSlopeDkhPerDay": null,
+          "returnPlanEligibleTrajectory": false,
+          "returnPlanOffer": "NOT_ELIGIBLE",
+          "note": "Two clusters over two days. An offer needs established evidence that nothing is moving, not an absence of evidence."
+        },
+        "SUPPORTED_RISING": {
+          "movementEvidence": "SUFFICIENT",
+          "supportedSlopeDkhPerDay": 0.104745166004,
+          "returnPlanEligibleTrajectory": false,
+          "returnPlanOffer": "NOT_ELIGIBLE"
+        },
+        "UNCERTAINTY_LIMITED": {
+          "movementEvidence": "UNCERTAINTY_LIMITED",
+          "observedSlopeDkhPerDay": 0.02,
+          "supportedSlopeDkhPerDay": 0.0,
+          "analyticalTrajectory": "UNCERTAINTY_LIMITED",
+          "isSTABLEUnderALK_STABLE_001": false,
+          "returnPlanEligibleTrajectory": true,
+          "returnPlanOffer": "AVAILABLE",
+          "note": "The load-bearing case: not STABLE, yet eligible. ALK-STABLE-001 is untouched."
+        }
+      },
+      "expectedReasonCodes": [
+        "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY",
+        "RETURN_OFFER_AVAILABLE"
+      ],
+      "openIssues": [
+        "OI-RETURNOFFER-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-04)"
+      ],
+      "forbidden": {
+        "note": "Widening ALK-STABLE-001, adding a near-zero tolerance band to make the UNCERTAINTY_LIMITED case STABLE, or offering a plan on INSUFFICIENT evidence are all forbidden. Automatic maintenance is HOLD in all three cases and must not vary with eligibility.",
+        "reasonCodes": [
+          "RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED",
+          "TRAJECTORY_STABLE"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-RTN-004",
+      "title": "An in-flight return plan is terminated, not suspended, by a safety return",
+      "provenance": {
+        "class": "CANON_QUALITATIVE",
+        "canonSource": [
+          "ALK-RETURN-TERMINATED-BY-SAFETY-001",
+          "ALK-SAFETY-RETURN-INTEGRATION-001",
+          "ALK-COMPOSITE-RAIL-001",
+          "ALK-RETURN-EXPIRY-001"
+        ],
+        "note": "Freeze 5 F5-08. The open-issue failure scenario: a downward plan running while the level breaches OuterMin."
+      },
+      "rulesExercised": [
+        "ALK-RETURN-TERMINATED-BY-SAFETY-001",
+        "ALK-SAFETY-RETURN-INTEGRATION-001",
+        "ALK-OUTER-BOUND-ACTION-001",
+        "ALK-COMPOSITE-RAIL-001"
+      ],
+      "input": {
+        "activeReturnPlan": {
+          "returnPlanId": "RP-1",
+          "direction": "DOWNWARD",
+          "aimPointLevelDkh": 8.5,
+          "plannedSlopeDkhPerDay": -0.25,
+          "temporaryDoseMlPerDay": 5.4,
+          "predictedDurationDays": 4.4,
+          "expiryDays": 10.8,
+          "temporaryDoseExactMlPerDay": 5.392496392,
+          "maintenanceReferenceMlPerDay": 9.0,
+          "selectedPotencyDkhPerMl": 0.0693,
+          "startLevelDkh": 9.6
+        },
+        "outerMinDkh": 7.0,
+        "safetyDestinationLowDkh": 7.2,
+        "latestAlkDkh": 6.85
+      },
+      "expectedAction": {
+        "returnPlanPhase": "TERMINATED_BY_SAFETY_RETURN",
+        "recommendedTemporaryMovement": "STOP_PENDING_USER_ACTION",
+        "actualDose": "UNKNOWN_OR_LAST_LOGGED",
+        "interventionType": "SAFETY_RETURN",
+        "outerBoundState": "BREACHED_LOW",
+        "intentionalMovementComponents": 1,
+        "compositeRailTerms": 1,
+        "planIdentityPreserved": true,
+        "storedDestinationDurationExpiryPreserved": true,
+        "terminationRecordedAsEvent": true,
+        "nextTestApproxHours": 24
+      },
+      "expectedReasonCodes": [
+        "SAFETY_OUTER_BOUND_BREACHED_LOW",
+        "SAFETY_RETURN_ACTIVE",
+        "RETURN_TERMINATED_BY_SAFETY_RETURN",
+        "RETURN_STOP_PENDING_USER_ACTION",
+        "SAFETY_INTERVENTION_LOCK_HELD",
+        "RETEST_SAFETY_RETURN_ACTIVE"
+      ],
+      "openIssues": [
+        "OI-RETURNDURINGSAFETY-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-08)"
+      ],
+      "forbidden": {
+        "returnPlanPhase": [
+          "SUSPENDED_PENDING_SAFETY",
+          "ACTIVE",
+          "PAUSED"
+        ],
+        "intentionalMovementComponents": 2,
+        "reasonCodes": [
+          "RETURN_SUSPENDED_BY_SAFETY_RETURN"
+        ],
+        "note": "Netting the plan's -0.25 dKH/day against the safety return's +0.35 dKH movement across one 0.50 dKH/day budget is exactly the layering ALK-SAFETY-RETURN-INTEGRATION-001 §5 forbids. Marking the pump as actually stopped is also forbidden."
+      }
+    },
+    {
+      "fixtureId": "AD-RTN-005",
+      "title": "A terminated return plan does not resume when the safety return completes",
+      "provenance": {
+        "class": "CANON_QUALITATIVE",
+        "canonSource": [
+          "ALK-RETURN-TERMINATED-BY-SAFETY-001",
+          "ALK-003A",
+          "ALK-RETURN-ELIGIBLE-TRAJECTORY-001"
+        ],
+        "note": "Freeze 5 F5-08 negative control - continuation of AD-RTN-004 past safety completion."
+      },
+      "rulesExercised": [
+        "ALK-RETURN-TERMINATED-BY-SAFETY-001",
+        "ALK-003A",
+        "ALK-RETURN-ELIGIBLE-TRAJECTORY-001",
+        "ALK-024"
+      ],
+      "input": {
+        "priorTerminatedReturnPlanId": "RP-1",
+        "safetyDestinationLowDkh": 7.2,
+        "latestAlkDkh": 7.25,
+        "safetyReturnCompleted": true,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "postSafetyEvidence": "not yet re-established: 1 cluster since the safety correction"
+      },
+      "expectedAction": {
+        "safetyReturnPhase": "COMPLETE",
+        "returnPlanPhase": "TERMINATED_BY_SAFETY_RETURN",
+        "returnPlanResumed": false,
+        "automaticMaintenance": "HOLD_CURRENT_DOSE",
+        "returnPlanEligibleTrajectory": false,
+        "returnPlanOffer": "NOT_ELIGIBLE",
+        "newPlanRequires": [
+          "fresh ALK-RETURN-ELIGIBLE-TRAJECTORY-001 eligibility on post-safety evidence",
+          "fresh explicit user opt-in"
+        ]
+      },
+      "expectedReasonCodes": [
+        "SAFETY_RETURN_COMPLETE",
+        "RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY",
+        "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS"
+      ],
+      "openIssues": [
+        "OI-RETURNDURINGSAFETY-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-08)"
+      ],
+      "forbidden": {
+        "returnPlanPhase": "ACTIVE",
+        "returnPlanResumed": true,
+        "note": "Restarting RP-1's temporary dose on safety completion, reusing RP-1's stored opt-in as consent for a new plan, or offering a plan before post-safety evidence is re-established are all forbidden."
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-004",
+      "title": "A maintenance command over the liquid guard is withheld, never capped",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-LIQUID-VOLUME-GUARD-001",
+          "ALK-ROUNDING-001",
+          "ALK-049",
+          "WG-ALK-067"
+        ],
+        "note": "Freeze 5 F5-06. The guard binds on maintenance only for an extremely dilute solution: it requires D > 0.02 * 1000 * V_L mL/day. Here V_L = 100 L, so the guard is 2000 mL/24 h."
+      },
+      "rulesExercised": [
+        "ALK-LIQUID-VOLUME-GUARD-001",
+        "ALK-ROUNDING-001",
+        "ALK-049"
+      ],
+      "input": {
+        "netVolumeL": 100,
+        "selectedPotencyDkhPerMl": 0.0002,
+        "actuatorIncrementMlPerDay": 50,
+        "currentDoseMlPerDay": 1900,
+        "continuousActionCandidateMlPerDay": 2040,
+        "note": "a 0.028 dKH/day supported deficit at P = 0.0002 dKH/mL needs +140 mL/day"
+      },
+      "expectedIntermediateEvidence": {
+        "systemVolumeMl": 100000,
+        "guardMlPer24h": 2000,
+        "roundedCandidateMlPerDay": 2050,
+        "guardCheckedAfterRounding": true,
+        "roundedCandidateViolatesGuard": true,
+        "stepTowardCurrentMlPerDay": 2000,
+        "note": "2050 is the nearest representable setting to 2040 and exceeds the guard. ALK-ROUNDING-001 step 7 steps toward D_current to 2000, which equals the guard exactly and does not exceed it."
+      },
+      "expectedAction": {
+        "recommendedDoseMlPerDay": 2000,
+        "deltaDoseMlPerDay": 100,
+        "executableDosingCommand": "ISSUED",
+        "cappedToGuardAndPresentedAsRecommendation": false,
+        "note": "2000 mL/day here is a representable actuator setting reached by ALK-ROUNDING-001 step 7, not the guard value substituted for a recommendation. Had no feasible representable command existed, the command would be WITHHELD."
+      },
+      "expectedReasonCodes": [
+        "MAINTENANCE_INCREASE_RECOMMENDED",
+        "SAFETY_LIQUID_GUARD_APPLIED"
+      ],
+      "openIssues": [
+        "OI-LIQUIDGUARD-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-06)"
+      ],
+      "variant": {
+        "title": "no feasible representable command remains",
+        "input": {
+          "currentDoseMlPerDay": 2100,
+          "continuousActionCandidateMlPerDay": 2240
+        },
+        "expectedAction": {
+          "executableDosingCommand": "WITHHELD",
+          "recommendedDoseMlPerDay": null,
+          "unaffectedOutputsRetained": [
+            "position",
+            "outerBoundState",
+            "observedSlope",
+            "supportedSlope",
+            "consumption",
+            "maintenanceEstimate",
+            "retest"
+          ]
+        },
+        "expectedReasonCodes": [
+          "MAINTENANCE_LIQUID_GUARD_EXCEEDED"
+        ],
+        "note": "D_current = 2100 already exceeds the guard, so stepping toward it cannot reach a feasible command; the engine withholds rather than affirming 2100."
+      },
+      "forbidden": {
+        "recommendedDoseMlPerDay": 2050,
+        "reasonCodes": [
+          "MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED",
+          "SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED"
+        ],
+        "note": "Issuing the rounded 2050 mL/day because the guard was only checked before rounding is the failure this fixture exists to catch. Presenting the guard value as the recommendation without a feasible actuator setting behind it is separately forbidden."
+      }
+    },
+    {
+      "fixtureId": "AD-SAF-005",
+      "title": "The advisory safety rate and the executable pump command stay separate fields",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-SAFETY-TEMP-RATE-RESOLUTION-001",
+          "M-1",
+          "ALK-ROUNDING-001"
+        ],
+        "note": "Freeze 5 F5-11 negative control, on AD-SAF-002's numbers."
+      },
+      "rulesExercised": [
+        "ALK-SAFETY-TEMP-RATE-RESOLUTION-001",
+        "M-1",
+        "ALK-ROUNDING-001",
+        "CORE-INFORM-PROCEED-001"
+      ],
+      "input": {
+        "alkDkh": 11.3,
+        "outerMaxDkh": 11.0,
+        "safetyDestinationHighDkh": 10.8,
+        "consumptionDkhPerDay": 0.6,
+        "consumptionPhysicality": "INTERPRETABLE",
+        "selectedPotencyDkhPerMl": 0.0693,
+        "cases": [
+          {
+            "case": "INCREMENT_MISSING",
+            "actuatorIncrementMlPerDay": null
+          },
+          {
+            "case": "INCREMENT_KNOWN",
+            "actuatorIncrementMlPerDay": 0.1
+          },
+          {
+            "case": "POTENCY_INVALID",
+            "actuatorIncrementMlPerDay": null,
+            "selectedPotencyDkhPerMl": null
+          }
+        ]
+      },
+      "expectedAction": {
+        "INCREMENT_MISSING": {
+          "temporarySafetyRateAdvisoryMlPerDay": 1.443001443,
+          "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
+          "safetyDirection": "REDUCE_ALK_DOSING"
+        },
+        "INCREMENT_KNOWN": {
+          "temporarySafetyRateAdvisoryMlPerDay": 1.443001443,
+          "temporarySafetyPumpCommandMlPerDay": 1.4,
+          "note": "ALK-ROUNDING-001 nearest: 1.4 is 0.043001 away, 1.5 is 0.056999 away."
+        },
+        "POTENCY_INVALID": {
+          "temporarySafetyRateAdvisoryMlPerDay": "NOT_RUN",
+          "temporarySafetyPumpCommandMlPerDay": "NOT_RUN",
+          "requiredMovementDkh": 0.5,
+          "safetyDirection": "REDUCE_ALK_DOSING",
+          "note": "The potency requirement stays load-bearing: state the dKH movement and direction, withhold both mL/day figures."
+        }
+      },
+      "expectedReasonCodes": [
+        "SAFETY_TEMP_RATE_ADVISORY_EMITTED",
+        "CAPABILITY_ACTUATOR_INCREMENT_REQUIRED",
+        "SAFETY_OUTER_BOUND_BREACHED_HIGH"
+      ],
+      "openIssues": [
+        "OI-SAFETYRATE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-11)"
+      ],
+      "forbidden": {
+        "note": "Merging the two fields, emitting 1.443001443 as a pump command, rounding to an invented 0.1 mL/day increment when none is configured, or withholding the advisory rate because the increment is absent are all forbidden.",
+        "reasonCodes": [
+          "SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-RET-002",
+      "title": "Retest scheduler: T_signal above the Day-4 ceiling loses to the routine cadence",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RETEST-SCHEDULER-001",
+          "ALK-050",
+          "PII-53"
+        ],
+        "note": "Freeze 5 F5-09. Perfect line 7.78, 7.90, 8.02 gives S_TS = +0.06, S_supported = 0.014745166004, so T_signal = 0.10 / 0.014745166004 = 6.781884 d = 162.765207 h."
+      },
+      "rulesExercised": [
+        "ALK-RETEST-SCHEDULER-001",
+        "ALK-050",
+        "ALK-TOWARD-RANGE-HOLD-001"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.78,
+          7.9,
+          8.02
+        ],
+        "asOfDay": 4,
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "state": "ordinary monitoring; below range with a supported rise; maintenance HELD; no intervention"
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": 0.06,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportedSlopeDkhPerDay": 0.014745166004,
+        "tSignalDays": 6.781883634,
+        "tSignalRawHours": 162.76520721
+      },
+      "expectedRetest": {
+        "candidateTimes": [
+          {
+            "candidateClass": "ROUTINE_CADENCE",
+            "approxHours": 48.0,
+            "included": true
+          },
+          {
+            "candidateClass": "SIGNAL_ACCUMULATION",
+            "rawHours": 162.76520721,
+            "clampedHours": 96.0,
             "included": true
           }
         ],
         "candidatesNotRun": [
           "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
-          "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
-          "RETEST_BOUNDARY_MARGIN_UNAVAILABLE",
           "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
         ],
-        "minimumUsefulIntervalApplied": "NOT_RUN",
+        "observationCeilingHours": 96.0,
+        "selectedApproxHours": 48.0,
         "selectedReasonCode": "RETEST_ROUTINE_CADENCE"
       },
       "expectedReasonCodes": [
         "RETEST_ROUTINE_CADENCE",
-        "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
-        "RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE",
-        "RETEST_BOUNDARY_MARGIN_UNAVAILABLE",
-        "RETEST_MINIMUM_INTERVAL_UNAVAILABLE"
+        "RETEST_OBSERVATION_CEILING_APPLIED"
       ],
       "openIssues": [
-        "OI-RETEST-001"
+        "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)"
       ],
       "forbidden": {
-        "note": "No K_detect, RequiredMovement, boundarySafetyMargin or minimumUsefulInterval value may be supplied from another parameter, from V1, or from a plausible default. Boundary-crossing risk therefore does NOT shorten testing, and the card must say so."
+        "selectedApproxHours": 162.76520721,
+        "note": "Treating T_signal as the answer rather than as one candidate would schedule a test almost seven days out for a tank that is moving. Ordinary observation must not extend beyond the ~Day-4 window, and the routine cadence is earlier in any case."
+      }
+    },
+    {
+      "fixtureId": "AD-RET-003",
+      "title": "Retest scheduler: forecast outer-bound risk schedules before the crossing",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RETEST-SCHEDULER-001",
+          "ALK-062",
+          "PII-54"
+        ],
+        "note": "Freeze 5 F5-09. Perfect line 7.50, 7.35, 7.20 gives S_TS = -0.075 and S_supported = -0.029745166004. The forecast uses S_observed: T_outer = (7.20 - 7.00) / 0.075 = 2.666667 d; the 24 h lead gives 1.666667 d = 40 h."
+      },
+      "rulesExercised": [
+        "ALK-RETEST-SCHEDULER-001",
+        "ALK-062",
+        "ALK-FORECAST-SLOPE-001",
+        "ALK-050"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.5,
+          7.35,
+          7.2
+        ],
+        "asOfDay": 4,
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.075,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "supportedSlopeDkhPerDay": -0.029745166004,
+        "position": "BELOW_RANGE",
+        "trajectory": "FALLING",
+        "tOuterLowDays": 2.666666667,
+        "tBoundaryDays": 1.666666667,
+        "tSignalDays": 3.361890802,
+        "tSignalHours": 80.685379254
+      },
+      "expectedRetest": {
+        "candidateTimes": [
+          {
+            "candidateClass": "ROUTINE_CADENCE",
+            "approxHours": 48.0,
+            "included": true
+          },
+          {
+            "candidateClass": "SIGNAL_ACCUMULATION",
+            "rawHours": 80.685379254,
+            "clampedHours": 80.685379254,
+            "included": true
+          },
+          {
+            "candidateClass": "FORECAST_BOUNDARY_RISK",
+            "approxHours": 40.0,
+            "included": true,
+            "boundSide": "OUTER_MIN"
+          }
+        ],
+        "candidatesNotRun": [
+          "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
+          "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
+        ],
+        "selectedApproxHours": 40.0,
+        "selectedReasonCode": "RETEST_FORECAST_BOUNDARY_RISK"
+      },
+      "expectedReasonCodes": [
+        "RETEST_FORECAST_BOUNDARY_RISK",
+        "MAINTENANCE_INCREASE_RECOMMENDED"
+      ],
+      "openIssues": [
+        "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)"
+      ],
+      "forbidden": {
+        "tOuterLowDays": 6.723781604,
+        "note": "Forecasting the crossing from S_supported = -0.029745166 gives 6.723782 d and would schedule the test after the projected crossing. ALK-011B and audit finding R3 require S_observed for risk forecasting. Selecting the 48 h routine cadence over the 40 h boundary candidate is equally forbidden.",
+        "reasonCodes": [
+          "RETEST_BOUNDARY_MARGIN_UNAVAILABLE"
+        ]
+      }
+    },
+    {
+      "fixtureId": "AD-RET-004",
+      "title": "Retest scheduler: a crossing already inside the safety lead returns test-now",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "ALK-RETEST-SCHEDULER-001",
+          "ALK-062",
+          "PII-54",
+          "PII-55"
+        ],
+        "note": "Freeze 5 F5-09 boundary partner of AD-RET-003. Perfect line 7.35, 7.20, 7.05 gives S_TS = -0.075; T_outer = 0.05 / 0.075 = 0.666667 d, so T_boundary = -0.333333 d."
+      },
+      "rulesExercised": [
+        "ALK-RETEST-SCHEDULER-001",
+        "ALK-062",
+        "PII-55"
+      ],
+      "input": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.35,
+          7.2,
+          7.05
+        ],
+        "asOfDay": 4,
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "currentDoseMlPerDay": 9.0
+      },
+      "expectedIntermediateEvidence": {
+        "observedSlopeDkhPerDay": -0.075,
+        "position": "BELOW_RANGE",
+        "outerBoundState": "INSIDE_BOUND",
+        "tOuterLowDays": 0.666666667,
+        "tBoundaryDays": -0.333333333
+      },
+      "expectedRetest": {
+        "selectedAction": "REPEAT_NOW",
+        "selectedReasonCode": "RETEST_FORECAST_BOUNDARY_RISK",
+        "observationFloorApplied": false,
+        "note": "The forecast-boundary candidate is not subject to the 24 h ordinary-observation floor."
+      },
+      "expectedReasonCodes": [
+        "RETEST_FORECAST_BOUNDARY_RISK"
+      ],
+      "openIssues": [
+        "OI-RETEST-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-09)"
+      ],
+      "forbidden": {
+        "selectedApproxHours": 24.0,
+        "note": "Clamping the negative T_boundary up to the 24 h observation floor, or to zero-plus-floor, would schedule the test after the projected outer-bound crossing. The level is not yet BREACHED, so the safety-return cadence does not apply and only this candidate protects the crossing."
+      }
+    },
+    {
+      "fixtureId": "AD-OUT-001",
+      "title": "recommendationConfidence is UNSPECIFIED and the evidence facts are surfaced instead",
+      "provenance": {
+        "class": "CANON_QUALITATIVE",
+        "canonSource": [
+          "ALK-071",
+          "ALK-CONFIDENCE-OUTPUT-001",
+          "X-INV-010",
+          "Part I §48"
+        ],
+        "note": "Freeze 5 F5-12. Uses WG-ALK-001's evidence so the surfaced facts are checkable."
+      },
+      "rulesExercised": [
+        "ALK-CONFIDENCE-OUTPUT-001",
+        "X-INV-010",
+        "ALK-VARIABLE-SEMANTICS-001"
+      ],
+      "input": {
+        "referenceScenario": "WG-ALK-001",
+        "independentClusters": 3,
+        "spanDays": 4.0,
+        "sigmaSDkhPerDay": 0.035355339059,
+        "observedSlopeDkhPerDay": -0.15,
+        "supportedSlopeDkhPerDay": -0.104745166004,
+        "confounders": [],
+        "potencyConfidence": "THEORETICAL_ONLY",
+        "deliveryBasis": "CONFIRMED_PROGRAMMED_SCHEDULE"
+      },
+      "expectedAction": {
+        "recommendationConfidence": "UNSPECIFIED",
+        "surfacedEvidenceFacts": {
+          "independentClusters": 3,
+          "spanDays": 4.0,
+          "sigmaSDkhPerDay": 0.035355339059,
+          "supportRatio": 0.698301107,
+          "confounders": [],
+          "potencyConfidence": "THEORETICAL_ONLY",
+          "deliveryBasis": "CONFIRMED_PROGRAMMED_SCHEDULE"
+        },
+        "recommendedDoseUnchangedByConfidence": true,
+        "supportRatioOmittedWhenObservedSlopeIsZero": true
+      },
+      "expectedReasonCodes": [
+        "OUTPUT_CONFIDENCE_UNSPECIFIED"
+      ],
+      "openIssues": [
+        "OI-CONFIDENCE-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-12)"
+      ],
+      "forbidden": {
+        "recommendationConfidence": [
+          "LOW",
+          "MODERATE",
+          "HIGH"
+        ],
+        "reasonCodes": [
+          "OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE"
+        ],
+        "note": "Emitting a three-valued label from an invented mapping is forbidden, as is any code path in which recommendationConfidence reaches an arithmetic operand. Mutating the label must not change recommendedDose by any amount - that is INV-B5's negative control."
       }
     }
   ]

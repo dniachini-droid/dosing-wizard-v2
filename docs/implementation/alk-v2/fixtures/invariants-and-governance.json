@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-invariants-and-governance",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "note": "Invariant fixtures named by the CANON RULE COVERAGE MANIFEST, plus the canon's governance scenarios. Invariants are property tests, not single-input goldens: each states the property, how to generate inputs, and what must hold for every generated case.",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [

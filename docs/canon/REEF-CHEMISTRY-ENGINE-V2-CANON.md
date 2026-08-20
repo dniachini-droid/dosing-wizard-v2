@@ -2038,9 +2038,17 @@ The following are no longer open for alkalinity because Part III has frozen them
 - Alk water-change materiality handling;
 - Alk target/outer-bound defaults;
 - Alk dose-step caps;
-- Alk intervention-response timing and classification.
+- Alk intervention-response timing and classification;
+- Alk independent-cluster selection (`ALK-INDEPENDENT-SELECTION-001`, Freeze 5);
+- Alk suspicious-reading detection basis (`ALK-SUSPECT-DETECTION-001`, Freeze 5);
+- Alk negative-consumption materiality boundary (`ALK-NEGATIVE-MATERIALITY-001`, Freeze 5);
+- Alk retest-scheduler parameterisation (`ALK-RETEST-SCHEDULER-001`, Freeze 5);
+- Alk water-change normalization confidence tier
+  (`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001`, Freeze 5).
 
-These values do not become shared defaults for other parameters.
+These values do not become shared defaults for other parameters. In particular, a Freeze-5
+determination that reuses an existing Alk constant is an alkalinity decision only, and is
+not evidence that another parameter may reuse the same number.
 
 ## Still deferred to later parameter Parts
 
@@ -4613,9 +4621,17 @@ This shared file does **not** decide:
 - Alk water-change materiality threshold;
 - Alk dose-step safety caps;
 - Alk correction/return-plan rate rail;
-- Alk potency-learning promotion thresholds.
+- Alk potency-learning promotion thresholds;
+- Alk suspicious-reading threshold for §47;
+- Alk replacement-water confidence tier for §45;
+- Alk parameterisation of the §51–§54 scheduler candidates and the §66 policy fields.
 
 Those belong in PART III — Alkalinity Engine of this master canon.
+
+Alk Freeze 5 supplies the §45, §47 and §51–§54/§66 answers, including two it answers as a
+canonised `NOT_RUN` — the §47 automatic suspicion threshold and the §52 `K_detect`. A
+`NOT_RUN` supplied by a parameter canon is an answer under this section, not a continuing
+deferral.
 
 The shared engine supplies the machinery; the Alk canon supplies the numbers.
 
@@ -4831,10 +4847,14 @@ because Alk consumes the shared configuration/time/evidence semantics. Part III 
 
 ```text
 sharedArchitectureCanon = SHARED_V2_FREEZE_2
-alkBehaviourCanon = ALK_V2_FREEZE_4
+alkBehaviourCanon = ALK_V2_FREEZE_5   # Alk reissued by Freeze 5; shared architecture unchanged
 implementationConformance = NOT_YET_PROVEN
 productionMigration = NOT_YET_PERFORMED
 ```
+
+`SHARED_V2_FREEZE_2` is **not** superseded by Alk Freeze 5. Freeze 5 parameterises shared
+rules that Part II deliberately deferred to a parameter canon (Part II §45, §47, §51–§54,
+§66) and changes no shared rule body.
 
 ### Reopening rule
 
@@ -4850,8 +4870,8 @@ A future shared behavioural or load-bearing completeness change requires:
 
 # PART III — ALKALINITY ENGINE
 
-**Status:** **FROZEN — ALK V2 FREEZE 4 — 2026-08-19.**  
-Freeze 1 was superseded after external adversarial review. Freeze 2 incorporated the capability contract, outer-bound safety path, advisory-responsibility integration, and final focused-review closures. Freeze 3 added the explicit `ALK-011A/ALK-011B` uncertainty rules and aligned the shared evidence engine to the same `Sxx` formula family. Freeze 4 closes implementation-discovered canon-completeness/capability gaps without changing the intended stabilise-first controller policy.
+**Status:** **FROZEN — ALK V2 FREEZE 5 — 2026-08-19.**  
+Freeze 1 was superseded after external adversarial review. Freeze 2 incorporated the capability contract, outer-bound safety path, advisory-responsibility integration, and final focused-review closures. Freeze 3 added the explicit `ALK-011A/ALK-011B` uncertainty rules and aligned the shared evidence engine to the same `Sxx` formula family. Freeze 4 closed implementation-discovered canon-completeness/capability gaps without changing the intended stabilise-first controller policy. Freeze 5 closes the twelve implementation-preparation blocking items with explicit owner decisions; it determines behaviour that was previously undetermined and does not redesign the controller.
 
 
 ### Freeze 3 reason
@@ -5211,7 +5231,46 @@ The **potency requirement remains load-bearing**. If `P_selected` is unavailable
 
 This exemption is narrow:
 - it applies to one-off Alk `SAFETY_RETURN` correction volume;
+- it applies to the temporary high-breach safety **rate** under
+  `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` below;
 - it does not exempt ordinary maintenance mL/day recommendations from M-1.
+
+#### Temporary high-breach safety rate
+
+`ALK-SAFETY-TEMP-RATE-RESOLUTION-001`
+
+The high-breach interpretable-consumption path below produces \(D_{safety,temp}\), a
+temporary safety **rate** in mL/day. It is neither a one-off correction volume nor an
+ordinary maintenance-rate recommendation, so neither the exemption above nor `M-1`'s
+prohibition previously named it.
+
+The exemption is extended to cover it. When `actuatorIncrementMlPerDay` is unavailable, the
+**exact calculated temporary safety rate may be emitted as an advisory rate**.
+
+Two outputs are kept **distinct and separately labelled**, and must never be merged:
+
+```text
+temporarySafetyRateAdvisoryMlPerDay = D_safety,temp        # exact, full precision
+temporarySafetyPumpCommandMlPerDay  = NOT_RUN              # while the increment is absent
+reason                              = CAPABILITY_ACTUATOR_INCREMENT_REQUIRED
+```
+
+- the **advisory rate** is the calculated safety target. It is stated at full precision,
+  described as a target rather than a pump setting, and carries `S_safety` and the safety
+  destination so the keeper can act on it;
+- the **executable rounded pump command** is `NOT_RUN` while the actuator increment is
+  unavailable. No increment is invented, and no default of 0.1 mL/day exists (`M-1`).
+
+Once the increment becomes available, the executable command is produced by
+`ALK-ROUNDING-001` from the same advisory rate.
+
+The **potency requirement remains load-bearing**: if `P_selected` is unavailable or
+invalid, \(D_{safety,temp}\) is not calculable and the engine states the required dKH
+movement and direction only, under `CORE-INFORM-PROCEED-001`.
+
+All other hard rails and guards remain applicable to both outputs — the 0.50 dKH/day rail
+(`ALK-046`), `ALK-COMPOSITE-RAIL-001`, `ALK-LIQUID-VOLUME-GUARD-001` and the non-negative
+clamp already inside \(D_{safety,temp}\).
 
 
 #### High breach — interpretable consumption
@@ -5411,6 +5470,48 @@ That means:
 - no ordinary Alk return plan is started;
 - no second Alk correction plan is layered on top of it.
 
+##### Existing return plan entering `SAFETY_RETURN`
+
+`ALK-RETURN-TERMINATED-BY-SAFETY-001`
+
+The clause above forbids *starting* a plan and forbids *layering* a second one. This clause
+states what happens to an ordinary Alk return plan that was **already running** when the
+outer-bound breach occurred.
+
+Entering `SAFETY_RETURN` **immediately terminates** it:
+
+```text
+returnPlanPhase              = TERMINATED_BY_SAFETY_RETURN
+recommendedTemporaryMovement = STOP_PENDING_USER_ACTION
+actualDose                   = last confirmed/logged value, or UNKNOWN
+reason                       = RETURN_TERMINATED_BY_SAFETY_RETURN
+```
+
+The plan is **not suspended, paused or held pending**, and **opposing intentional
+components are never layered**. After termination the `SAFETY_RETURN` owns the single
+intentional movement component, so `ALK-COMPOSITE-RAIL-001` has one term and this clause's
+no-layering requirement is satisfied by construction rather than by netting two opposing
+budgets against one 0.50 dKH/day rail.
+
+A terminated plan **cannot automatically resume**. When the safety return completes under
+`ALK-003A`, ordinary sequencing resumes at HOLD. A new return plan requires both:
+
+- fresh eligibility under `ALK-RETURN-ELIGIBLE-TRAJECTORY-001`, evaluated on post-safety
+  evidence; and
+- a fresh explicit user opt-in (Part I §36.2).
+
+The terminated plan keeps its identity, its stored destination, predicted duration and
+expiry, and its place in history. Termination is recorded as an event. It does not rewrite
+the plan, and it does not erase what was recommended at the time.
+
+`STOP_PENDING_USER_ACTION` and the `actualDose` semantics are exactly those
+`ALK-RETURN-EXPIRY-001` and `WG-ALK-032` already define: the app recommends stopping the
+temporary component and must not record it as actually stopped unless implementation is
+confirmed.
+
+This terminates the *intentional level-movement* component only. It does not alter the
+accepted permanent-maintenance estimate, which continues under clause 1.
+
 The engine may still:
 - observe;
 - recalculate current position;
@@ -5586,6 +5687,55 @@ This threshold is an engineering judgement, not a biological safety limit.
 
 ---
 
+## ALK-005A — Suspicious-reading detection basis
+
+`ALK-SUSPECT-DETECTION-001`
+
+Part II §47 defines a candidate standardized residual and states that a parameter canon
+*may* use a threshold such as a multiple of uncertainty. **Alkalinity does not define
+one, and Freeze 5 deliberately does not invent one.**
+
+```text
+automaticStatisticalSuspicionDetection = NOT_RUN
+reason                                 = VALIDATION_SUSPICION_DETECTION_NOT_RUN
+```
+
+Automatic statistical suspect detection remains `NOT_RUN` until it is separately validated
+and canonised in a later freeze. A `Z` threshold, a jump-size rule or a suspicious multiple
+must not be imported from another parameter, from V1, or from statistical convention
+(Part II §7.4, Part I §56).
+
+This is a canonised state, not an undefined one. The `SUSPECT` sources the canon **does**
+define remain fully operative, and they are the complete set:
+
+1. **explicit user marking** — Part II §4.2, §4.3, §49;
+2. **a recorded test/device fault**, carried as an event — Part II §49;
+3. **the existing repeat-test spread mechanism** — a repeat cluster whose internal spread
+   exceeds `ALK-005`'s 0.20 dKH becomes `ANOMALOUS`, and Part II §48 owns the behaviour
+   when that cluster is the latest one.
+
+Consequences that follow, and must be implemented:
+
+- `ALK-051` ("if the newest Alk is suspicious and materially affects advice, repeat now")
+  is driven from those three sources rather than from a statistical test. It is not dead;
+- **an unusual reading may prompt repeat testing without being silently discarded.**
+  Nothing in this rule permits dropping, down-weighting, hiding or excluding a reading
+  because it looks unlikely. Part II §49's prohibition on excluding a historical point
+  without documented basis is unaffected;
+- `ALK-MOVEMENT-001`'s "no unresolved latest anomaly" precondition is evaluated against
+  those three sources;
+- `ALK-G024` and `ALK-G025` are driven from an explicit mark or an anomalous repeat
+  cluster;
+- `ALK-SLOPE-UNCERTAINTY-001` is unchanged. A lone aberrant point that the residual MAD
+  cannot see does not raise \(\sigma_S\), and **no compensating uncertainty-inflation term
+  may be added**. That residual exposure is accepted deliberately by this freeze; it is the
+  reason automatic detection is a named future-canon item rather than a silent gap.
+
+**V1 disposition:** REPLACE V1's implicit outlier handling with an explicit, named,
+deliberately-deferred detection state.
+
+---
+
 ## ALK-006 — Routine testing cadence
 
 V1's normal alkalinity testing cadence is retained:
@@ -5693,6 +5843,57 @@ It is **not** the sufficiency threshold for an automatic maintenance trend.
 Therefore a 48-hour pair may produce provisional interval/slope information but does not by itself authorize ordinary automatic maintenance action.
 
 Under 48 hours is normally too weak for ordinary maintenance inference, but it is not analytically nonexistent.
+
+### Independent-cluster selection
+
+`ALK-INDEPENDENT-SELECTION-001`
+
+`ALK-008` above states which spacing is too close. This rule states **which cluster
+survives**, so the surviving set — and therefore \(Sxx\), \(\sigma_S\), \(S_{supported}\)
+and the recommended actuator command — is deterministic rather than an implementation
+choice.
+
+Within the selected analytical segment, order candidate clusters by representative
+timestamp ascending and select **forward-greedily from the earliest eligible cluster**:
+
+1. accept the earliest eligible candidate cluster in the segment;
+2. walk forward in time. Accept the next candidate whose representative time is at least
+   **24 hours** after the representative time of the **last accepted** cluster;
+3. a candidate closer than 24 hours to the last accepted cluster is **not accepted** as an
+   ordinary maintenance-trend observation, and does **not** become the comparison anchor
+   for the following candidate;
+4. repeat to the end of the segment.
+
+A candidate that is not accepted retains every non-trend use `ALK-008` already grants it:
+current position, anomaly confirmation, the rapid-change rule, and explicitly time-resolved
+intervention calculation. It is never deleted, hidden, marked invalid or treated as
+suspect.
+
+Selection is **anchored in the past and is not revised by later data.** Accepting a new
+cluster at the end of the series never changes which earlier clusters were accepted.
+Backward-greedy selection — or any selection whose result depends on the newest reading —
+is forbidden: it makes historical evidence a function of the present and breaks the
+deterministic-replay expectation of Part II §64.
+
+Worked instance. Candidate clusters at t = 0.0, 0.5, 2.0, 4.0 days:
+
+```text
+accept 0.0
+0.5 - 0.0 = 0.5 d   < 24 h    -> not accepted, anchor stays 0.0
+2.0 - 0.0 = 2.0 d  >= 24 h    -> accept, anchor becomes 2.0
+4.0 - 2.0 = 2.0 d  >= 24 h    -> accept
+
+selected = { 0.0, 2.0, 4.0 }
+t_bar    = 2.0 days
+Sxx      = 8.0 day^2
+sigma_S  = 0.10 / sqrt(8) = 0.035355339059 dKH/day
+```
+
+Adding a later candidate at t = 4.5 leaves `{ 0.0, 2.0, 4.0 }` unchanged and rejects 4.5.
+
+The 24-hour comparison is **inclusive at exactly 24 hours**, matching `ALK-008` — which
+excludes only separations *less than* 24 hours — and `ALK-RAPID-001`, which accepts "at
+least 24 hours".
 
 ---
 
@@ -6113,6 +6314,47 @@ Requirements:
 - latest measurement cluster is internally consistent, or the latest result has been repeated/confirmed;
 - no known correction or other event already explains the movement;
 - the direction is relevant to a maintenance or safety decision.
+
+### Rapid basis
+
+`ALK-RAPID-BASIS-001`
+
+The slope tested against the 0.30 dKH/day threshold is the **latest independent pair**:
+
+\[
+\boxed{
+S_{rapid}
+=
+\frac{A_{latest}-A_{previous\ independent}}{\Delta t_{days}}
+}
+\]
+
+where the two clusters are the last two clusters **accepted** under
+`ALK-INDEPENDENT-SELECTION-001`, and \(\Delta t \ge 24\) hours. This is exactly what this
+rule's own requirements describe — "two independent testing episodes; at least 24 hours
+elapsed between their representative times" — stated explicitly so it is not re-derived
+differently by two implementations.
+
+Record the basis:
+
+```text
+rapidBasis = LATEST_INDEPENDENT_PAIR
+```
+
+With **three or more** accepted clusters the ordinary trajectory and the **dose-sizing
+slope remain Theil–Sen based**. `ALK-011A` selects the multi-point formula whenever three
+or more eligible clusters exist, so \(S_{observed}\), \(\sigma_S\) and \(S_{supported}\)
+are unchanged by a rapid confirmation.
+
+`rapidConfirmed` therefore changes **pathway, cadence and cap eligibility only**. It does
+**not** substitute the latest-pair rate for \(S_{observed}\) as the ordinary sizing slope,
+for consumption estimation (`ALK-CONSUMPTION-ESTIMATE-001`), or for the forecast slope
+(`ALK-FORECAST-SLOPE-001`).
+
+When only two independent clusters exist, the latest independent pair *is* the whole
+series, `ALK-011A`'s two-point branch supplies \(\sigma_S\), and the evidence state remains
+`PROVISIONAL` (Part II §22). Permission to act comes from the rapid flag, never from the
+evidence state.
 
 A confirmed rapid change may:
 - bypass the ordinary 3-cluster / 4-day movement requirement;
@@ -6823,6 +7065,8 @@ Do not call a rising level “fine” merely because the latest reading has not 
 
 If below range and rising with no known deliberate level-movement intervention:
 
+- where the rise is a **supported** trajectory, HOLD maintenance under
+  `ALK-TOWARD-RANGE-HOLD-001`;
 - do not increase maintenance merely because the value is still low;
 - determine whether the current dose exceeds estimated maintenance;
 - forecast range entry;
@@ -6840,11 +7084,67 @@ The plan owns the rise; ordinary maintenance logic must not treat intentional up
 
 Mirror of ALK-029.
 
+Where the fall is a **supported** trajectory and no deliberate level-movement intervention
+is active, HOLD maintenance under `ALK-TOWARD-RANGE-HOLD-001`.
+
 Do not keep lowering maintenance merely because Alk remains high if the level is already moving down under a known plan or recent adjustment.
 
 Forecast arrival and preserve separation between:
 - maintenance;
 - deliberate downward movement.
+
+---
+
+## ALK-030A — Automatic maintenance does not oppose a supported trajectory toward range
+
+`ALK-TOWARD-RANGE-HOLD-001`
+
+This rule determines the two `ALK-070` cells that previously named only a prohibition.
+
+\[
+\boxed{
+\begin{aligned}
+&\text{below preferred range}\ \wedge\ \text{supported } RISING &&\Rightarrow\ \text{HOLD maintenance}\\
+&\text{above preferred range}\ \wedge\ \text{supported } FALLING &&\Rightarrow\ \text{HOLD maintenance}
+\end{aligned}
+}
+\]
+
+"Supported" means the `ALK-MOVEMENT-001` trajectory: \(S_{supported}\neq0\) with the
+ordinary minimum evidence satisfied. An observed lean that uncertainty has already reduced
+to zero is `UNCERTAINTY_LIMITED`, is **not** a supported trajectory, and is held by
+`ALK-011`'s own uncertainty-limited branch rather than by this rule.
+
+**Automatic maintenance must not oppose a supported trajectory that is already carrying
+alkalinity toward the preferred range.** It does not decrease the dose of a tank that is
+below range and supported-rising, and it does not increase the dose of a tank that is above
+range and supported-falling.
+
+`ALK-029`'s remaining instructions still run and are still reported: determine whether the
+current dose exceeds the estimated maintenance requirement, forecast range entry, and show
+both. They explain the HOLD; they do not size an action here.
+
+Intentional level movement remains owned by the separate return-plan mechanism
+(`ALK-054`, `ALK-RETURN-ELIGIBLE-TRAJECTORY-001`) and by nothing else. A tank with a
+supported non-zero trajectory is **not** return-plan eligible, so these two cells offer no
+plan either: they hold, explain and re-test.
+
+What this rule does **not** suspend:
+
+- `ALK-OUTER-BOUND-ACTION-001`. An outer-bound breach owns its own action regardless of the
+  direction of travel;
+- `ALK-RAPID-001` and the retest scheduler. Movement toward range may still be rapid and
+  may still shorten testing;
+- the active return/correction plan branches of `ALK-029` and `ALK-030`, which continue to
+  evaluate the plan against its intended trajectory;
+- the in-range rows of `ALK-070`. Once the level is inside the preferred range, a supported
+  trajectory is acted on normally.
+
+Reason:
+
+> using the maintenance controller to fight a movement the keeper wants is the one action
+> both readings of the old matrix cells forbade, and `CORE-STABILISE-001`'s symmetry
+> argument does not reach a case where the level is outside the range the keeper chose.
 
 ---
 
@@ -6869,16 +7169,64 @@ the simple model says the tank is gaining alkalinity faster than the known maint
 
 Possible physical explanations exist, but the app does not choose one without evidence.
 
+### Materiality boundary
+
+`ALK-NEGATIVE-MATERIALITY-001`
+
+The two branches below are separated by one deterministic test. Let \(\sigma_S\) be
+`ALK-SLOPE-UNCERTAINTY-001` and let `ALK_SLOPE_SUPPORT_K = 1.28` be the frozen controller
+constant of `ALK-SUPPORTED-SLOPE-001`.
+
+Negative inferred consumption is **materially negative** when, and only when:
+
+\[
+\boxed{
+C_{estimate}
++
+ALK\_SLOPE\_SUPPORT\_K\cdot\sigma_S
+<
+0
+}
+\]
+
+Otherwise the negative estimate is **uncertainty-limited/uninterpretable**. It is not a
+supported claim that the tank is gaining alkalinity, and it **cannot by itself reduce an
+established maintenance dose**.
+
+The test reuses the two quantities alkalinity already owns. **No \(\sigma_P\) and no
+\(\sigma_D\) are introduced, and none may be.** Treating potency and delivered-dose
+uncertainty as zero is conservative in the direction of calling a broken mass balance
+*slight* rather than *material* — it delays a dosing pause rather than triggering one
+spuriously. That direction is the intended one.
+
+The comparison is **strict**. At exactly \(C_{estimate}+1.28\sigma_S=0\) the result is
+**not** materially negative.
+
+Both branches are uninterpretable for the purpose of **sizing maintenance**, so the
+maintenance action is identical — HOLD — on either side of the boundary. What the boundary
+decides is the recorded classification, the wording and the follow-up.
+
+Where `ALK-HIGH-BREACH-UNRESOLVED-001` asks whether \(C_{estimate}\) is "physically
+uninterpretable", a **negative** \(C_{estimate}\) satisfies that condition on **both**
+branches, because both are uninterpretable for maintenance sizing. A non-negative
+\(C_{estimate}\) is interpretable and takes the *High breach — interpretable consumption*
+path instead. The high-breach fail-safe is therefore fully determined and no longer gated:
+
+```text
+C_estimate <  0   -> uninterpretable -> ALK-HIGH-BREACH-UNRESOLVED-001 (0 mL/day pause)
+C_estimate >= 0   -> interpretable   -> D_safety,temp per ALK-003A
+```
+
 ### Slight negative within uncertainty
 
-If zero consumption lies within the propagated uncertainty:
+If the estimate is **not** materially negative under `ALK-NEGATIVE-MATERIALITY-001`:
 - classify consumption as UNCERTAIN / non-resolvable;
 - HOLD;
 - retest according to evidence needs.
 
 ### Materially negative
 
-If negative consumption is clearly beyond model uncertainty:
+If the estimate **is** materially negative under `ALK-NEGATIVE-MATERIALITY-001`:
 - mark `NON_PHYSICAL_OR_UNEXPLAINED_GAIN`;
 - do not use the negative maintenance estimate;
 - do not silently clamp it to zero and then treat zero as a real maintenance target;
@@ -7022,7 +7370,35 @@ where \(f\) is changed fraction.
 
 ### If replacement alkalinity is measured/reliable
 
-If the expected step is material, normalize the known step in the analytical series.
+`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001`
+
+Part II §45 enumerates the replacement-chemistry confidence tiers and requires a parameter
+canon to state which of them may drive mathematical normalization. Alkalinity states it
+here.
+
+**Only `MEASURED_SAME_BATCH` qualifies for automatic water-change normalization.**
+
+\[
+\boxed{
+normalizationPermitted
+\iff
+replacementAlkalinityConfidence = MEASURED\_SAME\_BATCH
+}
+\]
+
+`USER_CONFIGURED_SALT_PROFILE`, `MANUFACTURER_NOMINAL`, an unknown tier and any lower
+confidence do **not** qualify. They are treated as unknown replacement alkalinity and fall
+through to `ALK-WATERCHANGE-UNKNOWN-001` and the segmentation handling below —
+`f < 0.05` retains the event inside the segment without an invented subtraction,
+`f ≥ 0.05` is a hard Alk segment boundary. That branch is fully specified already, so no
+behaviour is invented by the fall-through.
+
+This is Part II §45's own warning applied: an unverified salt label must not become a
+precise correction merely because a formula exists.
+
+Where the tier does qualify, and the expected step is material, normalize the known step in
+the analytical series. `WG-ALK-011` and `ALK-G022` are therefore executable only under
+`MEASURED_SAME_BATCH`, and are read that way.
 
 ### If replacement alkalinity is unknown
 
@@ -7787,7 +8163,9 @@ Preconditions:
 3. If the continuous candidate is an exact midpoint, choose the tied setting **closer to `D_current`**.
 4. If a tie still remains, choose the **lower** representable setting.
 5. Recalculate the actual dose delta and physical Alk effect from the rounded command.
-6. Recheck all hard constraints that can be affected by actuator discretisation.
+6. Recheck all hard constraints that can be affected by actuator discretisation. These
+   include the physical rate rail (`ALK-046`) and the liquid-volume guard
+   (`ALK-LIQUID-VOLUME-GUARD-001`).
 7. If the rounded command violates a hard constraint only because rounding moved the command farther from `D_current`, move by actuator increments **toward `D_current`** until the command is feasible.
 8. If no changed representable command remains feasible and the result returns to the current command:
 
@@ -7871,9 +8249,12 @@ V2 calculation order:
 5. apply dose-step cap;
 6. evaluate empirical bracket conflict;
 7. clamp to non-negative dose;
-8. apply actuator rounding under `ALK-ROUNDING-001`;
+8. apply actuator rounding under `ALK-ROUNDING-001`, whose step 6 rechecks the physical
+   rate rail and `ALK-LIQUID-VOLUME-GUARD-001` against the discretised command;
 9. recalculate expected physical response from the rounded dose;
-10. produce recommendation.
+10. assert `ALK-COMPOSITE-RAIL-001` over all simultaneously recommended intentional
+   movement components;
+11. produce recommendation.
 
 This replaces V1's “round first among the constraints” rule.
 
@@ -7942,9 +8323,185 @@ The scheduler should preserve the understandable ~48-hour human rhythm rather th
 
 ---
 
+## ALK-053A — Canonical Alk retest scheduler
+
+`ALK-RETEST-SCHEDULER-001`
+
+There is **one** Alk retest scheduler. `ALK-050`, `ALK-051`, `ALK-052`, `ALK-053`,
+`ALK-HIGH-BREACH-UNRESOLVED-001`, `ALK-RETURN-EXPIRY-001` and
+`ALK-SAFETY-RETURN-INTEGRATION-001` §9 submit candidates to it. No card, surface or other
+rule may compute a next-test time (`X-INV-004`, Part II §50). This rule states the
+alkalinity parameterisation of Part II §51–§54 and §66, so the single scheduler is
+deterministic.
+
+### Candidate set
+
+| Part II candidate class | Alk parameterisation | Source |
+|---|---|---|
+| routine cadence | 48 h | `ALK-050` |
+| immediate repeat | now | `ALK-051`, driven by `ALK-SUSPECT-DETECTION-001`'s three sources |
+| rapid movement | ~24 h, or earlier where outer-bound risk requires it | `ALK-052` |
+| after a maintenance change | first useful response test ~48 h; normally a second around Day 4 | `ALK-053`, `ALK-POSTCHANGE-RETEST-001` |
+| safety return active | ~24 h | `ALK-SAFETY-RETURN-INTEGRATION-001` §9 |
+| high-breach fail-safe | ~24 h | `ALK-HIGH-BREACH-UNRESOLVED-001` |
+| confidence-building | \(T_{signal}\), below | this rule |
+| forecast boundary crossing | 24 h safety lead, below | this rule |
+| intervention detectability | **NOT_RUN** — no `K_detect` | this rule |
+| return-plan arrival check | **NOT_RUN** — no distinct cadence | this rule |
+| expiry / overrun | \(T_{expiry}=2T_{plan}+2\) days | `ALK-RETURN-EXPIRY-001` |
+
+### Confidence-building time
+
+Part II §53's `RequiredMovement` for alkalinity is the **existing 0.10 dKH analytical
+floor** (`ALK-004`, `ALK-SLOPE-UNCERTAINTY-001`), and the slope is the supported slope:
+
+\[
+\boxed{
+T_{signal,days}
+=
+\frac{0.10}{|S_{supported}|}
+\qquad
+S_{supported}\neq0
+}
+\]
+
+If \(S_{supported}=0\), or movement evidence is `INSUFFICIENT` so no supported slope
+exists, the candidate is `NOT_RUN`: there is no supported movement whose accumulation could
+be timed. It is therefore `NOT_RUN` on a post-change regime that has not yet reached
+ordinary sufficiency, where `ALK-053` owns the timing instead.
+
+No new constant is introduced. Both operands are already frozen canon.
+
+### Forecast outer-bound risk
+
+Where `ALK-062`'s outer-operating-bound forecast produces a projected crossing time
+\(T_{outer}\) in days from the assessment instant, testing must be scheduled **before**
+that crossing. Part II §54's parameter-specific safety margin for alkalinity is the
+**24-hour safety lead** alkalinity already uses for rapid and safety cadence (`ALK-052`,
+`ALK-SAFETY-RETURN-INTEGRATION-001` §9):
+
+\[
+\boxed{
+T_{boundary,days}
+=
+T_{outer}-1.0
+}
+\]
+
+The forecast uses \(S_{observed}\), not \(S_{supported}\) — `ALK-011B` and audit finding
+R3 forbid sizing risk from the uncertainty-shrunk action slope.
+
+If \(T_{boundary}\le0\) — the crossing is already inside the safety lead — the candidate
+is test-now / earliest-practicable:
+
+```text
+action     = REPEAT_NOW
+reasonCode = RETEST_FORECAST_BOUNDARY_RISK
+```
+
+Forecast timing never overrides an immediate safety rule (Part II §54). This candidate is
+not subject to the ordinary-observation floor below.
+
+### Bounds on ordinary observation
+
+- **Ceiling.** An ordinary observation candidate is clamped to the existing ~Day-4 window:
+  **no ordinary observation candidate exceeds 96 hours.** The chemistry layer defines no
+  longer quiet-monitoring interval (`ALK-050`).
+- **Floor.** An ordinary observation candidate is clamped up to the existing **24-hour**
+  independence minimum (`ALK-008`, `ALK-INDEPENDENT-SELECTION-001`), because a test taken
+  sooner cannot produce a new full-strength maintenance-trend observation. This floor binds
+  ordinary observation only. It never delays `REPEAT_NOW`, a rapid candidate, a safety
+  candidate, a high-breach candidate or a forecast-boundary candidate.
+
+Both bounds reuse constants the canon already states. Part II §66's generic "minimum useful
+interval" and "maximum observation interval" are supplied by those two existing values and
+by nothing new.
+
+### Selection
+
+The single scheduler returns the **earliest applicable candidate** after the clamps above.
+`REPEAT_NOW` outranks ordinary scheduling (Part II §55). The output is
+Part II §57's `RetestRecommendation`, carrying every evaluated candidate and every
+`NOT_RUN` candidate class so the choice is auditable. Cards render that output and must not
+invent a separate cadence (`ALK-052`, `ALK-SAFETY-RETURN-INTEGRATION-001` §9).
+
+Under ordinary conditions the scheduler preserves the understandable ~48-hour human rhythm
+rather than presenting spurious precision; that presentation rule (`ALK-053`) applies to
+rendering and never to the stored timestamp.
+
+### Deliberately not parameterised
+
+\(T_{detect}\) (Part II §52) requires `K_detect`, and the return-plan arrival check
+requires a distinct cadence. Freeze 5 supplies neither, and forbids inventing an Alk
+constant merely to fill a generic scheduler slot. Both candidate classes are therefore
+**canonically `NOT_RUN`** — a decided state, not a gap:
+
+```text
+retestCandidatesNotRun = [
+  RETEST_DETECTABILITY_POLICY_UNAVAILABLE,
+  RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE
+]
+```
+
+Their absence can only lengthen an interval that the routine, post-change, rapid, safety,
+high-breach, confidence-building, forecast-boundary and expiry candidates already bound, so
+no unsafe later test results from it. While a return plan is active, the ordinary
+observation, rapid, safety and expiry candidates continue to apply normally.
+
+---
+
 ## ALK-054 — Return plan arithmetic
 
-Once Alk is stable and out of range and the keeper opts into a return plan:
+### Return-plan trajectory eligibility
+
+`ALK-RETURN-ELIGIBLE-TRAJECTORY-001`
+
+`ALK-STABLE-001` is **unchanged**. `STABLE` remains the narrow analytical claim
+\(S_{supported}=0\) **and** \(S_{observed}=0\). Nothing here widens it, adds a near-zero
+tolerance band, or reintroduces the fixed movement gate `ALK-011` removed.
+
+Return-plan eligibility is a **separate, explicitly named predicate**, because it answers a
+different question: not "is this tank analytically flat?" but "is there established
+evidence that no supported trajectory is already carrying the level?"
+
+\[
+\boxed{
+returnPlanEligibleTrajectory
+=
+\big(\text{ALK-011 ordinary minimum evidence satisfied}\big)
+\ \wedge\
+\big(S_{supported}=0\big)
+}
+\]
+
+Equivalently, in the `ALK-MOVEMENT-001` vocabulary:
+
+```text
+movementEvidence in { SUFFICIENT, UNCERTAINTY_LIMITED }  and  S_supported = 0
+```
+
+which is exactly `trajectory in { STABLE, UNCERTAINTY_LIMITED }`.
+
+A return plan may therefore be offered when the **observed slope is non-zero but
+uncertainty leaves no supported movement**. That is the reachable case on real hobby data,
+where a Theil–Sen slope over a resting tank is almost never exactly zero.
+
+`movementEvidence = INSUFFICIENT` is **not** eligible: an offer requires established
+evidence that nothing is already moving, not an absence of evidence. A supported non-zero
+trajectory is not eligible either.
+
+Where `ALK-024` and this rule say "stable", they mean `returnPlanEligibleTrajectory`.
+Where `ALK-STABLE-001` says `STABLE`, it means `STABLE`. The two are deliberately different
+and must not be collapsed. `WG-ALK-014` is executable under this predicate.
+
+The offer remains opt-in (`CORE-STABILISE-001`, Part I §36.2), remains outside automatic
+maintenance, and does not change the maintenance recommendation, which is HOLD on both
+eligible trajectories.
+
+### Arithmetic
+
+Once `returnPlanEligibleTrajectory` holds, Alk is out of range and the keeper opts into a
+return plan:
 
 Choose destination:
 
@@ -8183,7 +8740,7 @@ Let:
 V_{system,mL}=1000V_{system,L}
 \]
 
-Maximum Alk dosing-solution volume delivered through a deliberate correction/return-plan execution in any rolling 24-hour period:
+Maximum Alk dosing-solution volume delivered, through **any engine-generated Alk delivery**, in any rolling 24-hour period:
 
 \[
 \boxed{
@@ -8197,10 +8754,55 @@ That is **2% of configured net system water volume per 24 hours**.
 
 This is a fixed-but-reviewable engineering/practical guard, not a biological alkalinity rail.
 
-If the desired correction/return-plan execution would exceed this volume:
-- do not issue that one-day liquid volume;
-- lengthen/stage the execution until both the liquid-volume guard and the 0.50 dKH/day Alk rail are satisfied;
-- report the longer duration.
+### Scope
+
+The guard applies to **all engine-generated Alk delivery**:
+
+- ordinary maintenance delivery (mL/day);
+- deliberate return-plan and one-off correction execution;
+- `SAFETY_RETURN` correction volume and temporary safety delivery;
+- the **permitted combined total** of any of the above that the engine recommends for the
+  same rolling 24-hour period.
+
+There is **no maintenance exemption**. `WG-ALK-067`'s "maintenance/correction" wording and
+this rule body now agree.
+
+### Enforcement
+
+If a recommended 24-hour delivery would exceed \(V_{alk,max,24h}\):
+
+- **withhold the executable dosing command**;
+- **do not** cap the command to the guard value and present the capped figure as the
+  recommendation. A 2%-of-volume figure is the edge of a safety guard, not a result the
+  engine derived, and issuing it would be indistinguishable from a real recommendation;
+- keep every unaffected output under `CORE-INFORM-PROCEED-001` — position, outer-bound
+  state, trend, evidence, consumption, the calculated requirement at full precision, and
+  the retest decision;
+- where the delivery is a **correction or return-plan execution**, whose duration the
+  engine may choose, lengthen/stage the execution until both the liquid-volume guard and
+  the 0.50 dKH/day Alk rail are satisfied, and report the longer duration. It is the
+  offending single-day command that is withheld, not the plan.
+
+```text
+liquidVolumeGuardExceeded = true
+executableDosingCommand   = WITHHELD
+reason                    = SAFETY_LIQUID_GUARD_EXCEEDED
+```
+
+### Pipeline position
+
+The guard is a **hard constraint**. It is evaluated on the continuous candidate and then
+**rechecked after actuator rounding/discretisation**, in `ALK-ROUNDING-001` step 6,
+alongside the physical rate rail — because rounding away from the current command can move
+a command across the guard exactly as `WG-ALK-063` demonstrates for the rail.
+
+A rounded command that violates the guard is handled by `ALK-ROUNDING-001` steps 7 and 8:
+step toward the current command by actuator increments until feasible. If no changed
+representable command is feasible, the outcome is the withheld state above rather than a
+guard-edge command. If the **current** command itself exceeds the guard, the engine
+withholds an executable maintenance command and reports the exceedance rather than
+affirming the current dose.
+
 
 For a 77 L validation example:
 
@@ -8456,11 +9058,11 @@ Assuming evidence is sufficient and no intervention lock/confounder overrides:
 |---|---|---|
 | Below | Falling | Increase toward consumption-matching maintenance |
 | Below | Stable | Hold maintenance; offer return plan |
-| Below | Rising | Do not increase merely because low; evaluate why it is rising / active plan |
+| Below | Rising | Hold maintenance (`ALK-TOWARD-RANGE-HOLD-001`) where the rise is supported; do not increase merely because low; evaluate why it is rising / active plan |
 | In range | Falling | Increase maintenance if supported; forecast lower edge |
 | In range | Stable | Hold |
 | In range | Rising | Decrease maintenance if supported; forecast upper edge |
-| Above | Falling | Do not keep reducing merely because high; evaluate active plan/current maintenance |
+| Above | Falling | Hold maintenance (`ALK-TOWARD-RANGE-HOLD-001`) where the fall is supported; do not keep reducing merely because high; evaluate active plan/current maintenance |
 | Above | Stable | Hold maintenance; offer return plan |
 | Above | Rising | Decrease toward consumption-matching maintenance if consumption is interpretable |
 | Any | Uncertain | Hold / gather evidence |
@@ -8478,6 +9080,42 @@ Presentation card names are derived later.
 `ALK-CONFIDENCE-OUTPUT-001`
 
 Confidence is an **output describing the evidence**, not a multiplier used to create the dose number.
+
+### Frozen output
+
+Freeze 5 does **not** define numeric `LOW` / `MODERATE` / `HIGH` classification thresholds,
+and forbids inventing them.
+
+```text
+recommendationConfidence = UNSPECIFIED
+reason                   = OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE
+```
+
+Until a classification is separately specified and canonised, `UNSPECIFIED` is the emitted
+value. In its place the engine **surfaces the underlying evidence facts**, each of which is
+individually determinate:
+
+```text
+independentClusters
+spanDays
+sigma_S
+|S_supported| / |S_observed|          (undefined and omitted when S_observed = 0)
+confounders[]
+potencyConfidence
+deliveryBasis
+```
+
+A card can be honest and useful from those facts. It cannot be honest with a three-valued
+label whose derivation was invented.
+
+Confidence remains **explanatory only** and **must never participate in dosing arithmetic**
+— `ALK-CONFIDENCE-OUTPUT-001` and `X-INV-010` are unchanged, and `INV-ALK-CONFIDENCE-001`
+remains the fixture that proves it. `UNSPECIFIED` does not weaken that prohibition; it
+removes the only value that could have tempted a multiplier.
+
+The three descriptions below are retained as **non-normative** illustration of what a
+future classification would be describing. They are not emitted, not computed, and nothing
+may branch on them.
 
 Dose sizing comes from:
 
@@ -14931,11 +15569,15 @@ Freeze 3 closed the shared `Sxx` uncertainty mismatch. Repository inspection lat
 
 ---
 
-# PART III — ALK V2 FREEZE 4 DECLARATION
+# PART III — ALK V2 FREEZE 4 DECLARATION — HISTORICAL
 
 **Freeze identifier:** `ALK_V2_FREEZE_4`  
-**Status:** FROZEN — 2026-08-19  
+**Status:** SUPERSEDED — 2026-08-19  
+**Superseded by:** `ALK_V2_FREEZE_5`  
 **Scope:** Part III behavioural canon and its explicitly referenced active shared/governing rules as incorporated at freeze time.
+
+Freeze 4 remains the record of what was frozen at that point. Its closure items and policy
+statement below are unchanged and are carried forward by Freeze 5.
 
 ### Freeze 4 closure items
 
@@ -14963,10 +15605,131 @@ The frozen owner decisions remain:
 - two-stage intervention assessment;
 - magnesium safety interface remains `UNKNOWN` in the Alk-only migration phase.
 
-### Freeze status
+### Freeze status at Freeze 4 (historical)
 
 ```text
 behaviouralCanon = ALK_V2_FREEZE_4
+sharedArchitectureCanon = SHARED_V2_FREEZE_2
+implementationConformance = NOT_YET_PROVEN
+productionMigration = NOT_YET_PERFORMED
+empiricalPotencyLearning = CAPABILITY_GATED
+```
+
+### Reopening rule (as stated at Freeze 4)
+
+Do not silently edit Alk behaviour after this marker.
+
+Any future Alk behavioural or load-bearing completeness change requires:
+- exact affected rule IDs;
+- concrete failure scenario;
+- canon vs implementation classification;
+- affected coverage fixture updates;
+- `IMPACTS_FROZEN_ALK` where caused by a shared change;
+- Alk V2 Freeze 5 or later.
+
+Freeze 5 was raised under exactly that rule and satisfies each of its requirements.
+
+---
+
+# PART III — ALK V2 FREEZE 5 DECLARATION
+
+**Freeze identifier:** `ALK_V2_FREEZE_5`  
+**Status:** FROZEN — 2026-08-19  
+**Supersedes:** `ALK_V2_FREEZE_4`  
+**Shared architecture:** `SHARED_V2_FREEZE_2`, unchanged  
+**Scope:** bounded closure of the Alk implementation-preparation blocking register. Part III
+behavioural canon and its explicitly referenced active shared/governing rules as
+incorporated at freeze time.
+
+### Reason
+
+`docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md` classified 40 issues found while turning
+Freeze 4 into an implementable specification. Eleven were **blocking**: the dependent output
+could not be emitted at all, and the package shipped explicit refusals in their place. Eight
+of the register's items were `OWNER_DECISION_REQUIRED` — a genuine product or chemistry
+judgement, not a reading of the text.
+
+The owner has decided them. Freeze 5 writes those decisions into the canon so the behaviour
+has a freeze, a coverage fixture and a governed reissue path, which a decision recorded
+anywhere else would not have.
+
+This is a **determination freeze**: it fixes behaviour that was previously undetermined. It
+does not redesign the Alk controller and changes no already-determined numeric rule.
+
+### Owner decisions encoded
+
+| Decision | Rule ID created or amended | Closes |
+|---|---|---|
+| F5-01 forward-greedy independent-cluster selection | `ALK-INDEPENDENT-SELECTION-001` (new, under `ALK-008`) | `OI-INDEPENDENCE-001` |
+| F5-02 no automatic statistical suspect threshold | `ALK-SUSPECT-DETECTION-001` (new, `ALK-005A`) | `OI-SUSPECT-001`, `OI-MADFLOOR-001` |
+| F5-03 materially-negative consumption boundary | `ALK-NEGATIVE-MATERIALITY-001` (new, in `ALK-031`) | `OI-NEGCONS-001` |
+| F5-04 return-plan trajectory eligibility | `ALK-RETURN-ELIGIBLE-TRAJECTORY-001` (new, in `ALK-054`) | `OI-RETURNOFFER-001` |
+| F5-05 do not oppose a supported trajectory toward range | `ALK-TOWARD-RANGE-HOLD-001` (new, `ALK-030A`); `ALK-029`, `ALK-030`, `ALK-070` amended | `OI-BELOWRISING-001` |
+| F5-06 liquid-volume guard scope, withholding and position | `ALK-LIQUID-VOLUME-GUARD-001` amended; `ALK-ROUNDING-001` step 6 and `ALK-049` amended | `OI-LIQUIDGUARD-001`, part of `OI-PIPELINE-001` |
+| F5-07 rapid basis is the latest independent pair | `ALK-RAPID-BASIS-001` (new, in `ALK-013`) | `OI-RAPIDBASIS-001` |
+| F5-08 safety return terminates an active return plan | `ALK-RETURN-TERMINATED-BY-SAFETY-001` (new, `ALK-SAFETY-RETURN-INTEGRATION-001` §5) | `OI-RETURNDURINGSAFETY-001` |
+| F5-09 one authoritative Alk retest scheduler | `ALK-RETEST-SCHEDULER-001` (new, `ALK-053A`) | `OI-RETEST-001` |
+| F5-10 only `MEASURED_SAME_BATCH` normalizes a water change | `ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` (new, in `ALK-033`) | `OI-WATERCHANGE-001` |
+| F5-11 temporary high-breach safety rate is advisory-emittable | `ALK-SAFETY-TEMP-RATE-RESOLUTION-001` (new, in `ALK-003A`) | `OI-SAFETYRATE-001` |
+| F5-12 `recommendationConfidence = UNSPECIFIED` | `ALK-CONFIDENCE-OUTPUT-001` amended (`ALK-071`) | `OI-CONFIDENCE-001` |
+
+All eleven blocking items are closed. Every withheld output they gated now has a determined
+value or a **canonised** `NOT_RUN`.
+
+### Constants
+
+Freeze 5 introduces **no new numeric constant.** Every threshold it uses is already frozen:
+
+```text
+ALK_SLOPE_SUPPORT_K = 1.28          # F5-03 materiality boundary
+sigma_Alk_base      = 0.10 dKH      # F5-09 T_signal numerator
+24 h independence   = ALK-008       # F5-01 selection, F5-09 observation floor
+24 h safety cadence = ALK-052       # F5-09 forecast safety lead
+48 h routine        = ALK-050       # F5-09 routine candidate
+~Day 4              = ALK-053       # F5-09 ordinary-observation ceiling
+2% of net volume    = ALK-061       # F5-06 liquid guard
+0.20 dKH spread     = ALK-005       # F5-02 operative SUSPECT source
+```
+
+`sigma_P`, `sigma_D`, `K_detect`, a generic `RequiredMovement`, a `boundarySafetyMargin`
+distinct from the 24 h lead, a `minimumExposure`, an Alk `Z` threshold and numeric
+confidence thresholds are all deliberately **not** introduced.
+
+### Carried forward unchanged
+
+The frozen owner decisions of Freeze 4 all stand:
+- stabilise first;
+- current position from latest valid measurement;
+- `ALK_SLOPE_SUPPORT_K = 1.28`;
+- `sigma_Alk_base = 0.10 dKH`;
+- ordinary 25% / exceptional 50% cap policy;
+- 0.50 dKH/day rail;
+- negative/uninterpretable consumption does not size ordinary maintenance;
+- two-stage intervention assessment;
+- magnesium safety interface remains `UNKNOWN` in the Alk-only migration phase.
+
+`ALK-STABLE-001` is unchanged. `ALK-SLOPE-UNCERTAINTY-001` is unchanged. No canonical
+worked golden's stated arithmetic is altered.
+
+### Deliberately left open
+
+Freeze 5 is bounded. These remain open and are **not** decided here:
+
+- automatic statistical suspicion detection, and with it the lone-outlier exposure recorded
+  as `OI-MADFLOOR-001` — the residual is accepted, named and un-compensated;
+- `T_detect` and the return-plan arrival cadence — canonically `NOT_RUN`;
+- numeric confidence classification;
+- the potency-confidence state machine and its `REASSESSING` exit (`OI-POTENCYSTATE-001`,
+  `OI-POTENCYSNAP-001`), which remain capability-gated;
+- normalization uncertainty propagation (`OI-NORMUNCERT-001`);
+- minimum post-change exposure (`OI-EXPOSURE-001`);
+- `ALK-037`'s Day-4 wording (`OI-DAY4-001`) and `ALK-012`'s illustrative examples
+  (`OI-STABLE-001`), both documentation defects whose normative text already governs.
+
+### Freeze status
+
+```text
+behaviouralCanon = ALK_V2_FREEZE_5
 sharedArchitectureCanon = SHARED_V2_FREEZE_2
 implementationConformance = NOT_YET_PROVEN
 productionMigration = NOT_YET_PERFORMED
@@ -14983,7 +15746,7 @@ Any future Alk behavioural or load-bearing completeness change requires:
 - canon vs implementation classification;
 - affected coverage fixture updates;
 - `IMPACTS_FROZEN_ALK` where caused by a shared change;
-- Alk V2 Freeze 5 or later.
+- Alk V2 Freeze 6 or later.
 
 ---
 

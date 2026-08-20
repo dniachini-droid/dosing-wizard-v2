@@ -2,7 +2,10 @@
 
 Index and coverage analysis for the fixture corpus in `fixtures/`.
 
-**160 fixtures across 6 files, plus 60 invariants in `ALK-V2-INVARIANTS.md`.**
+**174 fixtures across 6 files, plus 62 invariants in `ALK-V2-INVARIANTS.md`.**
+
+`ALK_V2_FREEZE_5` added 14 fixtures and 2 invariants, and rewrote the expectations of the
+15 fixtures that previously asserted a refusal for an issue the freeze decided.
 
 ---
 
@@ -14,7 +17,7 @@ Index and coverage analysis for the fixture corpus in `fixtures/`.
 | `canon-worked-goldens-round2.json` | 20 | `WG-ALK-021` … `WG-ALK-040` — interruption, corrections, potency, edits, expiry, mirrors |
 | `canon-worked-goldens-external.json` | 27 | `WG-ALK-041` … `WG-ALK-067` — external-review corrections, safety path, capability contract |
 | `canon-named-goldens.json` | 43 | `ALK-G001` … `ALK-G040` including `G004A`, `G039A`, `G039B` |
-| `adversarial.json` | 34 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all |
+| `adversarial.json` | 48 | `AD-*` — scenarios the brief requires that the canon states qualitatively or not at all, plus the `ALK_V2_FREEZE_5` positive and negative controls |
 | `invariants-and-governance.json` | 16 | `INV-*` coverage fixtures, `X-MIG-001`, `X-GOV-001` … `X-GOV-004` |
 | `index.json` | — | Generated index; ids, counts, provenance split, open-issue coverage |
 | `config-defaults.json` | — | The canon's default worked-suite configuration plus once-derived constants |
@@ -28,10 +31,10 @@ behaviour** (`DEC-013`, canon §52).
 | Class | Count | Meaning |
 |---|---|---|
 | `CANON_VERBATIM` | 102 | Every asserted number or state appears in the canon |
-| `CANON_DERIVED` | 33 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
-| `CANON_QUALITATIVE` | 25 | The canon states states and prohibitions but no arithmetic |
+| `CANON_DERIVED` | 44 | Numbers computed here by applying frozen canonical formulas to stated or constructed inputs |
+| `CANON_QUALITATIVE` | 28 | The canon states states and prohibitions but no arithmetic |
 
-The 33 derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
+The derived fixtures were produced by evaluating Theil–Sen, `ALK-SLOPE-UNCERTAINTY-001`,
 `ALK-SUPPORTED-SLOPE-001`, `ALK-STEP-CAP-001`, `ALK-046`, `ALK-ROUNDING-001` and
 `ALK-RESPONSE-CLASSIFIER-001` exactly as frozen. The same evaluation reproduces
 `WG-ALK-001`, `-002`, `-003`, `-004`, `-005`, `-006`, `-007`, `-008`, `-009`, `-033`,
@@ -85,70 +88,90 @@ Every scenario named in the preparation brief, and where it lives.
 | potency uncertainty | `WG-ALK-025`, `WG-ALK-027`, `WG-ALK-050` |
 | return plan active | `WG-ALK-014`, `AD-RTN-002`, `ALK-G029` |
 | return plan interrupted | `AD-RTN-001`, `WG-ALK-032` |
-| safety fail-safe | `WG-ALK-051`, `AD-SAF-002` |
+| return plan terminated by a safety return | `AD-RTN-004`, `AD-RTN-005` |
+| safety fail-safe | `WG-ALK-051`, `AD-SAF-002`, `AD-SAF-005` |
+| independent-cluster selection | `AD-SEG-001`, `AD-SEG-005` |
+| suspicious-reading sources | `AD-VAL-001`, `ALK-G024`, `ALK-G025` |
+| negative-consumption materiality boundary | `AD-CON-002`, `WG-ALK-013`, `ALK-G026` |
+| toward-range hold | `AD-MNT-006`, `AD-MNT-007`, `AD-MNT-008` |
+| water-change normalization confidence | `WG-ALK-011`, `AD-SEG-006` |
+| liquid guard on maintenance | `AD-SAF-004`, `WG-ALK-067` |
+| retest scheduler candidates and clamps | `AD-RET-001`–`004` |
+| recommendation confidence | `AD-OUT-001` |
 | Mg capability UNKNOWN | `AD-SAF-001`, `X-MIG-001` |
 | Ca/Mg measurement-only capability gates | `AD-CAP-001`, `X-MIG-001` |
 
-**All 45 required scenarios are covered.**
+**All 45 required scenarios are covered, plus 11 added by `ALK_V2_FREEZE_5`.**
 
 ## 4. Coverage by rule owner
 
 Derived from `rulesExercised` across the corpus and the `Fixtures` column of
-`ALK-V2-RULE-TRACEABILITY.md`. Every one of the 261 inventoried rules names at least one
+`ALK-V2-RULE-TRACEABILITY.md`. Every one of the 271 inventoried rules names at least one
 fixture — the condition `CORE-CANON-COVERAGE-001` imposes on the canon's own manifest,
 applied here to this package.
 
 | Owner | Rules | Representative fixtures |
 |---|---|---|
-| `VALIDATION` | 21 | `VAL-*`, `AD-POS-001`, `AD-TIME-001`, `WG-ALK-066` |
-| `SEGMENTATION` | 33 | `AD-SEG-001`–`004`, `WG-ALK-011`, `WG-ALK-012`, `WG-ALK-047` |
-| `TREND` | 18 | `WG-ALK-001`, `AD-TRD-001`–`006`, `AD-RAP-001` |
+| `VALIDATION` | 22 | `VAL-*`, `AD-POS-001`, `AD-TIME-001`, `WG-ALK-066`, `AD-VAL-001` |
+| `SEGMENTATION` | 35 | `AD-SEG-001`–`004`, `WG-ALK-011`, `WG-ALK-012`, `WG-ALK-047`, `AD-SEG-005`, `AD-SEG-006` |
+| `TREND` | 19 | `WG-ALK-001`, `AD-TRD-001`–`006`, `AD-RAP-001` |
 | `UNCERTAINTY` | 11 | `WG-ALK-062` (mandatory), `AD-TRD-004`, `AD-TRD-005` |
 | `SUPPORT` | 2 | `WG-ALK-001`, `WG-ALK-002`, `WG-ALK-062` |
-| `CONSUMPTION` | 6 | `WG-ALK-013`, `AD-CON-001`, `AD-MNT-005` |
+| `CONSUMPTION` | 7 | `WG-ALK-013`, `AD-CON-001`, `AD-MNT-005`, `AD-CON-002` |
 | `POTENCY` | 18 | `WG-ALK-024`–`027`, `WG-ALK-050`, `AD-POT-001`, `AD-POT-002` |
 | `RESPONSE` | 27 | `WG-ALK-007`–`010`, `WG-ALK-021`, `AD-RSP-001`–`003` |
-| `MAINTENANCE` | 26 | `WG-ALK-001`, `AD-MNT-001`–`007` |
-| `RETURN` | 11 | `WG-ALK-014`, `WG-ALK-015`, `WG-ALK-031`, `WG-ALK-035`, `AD-RTN-001`, `AD-RTN-002` |
-| `SAFETY` | 12 | `WG-ALK-041`, `WG-ALK-051`–`061`, `AD-SAF-001`–`003` |
-| `RETEST` | 13 | `WG-ALK-060`, `AD-RET-001` |
+| `MAINTENANCE` | 27 | `WG-ALK-001`, `AD-MNT-001`–`007`, `AD-MNT-008` |
+| `RETURN` | 12 | `WG-ALK-014`, `WG-ALK-015`, `WG-ALK-031`, `WG-ALK-035`, `AD-RTN-001`, `AD-RTN-002`, `AD-RTN-003`–`005` |
+| `SAFETY` | 14 | `WG-ALK-041`, `WG-ALK-051`–`061`, `AD-SAF-001`–`003`, `AD-SAF-004`, `AD-SAF-005` |
+| `RETEST` | 14 | `WG-ALK-060`, `AD-RET-001`, `AD-RET-002`–`004` |
 | `CAPABILITY` | 20 | `WG-ALK-045`–`048`, `WG-ALK-054`, `WG-ALK-065`, `WG-ALK-066`, `AD-CAP-001` |
-| `OUTPUT` | 20 | `INV-*`, `X-GOV-*` |
+| `OUTPUT` | 20 | `INV-*`, `X-GOV-*`, `AD-OUT-001` |
 | `AUDIT` | 12 | `ALK-G040`, `INV-REPLAY-001`, `WG-ALK-029`, `WG-ALK-030` |
 | `PRESENTATION` | 11 | `INV-SURFACE-WORDING-001`, `ALK-G039A`, `ALK-G039B` |
 
-## 5. Open-issue coverage
+## 5. Freeze-5 decision coverage
 
-18 of the 33 open issues are exercised by a fixture that asserts the **refusal** rather
-than a guessed value. These are the tests that fail if an implementer silently picks a
-default.
+Every `ALK_V2_FREEZE_5` owner decision is pinned by at least one fixture asserting the
+decided behaviour **and** at least one `forbidden` block naming the alternative the owner
+rejected. `INV-I8` is the mechanical check that this holds.
+
+| Decision | Positive control | Negative control |
+|---|---|---|
+| F5-01 independent-cluster selection | `AD-SEG-001` | `AD-SEG-005`; backward-greedy and keep-all asserted forbidden in both |
+| F5-02 suspicious-reading basis | `AD-VAL-001`, `ALK-G024`, `ALK-G025` | `AD-VAL-001` statistically-unusual-only case; `AD-TRD-004` forbids a compensating term |
+| F5-03 negative-consumption materiality | `WG-ALK-013`, `ALK-G026`, `WG-ALK-051` | `AD-CON-002` straddle: each variant forbids the other's classification |
+| F5-04 return-plan eligibility | `WG-ALK-014`, `WG-ALK-028`, `ALK-G006` | `AD-RTN-003`; `AD-MNT-008` |
+| F5-05 toward-range hold | `AD-MNT-006`, `AD-MNT-007` | `AD-MNT-008`; the strict-stabilise-first doses 7.5 / 10.5 asserted forbidden |
+| F5-06 liquid-volume guard | `AD-SAF-003`, `AD-SAF-004`, `WG-ALK-067` | `AD-SAF-004` variant and its forbidden 2050 mL/day pre-rounding result |
+| F5-07 rapid basis | `AD-RAP-001` | same fixture: both wrong readings forbidden |
+| F5-08 return plan under safety | `AD-RTN-004` | `AD-RTN-005`; `SUSPENDED_PENDING_SAFETY` asserted forbidden |
+| F5-09 retest scheduler | `AD-RET-001`, `AD-RET-003` | `AD-RET-002`, `AD-RET-004` |
+| F5-10 water-change confidence tier | `WG-ALK-011`, `ALK-G022` | `AD-SEG-006` — same arithmetic, lower tier, opposite outcome |
+| F5-11 temporary safety rate | `AD-SAF-002` | `AD-SAF-005` three capability cases |
+| F5-12 recommendation confidence | `AD-OUT-001` | same fixture: the three-valued label and any arithmetic path forbidden |
+
+## 5A. Still-open-issue coverage
+
+Nine of the 27 remaining open issues are exercised by a fixture that asserts the
+**refusal** rather than a guessed value. These are the tests that fail if an implementer
+silently picks a default.
 
 | Open issue | Fixture(s) asserting the refusal |
 |---|---|
-| `OI-INDEPENDENCE-001` | `AD-SEG-001` |
-| `OI-SUSPECT-001` | `ALK-G024`, `ALK-G025`, `AD-TRD-004` |
-| `OI-MADFLOOR-001` | `AD-TRD-004` |
-| `OI-NEGCONS-001` | `WG-ALK-013`, `WG-ALK-051`, `ALK-G026` |
-| `OI-RETEST-001` | `AD-RET-001` |
-| `OI-RETURNOFFER-001` | `WG-ALK-014`, `WG-ALK-028`, `ALK-G006` |
-| `OI-BELOWRISING-001` | `AD-MNT-006`, `AD-MNT-007` |
-| `OI-WATERCHANGE-001` | `WG-ALK-011`, `ALK-G022` |
-| `OI-LIQUIDGUARD-001` | `WG-ALK-067`, `AD-SAF-003` |
-| `OI-SAFETYRATE-001` | `AD-SAF-002` |
 | `OI-DAY4-001` | `ALK-G011`, `AD-SEG-003` |
 | `OI-WG024-001` | `WG-ALK-024`, `AD-POT-001`, `ALK-G033` |
 | `OI-ANOMCLUSTER-001` | `AD-SEG-004` |
 | `OI-OVERSHOOT-001` | `ALK-G016` |
-| `OI-RAPIDBASIS-001` | `AD-RAP-001`, `AD-MNT-002` |
 | `OI-FORECASTHORIZON-001` | `WG-ALK-042`, `WG-ALK-043` |
 | `OI-DEFERREASON-001` | `WG-ALK-052` |
 | `OI-ANCHOR-001` | `AD-SEG-003` |
+| `OI-STABLE-001` | `AD-TRD-001`, `AD-RTN-003` |
+| `OI-PIPELINE-001` | `WG-ALK-052`, `AD-SAF-004` |
 
-The remaining open issues (`OI-STABLE-001`, `OI-EXPOSURE-001`, `OI-NORMUNCERT-001`,
-`OI-CONFIDENCE-001`, `OI-POTENCYSTATE-001`, `OI-POTENCYSNAP-001`, `OI-PIPELINE-001`,
-`OI-RETURNDURINGSAFETY-001`, and the pinned conventions) are covered by invariants rather
-than goldens, because they concern absent behaviour, structural properties or states that
-are unreachable in the Alk-only runtime.
+The remaining open issues (`OI-EXPOSURE-001`, `OI-NORMUNCERT-001`, `OI-POTENCYSTATE-001`,
+`OI-POTENCYSNAP-001`, `OI-PLANTARGETEDIT-001`, and the pinned conventions) are covered by
+invariants rather than goldens, because they concern absent behaviour, structural
+properties or states that are unreachable in the Alk-only runtime.
 
 ## 6. Boundary-straddling pairs
 
@@ -174,6 +197,14 @@ therefore carries a **pair** that straddles it.
 | potency SNR class | `WG-ALK-024` at minimum evidence (2.80 → diagnostic) | `AD-POT-001` (6.26 → calibration-eligible) |
 | potency plausibility envelope | `WG-ALK-027` (1.587× → inside, hold) | `WG-ALK-050` (2.02× → outside, `PLAUSIBILITY_HOLD`) |
 | safety-return completion | `WG-ALK-053` (7.05 → recovering) | `WG-ALK-053` (7.21 → complete) |
+| negative-consumption materiality | `AD-CON-002` `D = 1.6` (`C + 1.28σ_S` = +0.006135 → uncertainty-limited) | `AD-CON-002` `D = 1.5` (−0.000795 → materially negative) |
+| independence spacing at 24 h | `AD-SEG-001` (12 h → not accepted) | `WG-ALK-003` (48 h → accepted) |
+| `T_signal` against the observation floor | `AD-RET-001` (22.913 h → clamped to 24 h) | `AD-RET-003` (80.685 h, loses to the 40 h boundary candidate) |
+| `T_signal` against the observation ceiling | `AD-RET-002` (162.765 h → clamped to 96 h) | `AD-RET-001` (22.913 h, floor side) |
+| forecast boundary safety lead | `AD-RET-003` (`T_boundary` +1.667 d → 40 h) | `AD-RET-004` (`T_boundary` −0.333 d → test now) |
+| supported vs uncertainty-limited toward range | `AD-MNT-008` (`S_supported = 0` → not this rule) | `AD-MNT-006` (`S_supported = 0.104745` → toward-range hold) |
+| water-change confidence tier | `AD-SEG-006` (`MANUFACTURER_NOMINAL` → boundary) | `WG-ALK-011` (`MEASURED_SAME_BATCH` → normalize) |
+| liquid guard across actuator rounding | `AD-SAF-004` (2050 → recheck → 2000, issued) | `AD-SAF-004` variant (`D_current` 2100 already over → withheld) |
 
 ## 7. Acceptance rule
 
@@ -226,8 +257,13 @@ depends on a DST transition**. DST behaviour is tested separately and explicitly
 `ALK-V2-ALGORITHM-CONTRACT.md` names test identifiers in its **TESTS** lines that do not
 appear in `fixtures/` — `VAL-001`…`VAL-008`, `CLU-001`…`CLU-005`, `TIME-001`, `TIME-002`,
 `SEG-001`…`SEG-010`, `TRD-001`, `TRD-002`, `EVD-002`, `INT-001`…`INT-005`,
-`RET-001`…`RET-004`, `RSP-006`, `RSP-B01`, `RSP-B02`, `MNT-*`, `CON-*`, `CAP-*`, `POT-*`,
-`SAF-*`, `RTN-*`, `WC-*`, `COR-*`, `CFG-*`.
+`RET-001`…`RET-004`, `RSP-006`, `RSP-B01`, `RSP-B02`, `DEL-002`, `MNT-*`, `CON-*`,
+`CAP-*`, `POT-*`, `SAF-*`, `RTN-*`, `WC-*`, `COR-*`, `CFG-*`.
+
+`DEL-002` was previously written `AD-DEL-002`, which reads as a committed `AD-` fixture
+and dangled — no such body exists. `ALK_V2_FREEZE_5`'s mechanical check found it and it
+was renamed to the slot convention. `ALK-035` keeps `WG-ALK-047` and `AD-SEG-003` as its
+committed coverage, so no rule lost a fixture.
 
 These are **unit-test slots**, not golden fixtures. They name the small mechanical tests
 each algorithm needs (does the validator reject a non-finite value; does a 10-minute repeat
@@ -254,4 +290,7 @@ Recorded so their absence is a known choice, not an oversight.
 - **Presentation snapshot strings.** `INV-SURFACE-WORDING-001` states the contract; exact
   production wording belongs to Part IX and to the eventual UI.
 - **Fixtures for open issues that would require inventing the missing behaviour.** By
-  design: those are the refusal fixtures in §5.
+  design: those are the refusal fixtures in §5A.
+- **A committed runner.** Every count and cross-reference in this document is verifiable by
+  reading `fixtures/index.json` and `traceability/alk-v2-traceability.json`; the executable
+  checker belongs with the implementation, which does not exist yet.

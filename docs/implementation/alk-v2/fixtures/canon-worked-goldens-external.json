@@ -1,6 +1,6 @@
 {
   "corpusId": "alk-v2-canon-worked-goldens-external",
-  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_4",
+  "canonAuthority": "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5",
   "canonSection": "PART III - WORKED GOLDEN SUITE - EXTERNAL REVIEW CORRECTIONS (WG-ALK-041..067)",
   "defaultConfigRef": "config-defaults.json#/configurations/CANON_DEFAULT",
   "fixtures": [
@@ -121,19 +121,20 @@
       "fixtureId": "WG-ALK-051",
       "title": "High breach plus uninterpretable consumption pauses Alk addition",
       "provenance": { "class": "CANON_VERBATIM", "canonSource": ["WG-ALK-051", "ALK-HIGH-BREACH-UNRESOLVED-001"] },
-      "rulesExercised": ["ALK-HIGH-BREACH-UNRESOLVED-001", "ALK-NEGATIVE-CONSUMPTION-001"],
-      "input": { "outerMaxDkh": 11.0, "latestAlkDkh": 11.40, "currentAlkDoseMlPerDay": 10.0, "consumptionEstimate": "NON_PHYSICAL_OR_UNINTERPRETABLE", "temporaryUpwardCorrectionActive": false },
+      "rulesExercised": ["ALK-HIGH-BREACH-UNRESOLVED-001", "ALK-NEGATIVE-CONSUMPTION-001", "ALK-NEGATIVE-MATERIALITY-001"],
+      "input": { "outerMaxDkh": 11.0, "latestAlkDkh": 11.40, "currentAlkDoseMlPerDay": 10.0, "consumptionEstimate": "NEGATIVE - uninterpretable under ALK-NEGATIVE-MATERIALITY-001 on either branch", "temporaryUpwardCorrectionActive": false },
       "expectedAction": {
         "outerBoundState": "BREACHED_HIGH",
         "interventionType": "SAFETY_RETURN",
         "safetyDoseRecommendationMlPerDay": 0,
         "maintenanceEstimateStatus": "UNRESOLVED",
         "actualDoseState": "unchanged until user/pump confirms implementation",
+        "failSafeGated": false,
         "nextTestApproxHours": 24
       },
       "expectedReasonCodes": ["SAFETY_OUTER_BOUND_BREACHED_HIGH", "SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE", "RETEST_HIGH_BREACH_FAILSAFE"],
-      "forbidden": { "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden." },
-      "openIssues": ["OI-NEGCONS-001 - the stated magnitude is material under every defensible reading; the fail-safe is gated only where the boundary is genuinely in question"]
+      "forbidden": { "note": "Recommending continuation of 10.0 mL/day merely because permanent maintenance cannot be recalculated is forbidden.", "reasonCodes": ["SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED"] },
+      "openIssues": ["OI-NEGCONS-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-03); the zero-dose fail-safe is no longer gated, because a negative C_estimate is uninterpretable on both materiality branches"]
     },
     {
       "fixtureId": "WG-ALK-052",
@@ -300,13 +301,14 @@
     },
     {
       "fixtureId": "WG-ALK-067",
-      "title": "Gross liquid-volume guard remains independent of the Alk rate rail",
-      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-067", "ALK-LIQUID-VOLUME-GUARD-001"], "note": "Canon states the requirement without arithmetic. AD-SAF-003 supplies a determined numeric instance." },
-      "rulesExercised": ["ALK-LIQUID-VOLUME-GUARD-001", "ALK-046"],
-      "input": { "solution": "very dilute", "candidateSatisfiesRail": true, "candidateExceedsGuard": true },
-      "expectedAction": { "issueThatLiquidVolumeAsOne24hCommand": false, "stageOrLengthenUntilBothSatisfied": true, "railSatisfactionImpliesGuardSatisfaction": false },
+      "title": "Gross liquid-volume guard covers all engine-generated Alk delivery",
+      "provenance": { "class": "CANON_QUALITATIVE", "canonSource": ["WG-ALK-067", "ALK-LIQUID-VOLUME-GUARD-001"], "note": "Canon states the requirement without arithmetic. AD-SAF-003 and AD-SAF-004 supply determined numeric instances. Freeze 5 F5-06 reconciles this fixture's 'maintenance/correction' wording with the rule body." },
+      "rulesExercised": ["ALK-LIQUID-VOLUME-GUARD-001", "ALK-046", "ALK-ROUNDING-001"],
+      "input": { "solution": "very dilute", "deliveryKind": "maintenance or correction - the guard does not distinguish them", "candidateSatisfiesRail": true, "candidateExceedsGuard": true },
+      "expectedAction": { "issueThatLiquidVolumeAsOne24hCommand": false, "scope": ["MAINTENANCE", "RETURN_PLAN", "ONE_OFF_CORRECTION", "SAFETY_RETURN", "COMBINED_24H_TOTAL"], "stageOrLengthenUntilBothSatisfied": true, "executableDosingCommandWhenNoStagingAvailable": "WITHHELD", "cappedToGuardAndPresentedAsRecommendation": false, "recheckedAfterActuatorRounding": true, "railSatisfactionImpliesGuardSatisfaction": false },
       "expectedReasonCodes": ["SAFETY_LIQUID_GUARD_APPLIED"],
-      "openIssues": ["OI-LIQUIDGUARD-001 - this fixture says 'maintenance/correction' while ALK-LIQUID-VOLUME-GUARD-001's body says 'correction/return-plan execution'"]
+      "forbidden": { "reasonCodes": ["SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED", "MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED"], "note": "Exempting ordinary maintenance from the guard, capping a command to the guard value and presenting it as the recommendation, or checking the guard only before actuator rounding are all forbidden." },
+      "openIssues": ["OI-LIQUIDGUARD-001 - RESOLVED by ALK_V2_FREEZE_5 (F5-06); the rule body now covers maintenance, so this fixture's wording and the rule agree"]
     }
   ]
 }

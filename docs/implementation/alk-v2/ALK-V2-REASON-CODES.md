@@ -41,7 +41,8 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `VALIDATION_OUTER_BOUNDS_INVERTED` | `REFUSAL` | `outerMin ≥ outerMax`. | `outerBounds` |
 | `VALIDATION_NET_VOLUME_INVALID` | `REFUSAL` | Net volume ≤ 0. | `netVolumeL` |
 | `VALIDATION_ACTUATOR_INCREMENT_INVALID` | `REFUSAL` | Increment ≤ 0. | `actuatorIncrementMlPerDay` |
-| `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `INFO` | Automatic suspicion detection is `NOT_RUN`; Alk has no threshold. | `openIssue: OI-SUSPECT-001` |
+| `VALIDATION_SUSPICION_DETECTION_NOT_RUN` | `INFO` | Automatic statistical suspicion detection is canonically `NOT_RUN`; alkalinity defines no threshold and Freeze 5 declined to invent one. Explicit marks, recorded faults and repeat-spread anomalies still run. | `ruleId: ALK-SUSPECT-DETECTION-001`, `operativeSources[]` |
+| `VALIDATION_DEVICE_FAULT_RECORDED` | `GATING` | A recorded test/device fault marks the affected readings `SUSPECT`. | `readingIds[]`, `faultEventId` |
 | `VALIDATION_READING_MARKED_INVALID` | `INFO` | User or a recorded fault marked the reading invalid. | `readingId`, `invalidReason` |
 | `VALIDATION_READING_MARKED_SUSPECT` | `GATING` | Explicitly marked suspect; ordinary dose escalation withheld until resolved. | `readingId`, `markedBy` |
 
@@ -96,7 +97,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED` | `INFO` | Material known step normalized. | `waterChangeId`, `expectedStepDkh` |
 | `SEGMENT_WC_UNKNOWN_SUBFLOOR` | `INFO` | Unknown replacement, `f < 0.05`; retained, no invented subtraction. | `waterChangeId`, `changedFraction`, `potentialStepDkh` |
 | `SEGMENT_WC_UNKNOWN_BOUNDARY` | `GATING` | Unknown replacement, `f ≥ 0.05`; hard Alk boundary. | `waterChangeId`, `changedFraction`, `potentialStepDkh` |
-| `SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED` | `GATING` | Replacement value present but its confidence tier is not established as normalizable. | `waterChangeId`, `confidence`, `openIssue: OI-WATERCHANGE-001` |
+| `SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE` | `GATING` | Replacement value present, but its confidence tier is not `MEASURED_SAME_BATCH`; normalization is refused and the unknown branch runs instead. | `waterChangeId`, `confidence`, `requiredConfidence: MEASURED_SAME_BATCH`, `ruleId: ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` |
 | `SEGMENT_NORMALIZATION_UNCERTAINTY_MODEL_UNAVAILABLE` | `INFO` | Normalization applied; its own uncertainty not propagated. | `eventIds[]`, `openIssue: OI-NORMUNCERT-001` |
 | `SEGMENT_CHANGEPOINT_DETECTION_NOT_RUN` | `INFO` | No automatic change-point detection; explicit events only. | `openIssue: OI-CHANGEPOINT-001` |
 | `SEGMENT_LOOKBACK_NOT_EXTENDED` | `INFO` | The 14-day cap was not extended despite sparse evidence. | `spanDays`, `capDays: 14` |
@@ -119,7 +120,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `EVIDENCE_INSUFFICIENT_CLUSTERS` | `GATING` | Fewer than 3 independent clusters in the 14-day window. | `have`, `need: 3`, `windowDays: 14`, `nextUsefulTestAt` |
 | `EVIDENCE_INSUFFICIENT_SPAN` | `GATING` | Span under 4 days. | `haveDays`, `needDays: 4`, `nextUsefulTestAt` |
 | `EVIDENCE_INSUFFICIENT_POSTCHANGE_SPAN` | `GATING` | Post-change regime has not yet reached the ordinary minimum. | `postClusters`, `postSpanDays`, `earliestSufficientAt` |
-| `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `REFUSAL` | Two candidate clusters are under 24 h apart; which to drop is not specified. | `conflictingClusterIds[]`, `separationHours`, `openIssue: OI-INDEPENDENCE-001` |
+| `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | `INFO` | Forward-greedy chronological selection ran; at least one candidate cluster was not accepted as an ordinary trend observation. Its non-trend uses are unaffected. | `acceptedClusterIds[]`, `notAcceptedClusterIds[]`, `separationHours[]`, `ruleId: ALK-INDEPENDENT-SELECTION-001` |
 | `EVIDENCE_CONFOUNDED_HARD` | `GATING` | A hard confounder prevents the inference. | `confounders[]` |
 | `EVIDENCE_ANOMALOUS_LATEST_CLUSTER` | `GATING` | Latest cluster unresolved; ordinary dose action withheld. | `clusterId`, `spreadDkh` |
 | `EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER` | `GATING` | A historical anomalous cluster is present; ordinary inference blocked rather than choosing between two slopes. | `clusterId`, `openIssue: OI-ANOMCLUSTER-001` |
@@ -158,7 +159,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `CONSUMPTION_NOT_RUN_NET_VOLUME_UNAVAILABLE` | `REFUSAL` | Net volume required and absent. | — |
 | `CONSUMPTION_NOT_RUN_HISTORICAL_CONTEXT_MISSING` | `REFUSAL` | Legacy records lack the dosing/intervention context this analysis requires. | `periodFrom`, `periodTo`, `ref: DATA-PROVENANCE.md §3` |
 | `CONSUMPTION_NON_PHYSICAL_UNEXPLAINED_GAIN` | `SAFETY` | Mass balance says the tank gained alkalinity faster than the known dose supplied; no cause is asserted. | `consumptionDkhPerDay`, `P`, `D`, `S_observed`, `knownEventsInspected[]` |
-| `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `GATING` | Negative result; the slight/material boundary has no canonical `sigma_C`. HOLD on either reading. | `consumptionDkhPerDay`, `sigmaS`, `openIssue: OI-NEGCONS-001` |
+| `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | `GATING` | Negative but **not** materially negative: `C + 1.28·sigma_S >= 0`. UNCERTAIN / non-resolvable; HOLD; it cannot by itself reduce established maintenance. | `consumptionDkhPerDay`, `sigmaS`, `materialityMargin`, `ruleId: ALK-NEGATIVE-MATERIALITY-001` |
 | `CONSUMPTION_MIXED_INTERVAL_INTEGRATED` | `INFO` | `D_eff` from an eligible integrated basis. | `integratedVolumeMl`, `elapsedDays`, `deliveryBasis` |
 
 ## POTENCY_ — owner: `POTENCY`
@@ -252,9 +253,9 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `MAINTENANCE_INTERVENTION_LOCK` | `GATING` | An ordinary intervention is not yet assessable and the post-change regime is not independently sufficient. | `interventionId`, `phase`, `postClusters` |
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RETURN` | `SAFETY` | A safety return owns the intervention lock; the estimate is shown but not implemented. | `maintenanceEstimate`, `safetyInterventionId` |
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RAIL` | `SAFETY` | Combined intentional movement would exceed 0.50 dKH/day. Emitted alongside the above. | `safetyMovementDkh`, `maintenanceEffectDkh`, `railDkh: 0.50` |
-| `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `GATING` | Below+rising or above+falling with no active plan; the automatic action is not determined by canon. | `position`, `trajectory`, `S_observed`, `S_supported`, `maintenanceEstimate`, `openIssue: OI-BELOWRISING-001` |
+| `MAINTENANCE_HOLD_TOWARD_RANGE` | `INFO` | Below range with a supported rise, or above range with a supported fall. Automatic maintenance does not oppose a supported trajectory already moving the level toward the preferred range. | `position`, `trajectory`, `S_observed`, `S_supported`, `maintenanceEstimate`, `forecastRangeEntryDays`, `ruleId: ALK-TOWARD-RANGE-HOLD-001` |
 | `MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE` | `SAFETY` | Negative or uninterpretable consumption cannot size a change; the accepted estimate is held. | `consumptionDkhPerDay`, `acceptedMaintenanceEstimate` |
-| `MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h guard whose maintenance scope is disputed. | `commandMl`, `guardMl`, `openIssue: OI-LIQUIDGUARD-001` |
+| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The executable command is withheld and is **never** capped to the guard value. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAfterRounding: true`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
 
 ## BRACKET_ — owner: `MAINTENANCE`
 
@@ -270,7 +271,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
 | `RETURN_OFFER_AVAILABLE` | `INFO` | An opt-in return plan may be offered. | `aimPointLevelDkh`, `A_now`, `paces[]` |
-| `RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED` | `GATING` | The "stable" precondition is not deterministic. Maintenance is unaffected. | `S_observed`, `S_supported`, `openIssue: OI-RETURNOFFER-001` |
+| `RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY` | `INFO` | `returnPlanEligibleTrajectory` is false — evidence is `INSUFFICIENT`, or a supported non-zero trajectory is already moving the level. No offer. Maintenance is unaffected. | `movementEvidence`, `S_observed`, `S_supported`, `ruleId: ALK-RETURN-ELIGIBLE-TRAJECTORY-001` |
 | `RETURN_PLAN_STARTED` | `INFO` | User opted in and implementation was logged. | `returnPlanId`, `S_plan`, `temporaryDose`, `predictedDurationDays`, `expiryAt` |
 | `RETURN_PACE_LIMITED_BY_ZERO_DOSE` | `INFO` | Requested downward pace exceeds what zero dosing can achieve. | `requestedPace`, `achievablePace`, `C_estimate` |
 | `RETURN_AIM_POINT_REACHED` | `INFO` | First measured reach or pass; temporary movement stops now. | `A_now`, `aimPointLevelDkh` |
@@ -278,7 +279,8 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `RETURN_ASSESSMENT_DUE` | `INFO` | Assessment point reached with no new test. Arrival must not be inferred. | `returnPlanId`, `dueAt` |
 | `RETURN_EXPIRED_OVERRUN` | `GATING` | No valid assessment by `2·T_plan + 2` days. | `returnPlanId`, `expiryAt`, `T_plan` |
 | `RETURN_STOP_PENDING_USER_ACTION` | `INFO` | Stopping is recommended; the app cannot assert the pump stopped. | `actualDoseState` |
-| `RETURN_SUSPENDED_BY_SAFETY_RETURN` | `SAFETY` | An in-flight plan met an outer-bound breach; behaviour is not defined by canon. | `returnPlanId`, `safetyInterventionId`, `openIssue: OI-RETURNDURINGSAFETY-001` |
+| `RETURN_TERMINATED_BY_SAFETY_RETURN` | `SAFETY` | An in-flight plan met an outer-bound breach and is terminated, not suspended. Opposing intentional components are never layered. | `returnPlanId`, `safetyInterventionId`, `terminatedAt`, `ruleId: ALK-RETURN-TERMINATED-BY-SAFETY-001` |
+| `RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY` | `INFO` | A terminated plan cannot resume automatically. A new plan needs fresh eligibility and a fresh opt-in. | `terminatedReturnPlanId`, `safetyInterventionId` |
 | `RETURN_INTENTIONAL_MOVEMENT_NOT_MAINTENANCE_MISMATCH` | `INFO` | The plan's intentional trajectory is not evidence that maintenance is wrong. | `returnPlanId`, `S_plan` |
 
 ## SAFETY_ — owner: `SAFETY`
@@ -292,16 +294,16 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `SAFETY_RETURN_COMPLETE` | `INFO` | Buffered destination reached; ordinary sequencing resumes. | `A_now`, `safetyDestinationDkh` |
 | `SAFETY_CORRECTION_ACTIONABLE_WITHOUT_INCREMENT` | `INFO` | One-off safety volume emitted although the maintenance increment is missing. | `correctionVolumeMl`, `P` |
 | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` | `SAFETY` | Above `outerMax` with an uninterpretable mass balance; pausing dosing is recommended. Not a maintenance estimate. | `A_now`, `outerMax`, `maintenanceEstimateStatus: UNRESOLVED` |
-| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | `GATING` | The zero-dose fail-safe is gated because the uninterpretability boundary is undefined. | `consumptionDkhPerDay`, `openIssue: OI-NEGCONS-001` |
+| `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | `SAFETY` | Above `outerMax` with `C_estimate >= 0`; the temporary safety **rate** path runs instead of the zero-dose pause. | `consumptionDkhPerDay`, `R_down`, `S_safety` |
 | `SAFETY_HIGH_BREACH_SLOWER_DECLINE` | `INFO` | Zero dosing cannot achieve the desired decline; the achievable rate is reported. | `desiredRate`, `achievableRate`, `C_estimate` |
 | `SAFETY_RATE_RAIL_APPLIED` | `SAFETY` | 0.50 dKH/day physical-effect rail bound the change. | `uncappedEffect`, `railDkhPerDay: 0.50`, `cappedDeltaDose` |
 | `SAFETY_COMPOSITE_RAIL_APPLIED` | `SAFETY` | Combined intentional movement clamped to the rail. | `components[]`, `combinedDkh` |
 | `SAFETY_LIQUID_GUARD_APPLIED` | `SAFETY` | The 2%/24 h liquid guard lengthened or staged the execution. | `requestedMl`, `guardMl`, `stagedDays` |
-| `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED` | `REFUSAL` | The guard's maintenance scope is disputed; the command is withheld. | `commandMl`, `guardMl`, `openIssue: OI-LIQUIDGUARD-001` |
+| `SAFETY_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | An engine-generated 24 h delivery exceeds the guard and no staging is available; the executable command is withheld, never capped to the guard. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAfterRounding: true` |
 | `SAFETY_MG_GATE_OVERRIDDEN` | `SAFETY` | Mg is alert-low; the Alk safety return proceeds and the Mg condition is surfaced. | `magnesiumGateState` |
 | `SAFETY_MG_GATE_UNKNOWN` | `INFO` | `magnesiumGateState = UNKNOWN`; safety return proceeds, no low-Mg condition invented. | `magnesiumGateState: UNKNOWN` |
 | `SAFETY_INTERVENTION_LOCK_HELD` | `SAFETY` | The safety return owns the lock on new Alk actuator changes. | `lockOwner` |
-| `SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED` | `REFUSAL` | High-breach temporary **rate** withheld; the M-1 exemption names only the one-off volume. | `D_safety_temp`, `openIssue: OI-SAFETYRATE-001` |
+| `SAFETY_TEMP_RATE_ADVISORY_EMITTED` | `SAFETY` | The exact temporary high-breach safety rate is emitted as an **advisory** rate while the actuator increment is unavailable. The executable rounded pump command is separately `NOT_RUN`. | `temporarySafetyRateAdvisoryMlPerDay`, `S_safety`, `safetyDestinationDkh`, `pumpCommandState: NOT_RUN`, `ruleId: ALK-SAFETY-TEMP-RATE-RESOLUTION-001` |
 
 ## RETEST_ — owner: `RETEST`
 
@@ -316,11 +318,13 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `RETEST_RETURN_PLAN_ASSESSMENT` | `INFO` | Plan assessment or expiry point. | `returnPlanId`, `recommendedAt` |
 | `RETEST_ROUTINE_CADENCE` | `INFO` | 48-hour ordinary cadence. | `recommendedAt` |
 | `RETEST_EVIDENCE_BUILDING` | `INFO` | Next test needed to reach the ordinary minimum. | `clustersNeeded`, `spanNeededDays`, `recommendedAt` |
-| `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` | `INFO` | `T_detect` candidate `NOT_RUN`; `K_detect` absent for Alk. | `openIssue: OI-RETEST-001` |
-| `RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE` | `INFO` | `T_signal` candidate `NOT_RUN`; `RequiredMovement` absent. | `openIssue: OI-RETEST-001` |
-| `RETEST_BOUNDARY_MARGIN_UNAVAILABLE` | `GATING` | Forecast-crossing candidate `NOT_RUN`; `boundarySafetyMargin` absent. Boundary risk does not shorten testing. | `T_outerDays`, `openIssue: OI-RETEST-001` |
-| `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE` | `INFO` | No return-plan retest cadence is defined. | `openIssue: OI-RETEST-001` |
-| `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` | `INFO` | The minimum-useful-interval clamp is `NOT_RUN`. | `openIssue: OI-RETEST-001` |
+| `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` | `INFO` | `T_detect` candidate canonically `NOT_RUN`; Freeze 5 declined to invent `K_detect`. | `ruleId: ALK-RETEST-SCHEDULER-001` |
+| `RETEST_SIGNAL_ACCUMULATION` | `INFO` | Confidence-building candidate selected: `T_signal = 0.10 / |S_supported|`. | `sSupportedDkhPerDay`, `tSignalDays`, `recommendedAt` |
+| `RETEST_SIGNAL_ACCUMULATION_NOT_RUN` | `INFO` | `T_signal` candidate `NOT_RUN` because `S_supported = 0` or movement evidence is `INSUFFICIENT`. | `sSupportedDkhPerDay`, `movementEvidence` |
+| `RETEST_FORECAST_BOUNDARY_RISK` | `SAFETY` | Testing scheduled before a projected outer-bound crossing, targeting the 24 h safety lead. `T_boundary <= 0` returns test-now semantics. | `T_outerDays`, `T_boundaryDays`, `boundSide`, `recommendedAt` |
+| `RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE` | `INFO` | The return-plan arrival-check candidate is canonically `NOT_RUN`; ordinary, rapid, safety and expiry candidates continue. | `returnPlanId`, `ruleId: ALK-RETEST-SCHEDULER-001` |
+| `RETEST_OBSERVATION_FLOOR_APPLIED` | `INFO` | An ordinary observation candidate was clamped up to the 24 h independence minimum. Never applied to repeat-now, rapid, safety or forecast-boundary candidates. | `rawCandidateHours`, `floorHours: 24` |
+| `RETEST_OBSERVATION_CEILING_APPLIED` | `INFO` | An ordinary observation candidate was clamped down to the ~Day-4 window. | `rawCandidateHours`, `ceilingHours: 96` |
 
 ## CAPABILITY_ — owner: `CAPABILITY`
 
@@ -345,7 +349,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
-| `OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE` | `INFO` | `recommendationConfidence = UNSPECIFIED`; no canonical derivation exists. Underlying evidence facts are still surfaced. | `openIssue: OI-CONFIDENCE-001` |
+| `OUTPUT_CONFIDENCE_UNSPECIFIED` | `INFO` | `recommendationConfidence = UNSPECIFIED` by frozen decision; no numeric classification exists and none may be invented. The evidence facts below are surfaced in its place. | `independentClusters`, `spanDays`, `sigmaS`, `supportRatio?`, `confounders[]`, `potencyConfidence`, `deliveryBasis`, `ruleId: ALK-CONFIDENCE-OUTPUT-001` |
 | `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE` | `GATING` | Insufficiency stated with what is missing and when the next useful test is. | `missing[]`, `nextUsefulTestAt`, `currentValueDkh` |
 | `OUTPUT_HOLD_IS_A_RECOMMENDATION` | `INFO` | HOLD is a full recommendation, not a failure to answer. | `holdReasons[]` |
 
@@ -385,7 +389,7 @@ output.
 
 | Group | Codes |
 |---|---|
-| `VALIDATION_` | 14 |
+| `VALIDATION_` | 15 |
 | `TIME_` | 6 |
 | `CONFIG_` | 4 |
 | `CLUSTER_` | 5 |
@@ -400,15 +404,46 @@ output.
 | `RESPONSE_` | 18 |
 | `MAINTENANCE_` | 17 |
 | `BRACKET_` | 4 |
-| `RETURN_` | 11 |
+| `RETURN_` | 12 |
 | `SAFETY_` | 17 |
-| `RETEST_` | 14 |
+| `RETEST_` | 16 |
 | `CAPABILITY_` | 14 |
 | `OUTPUT_` | 3 |
 | `AUDIT_` | 3 |
 | `PRESENTATION_` | 5 |
 | `MIGRATION_` | 4 |
-| **Total** | **235** |
+| **Total** | **239** |
+
+---
+
+## Retired by `ALK_V2_FREEZE_5`
+
+These codes existed only because a canon defect blocked an output. Freeze 5 determined the
+behaviour, so the code has no reachable state and is removed from the closed set. History is
+kept here rather than deleted; an engine that still emits a retired code is a conformance
+failure.
+
+| Retired code | Replaced by | Freeze-5 decision |
+|---|---|---|
+| `EVIDENCE_INDEPENDENT_SELECTION_UNDEFINED` | `EVIDENCE_INDEPENDENT_SELECTION_APPLIED` | F5-01 |
+| `VALIDATION_SUSPICION_THRESHOLD_UNAVAILABLE` | `VALIDATION_SUSPICION_DETECTION_NOT_RUN` (renamed: the state is decided, not unavailable) | F5-02 |
+| `CONSUMPTION_NEGATIVE_MATERIALITY_UNDEFINED` | `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED` | F5-03 |
+| `SAFETY_HIGH_BREACH_MATERIALITY_UNDEFINED` | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` (now reachable) and `SAFETY_HIGH_BREACH_CONSUMPTION_INTERPRETABLE` | F5-03 |
+| `RETURN_ELIGIBILITY_STABILITY_DEFINITION_UNDEFINED` | `RETURN_OFFER_AVAILABLE` / `RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY` | F5-04 |
+| `MAINTENANCE_MATRIX_CELL_UNDETERMINED` | `MAINTENANCE_HOLD_TOWARD_RANGE` | F5-05 |
+| `MAINTENANCE_LIQUID_GUARD_SCOPE_UNDEFINED` | `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | F5-06 |
+| `SAFETY_LIQUID_GUARD_SCOPE_UNDEFINED` | `SAFETY_LIQUID_GUARD_EXCEEDED` | F5-06 |
+| `RETURN_SUSPENDED_BY_SAFETY_RETURN` | `RETURN_TERMINATED_BY_SAFETY_RETURN` + `RETURN_NO_AUTOMATIC_RESUME_AFTER_SAFETY` | F5-08 |
+| `RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE` | `RETEST_SIGNAL_ACCUMULATION` / `RETEST_SIGNAL_ACCUMULATION_NOT_RUN` | F5-09 |
+| `RETEST_BOUNDARY_MARGIN_UNAVAILABLE` | `RETEST_FORECAST_BOUNDARY_RISK` | F5-09 |
+| `RETEST_MINIMUM_INTERVAL_UNAVAILABLE` | `RETEST_OBSERVATION_FLOOR_APPLIED` + `RETEST_OBSERVATION_CEILING_APPLIED` | F5-09 |
+| `SEGMENT_WC_CONFIDENCE_TIER_UNDEFINED` | `SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE` | F5-10 |
+| `SAFETY_ACTUATOR_INCREMENT_REQUIRED_SAFETY_RATE_UNDEFINED` | `SAFETY_TEMP_RATE_ADVISORY_EMITTED` + `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED` | F5-11 |
+| `OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE` | `OUTPUT_CONFIDENCE_UNSPECIFIED` (renamed: `UNSPECIFIED` is the decided value) | F5-12 |
+
+Two `RETEST_` codes are **kept**, with their meaning changed from "policy absent" to
+"canonically `NOT_RUN`": `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and
+`RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE`.
 
 ---
 

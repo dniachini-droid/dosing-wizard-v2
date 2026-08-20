@@ -264,24 +264,40 @@ AlkPolicy {
   potency      { minSideClusters, minSideSpanDays, snrDiagnostic, snrCalibration,
                  envelopeLow, envelopeHigh, calibratedN, calibratedSpanDays,
                  calibratedRDisp, strongN, strongSpanDays, strongRDisp, reassessDelta }
-  waterChange  { materialityFloorDkh, unknownAssumedMismatchDkh, unknownBreakFraction }
+  waterChange  { materialityFloorDkh, unknownAssumedMismatchDkh, unknownBreakFraction,
+                 normalizationConfidenceTier }   // MEASURED_SAME_BATCH  (F5-10)
   retest       { routineCadenceHours, rapidHours, safetyHours,
-                 postChangeFirstHours, postChangeSecondHours }
+                 postChangeFirstHours, postChangeSecondHours,
+                 signalRequiredMovementDkh,      // 0.10                 (F5-09)
+                 boundarySafetyLeadDays,         // 1.0                  (F5-09)
+                 observationFloorHours,          // 24                   (F5-09)
+                 observationCeilingHours }       // 96                   (F5-09)
   safety       { outerMinDkh, outerMaxDkh, bSafetyDkh, maxSafetyMove24hDkh,
                  rateRailDkhPerDay, ordinaryStepCap, exceptionalStepCap,
                  stepCapMeaningfulMultiple, liquidGuardFraction }
-  unavailable  { kDetect, requiredMovement, boundarySafetyMargin,
-                 minimumUsefulInterval, maximumObservationInterval,
-                 minimumExposure, suspicionThreshold,
-                 waterChangeNormalizationTier, consumptionUncertaintyModel,
-                 confidenceDerivation }        // all explicitly ABSENT — see OI-*
+  unavailable  { minimumExposure,               // OI-EXPOSURE-001, still absent
+                 normalizationUncertaintyModel }// OI-NORMUNCERT-001, still absent
+  notRun       { kDetect,                       // canonised NOT_RUN     (F5-09)
+                 returnPlanArrivalCadence,      // canonised NOT_RUN     (F5-09)
+                 suspicionThreshold,            // canonised NOT_RUN     (F5-02)
+                 confidenceClassification }     // UNSPECIFIED           (F5-12)
 }
 ```
 
-The `unavailable` block is deliberate. Every field in it is a policy value the shared
-architecture references and the Alk canon never supplies. Representing them as explicitly
-absent — rather than omitting them — is what lets `INV-I6` assert that the dependent output
-refused instead of defaulting.
+Two blocks, and the distinction is load-bearing.
+
+`unavailable` is a policy value the shared architecture references and the Alk canon still
+never supplies. Representing them as explicitly absent — rather than omitting them — is
+what lets `INV-I6` assert that the dependent output refused instead of defaulting.
+
+`notRun` is a value `ALK_V2_FREEZE_5` **decided not to supply**. The engine emits the named
+`NOT_RUN` state and its reason code. Reading a `notRun` field as though it were merely
+missing, or supplying one from a neighbouring parameter, is a conformance failure — the
+owner's decision is that the analysis does not run, not that it is pending.
+
+The negative-consumption materiality boundary, the water-change normalization tier and the
+four scheduler values above moved **out** of the absent set at Freeze 5. Each is derived
+from a constant already in `policy`, so none of them is a new number.
 
 ---
 
