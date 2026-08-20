@@ -275,7 +275,7 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `MAINTENANCE_DEFERRED_BY_SAFETY_RAIL` | `SAFETY` | Combined intentional movement would exceed 0.50 dKH/day. Emitted alongside the above. | `safetyMovementDkh`, `maintenanceEffectDkh`, `railDkh: 0.50` |
 | `MAINTENANCE_HOLD_TOWARD_RANGE` | `INFO` | Below range with a supported rise, or above range with a supported fall. Automatic maintenance does not oppose a supported trajectory already moving the level toward the preferred range. | `position`, `trajectory`, `S_observed`, `S_supported`, `maintenanceEstimate`, `forecastRangeEntryDays`, `ruleId: ALK-TOWARD-RANGE-HOLD-001` |
 | `MAINTENANCE_NO_ACTION_FROM_BROKEN_MASS_BALANCE` | `SAFETY` | Negative or uninterpretable consumption cannot size a change; the accepted estimate is held. | `consumptionDkhPerDay`, `acceptedMaintenanceEstimate` |
-| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A maintenance command would exceed the 2%/24 h liquid guard. The recommendation is withheld and is **never** capped to the guard value, nor emitted equal to it. | `commandMl`, `guardMl`, `netVolumeL`, `checkedAt: CONTINUOUS \| POST_ROUNDING`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
+| `MAINTENANCE_LIQUID_GUARD_EXCEEDED` | `REFUSAL` | A recommended maintenance dose would exceed the 2%/24 h liquid guard. The recommendation is withheld and is **never** capped to the guard value, nor emitted equal to it. | `recommendedMl`, `guardMl`, `netVolumeL`, `checkedAt: CONTINUOUS \| POST_ROUNDING`, `ruleId: ALK-LIQUID-VOLUME-GUARD-001` |
 
 ## BRACKET_ — owner: `MAINTENANCE`
 

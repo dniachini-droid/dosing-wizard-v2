@@ -18,7 +18,7 @@ What it does, for every fixture in the corpus:
      selection, Theil-Sen slope, intercept, residuals, MAD, sigma_resid, sigma_point,
      t-bar, Sxx, sigma_S, the 1.28-sigma support subtraction and the supported slope;
   3. recomputes the scalar arithmetic the owner decisions introduced - R_down, the
-     dose-equivalent of R_down, the temporary safety rate, the actuator command, episode
+     dose-equivalent of R_down, the temporary safety rate, the recommended rate, episode
      representative values, spreads, separations, the rapid-pair slope, exact-decimal
      spreads and mass-balance consumption;
   4. writes a machine-readable record of stated-versus-recomputed for every value it
@@ -472,7 +472,7 @@ def main():
 
     # ---- 5b. decisions 21 and 22: boundaries, escalation and branch-B' sizing ----------
     # The escalation and B-prime fixtures state R_down, its dose equivalent, sized rates,
-    # actuator commands, boundary levels and correction volumes, and the first version of this
+    # recommended rates, boundary levels and correction volumes, and the first version of this
     # recorder reached NONE of them - it hard-coded the fixtures it knew about, and reported
     # "0 unreadable" because `unreadable` was only appended for a KNOWN key whose inputs were
     # missing. A stated value in a shape the tool never looked for was invisible rather than
@@ -483,16 +483,38 @@ def main():
     def case_ctx(f, c):
         return {**(f.get('input') or {}), **c}
 
-    for fid in ('AD-ESC-001', 'AD-ESC-002', 'AD-ESC-003', 'AD-SAF-009', 'AD-DHS-003'):
+    # The list was fixed at five names, so AD-SAF-010 (decision 25) and AD-REC-001
+    # (decision 23) - the two fixtures the decisions-23-26 round ADDED - contributed no
+    # recorded values and were not reported as unreadable either. A 7.7 mL/day branch-A rate
+    # and a 99.9 mL/day recommendation both passed the recorder in silence. Found by the
+    # breaker; the coverage assertion at the end of this block is the structural fix.
+    for fid in ('AD-ESC-001', 'AD-ESC-002', 'AD-ESC-003', 'AD-SAF-009', 'AD-DHS-003',
+                'AD-SAF-010', 'AD-REC-001', 'AD-SAF-005', 'AD-DHS-002'):
         f = fixtures.get(fid, (None, None))[1]
         if not f:
             continue
         inp = f.get('input') or {}
         ev = f.get('expectedIntermediateEvidence') or {}
         act = f.get('expectedAction') or {}
-        cin = {c['case']: c for c in (inp.get('cases') or []) if isinstance(c, dict) and 'case' in c}
-        cev = {c['case']: c for c in (ev.get('cases') or []) if isinstance(c, dict) and 'case' in c}
-        cac = {c['case']: c for c in (act.get('cases') or []) if isinstance(c, dict) and 'case' in c}
+
+        def _cases(d):
+            """Cases come in two shapes in this corpus: a LIST of {case: ...} objects, and a
+            MAP keyed by case name. Reading only the list shape silently skipped every
+            map-shaped fixture."""
+            if not isinstance(d, dict):
+                return {}
+            v = d.get('cases')
+            if isinstance(v, list):
+                return {c['case']: c for c in v if isinstance(c, dict) and 'case' in c}
+            if isinstance(v, dict):
+                return {k: c for k, c in v.items() if isinstance(c, dict)}
+            named = {k: c for k, c in d.items()
+                     if isinstance(c, dict) and k.isupper() and k not in ('NOTE',)}
+            return named
+
+        cin = _cases(inp)
+        cev = _cases(ev)
+        cac = _cases(act)
         names = sorted(set(cin) | set(cev) | set(cac)) or ['']
         for name in names:
             ctx = case_ctx(f, cin.get(name, {}))
@@ -510,7 +532,7 @@ def main():
                 rec.note(fid, name, 'advisoryFloorDkh', e.get('advisoryFloorDkh'),
                          float(_D(repr(ctx['outerMinDkh'])) - ADVISORY_OFFSET))
 
-            # R_down, its dose equivalent, the sized rate and the actuator command
+            # R_down, its dose equivalent, the sized rate and the recommended rate
             A = ctx.get('alkDkh')
             ASH = ctx.get('safetyDestinationHighDkh')
             if isinstance(A, (int, float)) and isinstance(ASH, (int, float)) and isinstance(P, (int, float)) \
@@ -519,12 +541,26 @@ def main():
                 rec.note(fid, name, 'rDownDkh', e.get('rDownDkh'), rd)
                 rec.note(fid, name, 'rDownAsDoseMlPerDay', e.get('rDownAsDoseMlPerDay'), rd / P)
                 dc = ctx.get('currentDoseMlPerDay')
+                # WHICH BRANCH sizes the rate decides WHICH FORMULA the recorder must use.
+                # Branch A sizes from consumption, max(0, (C_estimate + S_safety)/P) with
+                # S_safety = -R_down; B and B' size from D_current. Recomputing the D_current
+                # form on a branch-A state does not check the fixture, it contradicts it.
+                C = ctx.get('consumptionDkhPerDay')
+                phys = ctx.get('consumptionPhysicality')
+                branch_a = (phys == 'INTERPRETABLE'
+                            or (isinstance(C, (int, float)) and C >= 0 and phys is None))
+
+                rate = None
+                if branch_a and isinstance(C, (int, float)):
+                    rate = max(0.0, (C - rd) / P)          # branch A
+                elif isinstance(dc, (int, float)):
+                    rate = max(0.0, dc - rd / P)           # branches B and B'
+
                 # The CONTINUOUS value is an auditable intermediate and the ROUNDED value is
                 # the single output (ALK-RECOMMEND-ONLY-001, owner decision 23). A fixture may
                 # state either or both; record whichever it states, and never require the
                 # intermediate as the price of recording the output.
-                if isinstance(dc, (int, float)):
-                    rate = max(0.0, dc - rd / P)
+                if rate is not None:
                     for src in (e, a):
                         if isinstance(src.get('temporarySafetyRateContinuousMlPerDay'), (int, float)):
                             rec.note(fid, name, 'temporarySafetyRateContinuousMlPerDay',
@@ -534,6 +570,11 @@ def main():
                             isinstance(a.get('temporarySafetyRateRecommendationMlPerDay'), (int, float)):
                         rec.note(fid, name, 'temporarySafetyRateRecommendationMlPerDay',
                                  a['temporarySafetyRateRecommendationMlPerDay'], round_to(rate, INC))
+                    elif a.get('roundingApplied') is False and \
+                            isinstance(a.get('temporarySafetyRateRecommendationMlPerDay'), (int, float)):
+                        # no precision configured: the recommendation IS the continuous value
+                        rec.note(fid, name, 'temporarySafetyRateRecommendationMlPerDay',
+                                 a['temporarySafetyRateRecommendationMlPerDay'], rate)
 
             # the low-breach one-off correction volume, which decision 21's exception continues
             ASL = ctx.get('safetyDestinationLowDkh')
@@ -545,6 +586,40 @@ def main():
                     stated = e.get(key) if key in e else a.get(key)
                     if stated is not None:
                         rec.note(fid, name, key, stated, dA / P)
+
+    # ---- 5b. COVERAGE: every stated safety figure must have been REACHED ----------
+    # "0 unreadable" previously meant "0 of the keys this tool happens to know about", not
+    # "it reached everything". Any fixture that states a safety rate or correction volume
+    # NUMERICALLY and contributed no recorded value is listed as unreadable by name, so the
+    # report can never again imply coverage it does not have.
+    _SAFETY_KEYS = ('temporarySafetyRateContinuousMlPerDay',
+                    'temporarySafetyRateRecommendationMlPerDay',
+                    'safetyCorrectionVolumeMl', 'requiredVolumeMl',
+                    'rDownDkh', 'desiredMovementDkh')
+    _reached = set(rec.fixtures_recomputed)
+
+    def _states_a_number(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k in _SAFETY_KEYS and isinstance(v, (int, float)):
+                    return True
+                if _states_a_number(v):
+                    return True
+        elif isinstance(o, list):
+            for v in o:
+                if _states_a_number(v):
+                    return True
+        return False
+
+    for fid, (fn, f) in sorted(fixtures.items()):
+        if fid in _reached:
+            continue
+        if _states_a_number({'e': f.get('expectedIntermediateEvidence'),
+                             'a': f.get('expectedAction')}):
+            rec.unreadable.append({'fixtureId': fid, 'file': fn,
+                                   'statedKeys': ['<safety figures>'],
+                                   'reason': 'states a safety figure numerically but this '
+                                             'recorder does not reach it'})
 
     # ---- 6. maintenance-controller arithmetic -----------------------------------
     # ALK-MAINTENANCE-SEMANTICS-001 / ALK-044 / ALK-PREDICTED-POST-SLOPE-001. Every one of

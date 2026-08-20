@@ -1449,7 +1449,7 @@ explicitly declines to close it.
 |---|---|---|
 | `D-ESTABLISHED-UNDEFINED` | `OI-DELIVERYRATEBASIS-001` | RESOLVED by owner decision 20 |
 | `SIZING-NO-BRANCH-FOR-UNCOMPUTABLE-C` | `OI-UNCOMPUTABLEC-001` | RESOLVED by owner decision 22 |
-| `SIZING-FLAT-ABOVE-THE-RAIL` | `OI-SIZINGFLAT-001` | **OPEN** — narrowed by decision 21, not closed |
+| `SIZING-FLAT-ABOVE-THE-RAIL` | `OI-SIZINGFLAT-001` | **OPEN, and NO LONGER NARROWED** — decision 21 narrowed it, decision 24 removed that bound; the flat region runs upward without limit again |
 | `SIZING-C-ZERO-DISCONTINUITY` | `OI-CZERODISCONT-001` | **OPEN** — not addressed |
 
 ## OI-DELIVERYRATEBASIS-001 — `D_established` names two different physical quantities
@@ -2721,7 +2721,7 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 | **OPENED by Freeze-5 review, CLOSED by F5-13/14/15** | 3 | OI-HIGHBREACHBAND-001, OI-CLUSTERTIE-001, OI-RETESTFLOOR-001 |
 | **RESOLVED by owner decisions 16–19** | 5 | OI-HIGHBREACHSIZING-001, OI-EPISODE-001, OI-CROSSMETHOD-001, OI-DECIMALTHRESHOLD-001, OI-EPISODECONSUMER-001 |
 | **OPENED by decisions 16–19 review, RESOLVED by owner decisions 20 and 22** | 2 | OI-DELIVERYRATEBASIS-001, OI-UNCOMPUTABLEC-001 |
-| **OPENED by decisions 16–19 review, LEFT OPEN** | 2 | OI-SIZINGFLAT-001 (narrowed by decision 21, not closed), OI-CZERODISCONT-001 (not addressed) |
+| **OPENED by decisions 16–19 review, LEFT OPEN** | 2 | OI-SIZINGFLAT-001 (narrowed by decision 21, then NO LONGER NARROWED by decision 24, and not closed), OI-CZERODISCONT-001 (not addressed) |
 | **OPENED by decisions 20–22 review, LEFT OPEN — reported to the owner, not decided** | 5 | OI-BRANCHAREFUSAL-001, OI-ADVISORYEXCEPTION-001, OI-ADVISORYMEMBERS-001, OI-ADVISORYRETEST-001, OI-ADVISORYRETURN-001 |
 | **RESOLVED by Freeze 5** | 13 | OI-INDEPENDENCE-001, OI-SUSPECT-001, OI-MADFLOOR-001, OI-NEGCONS-001, OI-RETEST-001, OI-RETURNOFFER-001, OI-BELOWRISING-001, OI-WATERCHANGE-001, OI-LIQUIDGUARD-001, OI-SAFETYRATE-001, OI-RETURNDURINGSAFETY-001, OI-RAPIDBASIS-001, OI-CONFIDENCE-001 |
 | `CANON_DEFECT` still open (all non-blocking) | 11 | OI-STABLE-001, OI-DAY4-001, OI-EXPOSURE-001, OI-NORMUNCERT-001, OI-POTENCYSTATE-001, OI-POTENCYSNAP-001, OI-WG024-001, OI-ANOMCLUSTER-001, OI-OVERSHOOT-001, OI-PIPELINE-001, OI-PLANTARGETEDIT-001 |

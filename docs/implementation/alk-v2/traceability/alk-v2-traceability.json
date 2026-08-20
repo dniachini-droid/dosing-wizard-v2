@@ -3873,7 +3873,7 @@
      "reasonCodes": "SAFETY_ADVISORY_CONFIDENCE_WARNING",
      "fixtures": "AD-ESC-001, AD-ESC-002, AD-ESC-003",
      "boundaries": "AMENDED by owner decision 24: the boundary WARNS, it does not withhold. The ordinary rules produce the recommendation at every level, so there is NO discontinuity at the boundary. The warning must not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and under owner decision 26 it RENDERS the scheduler's interval rather than stating one of its own. Decision 21's member-wise predicate over contested episode members is RETIRED with the withholding it served, so ALK-EPISODE-SINGLE-OUTPUT-001 needs no exception. Decision 24 REMOVES the bound decision 21 placed on OI-SIZINGFLAT-001, whose flat region now extends upward without limit again; that item is NOT closed and is no longer narrowed. NO epsilon.",
-     "dependencies": "ALK-OUTER-BOUNDS-001, ALK-EPISODE-RESOLUTION-001, ALK-DECIMAL-THRESHOLD-001, ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-RETEST-SCHEDULER-001, ALK-SAFETY-CORRECTION-RESOLUTION-001, ALK-SAFETY-RETURN-INTEGRATION-001",
+     "dependencies": "ALK-OUTER-BOUNDS-001, ALK-EPISODE-RESOLUTION-001, ALK-DECIMAL-THRESHOLD-001, ALK-HIGH-BREACH-SAFETY-SIZING-001, ALK-RETEST-SCHEDULER-001, ALK-SAFETY-RETURN-INTEGRATION-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM (RESOLVED by owner decision 21, superseded by owner decision 24)"
     },
