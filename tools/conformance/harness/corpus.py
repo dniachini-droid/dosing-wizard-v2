@@ -105,6 +105,61 @@ class Fixture:
         return [c for c in v if isinstance(c, str)]
 
     @property
+    def all_expected_reason_codes(self) -> Dict[str, List[str]]:
+        """Every shape in which this fixture requires a reason code.
+
+        Absorbed from the retired freeze validator, which found this the hard
+        way. The corpus states required codes in four shapes:
+
+            expectedReasonCodes           a top-level array
+            variant.expectedReasonCodes   the variant's own array
+            expectedReasonCodesByCase     {case: [codes]}, introduced by the
+                                          owner decisions 24-26 round
+            variantReasonCodes            {variant: [codes]}, older
+
+        Reading only the first left 70+ assertions unvalidated against the
+        catalogue and the retired set, and the breaker demonstrated it by
+        appending two retired codes to `AD-ESC-001` while the gate stayed
+        green. The by-case shapes are nested at arbitrary depth, so the walk
+        is recursive rather than a fixed list of keys.
+
+        Returns `{site: [codes]}` so a violation can name where it came from.
+        """
+        found: Dict[str, List[str]] = {}
+
+        def _walk(node: Any, path: str) -> None:
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    if k in ("expectedReasonCodes",) and isinstance(v, list):
+                        found.setdefault(path + "." + k if path else k, []).extend(
+                            c for c in v if isinstance(c, str)
+                        )
+                    elif k in ("expectedReasonCodesByCase", "variantReasonCodes") and (
+                        isinstance(v, dict)
+                    ):
+                        for case, codes in v.items():
+                            site = "%s.%s[%s]" % (path, k, case) if path else "%s[%s]" % (k, case)
+                            found.setdefault(site, []).extend(
+                                c for c in (codes or []) if isinstance(c, str)
+                            )
+                    else:
+                        _walk(v, path + "." + str(k) if path else str(k))
+            elif isinstance(node, list):
+                for i, v in enumerate(node):
+                    _walk(v, path)
+
+        # `forbidden` states what must NOT be emitted, and `supersededExpectation`
+        # is preserved history. Neither is a requirement, so neither is harvested
+        # here; `forbidden` is read separately, and against a different rule.
+        body = {
+            k: v
+            for k, v in self.body.items()
+            if k not in ("forbidden", "supersededExpectation")
+        }
+        _walk(body, "")
+        return {k: v for k, v in found.items() if v}
+
+    @property
     def forbidden(self) -> Dict[str, Any]:
         v = self.body.get("forbidden")
         return v if isinstance(v, dict) else {}
