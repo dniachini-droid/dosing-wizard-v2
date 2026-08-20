@@ -1106,8 +1106,15 @@ if f:
           and 'no generated state selects zero branches' in txt
           and 'never two' in f['property'])
     check('INV-G12 scopes itself to the states that REACH branch selection (decision 25)',
-          'reach' in txt.lower() and 'precondition' in txt.lower()
-          and 'INV-G15' in txt)
+          'THAT REACHES BRANCH SELECTION' in f['property']
+          and 'precondition' in f['property'].lower()
+          and 'INV-G15' in f['property']
+          and 'complementary' in f['property'].lower())
+    check('INV-G12 no longer asserts the decision-20 reading that a refused state selects a branch',
+          not any('the branch is still selected and identified, and only the RATE' in m
+                  and 'Under owner decision 20 alone' not in m for m in f['mustHold']))
+    check('INV-G12 asserts that the boundary gates no branch (decision 24)',
+          any('AdvisoryCeiling' in m and 'still selects a branch' in m for m in f['mustHold']))
     check('INV-G12 carries the B-prime removal as its negative control',
           "Remove the B' branch" in f['negativeControl'] and 'AD-SAF-009' in f['negativeControl'])
 
@@ -1402,10 +1409,32 @@ def _live_units():
 
 _LIVE_CORPUS = list(_live_units())
 
+# A contradicting SENTENCE inserted into a paragraph that carries an exemption phrase is
+# invisible to a paragraph-scoped scan: mutation M7 landed in the very paragraph whose
+# "renders whatever the scheduler produced" exempted it. The scanning unit is therefore the
+# SENTENCE, with the paragraph kept only for the preserved-history exclusion above.
+def _norm(t):
+    """Markdown emphasis and code ticks are decoration; a mutation can hide behind them."""
+    return re.sub(r'\s+', ' ', t.replace('**', '').replace('`', '')).strip()
+
+def _sentences(u):
+    flatu = _norm(u)
+    if flatu.startswith('|'):
+        return [flatu]                 # a table row is one unit; splitting it loses context
+    parts = re.split(r'(?<=\.)\s+(?=[A-Z])', flatu)
+    return [p for p in ([flatu] + parts) if p]
+
 def _scan(pred, extra=()):
-    """Every live unit matching pred, plus any synthetic units supplied for a control."""
-    return [(n, re.sub(r'\s+', ' ', u).strip()[:110])
-            for n, u in list(_LIVE_CORPUS) + list(extra) if pred(re.sub(r'\s+', ' ', u))]
+    """Every live SENTENCE matching pred, plus any synthetic units supplied for a control.
+    The exemption lives in the predicate and is applied to the SENTENCE, never to the
+    surrounding paragraph: a paragraph-scoped exemption is what let M7 through."""
+    out = []
+    for n, u in list(_LIVE_CORPUS) + list(extra):
+        for s in _sentences(u)[1:] or _sentences(u):
+            if pred(s):
+                out.append((n, s[:110]))
+                break          # one report per unit; the unit is the thing to fix
+    return out
 
 # --- 19a. [M5, decision 23] nothing may withhold an output for want of a precision -----
 _M5 = ('Where `recommendationPrecisionMlPerDay` is unavailable the rounded figure '
@@ -1434,7 +1463,8 @@ def _p_precision_withholds(u):
                  r'never `NOT_RUN`|not `NOT_RUN`|never withheld|no longer|retired|RETIRED|'
                  r'retires|previously|superseded|Superseded|must not|may not|does not|'
                  r'is not blocked|forbidden|Forbidden|negative control|Negative control|'
-                 r'not NOT_RUN|there is no ', u, re.I):
+                 r'not NOT_RUN|there is no |no output is withheld|must fail|nothing is '
+                 r'refused|never "unavailable"|in the sense that withholds', u, re.I):
         return False
     return True
 
@@ -1457,8 +1487,9 @@ def _p_boundary_withholds(u):
     if re.search(r'not withheld|nothing withheld|nothing is withheld|withholds nothing|'
                  r'never withheld|no longer|retired|RETIRED|retires|previously|superseded|'
                  r'Superseded|must not|may not|forbidden|negative control|Negative control|'
-                 r'gates nothing|still runs|still sized|still sizes|is NOT|not `NOT_RUN`|'
-                 r'withholds neither|rewrote|rewritten|into a warning', u, re.I):
+                 r'gates nothing|still runs|still sized|still sizes|not `NOT_RUN`|'
+                 r'not NOT_RUN|withholds neither|rewrote|rewritten|into a warning|must fail|'
+                 r'is NOT `NOT_RUN`|auditable intermediate', u, re.I):
         return False
     return True
 
@@ -1499,9 +1530,11 @@ def _p_warning_own_interval(u):
     if not re.search(r'its own (confirmation )?interval|own retest|halves|its own schedule|'
                      r'shortens the retest|own cadence|second interval', u, re.I):
         return False
+    # 'must fail' marks an invariant's negative control: a description of the mutation that
+    # must be caught, not an assertion that the mutation is correct behaviour.
     if re.search(r'must not|may not|never states|states NO interval|no interval of its own|'
                  r'retired|previously|superseded|Superseded|forbidden|negative control|'
-                 r'Negative control|renders whatever', u, re.I):
+                 r'Negative control|renders whatever|must fail', u, re.I):
         return False
     return True
 
@@ -1616,12 +1649,19 @@ for fid in ('AD-ESC-001', 'AD-ESC-002'):
     check('%s states both warned and unwarned cases' % fid,
           len(warned) >= 1 and len(unwarned) >= 1,
           'warned=%d unwarned=%d' % (len(warned), len(unwarned)))
-    for field in ('nextTestApproxHours',):
-        vals_w = {v.get(field) for v in warned.values() if field in v}
-        vals_u = {v.get(field) for v in unwarned.values() if field in v}
+    # Every field ANY case states must be stated by EVERY case and be IDENTICAL across the
+    # boundary. Decision 24's headline property is that the answer does not change; a field
+    # stated only on one side is exactly how a change hides.
+    _stated = sorted({k for c in cases.values() for k in c
+                      if k not in ('case', 'note', 'advisoryConfidenceWarning', 'warningStates',
+                                   'warningRetestIntervalHours', 'schedulerRetestIntervalHours')})
+    check('%s states at least one recommendation-bearing field' % fid, len(_stated) >= 2, str(_stated))
+    for field in _stated:
+        vals_w = {str(v.get(field, '<<ABSENT>>')) for v in warned.values()}
+        vals_u = {str(v.get(field, '<<ABSENT>>')) for v in unwarned.values()}
         check('%s: the warning does not move %s across the boundary' % (fid, field),
-              bool(vals_w) and bool(vals_u) and vals_w == vals_u,
-              'warned=%s unwarned=%s' % (sorted(map(str, vals_w)), sorted(map(str, vals_u))))
+              vals_w == vals_u and '<<ABSENT>>' not in vals_w,
+              'warned=%s unwarned=%s' % (sorted(vals_w), sorted(vals_u)))
     # and the three retest fields agree within every case that states them
     for name, c in cases.items():
         present = [k for k in ('nextTestApproxHours', 'warningRetestIntervalHours',
@@ -1630,6 +1670,61 @@ for fid in ('AD-ESC-001', 'AD-ESC-002'):
             check('%s/%s: one retest answer, not two (decision 26)' % (fid, name),
                   len({c[k] for k in present}) == 1,
                   str({k: c[k] for k in present}))
+
+# --- 19g2. targeted structural checks the free-text scanners cannot express -------------
+# Three reversions slipped the sentence scanners because they carry no withholding VERB
+# (a restored precondition), or hide behind an exemption inside the same table row. Each is
+# pinned directly at the site instead.
+
+# [B3] ALK-ROUNDING-001 must not gate on the precision again (decision 23).
+_rnd = rule_body('ALK-ROUNDING-001')
+_pre = _rnd.split('Preconditions:', 1)[1].split('###', 1)[0] if 'Preconditions:' in _rnd else ''
+_pre = '\n'.join(l for l in _pre.split('\n') if not l.lstrip().startswith('>'))  # drop history
+check('ALK-ROUNDING-001 preconditions do not gate on R_precision',
+      bool(_pre) and not re.search(r'`R_precision` is known|R_\{?precision\}? is known|'
+                                   r'`R_pump` is known', _pre),
+      _norm(_pre)[:120])
+check('ALK-ROUNDING-001 states the three precision states instead',
+      'no longer a precondition of this rule running' in _norm(_rnd)
+      and 'NOT CONFIGURED' in _rnd and 'STEP 6 STILL RUNS' in _rnd)
+
+# [A3] A40's preconditions must carry no upper limit (decision 24).
+_AC = open(R + 'docs/implementation/alk-v2/ALK-V2-ALGORITHM-CONTRACT.md', encoding='utf-8').read()
+_a40 = _AC.split('## A40 — Outer-bound safety return, high breach', 1)[-1].split('## A40b', 1)[0]
+_a40pre = _a40.split('**DECISION TREE**', 1)[0]
+check("A40's preconditions place NO upper limit on the high-breach region",
+      '`A_now > outerMax`, with **no upper limit**' in _a40pre
+      and not re.search(r'^\*\*PRECONDITIONS\*\* `outerMax < A_now < AdvisoryCeiling`',
+                        _a40pre, re.M),
+      _norm(_a40pre)[:120])
+check("A40's pre-branch precondition is stated BEFORE the decision tree",
+      'PRE-BRANCH PRECONDITION' in _a40pre
+      and 'branch selection DOES NOT RUN' in _a40pre
+      and 'branchSelected     = NOT_RUN' in _a40pre)
+
+# [P2] the three output rows of the data contract must not withhold at the boundary.
+_DC = open(R + 'docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md', encoding='utf-8').read()
+for _fieldname in ('recommendedDoseMlPerDay',
+                   'temporarySafetyRateContinuousMlPerDay',
+                   'temporarySafetyRateRecommendationMlPerDay'):
+    _row = [l for l in _DC.split('\n')
+            if l.startswith('| `%s`' % _fieldname)]
+    check('data contract states %s' % _fieldname, len(_row) == 1, str(len(_row)))
+    if len(_row) == 1:
+        r0 = _norm(_row[0])
+        # Only the AFFIRMATIVE form is a defect. "is not NOT_RUN at an advisory boundary" is
+        # the decision-24 statement itself, and must survive; "NOT_RUN where the boundary
+        # escalates" is the reverted decision-21 statement, and must not.
+        _affirm = re.search(r'(?<!not )(?<!never )(?:WITHHELD|NOT_RUN)[^.]{0,60}'
+                            r'(?:where `?ALK-ADVISORY-RANGE-BOUNDARY-001|escalat)', r0)
+        check('%s is not withheld or NOT_RUN at an advisory boundary' % _fieldname,
+              not _affirm and 'escalates (owner decision 21)' not in r0,
+              (_affirm.group(0) if _affirm else r0[:120]))
+        check('%s says so explicitly' % _fieldname,
+              re.search(r'(?:not|NOT) (?:WITHHELD|`?NOT_RUN`?|withheld)[^.]{0,60}'
+                        r'advisory boundary|It is NOT withheld at an advisory boundary|'
+                        r'not withheld at an advisory boundary', r0) is not None,
+              r0[-160:])
 
 # --- 19h. [F17] AD-REC-002's forbidden phrases are searched against the package --------
 # The gate asserted the LIST had four entries and that one contained 'pump continues'. It

@@ -5012,7 +5012,8 @@
             "temporarySafetyRateRecommendationMlPerDay": 1.8,
             "outerBoundState": "BREACHED_HIGH",
             "maintenanceEstimateStatus": "UNRESOLVED",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "AT_CEILING",
@@ -5030,6 +5031,7 @@
             ],
             "warningRetestIntervalHours": 24,
             "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN",
             "note": "Identical recommendation to BELOW_CEILING, produced by the same rules. The only difference is the attached warning. Owner decision 26: the warning renders the scheduler's 24 h and states no interval of its own."
           },
           {
@@ -5047,7 +5049,8 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "ALT_BOUNDS_BELOW",
@@ -5055,7 +5058,8 @@
             "temporarySafetyRateRecommendationMlPerDay": 1.8,
             "outerBoundState": "BREACHED_HIGH",
             "maintenanceEstimateStatus": "UNRESOLVED",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "ALT_BOUNDS_AT",
@@ -5072,7 +5076,8 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "DECIMAL_STRADDLE_AT",
@@ -5089,11 +5094,12 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           }
         ],
         "recommendationIdenticalAcrossBoundary": true,
-        "note": "NO DISCONTINUITY. The recommendation immediately below the boundary and the recommendation at and above it are the same number from the same rules."
+        "note": "maintenanceActionStatus is stated in EVERY case, warned and unwarned alike, and is IDENTICAL across the boundary. Owner decision 24: the boundary withholds nothing, so recommendedDoseMlPerDay is not WITHHELD here for the boundary's sake - the ordinary SAFETY_RETURN integration of ALK-SAFETY-RETURN-INTEGRATION-001 defers the maintenance change, exactly as it does below the boundary. Stating the status rather than a number avoids asserting maintenance arithmetic this fixture does not compute."
       },
       "expectedReasonCodes": [
         "SAFETY_OUTER_BOUND_BREACHED_HIGH",
@@ -5302,7 +5308,8 @@
             "advisoryConfidenceWarning": "NONE",
             "safetyCorrectionVolumeMl": 7.215007215007215,
             "outerBoundState": "BREACHED_LOW",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "AT_FLOOR",
@@ -5319,6 +5326,7 @@
             ],
             "warningRetestIntervalHours": 24,
             "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN",
             "note": "Identical correction volume to INSIDE_FLOOR. The engine keeps advising; it simply says it is less confident."
           },
           {
@@ -5335,14 +5343,16 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "ALT_BOUNDS_INSIDE",
             "advisoryConfidenceWarning": "NONE",
             "safetyCorrectionVolumeMl": 7.215007215007215,
             "outerBoundState": "BREACHED_LOW",
-            "nextTestApproxHours": 24
+            "nextTestApproxHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "ALT_BOUNDS_AT",
@@ -5358,7 +5368,8 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           },
           {
             "case": "DECIMAL_STRADDLE_AT",
@@ -5374,10 +5385,12 @@
               "that correction at this level warrants experienced judgement about the specific system"
             ],
             "warningRetestIntervalHours": 24,
-            "schedulerRetestIntervalHours": 24
+            "schedulerRetestIntervalHours": 24,
+            "maintenanceActionStatus": "DEFERRED_BY_SAFETY_RETURN"
           }
         ],
-        "recommendationIdenticalAcrossBoundary": true
+        "recommendationIdenticalAcrossBoundary": true,
+        "note": "maintenanceActionStatus is stated in EVERY case, warned and unwarned alike, and is IDENTICAL across the boundary. Owner decision 24: the boundary withholds nothing, so recommendedDoseMlPerDay is not WITHHELD here for the boundary's sake - the ordinary SAFETY_RETURN integration of ALK-SAFETY-RETURN-INTEGRATION-001 defers the maintenance change, exactly as it does below the boundary. Stating the status rather than a number avoids asserting maintenance arithmetic this fixture does not compute."
       },
       "expectedReasonCodes": [
         "SAFETY_OUTER_BOUND_BREACHED_LOW",
