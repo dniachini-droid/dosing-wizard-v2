@@ -163,12 +163,15 @@ rejected. `INV-I8` is the mechanical check that this holds.
 | F5-11 temporary safety rate | `AD-SAF-002` | `AD-SAF-005` three capability cases |
 | F5-12 recommendation confidence | `AD-OUT-001` | same fixture: the three-valued label and any arithmetic path forbidden |
 | F5-13 no pause on an uncertainty-limited negative | `AD-CON-002` variant 1.6, `WG-ALK-051` | `AD-CON-002` variant 1.5 — superseded for sizing by owner decision 16; both variants now receive the same delivered rate |
-| F5-14 same-timestamp coalescing | `AD-SEG-007` | `AD-SEG-008` (a 0.30 dKH same-method pool stays `ANOMALOUS`); both forbid order-dependent selection |
+| F5-14 same-timestamp coalescing | `AD-SEG-007` | `AD-SEG-008` (a 0.30 dKH pool stays `ANOMALOUS`); both forbid order-dependent selection |
 | F5-15 ordinary signal floor | `AD-RET-001` | `AD-RET-004` (the floor must not reach an outer-bound candidate) |
 | **16** high-breach safety sizing | `AD-SAF-007` (`A_now` sweep, rail saturation, zero floor, materiality straddle), `WG-ALK-051` | `AD-SAF-008` (continuity across the materiality boundary), `AD-CON-002` (identical delivered rate on both sides) |
-| **17** canonical testing episode | `AD-EPI-001`, `AD-SEG-007` | `AD-EPI-002` (incompatible methods contested, three-minute offset, reversed insertion order), `AD-SEG-008` |
-| **18** repeat-spread domain and exact decimals | `AD-VAL-002` | `AD-VAL-002` straddling pairs and `CROSS_METHOD`; `AD-EPI-002` |
+| **17** canonical testing episode | `AD-EPI-001`, `AD-SEG-007` | `AD-EPI-002` (three-minute offset, reversed insertion order), `AD-SEG-008` |
+| **18** repeat-spread domain and exact decimals | `AD-VAL-002` | `AD-VAL-002` straddling pairs; `AD-EPI-002` |
 | **19** one episode output per consumer | `AD-EPI-003`, `AD-EPI-004` | `AD-EPI-003` (both ordering answers and the older episode forbidden), `AD-EPI-004` (both member slopes and the older-pair fallback forbidden) |
+| **27** the application does not know the test method | `AD-EPI-002` (formerly contested, now ordinary), `AD-VAL-002` `NO_QUALIFIER` | `AD-EPI-002`, `AD-EPI-003`, `AD-EPI-004` and `AD-VAL-002` all forbid the retired contested state and the retired reason codes |
+| **28** repeats inside 30 minutes, count stated | `AD-EPI-005` (5 min, count 2), `AD-EPI-001` (3 within 30 min, count 3) | `AD-EPI-006` (45 min ⇒ two observations), `AD-EPI-007` (29 / 30 / 31 minutes) |
+| **29** the advisory warning field has two states | `AD-ESC-001`, `AD-ESC-002` (`NONE` below, `ATTACHED` at and beyond) | `AD-ESC-003` — its three formerly contested cases now resolve and carry `NONE`; `NOT_RUN` appears nowhere. Closes `OI-ADVISORYWARNSTATE-001` |
 | **20** `D_current` / `D_history` split | `AD-DHS-001` (mixed-dose interval, both directions), `AD-DHS-003` (`D_history` unavailable, sizing still runs) | `AD-DHS-002` (`D_current` unknown ⇒ refusal; `0` and the `D_history` substitution both forbidden); `AD-DHS-001` `forbidden.cases` state exactly what a reverted engine produces, and the error reverses sign between the two cases |
 | **21** advisory ceiling and floor | `AD-ESC-001` (ceiling: below / at / above, at two configured bound pairs), `AD-ESC-002` (floor, mirrored) | `AD-ESC-001` and `AD-ESC-002` forbid both the reverted sized rate and a `0` in place of the withheld one; `AD-ESC-003` forbids a contested episode bypassing the check, and carries a straddling case so all-beyond cannot be read as any-beyond |
 | **22** uncomputable consumption, branch B′ | `AD-SAF-009` (first-ever test, `D_current` known), `AD-DHS-003` | `AD-SAF-009` forbids falling through with no branch, forbids routing to branch A (which would deliver `0`), and forbids refusing as though `D_current` were unknown; `INV-G12` asserts exactly one branch |

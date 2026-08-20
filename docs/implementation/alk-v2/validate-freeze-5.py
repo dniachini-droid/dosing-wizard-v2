@@ -165,7 +165,9 @@ DEC={'F5-01':['OI-INDEPENDENCE-001'],'F5-02':['OI-SUSPECT-001','OI-MADFLOOR-001'
  'D18':['OI-CROSSMETHOD-001','OI-DECIMALTHRESHOLD-001'],'D19':['OI-EPISODECONSUMER-001'],
  'D20':['OI-DELIVERYRATEBASIS-001'],'D21':['OI-SIZINGFLAT-001'],'D22':['OI-UNCOMPUTABLEC-001'],
  'D23':['OI-SAFETYRATE-001'],'D24':['OI-ADVISORYEXCEPTION-001','OI-ADVISORYMEMBERS-001','OI-ADVISORYRETURN-001'],
- 'D25':['OI-BRANCHAREFUSAL-001'],'D26':['OI-ADVISORYRETEST-001']}
+ 'D25':['OI-BRANCHAREFUSAL-001'],'D26':['OI-ADVISORYRETEST-001'],
+ 'D27':['OI-METHODUNKNOWN-001'],'D28':['OI-EPISODEMEMBERSHIP-001'],
+ 'D29':['OI-ADVISORYWARNSTATE-001']}
 for dec,ois in DEC.items():
     pos=[fid for fid,(fn,f) in fixtures.items()
          if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
@@ -183,7 +185,8 @@ DECIDED_16_19=['OI-HIGHBREACHSIZING-001','OI-EPISODE-001','OI-CROSSMETHOD-001',
  'OI-DECIMALTHRESHOLD-001','OI-EPISODECONSUMER-001',
  'OI-DELIVERYRATEBASIS-001','OI-UNCOMPUTABLEC-001',
  'OI-ADVISORYEXCEPTION-001','OI-ADVISORYMEMBERS-001','OI-ADVISORYRETURN-001',
- 'OI-BRANCHAREFUSAL-001','OI-ADVISORYRETEST-001']
+ 'OI-BRANCHAREFUSAL-001','OI-ADVISORYRETEST-001',
+ 'OI-METHODUNKNOWN-001','OI-EPISODEMEMBERSHIP-001','OI-ADVISORYWARNSTATE-001']
 # Opened by the decisions 16-19 review and DELIBERATELY LEFT OPEN. A register section that
 # quietly acquired a resolution box would be a silent decision, so the gate asserts the
 # absence of one as hard as it asserts the presence of the others.
@@ -205,7 +208,7 @@ check('register keeps the original analysis (history not deleted)',
 n_res=OI.count('> **RESOLVED by `ALK_V2_FREEZE_5`')
 check('exactly 16 Freeze-5 resolution boxes', n_res==16, str(n_res))
 n_d=OI.count('> **RESOLVED by owner decision')
-check('exactly 12 owner-decision 16-26 resolution boxes', n_d==12, str(n_d))
+check('exactly 15 owner-decision 16-29 resolution boxes', n_d==15, str(n_d))
 for oi in LEFT_OPEN:
     m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
     if not m: check('register section for '+oi, False); continue
@@ -239,7 +242,7 @@ for c in ['1.28','0.10 dKH','0.20 dKH','0.02','24','48','0.50']:
 # ---------- 10. invariant count ----------
 INV=open(R+'docs/implementation/alk-v2/ALK-V2-INVARIANTS.md',encoding='utf-8').read()
 n=len(re.findall(r'^### INV-', INV, re.M))
-check('invariant bodies match the coverage total', n==74 and '| **Total** | **74** |' in INV, str(n))
+check('invariant bodies match the coverage total', n==76 and '| **Total** | **76** |' in INV, str(n))
 
 # ---------- 11. canon internal consistency for the amended rules ----------
 pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
@@ -258,9 +261,9 @@ pairs=[('ALK-INDEPENDENT-SELECTION-001','forward-greedily'),
        ('ALK-ADVISORY-RANGE-BOUNDARY-001','AdvisoryCeiling = OuterMax + 1.0'),
        ('ALK-RECOMMEND-ONLY-001','no execution path from the engine to the tank'),
        ('ALK-HIGH-BREACH-UNCOMPUTABLE-CONSUMPTION-001','jointly exhaustive and mutually exclusive'),
-       ('ALK-REPEAT-SPREAD-DOMAIN-001','crossMethodConcordanceThreshold'),
-       ('ALK-TESTING-EPISODE-001','SAME TESTING EPISODE'),
-       ('ALK-EPISODE-RESOLUTION-001','CONTESTED_METHODS'),
+       ('ALK-REPEAT-SPREAD-DOMAIN-001','does not know what produced a reading'),
+       ('ALK-TESTING-EPISODE-001','within 30 minutes of one another'),
+       ('ALK-EPISODE-RESOLUTION-001','There is no contested'),
        ('ALK-EPISODE-SINGLE-OUTPUT-001','may independently choose'),
        ('ALK-DECIMAL-THRESHOLD-001','compare exact decimal values')]
 for rid,token in pairs:
@@ -342,10 +345,27 @@ if len(man)==2:
 # than deleting it. History is quoted, so the exemption is exactly "on a blockquote line".
 # A retired code on any ordinary line is still a live instruction and still fails.
 canon_retired=[]
-RETIRE_MARK=('is retired','are retired','RETIRED by','retired by owner decision','Retired code')
-for line in CANON.split('\n'):
+MARKED=('previously read','previously required','Superseded wording','superseded by owner decision',
+        'Superseded','superseded','Amended by owner decision','retire','Retire','RETIRE','formerly','inoperative')
+# Prose is paragraph-scoped: a preserved-history paragraph is exempt as a unit, because the
+# quotation wraps. Fenced code blocks are LINE-scoped: an instruction re-inserted inside a
+# fence is not exempted by a marker outside it.
+_lines=CANON.split('\n')
+_infence=False; _fenced=set()
+for _n,_l in enumerate(_lines):
+    if _l.lstrip().startswith('```'): _infence=not _infence; continue
+    if _infence: _fenced.add(_n)
+_blockmark=[False]*len(_lines); _n=0
+for _blk in CANON.split('\n\n'):
+    _m=any(x in _blk for x in MARKED)
+    for _ in _blk.split('\n'):
+        if _n<len(_blockmark): _blockmark[_n]=_m
+        _n+=1
+    _n+=1
+for _n,line in enumerate(_lines):
     if line.lstrip().startswith('>'): continue
-    if any(m in line for m in RETIRE_MARK): continue   # a line that retires a code may name it
+    if any(x in line for x in MARKED): continue
+    if _n not in _fenced and _n<len(_blockmark) and _blockmark[_n]: continue
     for c in retired:
         if c in line: canon_retired.append((c, line.strip()[:60]))
 check('canon names no retired reason code outside preserved history',
@@ -542,35 +562,37 @@ if f:
     cases=[c['case'] for c in f['input']['cases']]
     check('AD-EPI-002 covers same-instant, three-minute offset and reversed insertion order',
           set(cases)=={'SAME_INSTANT','THREE_MINUTE_OFFSET','REVERSED_INSERTION_ORDER'}, str(cases))
-    check('AD-EPI-002 states one contested episode for every case',
-          ev['episodeCount']==1 and ev['episodeStatus']=='CONTESTED_METHODS'
-          and ev['episodeValueDkh']=='NOT_RUN' and ev['alk005Applied'] is False)
-    vals=[r['alkDkh'] for c in f['input']['cases'] for r in c['readings']]
-    spread=float(max(vals)-min(vals))
-    check('AD-EPI-002 cross-method spread is below ALK-005 and contested anyway',
-          abs(ev['crossMethodSpreadDkh']-0.19)<1e-9 and ev['crossMethodSpreadDkh']<0.20,
-          '%r'%ev['crossMethodSpreadDkh'])
+    check('AD-EPI-002 states one RESOLVED episode for every case',
+          ev['episodeCount']==1 and ev['episodeStatus']=='RESOLVED'
+          and ev['combinedMeasurementCount']==2 and ev['episodeClusterStatus']=='OK')
+    check('AD-EPI-002 spread is inside ALK-005 and the threshold is applied',
+          abs(ev['episodeSpreadDkh']-0.19)<1e-9 and ev['episodeSpreadDkh']<0.20,
+          '%r'%ev['episodeSpreadDkh'])
     forb=f['forbidden']['episodeValueDkh']
-    check('AD-EPI-002 forbids the averaged and the order-chosen values',
-          11.045 in forb and 10.95 in forb and 11.14 in forb, str(forb))
+    check('AD-EPI-002 forbids the order-chosen values',
+          10.95 in forb and 11.14 in forb and 11.045 not in forb, str(forb))
 
 # 15e. decision 19 - position and rapid read the resolved episode
 f=_fx('AD-EPI-003')
 check('AD-EPI-003 exists', f is not None)
 if f:
-    c=f['expectedAction']['CONTESTED_LATEST']
-    check('AD-EPI-003 withholds position and outer-bound state on a contested latest episode',
-          c['position']=='NOT_RUN' and c['outerBoundState']=='NOT_RUN'
-          and c['retest']=='REPEAT_NOW' and c['priorEpisodePromotedToPosition'] is False)
-    r=f['expectedAction']['RESOLVED_LATEST']
-    reads=[x['alkDkh'] for x in f['input']['cases'][0]['readings']]
-    med=sorted(reads)[len(reads)//2] if len(reads)%2 else (sorted(reads)[len(reads)//2-1]+sorted(reads)[len(reads)//2])/2
-    check('AD-EPI-003 resolved position is the episode representative value',
-          abs(f['expectedIntermediateEvidence']['RESOLVED_LATEST']['episodeValueDkh']-med)<1e-9
-          and abs(r['positionDkh']-med)<1e-9 and r['outerBoundState']=='BREACHED_HIGH', '%r'%med)
-    forb=f['forbidden']['CONTESTED_LATEST']['positionDkh']
+    # decision 27: the formerly contested case now resolves and is classified normally
+    bad=[]
+    for case in ('TWO_READINGS_CLOSE','FORMERLY_CONTESTED'):
+        reads=sorted(x['alkDkh'] for x in
+                     [c for c in f['input']['cases'] if c['case']==case][0]['readings'])
+        med=reads[len(reads)//2] if len(reads)%2 else (reads[len(reads)//2-1]+reads[len(reads)//2])/2
+        ev=f['expectedIntermediateEvidence'][case]; ac=f['expectedAction'][case]
+        if abs(ev['episodeValueDkh']-med)>1e-12: bad.append((case,'value',ev['episodeValueDkh'],med))
+        if abs(ac['positionDkh']-med)>1e-12: bad.append((case,'position',ac['positionDkh']))
+        if ev['episodeStatus']!='RESOLVED': bad.append((case,'status',ev['episodeStatus']))
+        if ac['outerBoundState']!='BREACHED_HIGH': bad.append((case,'outerBound',ac['outerBoundState']))
+    check('AD-EPI-003 position is the episode value in both cases, and both resolve', not bad, str(bad))
+    forb=f['forbidden']['FORMERLY_CONTESTED']['positionDkh']
     check('AD-EPI-003 forbids both ordering answers and the older episode',
           10.95 in forb and 11.14 in forb and 10.6 in forb, str(forb))
+    check('AD-EPI-003 forbids withholding position on episode grounds',
+          f['forbidden']['FORMERLY_CONTESTED']['position']=='NOT_RUN')
 
 f=_fx('AD-EPI-004')
 check('AD-EPI-004 exists', f is not None)
@@ -584,11 +606,28 @@ if f:
     want=(eps[t1]-eps[t0])/(t1-t0)
     check('AD-EPI-004 rapid pair slope recomputes', abs(ev['rapidPairSlopeDkhPerDay']-want)<1e-9
           and abs(want)>=ev['rapidThresholdDkhPerDay'], '%r vs %r'%(ev['rapidPairSlopeDkhPerDay'],want))
-    check('AD-EPI-004 withholds rapidConfirmed on a contested latest episode',
-          a['CONTESTED_LATEST']['rapidConfirmed']=='NOT_RUN')
-    forb=f['forbidden']['CONTESTED_LATEST']['rapidPairSlopeDkhPerDay']
+    # decision 27: the formerly contested latest episode is an ordinary anomalous cluster
+    ev2=f['expectedIntermediateEvidence']['FORMERLY_CONTESTED_LATEST']
+    reads=sorted(r['alkDkh'] for r in
+                 [c for c in f['input']['cases'] if c['case']=='FORMERLY_CONTESTED_LATEST'][0]['episodes'][-1]['readings'])
+    med=(reads[0]+reads[1])/2.0; spr=round(reads[1]-reads[0],12)
+    t0,t1=ev2['rapidPairDays']
+    base=[e for e in [c for c in f['input']['cases'] if c['case']=='FORMERLY_CONTESTED_LATEST'][0]['episodes'] if e.get('atDay')==t0][0]['alkDkh']
+    want=(med-base)/(t1-t0)
+    a2=f['expectedAction']['FORMERLY_CONTESTED_LATEST']
+    check('AD-EPI-004 formerly contested episode resolves, pools and lands on the anomalous path',
+          abs(ev2['latestEpisodeValueDkh']-med)<1e-12 and abs(ev2['latestEpisodeSpreadDkh']-spr)<1e-12
+          and spr>0.20 and ev2['latestEpisodeClusterStatus']=='ANOMALOUS'
+          and ev2['latestEpisodeStatus']=='RESOLVED'
+          and abs(ev2['rapidPairSlopeDkhPerDay']-want)<1e-9
+          and abs(want)<ev2['rapidThresholdDkhPerDay']
+          and a2['rapidConfirmed'] is False,
+          'value=%r spread=%r slope=%r'%(med,spr,want))
+    forb=f['forbidden']['FORMERLY_CONTESTED_LATEST']['rapidPairSlopeDkhPerDay']
     check('AD-EPI-004 forbids both member slopes and the older-pair fallback',
           len(forb)==3 and -0.325 in forb and -0.15 in forb)
+    check('AD-EPI-004 forbids withholding rapidConfirmed on episode grounds',
+          'NOT_RUN' in f['forbidden']['FORMERLY_CONTESTED_LATEST']['rapidConfirmed'])
 
 # 15f. decision 18 - exact decimal semantics, recomputed with Decimal AND with binary64
 f=_fx('AD-VAL-002')
@@ -970,7 +1009,7 @@ if f:
     check('AD-ESC-001 records that the flat region is OPEN and NO LONGER NARROWED',
           any('NO LONGER NARROWED' in x for x in f['openIssues']))
 
-# 17g. AD-ESC-003 - a contested episode is episode resolution's business, and only that -----
+# 17g. AD-ESC-003 - every episode resolves, and the warning has exactly two states --------
 f=_fx('AD-ESC-003')
 check('AD-ESC-003 exists', f is not None)
 if f:
@@ -980,27 +1019,41 @@ if f:
     cac={c['case']:c for c in f['expectedAction']['cases']}
     bad=[]
     for name,c in cin.items():
-        methods={r['method'] for r in c['readings']}
-        contested = len(methods)>1
-        if (cev[name]['episodeStatus']=='CONTESTED_METHODS')!=contested:
-            bad.append((name,'episodeStatus',cev[name]['episodeStatus'],methods))
-        if contested:
-            if cev[name]['episodeValueDkh']!='NOT_RUN': bad.append((name,'contested resolves no value'))
-            if cev[name]['warn']!='NOT_RUN': bad.append((name,'nothing to warn about without a value'))
-            if cac[name]['advisoryConfidenceWarning']!='NOT_RUN': bad.append((name,'warned on a contested episode'))
-            if cac[name]['retest']!='REPEAT_NOW': bad.append((name,'REPEAT_NOW is preserved'))
-        else:
-            vals=sorted(r['alkDkh'] for r in c['readings'])
-            med=vals[len(vals)//2] if len(vals)%2 else (vals[len(vals)//2-1]+vals[len(vals)//2])/2
-            if abs(cev[name]['episodeValueDkh']-med)>1e-9: bad.append((name,'median',cev[name]['episodeValueDkh'],med))
-            if cev[name]['warn']!=(_D(repr(med))>=ceil_): bad.append((name,'warn'))
-    check('AD-ESC-003 lets episode resolution govern, and warns only on a resolved value',
-          not bad, str(bad[:4]))
-    check('AD-ESC-003 records the member-wise predicate as RETIRED',
-          f['expectedIntermediateEvidence'].get('memberWisePredicate','').startswith('RETIRED'))
-    check('AD-ESC-003 carries the SUSPECT-member case that OI-ADVISORYMEMBERS-001 raised',
-          'WITH_SUSPECT_MEMBER' in cin
-          and any(r.get('status')=='SUSPECT' for r in cin['WITH_SUSPECT_MEMBER']['readings']))
+        # owner decision 27: no member carries a method, and nothing is contested
+        if any('method' in r for r in c['readings']): bad.append((name,'a reading carries a method'))
+        if cev[name]['episodeStatus']!='RESOLVED': bad.append((name,'episodeStatus',cev[name]['episodeStatus']))
+        valid=[r['alkDkh'] for r in c['readings'] if r.get('status')!='INVALID']
+        if cev[name]['combinedMeasurementCount']!=len(valid):
+            bad.append((name,'count',cev[name]['combinedMeasurementCount'],len(valid)))
+        if not valid:
+            # owner decision 29: nothing resolves -> the warning is ABSENT, not a third value
+            if cac[name]['advisoryConfidenceWarning']!='NONE': bad.append((name,'absent warning must be NONE'))
+            continue
+        vals=sorted(valid)
+        med=vals[len(vals)//2] if len(vals)%2 else (vals[len(vals)//2-1]+vals[len(vals)//2])/2
+        if abs(cev[name]['episodeValueDkh']-med)>1e-9: bad.append((name,'median',cev[name]['episodeValueDkh'],med))
+        spread=_D(repr(max(vals)))-_D(repr(min(vals)))
+        if cev[name]['episodeSpreadDkh'] is not None and abs(float(cev[name]['episodeSpreadDkh'])-float(spread))>1e-12:
+            bad.append((name,'spread',cev[name]['episodeSpreadDkh'],str(spread)))
+        want_anom = 'ANOMALOUS' if spread>_D('0.20') else 'OK'
+        if cev[name]['episodeClusterStatus']!=want_anom: bad.append((name,'clusterStatus',cev[name]['episodeClusterStatus'],want_anom))
+        warn = _D(repr(med))>=ceil_
+        if cev[name]['warn']!=warn: bad.append((name,'warn'))
+        if cac[name]['advisoryConfidenceWarning']!=('ATTACHED' if warn else 'NONE'):
+            bad.append((name,'advisoryConfidenceWarning',cac[name]['advisoryConfidenceWarning']))
+    check('AD-ESC-003 resolves every episode and warns on the combined value', not bad, str(bad[:4]))
+    check('AD-ESC-003 records the member-wise predicate and the contested state as RETIRED',
+          f['expectedIntermediateEvidence'].get('memberWisePredicate','').startswith('RETIRED')
+          and f['expectedIntermediateEvidence'].get('contestedState','').startswith('RETIRED'))
+    check('AD-ESC-003 forbids the retired third state and the retired episode state',
+          f['forbidden'].get('advisoryConfidenceWarning')=='NOT_RUN'
+          and f['forbidden'].get('episodeStatus')=='CONTESTED_METHODS')
+    check('AD-ESC-003 carries a straddling case that warns on the combined value',
+          'STRADDLING_THE_CEILING' in cin
+          and min(r['alkDkh'] for r in cin['STRADDLING_THE_CEILING']['readings'])<float(ceil_)
+          and cac['STRADDLING_THE_CEILING']['advisoryConfidenceWarning']=='ATTACHED')
+    check('AD-ESC-003 carries the no-valid-reading case decision 29 names',
+          'NO_VALID_READING' in cin and cac['NO_VALID_READING']['advisoryConfidenceWarning']=='NONE')
 
 # 17g2. decision 25 - AD-SAF-010, refusal BEFORE branch selection -------------------------
 f=_fx('AD-SAF-010')
@@ -1747,6 +1800,234 @@ if f:
               re.sub(r'\s+', ' ', phrases[0].strip().lower())
               in re.sub(r'\s+', ' ', u).lower()
               for _, u in [('PROBE.md', 'Note that ' + phrases[0] + ' in this state.')]))
+
+# ---------- 18. owner decisions 27, 28 and 29 ----------
+# Decision 27 is a sweep, so these scanners exist to make a reversion fail. Their exemptions
+# are deliberately narrow: an earlier draft exempted any paragraph containing an ordinary word
+# like "forbidden", skipped fixture `note` keys, skipped three whole files and skipped canon
+# Part I. Each of those four was shown to let a full reversion through, and each is closed here.
+import glob as _glob
+DOCS_ALL=[R+'docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md']+DOCS+_glob.glob(FIXDIR+'*.json')+[
+    R+'docs/implementation/alk-v2/traceability/alk-v2-traceability.json']
+SKIP_FILES=('ALK-V2-ADVERSARIAL-REVIEW.md',)          # a historical review, not a spec
+# ONLY explicit supersession markers exempt a paragraph.
+HISTORY=('Superseded wording, preserved','Superseded by owner decision','superseded by owner decision',
+         'Amended by owner decision','amended by owner decision','preserved rather than deleted',
+         'preserved here rather than deleted','previously read','previously required',
+         'previously stated','previously required','this rule previously','this section previously',
+         'this paragraph previously','this invariant previously','this golden previously',
+         'this record formerly','RETIRED by owner decision','Retired by owner decision',
+         'REWRITTEN by owner decision','What this retires outright','retirement table',
+         'is inoperative here','inoperative for alkalinity','what they supersede')
+
+def _canon_alk(text):
+    """Exclude ONLY Part II, which is shared canon under SHARED_V2_FREEZE_2 and which owner
+    decision 27 deliberately does not edit (OI-PII53METHOD-001). Part I is Alk-governing and
+    is scanned."""
+    a=text.find('\n# PART II')
+    b=text.find('\n# PART III')
+    return (text[:a]+text[b:]) if 0<a<b else text
+
+def _register_live(text):
+    """The register's `# A<n>.` sections are the record of owner decisions and of what they
+    retired, so they quote the retired vocabulary by design. Sections B, C and D are live
+    specification and ARE scanned - a reversion hidden in a pinned convention must fail."""
+    out=[]; skipping=False
+    for line in text.split('\n'):
+        if re.match(r'^# A\d+\.', line): skipping=True
+        elif re.match(r'^# [B-Z]\.', line): skipping=False
+        out.append('' if skipping else line)
+    return '\n'.join(out)
+
+def _json_live(node):
+    """Everything an implementation could act on. `forbidden`, `supersededExpectation`,
+    `provenance` and `openIssues` record what must NOT happen or what used to; `note` is NOT
+    skipped, because notes carry load-bearing statements in this corpus."""
+    SKIP={'forbidden','supersededExpectation','provenance','openIssues'}
+    if isinstance(node,dict):
+        for k,v in node.items():
+            if k in SKIP: continue
+            for x in _json_live(v): yield x
+    elif isinstance(node,list):
+        for v in node:
+            for x in _json_live(v): yield x
+    elif isinstance(node,str): yield node
+
+def sweep(label, needles):
+    hits=[]
+    for fn in DOCS_ALL:
+        base=os.path.basename(fn)
+        if base in SKIP_FILES: continue
+        raw=open(fn,encoding='utf-8').read()
+        if fn.endswith('.json'):
+            try: doc=json.loads(raw)
+            except Exception: continue
+            if 'groups' in doc:      # traceability: shared PII- rules are out of scope
+                doc={'g':[[r for r in g['rules'] if not r['id'].startswith('PII-')] for g in doc['groups']]}
+            for txt in _json_live(doc):
+                if any(m in txt for m in HISTORY) or 'RETIRED' in txt: continue
+                for nd in needles:
+                    if nd in txt: hits.append((base,nd,txt[:60]))
+            continue
+        if base.startswith('REEF'): raw=_canon_alk(raw)
+        if base=='ALK-V2-OPEN-ISSUES.md': raw=_register_live(raw)
+        lines=raw.split('\n')
+        infence=False; fenced=set()
+        for n,l in enumerate(lines):
+            if l.lstrip().startswith('```'): infence=not infence; continue
+            if infence: fenced.add(n)
+        blockmark=[False]*len(lines); n=0
+        for blk in raw.split('\n\n'):
+            marked=any(m in blk for m in HISTORY)
+            for _ in blk.split('\n'):
+                if n<len(blockmark): blockmark[n]=marked
+                n+=1
+            n+=1
+        for n,line in enumerate(lines):
+            t=line.lstrip()
+            if t.startswith('>') or t.startswith('```'): continue
+            if t.startswith('| `PII-'): continue                 # shared Part II inventory rows
+            if any(m in line for m in HISTORY): continue
+            if re.match(r'^\| `([A-Z][A-Z0-9_]+)` \|', t) and re.match(r'^\| `([A-Z][A-Z0-9_]+)` \|', t).group(1) in retired:
+                continue                                  # a retirement-table row names its own code
+            if re.search(r'=\s*RETIRED\b', line): continue      # a canonised retirement declaration
+            if t.startswith('| `ALK-') and '` | ' in t and 'supersede' in raw[max(0,raw.find(line)-1200):raw.find(line)]:
+                continue                                  # a row inside a "what they supersede" table
+            if n not in fenced and n<len(blockmark) and blockmark[n]: continue
+            for nd in needles:
+                if nd in line: hits.append((base,nd,line.strip()[:60]))
+    check(label, not hits, str(sorted(set((h[0],h[1]) for h in hits))[:5]))
+
+sweep('no live method-compatibility concept survives decision 27',
+      ['compatibleMethodClassification','crossMethodConcordanceThreshold','incompatible method',
+       'incompatible-method','same-method','compatible method','methodId','episodeMethods'])
+sweep('no live contested-episode state survives decision 27',
+      ['CONTESTED_METHODS','EPISODE_CONTESTED_METHODS','RETEST_EPISODE_CONTESTED',
+       'EVIDENCE_WITHHELD_CONTESTED_EPISODE','EPISODE_POSITION_WITHHELD'])
+
+# 18c. decision 28 keeps the existing window, and no other figure appears in the rule or in A3
+AC_TXT=open(R+'docs/implementation/alk-v2/ALK-V2-ALGORITHM-CONTRACT.md',encoding='utf-8').read()
+CANON_EP=CANON[CANON.index('`ALK-TESTING-EPISODE-001`'):][:7000]
+A3=AC_TXT[AC_TXT.index('## A3'):AC_TXT.index('## A4')]
+mins=set(re.findall(r'(\d+)[- ]minute', CANON_EP))|set(re.findall(r'within (\d+) minutes', CANON_EP))
+check('decision 28 keeps the existing 30-minute window, and no other figure appears',
+      mins=={'30'} and set(re.findall(r'(\d+) minutes', A3))=={'30'}
+      and 'inclusive at exactly 30 minutes' in CANON_EP and '<= 30 minutes' in A3,
+      'canon=%s'%sorted(mins))
+
+# 18d. the combined count is defined, structured, and stated by fixtures
+DC=open(R+'docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md',encoding='utf-8').read()
+cnt_fx=[fid for fid,(fn,f) in fixtures.items() if 'combinedMeasurementCount' in json.dumps(f)]
+check('the combined-measurement count is a stated structured field',
+      'combinedMeasurementCount = <integer >= 1>' in CANON_EP
+      and 'combinedMeasurementCount' in AC_TXT and '`combinedMeasurementCount`' in DC
+      and 'structured field' in CANON_EP and len(cnt_fx)>=6, '%d fixtures state it'%len(cnt_fx))
+
+# 18e. decision 29 - the advisory warning has exactly two states, everywhere
+# NOT_RUN counts only where it is a VALUE of the field: an assignment, a JSON leaf, or the
+# field's own enumeration row. Prose saying the value is retired or never emitted is not that.
+def _adv_leaves(node,key=None):
+    """advisoryConfidenceWarning leaves outside forbidden/superseded/provenance subtrees."""
+    SKIP={'forbidden','supersededExpectation','provenance','openIssues'}
+    if isinstance(node,dict):
+        for k,v in node.items():
+            if k in SKIP: continue
+            for x in _adv_leaves(v,k): yield x
+    elif isinstance(node,list):
+        for v in node:
+            for x in _adv_leaves(v,key): yield x
+    elif key=='advisoryConfidenceWarning':
+        yield (key,node)
+
+ADV_VALUE=[re.compile(r'advisoryConfidenceWarning\s*=\s*NOT_RUN'),
+           re.compile(r'"advisoryConfidenceWarning"\s*:\s*"NOT_RUN"')]
+# The data contract's own enumeration is read directly rather than scanned: a row that both
+# lists NOT_RUN and calls it retired must still fail, and a text scan cannot tell those apart.
+_dc=open(R+'docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md',encoding='utf-8').read()
+_row=[l for l in _dc.split('\n') if l.startswith('| `advisoryConfidenceWarning` |')]
+_enum=set(re.findall(r'`(NONE|ATTACHED|NOT_RUN)`', _row[0].split('.')[0])) if _row else set()
+check('the data contract enumerates exactly two advisory-warning states',
+      len(_row)==1 and _enum=={'NONE','ATTACHED'}, str(sorted(_enum)))
+adv_bad=[]
+for fn in DOCS_ALL:
+    base=os.path.basename(fn)
+    if base in SKIP_FILES: continue
+    raw=open(fn,encoding='utf-8').read()
+    if fn.endswith('.json'):
+        try: doc=json.loads(raw)
+        except Exception: continue
+        for f_ in (doc.get('fixtures') or []):
+            for k,v in _adv_leaves(f_):
+                if v=='NOT_RUN': adv_bad.append((base,'%s = NOT_RUN'%k))
+        continue
+    if base=='ALK-V2-OPEN-ISSUES.md': raw=_register_live(raw)
+    for line in raw.split('\n'):
+        if any(m in line for m in HISTORY) or line.lstrip().startswith('>'): continue
+        if 'RETIRED' in line or 'retired' in line or 'forbidden' in line: continue
+        for pat in ADV_VALUE:
+            if pat.search(line): adv_bad.append((base,line.strip()[:70])); break
+check('decision 29 leaves the advisory warning two-valued', not adv_bad, str(adv_bad[:4]))
+
+# 18f. episode fixtures recompute from their own inputs
+import datetime
+from statistics import median as _med
+def _pool(readings):
+    v=sorted(r['alkDkh'] for r in readings if r.get('status')!='INVALID')
+    return (_med(v) if v else None), (round(max(v)-min(v),12) if v else None), len(v)
+
+f=_fx('AD-EPI-005')
+if f:
+    ev=f['expectedIntermediateEvidence']; val,spr,n=_pool(f['input']['readings'])
+    t=[datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
+    mins=(t[1]-t[0]).total_seconds()/60.0
+    check('AD-EPI-005 combines two readings five minutes apart',
+          abs(ev['episodeValueDkh']-val)<1e-12 and abs(ev['episodeSpreadDkh']-spr)<1e-12
+          and ev['combinedMeasurementCount']==n==2 and abs(ev['separationMinutes']-mins)<1e-9
+          and mins<=30, 'value=%r sep=%r'%(val,mins))
+
+f=_fx('AD-EPI-006')
+if f:
+    ev=f['expectedIntermediateEvidence']
+    t=[datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
+    mins=(t[1]-t[0]).total_seconds()/60.0
+    check('AD-EPI-006 is outside the window and stays two observations',
+          abs(ev['separationMinutes']-mins)<1e-9 and mins>30 and ev['episodeCount']==2
+          and all(e['combinedMeasurementCount']==1 for e in ev['episodes']), '%r min'%mins)
+    check('AD-EPI-006 keeps trend independence separate from episode resolution',
+          f['expectedAction']['acceptedCount']==1 and len(f['expectedAction']['notAcceptedForTrend'])==1)
+
+f=_fx('AD-EPI-007')
+if f:
+    bad=[]; ev={c['case']:c for c in f['expectedIntermediateEvidence']['cases']}
+    for c in f['input']['cases']:
+        t=[datetime.datetime.fromisoformat(r['at']) for r in c['readings']]
+        mins=(t[1]-t[0]).total_seconds()/60.0
+        want=1 if mins<=30 else 2
+        e=ev[c['case']]
+        if abs(e['separationMinutes']-mins)>1e-9: bad.append((c['case'],'minutes',mins))
+        if e['episodeCount']!=want: bad.append((c['case'],'episodeCount',e['episodeCount'],want))
+    check('AD-EPI-007 pins the 30-minute boundary inclusively', not bad, str(bad))
+
+f=_fx('AD-EPI-001')
+if f:
+    eps=f['input']['episodes']; ev=f['expectedIntermediateEvidence']
+    val,spr,n=_pool(eps[0]['readings'])
+    t1=sorted(datetime.datetime.fromisoformat(x['at']) for x in eps[0]['readings'])
+    medt=t1[len(t1)//2]
+    sep=(datetime.datetime.fromisoformat(eps[1]['readings'][0]['at'])-medt).total_seconds()/3600.0
+    check('AD-EPI-001 recomputes from its own ISO timestamps',
+          abs(ev['episode1']['episodeValueDkh']-val)<1e-12
+          and ev['episode1']['combinedMeasurementCount']==n==3
+          and ev['episode1']['episodeTime']==medt.isoformat()
+          and abs(ev['separationHours']-sep)<1e-9, 'sep=%r'%sep)
+    check('AD-EPI-001 stays off the window-anchoring question',
+          (max(t1)-min(t1)).total_seconds()/60.0<=30)
+
+f=_fx('AD-VAL-002')
+if f:
+    cases=[c['case'] for c in f['input']['cases']]
+    check('AD-VAL-002 drops the cross-method case and adds the unqualified one',
+          'CROSS_METHOD' not in cases and 'NO_QUALIFIER' in cases, str(cases))
 
 print()
 print('%d checks failed' % len(fails))

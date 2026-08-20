@@ -40,7 +40,8 @@ refuses; `WG-ALK-066`.
 
 ## A2 — Ingest validation
 
-**INPUTS** raw entry `{value, unit, measuredAt, parameter, method?}`.
+**INPUTS** raw entry `{value, unit, measuredAt, parameter}`. **No method, kit, device or
+instrument field is accepted, inferred or stored** (owner decision 27).
 
 **PRECONDITIONS** none.
 
@@ -91,12 +92,13 @@ and delivery events; `asOf`.
 **DECISION TREE**
 
 ```text
-1. Explicit grouping wins: readings sharing repeatGroupId form one cluster.
-2. Otherwise group consecutive readings r_i, r_{i+1} when ALL hold:
+1. Group readings r_i, r_{i+1} when ALL hold:                 [ALK-TESTING-EPISODE-001]
      same parameter
-     same or compatible methodId
      elapsedDays(r_i.measuredAt, r_{i+1}.measuredAt) <= 30 minutes
      no intervention, correction, water change or delivery anomaly between them
+   Owner decisions 27 and 28: there is NO method condition (the method is never known)
+   and NO explicit-relationship requirement (proximity in time is the whole test).
+   PII-5.3's "same or compatible method" clause is shared canon and is inoperative here.
 3. Cluster fields:
      representativeValueDkh = median(rawValueDkh of VALID members)
      representativeAt       = median(measuredAt of members)
@@ -125,63 +127,59 @@ window.
 
 ## A4 — Independent-cluster selection
 
-**INPUTS** `Measurement[]` within the selected segment (step 0 runs on measurements, and
-emits `TestingEpisode[]`; `MeasurementCluster` is the same-method pool inside a resolved
-episode).
+**INPUTS** `Measurement[]` within the selected segment (step 0 runs on measurements and
+emits `TestingEpisode[]`; a `MeasurementCluster` is the pooled set inside an episode).
 
 **PRECONDITIONS** segment bounds known.
 
-**ALGORITHM** — step 0 first: testing episodes are constructed and resolved *before* any of
-the selection below runs (**owner decisions 17 and 19**; this supersedes the exact-timestamp
-coalescing step Freeze 5 first specified here).
+**ALGORITHM** — step 0 first: testing episodes are constructed *before* any of the selection
+below runs (**owner decisions 27 and 28**; this supersedes both the exact-timestamp
+coalescing step Freeze 5 first specified and the method-split episode of decisions 17–19).
 
 ```text
 STEP 0, before selection      [ALK-TESTING-EPISODE-001, ALK-EPISODE-RESOLUTION-001]
     group measurements into TESTING EPISODES:
-        explicit repeat/confirmation relationship (PII-5.2) where present
-        otherwise the EXISTING 30-minute repeatClusterWindow (PII-5.3, ALK-005)
-        membership is the EPISODE, not an identical timestamp - a three-minute
-        offset does not create two episodes
+        same parameter, within 30 minutes of one another   (the EXISTING window)
+        no method condition, no explicit-relationship requirement:
+            proximity in time is the whole test
+        > 30 minutes apart -> SEPARATE observations, into ordinary trend logic
 
     exclude INVALID measurements (PII-4.3), then per episode:
-        all remaining members same-method (or canon-classified compatible):
-            pool the COMBINED underlying measurements
-            rebuild ONE value from the pool using the existing rules:
-                PII-5.4 representative value   = median(pooled raw readings)
-                PII-5.5 representative timestamp
-                PII-5.6 internal spread, and ALK-005
-            episodeStatus = RESOLVED
-            EPISODE_MEASUREMENTS_POOLED (+ EPISODE_RESOLVED)
-        otherwise:
-            episodeStatus = CONTESTED_METHODS
-            no episode value is emitted; members are preserved and kept distinct
-            ALK-005's 0.20 dKH is NOT applied across incompatible methods
-            EPISODE_CONTESTED_METHODS + EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT
-            RETEST_EPISODE_CONTESTED -> REPEAT_NOW  (ALK-051, PII-48)
+        pool the COMBINED underlying measurements
+        rebuild ONE value from the pool using the existing rules:
+            PII-5.4 representative value   = median(pooled raw readings)
+            PII-5.5 representative timestamp
+            PII-5.6 internal spread, and ALK-005      (no method qualifier)
+        episodeStatus            = RESOLVED
+        combinedMeasurementCount = count of pooled measurements
+        EPISODE_RESOLVED (+ EPISODE_MEASUREMENTS_COMBINED when the count > 1)
+
+        an episode whose every measurement is INVALID yields no observation (PII-4.3)
+        an episode whose pooled spread > 0.20 dKH is ANOMALOUS (ALK-005) and takes
+            PII-48's path - an ordinary, already-frozen outcome
 
     selection then runs over ONE CANDIDATE PER EPISODE, so ordering is total
 
-    compatibleMethodClassification = NOT_RUN   [ALK-REPEAT-SPREAD-DOMAIN-001]
-    crossMethodConcordanceThreshold = NOT_RUN  - no canon rule classifies any two
-        distinct Alk methods as compatible, and no cross-method threshold exists
-
-    NEVER: choose between contested members by event order, ID order, insertion order,
+    NEVER: choose one member of an episode by event order, ID order, insertion order,
     database ordering or implementation sorting - that makes the recommendation a
     property of how the rows were stored.
-    NEVER: average incompatible-method measurements, or average two cluster medians -
-    a same-method episode value is the median of the POOLED raw readings.
-    NEVER: let pooling hide an inconsistency - a SAME-METHOD pool spanning > 0.20 dKH is
-    ANOMALOUS under ALK-005 and takes PII-48's path.
-    NEVER: fall back to an older episode because the latest one is contested.
+    NEVER: average two cluster medians - the episode value is the median of the POOLED
+    raw readings.
+    NEVER: let pooling hide an inconsistency - a pool spanning > 0.20 dKH is ANOMALOUS
+    under ALK-005 and takes PII-48's path.
+    NEVER: record, ask for, infer or store the test method, or branch on it.
 ```
+
+`combinedMeasurementCount` is a **structured field**. The interface renders it plainly
+("3 tests combined"); the engine does not author that sentence.
 
 Then forward-greedy chronological selection (`ALK-INDEPENDENT-SELECTION-001`) over the
 resulting one-per-episode sequence (`ALK-SAME-TIMESTAMP-COALESCE-001`, amended).
 
 ```text
 candidates = resolved episode outputs in the selected segment, ascending by representativeAt
-             (unique times by construction after step 0; a CONTESTED episode supplies
-              no candidate and withholds the affected inference instead)
+             (unique times by construction after step 0; every episode supplies exactly
+              one candidate)
 accepted   = []
 anchor     = null
 
@@ -234,11 +232,14 @@ cluster; any selection whose result depends on the newest reading.
 
 **TESTS** `AD-SEG-001` (same-day tests, forward-greedy result); `AD-SEG-005` (appended
 cluster does not change selection; backdated-earlier case asserted separately);
-`AD-SEG-007` (two same-method clusters at one sampling moment ⇒ pooled, not chosen between);
-`AD-SEG-008` (a same-method pool spanning > 0.20 dKH stays `ANOMALOUS`);
-`AD-EPI-001` (same-method repeats are one episode and one independent observation);
-`AD-EPI-002` (incompatible methods ⇒ `CONTESTED_METHODS`; identical output under a
-three-minute offset and under reversed insertion order);
+`AD-SEG-007` (two clusters at one sampling moment ⇒ pooled, not chosen between);
+`AD-SEG-008` (a pool spanning > 0.20 dKH stays `ANOMALOUS`);
+`AD-EPI-001` (three repeats are one episode, one independent observation, count 3);
+`AD-EPI-002` (two readings that were formerly contested now combine by ordinary logic;
+identical output under a three-minute offset and under reversed insertion order);
+`AD-EPI-005` (5 minutes apart ⇒ one observation, count 2);
+`AD-EPI-006` (45 minutes apart ⇒ two separate observations);
+`AD-EPI-007` (the 30-minute boundary, at and either side of it);
 `EVD-002` all spacings ≥ 24 h proceeds normally.
 
 ## A5 — Segment construction
@@ -1780,8 +1781,14 @@ warn:
     + SAFETY_ADVISORY_CONFIDENCE_WARNING
 
     NOTHING here is WITHHELD, NOT_RUN or zeroed BY THE BOUNDARY. A field may still be
-      NOT_RUN for its OWN reason (unknown D_current, invalid P_selected, contested
-      episode) - that is the ordinary rule speaking, not this one.
+      NOT_RUN for its OWN reason (unknown D_current, invalid P_selected) - that is the
+      ordinary rule speaking, not this one. The contested episode is no longer one of
+      those reasons: owner decision 27 retires it.
+
+    advisoryConfidenceWarning HAS TWO STATES  [owner decision 29]:
+      ATTACHED  - present: the resolved value is at or beyond a boundary
+      NONE      - absent:  it is not, or no reading resolved at all
+      There is no third value. NOT_RUN is RETIRED from this field.
 
     the warning states, all five and none optional:
       the measured value; that the reading is beyond the range the engine is
@@ -1814,11 +1821,15 @@ warn:
     NO EXCEPTION LIST EXISTS, because nothing is withheld for an exception to
       except from. Decision 21's list is retired with the withholding it served.
 
-CONTESTED EPISODE:
-    no value resolves -> there is no value to warn about and no recommendation for a
-      warning to attach to. ALK-EPISODE-RESOLUTION-001's CONTESTED_METHODS /
-      REPEAT_NOW behaviour governs unchanged, with position, outerBoundState and
-      rapidConfirmed NOT_RUN.
+EPISODES  [owner decision 27]:
+    every episode resolves - the application does not know what produced a reading,
+      so two readings inside one episode cannot contest each other. The warning
+      attaches to the combined observation like any other consumer of it.
+    two readings 12 min apart at 10.4 and 12.9 dKH are ONE observation of 11.65 dKH
+      whose spread exceeds 0.20 -> an ordinary ANOMALOUS cluster on PII-48's path.
+      The warning attaches according to where 11.65 falls, like any other value.
+    NO reading resolves at all (every measurement INVALID) -> nothing to warn about
+      -> advisoryConfidenceWarning = NONE (absent), never NOT_RUN.
     the member-wise predicate of decision 21 ("every member at or beyond the
       boundary -> ESCALATE") is RETIRED: it existed to decide whether to WITHHOLD,
       and nothing is withheld any more. Member statuses decide nothing here.
@@ -1876,7 +1887,10 @@ recommendation at every level, because there is a recommendation at every level.
 **REASON CODE** `SAFETY_ADVISORY_CONFIDENCE_WARNING`.
 
 **FAILURE STATE** `outerMin` / `outerMax` unavailable ⇒ the boundary is not computable and
-this check is `NOT_RUN`; the outer-bound machinery is already unavailable in that state.
+**this check does not run**; the outer-bound machinery is already unavailable in that state,
+so there is no classification for a warning to accompany and `advisoryConfidenceWarning` is
+absent (`NONE`). Owner decision 29 leaves the field two-valued: the check not running is a
+statement about the check, not a third value of the field.
 
 **TESTS** `AD-ESC-001` (ceiling: the **same** recommendation immediately below, exactly at
 and above the boundary, with the warning added at and above; two configured bound pairs; a

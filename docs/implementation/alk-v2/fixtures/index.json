@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 69,
+      "count": 72,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -214,7 +214,13 @@
         "AD-ESC-003",
         "AD-REC-001",
         "AD-REC-002",
-        "AD-SAF-010"
+    "AD-SAF-010",
+    "AD-EPI-005",
+    "AD-EPI-006",
+    "AD-EPI-007",
+        "AD-EPI-005",
+        "AD-EPI-006",
+        "AD-EPI-007"
       ]
     },
     {
@@ -247,11 +253,11 @@
     }
   ],
   "totals": {
-    "fixtures": 200,
+    "fixtures": 203,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 69,
+    "CANON_DERIVED": 72,
     "CANON_QUALITATIVE": 29,
     "CANON_VERBATIM": 102
   },
@@ -435,6 +441,9 @@
     "AD-REC-001",
     "AD-REC-002",
     "AD-SAF-010",
+    "AD-EPI-005",
+    "AD-EPI-006",
+    "AD-EPI-007",
     "INV-CANON-001",
     "INV-CORE-ADVISORY-001",
     "INV-NONADHERENCE-001",
@@ -486,7 +495,10 @@
       "AD-MNT-008"
     ],
     "OI-BRANCHAREFUSAL-001": [
-      "AD-SAF-010"
+      "AD-SAF-010",
+    "AD-EPI-005",
+    "AD-EPI-006",
+    "AD-EPI-007"
     ],
     "OI-CLUSTERTIE-001": [
       "AD-SEG-007",

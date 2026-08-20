@@ -75,28 +75,32 @@ package and the canon appear to disagree, the canon governs and this package is 
 | `ALK-V2-MODULE-DESIGN.md` | Pure-domain module structure, dependency direction, purity classification. |
 | `ALK-V2-ADVERSARIAL-REVIEW.md` | Three independent review passes (canon / breaker / implementer). |
 | `ALK-V2-OPEN-ISSUES.md` | Classified defects, owner decisions required, pinned conventions. |
-| `validate-freeze-5.py` | Mechanical gate: 192 check sites emitting 339 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
+| `validate-freeze-5.py` | Mechanical gate: 427 PASS/FAIL lines over rule IDs, the canon coverage manifest, traceability, fixtures, reason codes, invariants, canon consistency, and independent arithmetic recomputation of every series fixture. Run `python3 docs/implementation/alk-v2/validate-freeze-5.py`. |
 | `recompute-goldens.py` | **Recorder, not a gate.** Independently recomputes every fixture-stated derived value from its declared inputs and writes a machine-readable record, so "no arithmetic moved" is a checkable claim rather than an assertion. `--diff <record>` reports every golden that moved against a stored baseline. |
 | `baselines/*.json` | Golden baseline records. `golden-baseline-65c6030.json` is the state before owner decisions 20-22; `golden-post-decisions-20-22.json` is the state after. |
-| `fixtures/*.json` | Machine-readable golden corpus — 196 fixtures plus schema, config defaults and index. |
+| `fixtures/*.json` | Machine-readable golden corpus — 203 fixtures plus schema, config defaults and index. |
 | `traceability/alk-v2-traceability.json` | Machine-readable copy of the 283-rule traceability inventory. |
 
 ## At a glance
 
 ```text
 283  normative canon rules inventoried, each with exactly one implementation owner
-196  fixtures  (102 canon-verbatim, 65 canon-derived, 29 canon-qualitative)
-248  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 by owner decisions
-                  16-19, 1 by owner decision 20, 4 by owner decisions 23-24)
- 74  machine-testable invariants
- 52  open issues  (16 resolved by Freeze 5 and its amendments, 12 by owner decisions 16-26,
+203  fixtures  (102 canon-verbatim, 72 canon-derived, 29 canon-qualitative)
+242  reason codes across 24 owner groups  (18 retired by Freeze 5, 3 by owner decisions
+                  16-19, 1 by owner decision 20, 4 by owner decisions 23-24,
+                  7 by owner decisions 27-28)
+ 76  machine-testable invariants
+ 59  open issues  (16 resolved by Freeze 5 and its amendments, 15 by owner decisions 16-29,
                   1 reclassified INAPPLICABLE by decision 23, 11 canon defects carried
                   forward, 13 pinned, 3 no-problem,
-                  2 DELIBERATELY LEFT OPEN: OI-SIZINGFLAT-001, OI-CZERODISCONT-001)
+                  2 DELIBERATELY LEFT OPEN: OI-SIZINGFLAT-001, OI-CZERODISCONT-001,
+                  6 opened by decisions 27-28 and left open: OI-EPISODEINTERVENTION-001,
+                  OI-EPISODEWINDOW-001, OI-EPISODEANCHOR-001, OI-EPISODESUSPECT-001,
+                  OI-ANOMLATESTSAFETY-001, OI-PII53METHOD-001)
   0  outputs withheld pending an owner decision
   0  rules without a fixture
   0  rules with more than one owner
-348 -> 430  derived values recomputed from declared inputs; 0 moved across decisions 20-26
+348 -> 489  derived values recomputed from declared inputs; 0 moved across decisions 20-29
 ```
 
 ---

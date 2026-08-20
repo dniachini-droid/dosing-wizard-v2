@@ -5492,6 +5492,25 @@ the ordinary recommendation is produced by the ORDINARY RULES, unchanged
     + reason = SAFETY_ADVISORY_CONFIDENCE_WARNING
 ```
 
+**The field has exactly two states (owner decision 29).** The warning is present or it is
+absent; there is no third value:
+
+```text
+advisoryConfidenceWarning = ATTACHED   # present: the resolved value is at or beyond a boundary
+advisoryConfidenceWarning = NONE       # absent:  it is not
+```
+
+Where **no reading resolves at all** — no valid measurement exists, so there is no
+observation and no recommendation — there is nothing to warn about, and the field is
+**absent**, which is `NONE`. It is not a third state, and it is not `NOT_RUN`: a field that
+is absent because there is nothing to describe is simply absent.
+
+**Superseded, preserved:** the field was previously `NONE | ATTACHED | NOT_RUN`, with
+`NOT_RUN` documented only as "where no episode value resolves". `OI-ADVISORYWARNSTATE-001`
+recorded that its trigger set was never stated in the rule that owns the field. Owner
+decision 29 removes the value rather than specifying it, and owner decision 27 removes the
+contested case that was its only documented trigger.
+
 The engine **continues to advise**. It does **not** withhold, does **not** emit zero, and
 does **not** escalate in place of advising. Whatever the ordinary rules would have
 recommended one increment below the boundary, they recommend at it and above it, by the same
@@ -5530,14 +5549,23 @@ The warning adds no candidate to the scheduler and computes no next-test time; w
 scheduler's answer is the ~24 h high-breach cadence, the warning says ~24 h, and where a
 repeat rule already produced `REPEAT_NOW`, the warning says now.
 
-**Contested episodes.** The warning attaches to the resolved episode value like any other
-consumer of it. Where the episode is **contested** and no value resolves, there is no value
-to warn about and no recommendation to attach a warning to; `ALK-EPISODE-RESOLUTION-001`'s
-contested handling governs unchanged — `position`, `outerBoundState` and `rapidConfirmed`
-`NOT_RUN`, and `REPEAT_NOW`. **The member-wise predicate of decision 21 is retired with the
-withholding it served**: because advice is no longer withheld at the boundary, a contested
-episode's member statuses no longer determine whether advice is withheld, and
-`ALK-EPISODE-SINGLE-OUTPUT-001` needs no exception.
+**Episodes.** The warning attaches to the resolved episode value like any other consumer of
+it, and under **owner decision 27** every episode resolves: the application does not know
+what produced a reading, so two readings inside one episode cannot contest each other. Two
+readings 12 minutes apart at 10.4 and 12.9 dKH are one observation of 11.65 dKH with a
+0.20-exceeding spread — an ordinary `ANOMALOUS` cluster on Part II §48's path — and the
+warning attaches or does not attach according to where 11.65 falls, like any other value.
+
+**The member-wise predicate of decision 21 is retired with the withholding it served**:
+because advice is no longer withheld at the boundary, an episode's member statuses do not
+determine whether advice is withheld, and `ALK-EPISODE-SINGLE-OUTPUT-001` needs no
+exception.
+
+**Superseded, preserved:** this paragraph previously read *"Where the episode is contested
+and no value resolves, there is no value to warn about and no recommendation to attach a
+warning to; `ALK-EPISODE-RESOLUTION-001`'s contested handling governs unchanged —
+`position`, `outerBoundState` and `rapidConfirmed` `NOT_RUN`, and `REPEAT_NOW`."* Owner
+decision 27 retires the contested state, so that branch is unreachable.
 
 **Scope, stated so it is not over-read.** Decision 21 narrowed the open finding that safety
 sizing is flat above the rail by bounding the region the sizing rule governed. **Decision 24
@@ -6167,6 +6195,11 @@ max(A_i)-min(A_i) > 0.20\ dKH
 
 unless a known testing method justifies another value.
 
+**Inoperative under owner decision 27**, and preserved above rather than deleted: the
+application does not record, ask for, infer or store the test method that produced a
+reading, so "a known testing method" is never available and the clause can never fire. The
+0.20 dKH threshold applies to every repeat cluster, with no exception route.
+
 Reason:
 0.20 dKH is twice the shared Alk analytical uncertainty floor and is large enough that choosing one of the repeats could materially change a dose calculation.
 
@@ -6176,36 +6209,39 @@ This threshold is an engineering judgement, not a biological safety limit.
 
 `ALK-REPEAT-SPREAD-DOMAIN-001`
 
-**Owner decision 18.** The `0.20 dKH` threshold above is a **repeat** threshold. It applies
-to measurements from:
+**Owner decision 27 supersedes owner decision 18 here.** The `0.20 dKH` threshold above is
+a **repeat** threshold, and it applies to repeat measurements **as such**, with no method
+qualifier of any kind.
 
-- the **same** test method; or
-- methods **explicitly classified by canon as compatible**.
+**The application does not know what produced a reading.** It does not record, ask for,
+infer or store the test method, kit, device or instrument behind any measurement, so it has
+no basis on which to say that two readings came from one kit or from two different ones. A
+reading is a reading.
 
-It does **not** establish a cross-method disagreement threshold, and it may not be applied
-across incompatible methods. Its stated justification — twice the shared Alk analytical
-uncertainty floor — is a statement about analytical repeatability, which is not what
-disagreement between two different methods measures.
-
-```text
-crossMethodConcordanceThreshold = NOT_RUN
-reason = VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED
-```
-
-No cross-method numerical concordance threshold is invented here. Where incompatible
-methods coexist, `ALK-EPISODE-RESOLUTION-001` below governs, and it resolves the situation
-by withholding rather than by comparing.
-
-Method compatibility is itself a canon classification:
+Everything decision 18 settled about this threshold stands unchanged: the value is
+`0.20 dKH`, the comparison is strictly greater-than, and it is performed on exact decimals
+under `ALK-DECIMAL-THRESHOLD-001`. Only the domain qualifier is removed, and with it the two
+deferred placeholders — they are **retired**, not still pending:
 
 ```text
-compatibleMethodClassification = NOT_RUN
+crossMethodConcordanceThreshold  = RETIRED   # decision 27; there is no cross-method case
+compatibleMethodClassification   = RETIRED   # decision 27; method is never known
 ```
 
-**No canon rule currently classifies any two distinct Alk test methods as compatible.**
-Until such a classification is frozen, only same-method measurements group. This is a
-canonised state, not an undefined one, and it follows the same pattern as
-`ALK-SUSPECT-DETECTION-001`: the missing item is named and deferred rather than guessed.
+There is nothing left to canonise later. A future freeze that wanted method-aware behaviour
+would first have to decide that the application records the method at all, which is the
+constraint decision 27 sets.
+
+**Superseded wording, preserved:** decision 18 confined the threshold to *"the **same** test
+method; or methods **explicitly classified by canon as compatible**"*, declined to establish
+a cross-method disagreement threshold, and left `crossMethodConcordanceThreshold = NOT_RUN`
+and `compatibleMethodClassification = NOT_RUN` as canonised deferrals with
+`VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED` as their reason code. None of that is
+reachable: it presumed the engine could tell one method from another.
+
+**No guidance, warning or prompt about method differences is added anywhere.** That a
+0.20 dKH disagreement between two kits may be the kits rather than the tank is the keeper's
+knowledge, not the engine's, and the engine does not comment on it.
 
 ---
 
@@ -6213,41 +6249,77 @@ canonised state, not an undefined one, and it follows the same pattern as
 
 `ALK-TESTING-EPISODE-001`
 
-**Owner decision 17.** An Alk **testing episode** is the set of Alk measurements intended to
-represent the **same real-world sampling moment**.
+**Owner decision 28 supersedes owner decision 17 here.** An Alk **testing episode** is the
+set of Alk measurements of the same parameter taken **within 30 minutes of one another**.
 
-Membership uses what the canon already has, and introduces **no new time constant**:
-
-1. **explicit repeat/confirmation relationships** where present (Part II §5.2); otherwise
-2. the existing canonical **30-minute `repeatClusterWindow`** (Part II §5.3, `ALK-005`).
-
-**The semantic concept is SAME TESTING EPISODE, not exact timestamp equality.** Two
-measurements three minutes apart inside the window are one episode; two measurements
-sharing an identical representative timestamp are also one episode. This **supersedes** the
-exact-timestamp-only scope of `ALK-SAME-TIMESTAMP-COALESCE-001`, which is amended below and
-now states the selection-side consequence only.
-
-Within one episode:
-
-1. **same-method** measurements — and measurements from methods canon has explicitly
-   classified as compatible, of which there are currently none
-   (`ALK-REPEAT-SPREAD-DOMAIN-001`) — form the normal repeat cluster under the existing
-   representative-value rules, Part II §5.4–§5.6 and `ALK-005`;
-2. **incompatible-method measurements must not be averaged, pooled or coalesced into one
-   numerical value** merely because their timestamps match or fall inside the episode
-   window;
-3. incompatible-method measurements remain **distinct evidence within the same episode**.
-   They are not separate episodes, and they are not one value;
-4. an episode that cannot produce one defensible resolved Alk value is **contested**, and
-   `ALK-EPISODE-RESOLUTION-001` governs it.
+**Proximity in time is the whole test.** There is no method qualifier and no explicit
+repeat-relationship requirement:
 
 ```text
-reason = EPISODE_MEASUREMENTS_POOLED        # same-method pool inside one episode
-reason = EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT
+within 30 minutes of one another  ->  repeats of a single test, one observation
+more than 30 minutes apart        ->  separate observations
 ```
 
-Episode construction runs on **measurements**, before clusters are consumed by anything
-downstream. It never deletes, hides, invalidates or down-weights a measurement.
+The 30-minute window is the one `ALK-005` and Part II §5.3 already use. **No new time
+constant is introduced**, and the window is unchanged in value. The comparison is
+**inclusive at exactly 30 minutes**, which is what `ALK-V2-ALGORITHM-CONTRACT.md` A3 has
+specified as `<= 30 minutes` since the package was written; decision 28 changes the window's
+role, not its value or its inclusivity.
+
+Part II §5.3's remaining grouping condition — **no relevant intervention between them** — is
+**untouched** by this decision and continues to apply: a dose change, correction, water
+change or delivery anomaly between two measurements separates them however close together
+they are. Decision 28 removes the method and explicit-relationship conditions and says
+nothing about that one. Whether "no exceptions" was meant to reach it as well is recorded as
+open (`OI-EPISODEINTERVENTION-001`) rather than decided here.
+
+Two further questions this rule does **not** answer, both recorded open rather than settled:
+whether the window is measured pairwise between consecutive measurements or from the first
+measurement of an episode (`OI-EPISODEANCHOR-001`), and what happens to a measurement with
+**no time of day at all** — a date-only legacy reading, which a purely temporal membership
+test cannot place (`OI-EPISODEDATEONLY-001`). Part II §5.2's *"explicit grouping wins"* is
+shared canon and is not edited here; its interaction with a time-only membership test is
+`OI-PII52EXPLICIT-001`.
+
+Measurements inside one episode are **combined into one observation** using the existing
+canonical representative-value rules — Part II §5.4 representative value, §5.5
+representative timestamp, §5.6 internal spread, and `ALK-005`'s spread rule. That single
+observation is what **every** downstream consumer sees
+(`ALK-EPISODE-SINGLE-OUTPUT-001`).
+
+### The combined count is part of the output
+
+The resolved observation states how many measurements were combined:
+
+```text
+combinedMeasurementCount = <integer >= 1>
+reason                   = EPISODE_MEASUREMENTS_COMBINED    # when the count is > 1
+```
+
+This is a **structured field, not prose**. The interface renders it plainly — "3 tests
+combined" — and the engine does not author that sentence. A single measurement is an
+episode of one and carries `combinedMeasurementCount = 1`.
+
+Measurements more than 30 minutes apart are **separate observations** and enter ordinary
+trend logic as such. Whether two separate observations are far enough apart to count as
+distinct longitudinal points is a different question entirely, owned by `ALK-008`'s
+24-hour independence rule, which decision 28 leaves **unchanged**. Episode resolution asks
+*can these measurements give one defensible observation*; trend independence asks *does this
+observation count as a separate point in time*. The two must stay distinct.
+
+Episode construction runs on **measurements**, before anything downstream consumes them. It
+never deletes, hides, invalidates or down-weights a measurement.
+
+**Superseded wording, preserved:** decision 17 made membership *"explicit repeat/confirmation
+relationships where present (Part II §5.2); otherwise the existing canonical 30-minute
+repeatClusterWindow"*, and then split the members of an episode by method — same-method
+measurements pooled, *"incompatible-method measurements must not be averaged, pooled or
+coalesced into one numerical value"* and *"remain distinct evidence within the same
+episode"*, with an episode that could not produce one defensible value declared
+**contested**. Reason codes `EPISODE_MEASUREMENTS_POOLED` and
+`EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT` carried those states. Owner decision 27 removes
+the method distinction the split depended on, and decision 28 removes the explicit-
+relationship condition; the 30-minute window is the part that survives.
 
 ---
 
@@ -6255,52 +6327,44 @@ downstream. It never deletes, hides, invalidates or down-weights a measurement.
 
 `ALK-EPISODE-RESOLUTION-001`
 
-**Owner decisions 17 and 18.** After the existing validity and status rules have been
-applied — `INVALID` measurements are excluded from analysis under Part II §4.3, and are
-excluded here too — an episode is:
+**Owner decision 27 supersedes owner decisions 17 and 18 here. There is no contested
+state.** An episode cannot be contested on method grounds, because method is not known
+(`ALK-REPEAT-SPREAD-DOMAIN-001`).
+
+After the existing validity and status rules have been applied — `INVALID` measurements are
+excluded from analysis under Part II §4.3, and are excluded here too — every episode holding
+at least one remaining measurement is:
 
 ```text
-episodeStatus = RESOLVED
+episodeStatus            = RESOLVED
+reason                   = EPISODE_RESOLVED
+combinedMeasurementCount = <count of the measurements combined>
 ```
 
-when every remaining measurement in it is same-method, or belongs to a canon-classified
-compatible set. The episode then emits one canonical value and time under Part II §5.4 and
-§5.5, with spread and status under Part II §5.6 and `ALK-005`. A resolved episode may still
-be `ANOMALOUS` on its own same-method spread; that path is unchanged.
+The episode emits one canonical value and time under Part II §5.4 and §5.5, with spread and
+status under Part II §5.6 and `ALK-005`. **Ordinary logic applies throughout.** Two states
+that decision 27 does **not** disturb:
 
-Otherwise:
+- a resolved episode may still be `ANOMALOUS` on its own spread — a spread above 0.20 dKH
+  takes Part II §48's path exactly as it always has. Two readings 0.30 dKH apart inside one
+  episode are an anomalous cluster, which is an ordinary, already-frozen outcome, and not a
+  contested episode;
+- an episode whose every measurement is `INVALID` holds nothing to analyse and produces no
+  observation. That follows from Part II §4.3 and needs no episode-specific rule.
 
-```text
-episodeStatus = RESOLVED            -> reason = EPISODE_RESOLVED
-episodeStatus = CONTESTED_METHODS   -> reason = EPISODE_CONTESTED_METHODS
-```
+Nothing is discarded, marked invalid or hidden, and no value is ever chosen by event order,
+ID order, insertion order, database order or arbitrary sorting. Those prohibitions are
+unchanged and remain load-bearing: they now bind the *pooling* of an episode's measurements
+rather than a choice between them.
 
-On a contested episode, all of the following hold together:
-
-- **preserve the individual measurements.** Nothing is discarded, marked invalid or hidden;
-- **do not average** the incompatible-method measurements into one episode value;
-- **do not apply `ALK-005`'s 0.20 dKH threshold** across them
-  (`ALK-REPEAT-SPREAD-DOMAIN-001`);
-- **do not choose a governing value** by event order, ID order, insertion order, database
-  order or arbitrary sorting. No such choice is admissible, and an implementation that
-  makes one is defective however stable its own ordering happens to be;
-- **withhold the affected automatic inference** rather than manufacturing a value;
-- **request resolution through the existing anomaly/retest machinery** — `ALK-051` and
-  Part II §48 already own this, and the immediate-repeat candidate of
-  `ALK-RETEST-SCHEDULER-001` carries it:
-
-```text
-retest = REPEAT_NOW
-reason = RETEST_EPISODE_CONTESTED
-```
-
-- **do not silently fall back to an older Alk episode** as though the latest evidence did
-  not exist. Part II §48's "do not silently exclude it and act on older data as though it
-  did not exist" governs unchanged.
-
-Resolution is by **confirmation**, not by arithmetic: a further measurement, an explicit
-user resolution, or an existing validity rule that removes one of the competing
-measurements. No numeric tie-break exists, and none is created here.
+**Superseded wording, preserved:** decisions 17 and 18 declared
+`episodeStatus = CONTESTED_METHODS` where an episode's remaining measurements were not all
+same-method, and on that state required *"do not average the incompatible-method
+measurements into one episode value"*, *"do not apply `ALK-005`'s 0.20 dKH threshold across
+them"*, *"withhold the affected automatic inference"*, `retest = REPEAT_NOW` with
+`RETEST_EPISODE_CONTESTED`, and *"do not silently fall back to an older Alk episode"* —
+adding that *"resolution is by confirmation, not by arithmetic"*. The whole branch is
+retired: it existed only to handle a distinction the engine cannot make.
 
 ---
 
@@ -6354,34 +6418,20 @@ governs unchanged, with `position`, `outerBoundState` and `rapidConfirmed` `NOT_
 > exception, and `position`, `outerBoundState` and `rapidConfirmed` remain `NOT_RUN` on a
 > contested episode whether or not escalation applies."
 
-**For a RESOLVED episode** — emit one canonical episode value and time for downstream use.
+Every episode emits one canonical episode value and time for downstream use, together with
+its `combinedMeasurementCount`. **Ordinary logic applies to it** — position, outer-bound
+classification, `SAFETY_RETURN` triggering, rapid detection, selection, trajectory,
+consumption, forecast and maintenance all read that one observation and proceed exactly as
+they would for any single reading.
 
-**For a CONTESTED or otherwise unresolved latest episode:**
-
-- do **not** manufacture a representative Alk value;
-- do **not** select whichever measurement happens to sort first or last;
-- do **not** silently discard the latest episode and act on older evidence;
-- **withhold the affected automatic inference** and invoke the existing resolving/retest
-  behaviour, **unless an already-authoritative safety rule explicitly governs the
-  unresolved state**.
-
-```text
-position         = NOT_RUN
-outerBoundState  = NOT_RUN
-reason           = EPISODE_POSITION_WITHHELD
-retest           = REPEAT_NOW
-```
-
-**Recorded exposure, not an invention.** No current Alk rule governs outer-bound
-classification from a contested episode: `ALK-003A` requires "the latest **valid** Alk", and
-a contested episode has not produced one. So where a contested latest episode straddles an
-outer bound — one method above it, one below — the classification is withheld and an
-immediate repeat is requested, and no `SAFETY_RETURN` is triggered from that episode until
-it resolves. The alternative would be a worst-case-member rule, which no canon states and
-which is **not** created here. This exposure is named deliberately, as
-`ALK-SUSPECT-DETECTION-001`'s residual is, so that it is visible rather than implied.
-
-The older episode is not promoted in its place, and the contested episode is surfaced.
+**Superseded wording, preserved:** decision 19 carried a second branch, *"For a CONTESTED or
+otherwise unresolved latest episode"*, which set `position = NOT_RUN`,
+`outerBoundState = NOT_RUN`, `reason = EPISODE_POSITION_WITHHELD` and `retest = REPEAT_NOW`,
+withheld the affected inference, and recorded as a deliberate exposure that *"no
+`SAFETY_RETURN` is triggered from that episode until it resolves"*. Owner decision 27
+retires the contested state, so that branch, its withheld outputs and its recorded exposure
+all go with it. An episode straddling an outer bound is now simply an episode whose combined
+observation is on one side of the bound, classified in the ordinary way.
 
 ### Episode resolution is not independent-trend selection
 
@@ -6684,10 +6734,12 @@ time, including measurements from incompatible methods. Both of those are supers
 - membership is now the **testing episode** of `ALK-TESTING-EPISODE-001` — explicit repeat
   relationships, otherwise the existing 30-minute window — not exact timestamp equality. A
   three-minute offset no longer reopens the problem this rule was written to close;
-- **incompatible-method measurements inside one episode are no longer pooled into one
-  value.** `ALK-EPISODE-RESOLUTION-001` contests the episode instead, and
-  `ALK-REPEAT-SPREAD-DOMAIN-001` withholds `ALK-005`'s 0.20 dKH threshold from that
-  comparison.
+- **pooling is no longer keyed on the cluster's method.** Owner decision 27 retires the
+  method distinction entirely: the application does not know what produced a reading, so
+  every measurement inside an episode pools, and `ALK-005`'s 0.20 dKH threshold applies to
+  the pooled readings without qualification. Decision 17's intermediate position is
+  **superseded by owner decision 27**: it pooled by method and contested the episode
+  otherwise, and neither half survives.
 
 The superseded mechanics are preserved here rather than deleted:
 
@@ -6701,21 +6753,20 @@ substance:
 
 1. independent-cluster selection operates over **resolved testing-episode outputs**, one
    value and one time per episode (`ALK-EPISODE-SINGLE-OUTPUT-001`);
-2. a **contested** episode emits no value, so it supplies no candidate to selection, and
-   the affected automatic inference is withheld under `ALK-EPISODE-RESOLUTION-001` rather
-   than computed from one arbitrarily chosen member;
+2. every episode supplies exactly one candidate, so the count of candidates is a property
+   of the measurement times and of nothing else;
 3. selection must therefore **never depend on arbitrary event order, ID order, insertion
    order, database ordering or implementation sorting.** Any of those would make the
    recommendation a property of how the rows happened to be stored.
 
-Pooling within a **same-method** episode is retained exactly as it was: the episode value is
-the median of the **pooled raw readings**, not the mean of two cluster medians; the spread
-is measured over the pooled readings, so `ALK-005` applies and a same-method pool spanning
-more than 0.20 dKH becomes `ANOMALOUS` and takes Part II §48's path. **Pooling never
-launders an internally inconsistent same-method set into a clean one.**
+Pooling within an episode is retained exactly as it was: the episode value is the median of
+the **pooled raw readings**, not the mean of two cluster medians; the spread is measured over
+the pooled readings, so `ALK-005` applies and a pool spanning more than 0.20 dKH becomes
+`ANOMALOUS` and takes Part II §48's path. **Pooling never launders an internally inconsistent
+set into a clean one.**
 
 ```text
-reason = EPISODE_MEASUREMENTS_POOLED
+reason = EPISODE_MEASUREMENTS_COMBINED
 ```
 
 Selection then proceeds over one candidate per episode, so the ordering in step 1 of the
@@ -6786,22 +6837,19 @@ This retains one of the strongest corrections made late in V1.
 
 ### Position reads the resolved episode
 
-**Owner decision 19.** "The latest valid measured cluster value" is the value of the
-**latest resolved testing episode** (`ALK-EPISODE-SINGLE-OUTPUT-001`). Position is a
-consumer of episode resolution, not an independent chooser among the measurements inside
-one episode.
+**Owner decision 19, amended by owner decision 27.** "The latest valid measured cluster
+value" is the value of the **latest testing episode** — the one observation its measurements
+combine to under `ALK-TESTING-EPISODE-001`. Position is a consumer of episode resolution,
+not an independent chooser among the measurements inside one episode, and it is never taken
+from whichever measurement sorts first or last.
 
-Where the latest episode is `CONTESTED_METHODS`:
+Every episode resolves, so position is always available where a valid measurement exists.
 
-```text
-position        = NOT_RUN
-outerBoundState = NOT_RUN
-reason          = EPISODE_POSITION_WITHHELD
-retest          = REPEAT_NOW
-```
-
-Position is **not** taken from whichever competing measurement sorts first or last, and the
-previous resolved episode is **not** silently promoted in its place.
+**Superseded wording, preserved:** decision 19 added a branch for a `CONTESTED_METHODS`
+latest episode setting `position = NOT_RUN`, `outerBoundState = NOT_RUN`,
+`reason = EPISODE_POSITION_WITHHELD` and `retest = REPEAT_NOW`, with the previous episode not
+promoted in its place. Owner decision 27 retires the contested state, so the branch is
+unreachable and is removed.
 
 **V1 disposition:** KEEP.
 
@@ -7201,22 +7249,19 @@ is at least 24 hours before it. This is exactly what this rule's own requirement
 times" — stated explicitly so it is not re-derived differently by two implementations.
 
 The pair is drawn from **resolved testing-episode outputs** — candidate episodes, whether
-or not they were accepted under `ALK-INDEPENDENT-SELECTION-001` (**owner decision 19**). A
-`CONTESTED_METHODS` episode emits no value, so it supplies no member of the pair and the
-competing measurements inside it are never compared against the 0.30 dKH/day threshold
-individually. Where the **latest** candidate episode is contested it is a member of the pair
-by definition, so the determination is **withheld**, not recomputed from an older pair:
+or not they were accepted under `ALK-INDEPENDENT-SELECTION-001` (**owner decision 19**).
+Every episode resolves (**owner decision 27**), so every candidate episode supplies exactly
+one value and the individual measurements inside an episode are never compared against the
+0.30 dKH/day threshold on their own.
 
-```text
-rapidConfirmed = NOT_RUN
-reason         = EVIDENCE_WITHHELD_CONTESTED_EPISODE
-```
+**Superseded wording, preserved:** decision 19 added a branch for a `CONTESTED_METHODS`
+episode, which emitted no value and supplied no member of the pair; where the *latest*
+candidate episode was contested the determination was withheld —
+`rapidConfirmed = NOT_RUN`, `reason = EVIDENCE_WITHHELD_CONTESTED_EPISODE` — rather than
+recomputed from an older pair. Owner decision 27 retires the contested state, so that branch
+is unreachable and is removed.
 
-`ALK-EPISODE-SINGLE-OUTPUT-001` requires exactly this — withhold the affected inference, and
-do not silently discard the latest episode and act on older evidence. Reading the exclusion
-as "drop it and pair the two resolved episodes below it" is that forbidden fallback and is
-not permitted. What the pair is *not*
-restricted to is the **accepted** set: it is drawn from candidate episodes, not only from
+What the pair is *not* restricted to is the **accepted** set: it is drawn from candidate episodes, not only from
 those accepted under `ALK-INDEPENDENT-SELECTION-001`. `ALK-008` grants a cluster that is not accepted for
 ordinary trend the right to "contribute to a rapid-change rule", and that grant is
 unchanged. Restricting the pair to accepted clusters would revoke it and would exclude the
@@ -9472,8 +9517,9 @@ The scheduler should preserve the understandable ~48-hour human rhythm rather th
 
 There is **one** Alk retest scheduler. `ALK-050`, `ALK-051`, `ALK-052`, `ALK-053`,
 `ALK-HIGH-BREACH-UNRESOLVED-001`, `ALK-RETURN-EXPIRY-001`,
-`ALK-SAFETY-RETURN-INTEGRATION-001` §9 and `ALK-EPISODE-RESOLUTION-001` submit candidates to
-it. No card, surface or other
+`ALK-SAFETY-RETURN-INTEGRATION-001` §9 submit candidates to it. `ALK-EPISODE-RESOLUTION-001`
+was briefly a submitter, for the contested-episode `REPEAT_NOW` that owner decision 27
+retires; it no longer submits anything. No card, surface or other
 rule may compute a next-test time (`X-INV-004`, Part II §50). This rule states the
 alkalinity parameterisation of Part II §51–§54 and §66, so the single scheduler is
 deterministic.
@@ -9483,7 +9529,7 @@ deterministic.
 | Part II candidate class | Alk parameterisation | Source |
 |---|---|---|
 | routine cadence | 48 h | `ALK-050` |
-| immediate repeat | now | `ALK-051`, driven by `ALK-SUSPECT-DETECTION-001`'s three sources, and by `ALK-EPISODE-RESOLUTION-001`'s contested episode (owner decisions 17 and 19) |
+| immediate repeat | now | `ALK-051`, driven by `ALK-SUSPECT-DETECTION-001`'s three sources |
 | rapid movement | ~24 h, or earlier where outer-bound risk requires it | `ALK-052` |
 | after a maintenance change | first useful response test ~48 h; normally a second around Day 4 | `ALK-053`, `ALK-POSTCHANGE-RETEST-001` |
 | safety return active | ~24 h | `ALK-SAFETY-RETURN-INTEGRATION-001` §9 |
@@ -16946,6 +16992,9 @@ does not redesign the Alk controller and changes no already-determined numeric r
 | **24** the advisory boundary is a warning, not a refusal | `ALK-ADVISORY-RANGE-BOUNDARY-001` rewritten; `ALK-EPISODE-SINGLE-OUTPUT-001`, `ALK-031`, `ALK-HIGH-BREACH-SAFETY-SIZING-001` amended | `OI-ADVISORYEXCEPTION-001`, `OI-ADVISORYRETURN-001`, `OI-ADVISORYMEMBERS-001`; `OI-SIZINGFLAT-001` **stays open and is no longer narrowed** |
 | **25** branch A refuses on an unknown `D_current` | `ALK-DELIVERY-RATE-BASIS-001` amended (pre-branch precondition); `ALK-HIGH-BREACH-SAFETY-SIZING-001` amended | `OI-BRANCHAREFUSAL-001` |
 | **26** one retest answer | `ALK-ADVISORY-RANGE-BOUNDARY-001` amended; `ALK-RETEST-SCHEDULER-001` confirmed sole authority | `OI-ADVISORYRETEST-001` |
+| **27** the application does not know the test method | `ALK-REPEAT-SPREAD-DOMAIN-001` rewritten; `ALK-TESTING-EPISODE-001`, `ALK-EPISODE-RESOLUTION-001`, `ALK-EPISODE-SINGLE-OUTPUT-001`, `ALK-010`, `ALK-RAPID-BASIS-001`, `ALK-SAME-TIMESTAMP-COALESCE-001`, `ALK-RETEST-SCHEDULER-001`, `ALK-ADVISORY-RANGE-BOUNDARY-001` and `ALK-005`'s method escape clause amended | `OI-METHODUNKNOWN-001` |
+| **28** repeats are measurements within 30 minutes, and the count is stated | `ALK-TESTING-EPISODE-001` rewritten | `OI-EPISODEMEMBERSHIP-001` |
+| **29** the advisory warning field has two states | `ALK-ADVISORY-RANGE-BOUNDARY-001` amended | `OI-ADVISORYWARNSTATE-001` |
 
 All eleven blocking items are closed, and so are the three items independent review of the
 first encoding opened. Every withheld output they gated now has a determined value or a
@@ -17005,6 +17054,10 @@ rather than resolved by derivation, and each was then decided by the owner as F5
 and F5-15. The register items they opened — `OI-HIGHBREACHBAND-001`, `OI-CLUSTERTIE-001`
 and `OI-RETESTFLOOR-001` — are closed by those amendments.
 
+Owner decision 27 retires the contested-episode state, so **no Alk output is withheld
+anywhere in this freeze because two readings disagree.** The paragraph below is the
+pre-decision-27 statement and is preserved for history.
+
 Nothing in F5-01 … F5-15 withholds an output for want of an owner decision. Decisions 17–19
 do withhold `position`, `outerBoundState` and `rapidConfirmed` on a contested episode — that
 is the decided behaviour, and the items it depends on that remain open are named under
@@ -17040,7 +17093,7 @@ D_current           = doser configuration   # not a constant
 D_history           = interval-mean rate    # renamed from the bare D of ALK-022 by
                                             # decision 20; not a constant
 30 min episode window = ALK-005 / Part II §5.3   # decision 17 membership
-0.20 dKH spread     = ALK-005       # decision 18, same-method domain only
+0.20 dKH spread     = ALK-005       # decision 18; decision 27 removes the domain qualifier
 ```
 
 Decision 18 explicitly **forbids** an epsilon for the decimal comparison, and forbids a
@@ -17116,15 +17169,29 @@ Freeze 5 is bounded. These remain open and are **not** decided here:
 - minimum post-change exposure (`OI-EXPOSURE-001`);
 - `ALK-037`'s Day-4 wording (`OI-DAY4-001`) and `ALK-012`'s illustrative examples
   (`OI-STABLE-001`), both documentation defects whose normative text already governs;
-- **method compatibility classification** — which Alk test methods, if any, are compatible
-  (`compatibleMethodClassification = NOT_RUN`, `ALK-REPEAT-SPREAD-DOMAIN-001`);
-- **cross-method concordance** — any numeric threshold for disagreement between
-  incompatible methods (`crossMethodConcordanceThreshold = NOT_RUN`);
+- ~~**method compatibility classification** and **cross-method concordance**~~ — both were
+  canonised `NOT_RUN` deferrals at decision 18 and are **retired** by owner decision 27, not
+  still open: the application never knows the method, so neither has a question left to
+  answer;
 - **a ceiling for the \(1.28\sigma_S\) maintenance-classification band** — decision 16
   removes it from safety sizing and deliberately leaves its width uncapped;
-- **outer-bound classification from a contested episode** — no worst-case-member rule is
-  created; the classification is withheld and an immediate repeat requested
-  (`ALK-EPISODE-SINGLE-OUTPUT-001`);
+- ~~**outer-bound classification from a contested episode**~~ — retired by owner decision 27
+  with the contested state itself; an episode's combined observation is classified in the
+  ordinary way;
+- **Part II §5.3's method-conditional grouping wording**, which is shared canon under
+  `SHARED_V2_FREEZE_2` and is inoperative for alkalinity but not yet edited there
+  (`OI-PII53METHOD-001`);
+- **whether Part II §5.3's "no relevant intervention between them" condition survives owner
+  decision 28's "no exceptions"** (`OI-EPISODEINTERVENTION-001`). The condition is
+  **retained** for now, which is the status quo and the conservative reading;
+- **whether the 30-minute window is measured pairwise between consecutive measurements or
+  from the first measurement of an episode** (`OI-EPISODEANCHOR-001`). For an episode of two
+  the two readings agree; for three or more spanning more than 30 minutes end to end they do
+  not. No fixture depends on it;
+- **the governance of the 30-minute window itself** (`OI-EPISODEWINDOW-001`) — Part II §5.3
+  calls it an implementation constant "subject to implementation review" and "not a
+  chemistry threshold", and owner decision 28 makes it the whole membership test without
+  freezing it as one;
 - **safety sizing is flat above the rail** (`OI-SIZINGFLAT-001`) — once
   \(A_{now}-A_{safe,high}\ge0.50\), \(R_{down}\) saturates and \(D_{safety,temp}\) stops
   responding to the level. Decision 21 narrowed the exposure by bounding the region;

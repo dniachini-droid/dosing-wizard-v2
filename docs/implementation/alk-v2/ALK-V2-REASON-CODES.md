@@ -38,7 +38,6 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `VALIDATION_UNIT_CONVERTED` | `INFO` | meq/L converted at 2.8 dKH per meq/L. | `enteredValue`, `enteredUnit`, `canonicalValueDkh` |
 | `VALIDATION_TARGET_RANGE_INVERTED` | `REFUSAL` | `min ≥ max`. | `min`, `max` |
 | `VALIDATION_TARGET_OUTSIDE_OUTER_BOUNDS` | `REFUSAL` | Target range not inside the outer envelope. | `targetRange`, `outerBounds` |
-| `VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED` | `INFO` | Canonised `NOT_RUN`: no cross-method concordance threshold and no method-compatibility classification exists (owner decision 18). `ALK-005`'s 0.20 dKH is a same-method repeat threshold and is not applied across methods. | `methods[]`, `ruleId: ALK-REPEAT-SPREAD-DOMAIN-001` |
 | `VALIDATION_OUTER_BOUNDS_INVERTED` | `REFUSAL` | `outerMin ≥ outerMax`. | `outerBounds` |
 | `VALIDATION_NET_VOLUME_INVALID` | `REFUSAL` | Net volume ≤ 0. | `netVolumeL` |
 | `VALIDATION_RECOMMENDATION_PRECISION_INVALID` | `REFUSAL` | A **configured** recommendation precision ≤ 0. **Renamed from `VALIDATION_ACTUATOR_INCREMENT_INVALID` by owner decision 23.** Absence of a configured precision is **not** this code and withholds nothing — the full-precision recommendation is stated. | `recommendationPrecisionMlPerDay` |
@@ -115,16 +114,14 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 
 ## EPISODE_ — owner: `SEGMENTATION`
 
-Owner decisions 17 and 19. The testing episode is constructed once, upstream of every Alk
-consumer; these codes explain what the episode was and why a consumer was withheld.
+Owner decisions 17, 19, 27 and 28. The testing episode is constructed once, upstream of
+every Alk consumer; these codes say what the episode was. Nothing here withholds an output
+any more — owner decision 27 retired the contested state, so every episode resolves.
 
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
-| `EPISODE_RESOLVED` | `INFO` | The testing episode produced one canonical value and time for every downstream consumer. | `episodeId`, `episodeValueDkh`, `episodeAt`, `readingCount`, `method`, `ruleId: ALK-EPISODE-RESOLUTION-001` |
-| `EPISODE_MEASUREMENTS_POOLED` | `INFO` | Two or more same-method measurements or clusters belonged to one testing episode and were pooled under the existing representative-value rules. Replaces `CLUSTER_SAME_TIMESTAMP_COALESCED`; membership is the episode, not an identical timestamp. | `sourceClusterIds[]`, `representativeAt`, `pooledReadingCount`, `episodeValueDkh`, `episodeSpreadDkh`, `ruleId: ALK-TESTING-EPISODE-001` |
-| `EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT` | `INFO` | Measurements from incompatible methods fell in one episode and were kept as distinct evidence rather than averaged. | `episodeId`, `readings[]`, `methods[]`, `ruleId: ALK-TESTING-EPISODE-001` |
-| `EPISODE_CONTESTED_METHODS` | `GATING` | The episode holds incompatible-method measurements and no authoritative rule resolves which value governs. No episode value is emitted and the affected automatic inference is withheld. `ALK-005`'s 0.20 dKH is **not** applied across them. | `episodeId`, `readings[]`, `methods[]`, `crossMethodSpreadDkh`, `ruleId: ALK-EPISODE-RESOLUTION-001` |
-| `EPISODE_POSITION_WITHHELD` | `GATING` | The latest episode is contested, so position and outer-bound classification are `NOT_RUN`. No measurement is chosen by ordering and no older episode is promoted. | `episodeId`, `candidateReadings[]`, `priorEpisodeAt`, `ruleId: ALK-EPISODE-SINGLE-OUTPUT-001` |
+| `EPISODE_RESOLVED` | `INFO` | The testing episode produced one canonical value and time for every downstream consumer. Every episode holding at least one valid measurement resolves. | `episodeId`, `episodeValueDkh`, `episodeAt`, `combinedMeasurementCount`, `ruleId: ALK-EPISODE-RESOLUTION-001` |
+| `EPISODE_MEASUREMENTS_COMBINED` | `INFO` | Two or more measurements fell within 30 minutes of one another and were combined into one observation under the existing representative-value rules. Carries the count the interface renders — "3 tests combined" — as a structured field, not prose. | `episodeId`, `combinedMeasurementCount`, `memberMeasurementIds[]`, `episodeValueDkh`, `episodeSpreadDkh`, `ruleId: ALK-TESTING-EPISODE-001` |
 
 ---
 
@@ -142,7 +139,6 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER` | `GATING` | A historical anomalous cluster is present; ordinary inference blocked rather than choosing between two slopes. | `clusterId`, `openIssue: OI-ANOMCLUSTER-001` |
 | `EVIDENCE_PROVISIONAL_TWO_POINT` | `INFO` | Two-cluster basis; a signal, not an established trend. | `independentClusters: 2`, `spanDays` |
 
-| `EVIDENCE_WITHHELD_CONTESTED_EPISODE` | `GATING` | An inference whose input set includes a contested episode is withheld rather than computed from one arbitrarily chosen measurement or from older evidence. | `inference`, `episodeId`, `ruleId: ALK-EPISODE-SINGLE-OUTPUT-001` |
 
 ---
 
@@ -334,7 +330,6 @@ consumer; these codes explain what the episode was and why a consumer was withhe
 | `RETEST_REPEAT_NOW` | `SAFETY` | Immediate repeat outranks ordinary scheduling. | `cause` |
 | `RETEST_SAFETY_RETURN_ACTIVE` | `SAFETY` | ~24 h safety cadence. | `anchorAt`, `recommendedAt` |
 | `RETEST_HIGH_BREACH_FAILSAFE` | `SAFETY` | ~24 h following a high-breach temporary safety-rate recommendation, including the case where that rate floors at zero. | `recommendedAt` |
-| `RETEST_EPISODE_CONTESTED` | `SAFETY` | The latest episode is contested; an immediate repeat is requested through the existing Part II §48 / `ALK-051` machinery. | `episodeId`, `methods[]`, `ruleId: ALK-EPISODE-RESOLUTION-001` |
 | `RETEST_RAPID_MOVEMENT` | `SAFETY` | ~24 h following confirmed rapid movement. | `recommendedAt` |
 | `RETEST_POST_CHANGE_FIRST` | `INFO` | ~48 h after the actual dose change. | `interventionId`, `recommendedAt` |
 | `RETEST_POST_CHANGE_SECOND` | `INFO` | ~48 h after the first post-change test. | `interventionId`, `recommendedAt` |
@@ -411,14 +406,14 @@ output.
 
 | Group | Codes |
 |---|---|
-| `VALIDATION_` | 16 |
+| `VALIDATION_` | 15 |
 | `TIME_` | 6 |
 | `CONFIG_` | 4 |
 | `CLUSTER_` | 5 |
-| `EPISODE_` | 5 |
+| `EPISODE_` | 2 |
 | `SEGMENT_` | 21 |
 | `DELIVERY_` | 5 |
-| `EVIDENCE_` | 10 |
+| `EVIDENCE_` | 9 |
 | `TRAJECTORY_` | 8 |
 | `UNCERTAINTY_` | 5 |
 | `CONSUMPTION_` | 8 |
@@ -429,13 +424,13 @@ output.
 | `BRACKET_` | 4 |
 | `RETURN_` | 12 |
 | `SAFETY_` | 18 |
-| `RETEST_` | 17 |
+| `RETEST_` | 16 |
 | `CAPABILITY_` | 14 |
 | `OUTPUT_` | 3 |
 | `AUDIT_` | 3 |
 | `PRESENTATION_` | 5 |
 | `MIGRATION_` | 4 |
-| **Total** | **248** |
+| **Total** | **242** |
 
 ---
 
@@ -473,7 +468,7 @@ failure.
 |---|---|---|
 | `SAFETY_HIGH_BREACH_ZERO_DOSE_PAUSE` | `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE`, and `SAFETY_HIGH_BREACH_RATE_FLOORED_AT_ZERO` where the rate reaches zero — decision 16 makes zero a floor rather than a chosen pause | 16 |
 | `SAFETY_HIGH_BREACH_NO_PAUSE_UNCERTAINTY_LIMITED` | `SAFETY_HIGH_BREACH_RATE_FROM_CURRENT_DOSE`; the maintenance-side classification is carried by `CONSUMPTION_NEGATIVE_UNCERTAINTY_LIMITED`, which is unchanged | 16 |
-| `CLUSTER_SAME_TIMESTAMP_COALESCED` | `EPISODE_MEASUREMENTS_POOLED` — decision 17 makes membership the testing episode rather than an identical timestamp, and forbids pooling across incompatible methods | 17 |
+| `CLUSTER_SAME_TIMESTAMP_COALESCED` | decision 17 replaced it with `EPISODE_MEASUREMENTS_POOLED`, **itself retired by decision 28**; the live replacement is `EPISODE_MEASUREMENTS_COMBINED` | 17, 28 |
 
 ### Retired by owner decisions 20–22
 
@@ -510,10 +505,25 @@ of `establishedDoseMlPerDay` in the payload.
 | `VALIDATION_ACTUATOR_INCREMENT_INVALID` | `VALIDATION_RECOMMENDATION_PRECISION_INVALID` | a configured precision ≤ 0 is still invalid |
 | `MAINTENANCE_ACTUATOR_RESOLUTION` | `MAINTENANCE_ROUNDS_TO_CURRENT_DOSE` | the rounded recommendation equalling the current dose is a fact about the number, not the hardware |
 
+### Retired by owner decisions 27 and 28
+
+Owner decision 27 removes the engine's ability to distinguish one test method from another —
+it never records, asks for, infers or stores the method — so every code whose existence
+depended on that distinction has no reachable state.
+
+| Retired code | Replaced by | Decision |
+|---|---|---|
+| `EPISODE_CONTESTED_METHODS` | nothing — the contested state is retired; ordinary logic applies to every episode | 27 |
+| `EPISODE_INCOMPATIBLE_METHODS_KEPT_DISTINCT` | `EPISODE_MEASUREMENTS_COMBINED` — every measurement in an episode is combined, whatever produced it | 27 |
+| `EPISODE_POSITION_WITHHELD` | nothing — position is never withheld for a contested episode, because there is none | 27 |
+| `EVIDENCE_WITHHELD_CONTESTED_EPISODE` | nothing — no inference is withheld on episode grounds | 27 |
+| `RETEST_EPISODE_CONTESTED` | nothing — `ALK-051`'s immediate repeat returns to its three `ALK-SUSPECT-DETECTION-001` sources | 27 |
+| `VALIDATION_CROSS_METHOD_THRESHOLD_NOT_CANONISED` | nothing — the deferral it announced is retired, not still pending | 27 |
+| `EPISODE_MEASUREMENTS_POOLED` | `EPISODE_MEASUREMENTS_COMBINED`, which carries `combinedMeasurementCount` | 28 |
+
 `EVIDENCE_INDEPENDENT_SELECTION_TIE_UNRESOLVED` remains retired. Its Freeze-5 replacement
 was `CLUSTER_SAME_TIMESTAMP_COALESCED`; that replacement is now
-`EPISODE_MEASUREMENTS_POOLED` for a same-method episode and `EPISODE_CONTESTED_METHODS`
-where the episode cannot be resolved.
+`EPISODE_MEASUREMENTS_COMBINED`, which applies to every episode.
 
 Two `RETEST_` codes are **kept**, with their meaning changed from "policy absent" to
 "canonically `NOT_RUN`": `RETEST_DETECTABILITY_POLICY_UNAVAILABLE` and

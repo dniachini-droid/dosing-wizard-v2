@@ -332,25 +332,38 @@ def main():
         medt = sorted(t1)[len(t1) // 2]
         rec.note('AD-EPI-001', 'episode1', 'episodeValueDkh', ev['episode1'].get('episodeValueDkh'), med)
         rec.note('AD-EPI-001', 'episode1', 'spreadDkh', ev['episode1'].get('spreadDkh'), max(r1) - min(r1))
+        rec.note('AD-EPI-001', 'episode1', 'combinedMeasurementCount',
+                 ev['episode1'].get('combinedMeasurementCount'), len(r1))
         sep = (datetime.datetime.fromisoformat(eps[1]['readings'][0]['at']) - medt).total_seconds() / 3600.0
         rec.note('AD-EPI-001', '', 'separationHours', ev.get('separationHours'), sep)
 
     f = fixtures.get('AD-EPI-002', (None, None))[1]
     if f:
         ev = f['expectedIntermediateEvidence']['everyCase']
-        vals = [r['alkDkh'] for c in f['input']['cases'] for r in c['readings']]
-        rec.note('AD-EPI-002', 'everyCase', 'crossMethodSpreadDkh',
-                 ev.get('crossMethodSpreadDkh'), float(max(vals) - min(vals)))
+        vals = sorted(r['alkDkh'] for r in f['input']['cases'][0]['readings'])
+        n = len(vals)
+        med = vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+        rec.note('AD-EPI-002', 'everyCase', 'episodeValueDkh', ev.get('episodeValueDkh'), med)
+        rec.note('AD-EPI-002', 'everyCase', 'episodeSpreadDkh',
+                 ev.get('episodeSpreadDkh'), float(max(vals) - min(vals)))
+        rec.note('AD-EPI-002', 'everyCase', 'combinedMeasurementCount',
+                 ev.get('combinedMeasurementCount'), n)
+        rec.note('AD-EPI-002', 'everyCase', 'positionDkh',
+                 f['expectedAction'].get('positionDkh'), med)
 
     f = fixtures.get('AD-EPI-003', (None, None))[1]
     if f:
-        reads = sorted(x['alkDkh'] for x in f['input']['cases'][0]['readings'])
-        n = len(reads)
-        med = reads[n // 2] if n % 2 else (reads[n // 2 - 1] + reads[n // 2]) / 2
-        rec.note('AD-EPI-003', 'RESOLVED_LATEST', 'episodeValueDkh',
-                 f['expectedIntermediateEvidence']['RESOLVED_LATEST'].get('episodeValueDkh'), med)
-        rec.note('AD-EPI-003', 'RESOLVED_LATEST', 'positionDkh',
-                 f['expectedAction']['RESOLVED_LATEST'].get('positionDkh'), med)
+        for c in f['input']['cases']:
+            reads = sorted(x['alkDkh'] for x in c['readings'])
+            n = len(reads)
+            med = reads[n // 2] if n % 2 else (reads[n // 2 - 1] + reads[n // 2]) / 2
+            key = c['case']
+            rec.note('AD-EPI-003', key, 'episodeValueDkh',
+                     f['expectedIntermediateEvidence'][key].get('episodeValueDkh'), med)
+            rec.note('AD-EPI-003', key, 'positionDkh',
+                     f['expectedAction'][key].get('positionDkh'), med)
+            rec.note('AD-EPI-003', key, 'combinedMeasurementCount',
+                     f['expectedIntermediateEvidence'][key].get('combinedMeasurementCount'), n)
 
     f = fixtures.get('AD-EPI-004', (None, None))[1]
     if f:
@@ -359,6 +372,51 @@ def main():
         eps = {e['atDay']: e['alkDkh'] for e in f['input']['cases'][0]['episodes']}
         rec.note('AD-EPI-004', 'RESOLVED_NOT_ACCEPTED', 'rapidPairSlopeDkhPerDay',
                  ev.get('rapidPairSlopeDkhPerDay'), (eps[t1] - eps[t0]) / (t1 - t0))
+
+    for fid in ('AD-EPI-005',):
+        f = fixtures.get(fid, (None, None))[1]
+        if not f: continue
+        ev = f['expectedIntermediateEvidence']
+        vals = sorted(r['alkDkh'] for r in f['input']['readings'])
+        n = len(vals)
+        med = vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+        t = [datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
+        rec.note(fid, '', 'episodeValueDkh', ev.get('episodeValueDkh'), med)
+        rec.note(fid, '', 'episodeSpreadDkh', ev.get('episodeSpreadDkh'), float(max(vals) - min(vals)))
+        rec.note(fid, '', 'combinedMeasurementCount', ev.get('combinedMeasurementCount'), n)
+        rec.note(fid, '', 'separationMinutes', ev.get('separationMinutes'),
+                 (t[1] - t[0]).total_seconds() / 60.0)
+
+    f = fixtures.get('AD-EPI-006', (None, None))[1]
+    if f:
+        t = [datetime.datetime.fromisoformat(r['at']) for r in f['input']['readings']]
+        ev = f['expectedIntermediateEvidence']
+        rec.note('AD-EPI-006', '', 'separationMinutes', ev.get('separationMinutes'),
+                 (t[1] - t[0]).total_seconds() / 60.0)
+        rec.note('AD-EPI-006', '', 'separationDays', ev.get('separationDays'),
+                 (t[1] - t[0]).total_seconds() / 86400.0)
+
+    f = fixtures.get('AD-EPI-007', (None, None))[1]
+    if f:
+        cev = {c['case']: c for c in f['expectedIntermediateEvidence']['cases']}
+        for c in f['input']['cases']:
+            t = [datetime.datetime.fromisoformat(r['at']) for r in c['readings']]
+            rec.note('AD-EPI-007', c['case'], 'separationMinutes',
+                     cev[c['case']].get('separationMinutes'),
+                     (t[1] - t[0]).total_seconds() / 60.0)
+
+    f = fixtures.get('AD-ESC-003', (None, None))[1]
+    if f:
+        cev = {c['case']: c for c in f['expectedIntermediateEvidence']['cases']}
+        for c in f['input']['cases']:
+            vals = sorted(r['alkDkh'] for r in c['readings'] if r.get('status') != 'INVALID')
+            if not vals: continue
+            n = len(vals)
+            med = vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+            rec.note('AD-ESC-003', c['case'], 'episodeValueDkh',
+                     cev[c['case']].get('episodeValueDkh'), med)
+            rec.note('AD-ESC-003', c['case'], 'combinedMeasurementCount',
+                     cev[c['case']].get('combinedMeasurementCount'), n)
 
     # ---- 4. owner decision 18 exact-decimal arithmetic ---------------------------
     f = fixtures.get('AD-VAL-002', (None, None))[1]

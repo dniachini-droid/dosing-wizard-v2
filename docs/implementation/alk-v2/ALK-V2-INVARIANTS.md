@@ -554,21 +554,24 @@ Fixture bodies for the canon-named invariants are in
 
 ### INV-C13 — One episode output for every Alk consumer
 - **Canon:** `ALK-TESTING-EPISODE-001`; `ALK-EPISODE-RESOLUTION-001`;
-  `ALK-EPISODE-SINGLE-OUTPUT-001` (owner decisions 17 and 19).
-- **Generator:** any ledger containing two or more measurements in one testing episode.
-  Permute event order, ids and insertion order; jitter the timestamps within the existing
-  30-minute window; run with same-method and with incompatible-method members.
-- **Assert:** identical `episodeStatus`, episode value, `position`, `outerBoundState`,
-  `acceptedClusterIds[]`, `sigma_S`, `rapidConfirmed` and recommendation across every
-  permutation and every jitter; a same-method episode pools to the median of the pooled raw
-  readings; an incompatible-method episode is `CONTESTED_METHODS`, emits no value, and
-  drives `position = NOT_RUN`, `outerBoundState = NOT_RUN`, `rapidConfirmed = NOT_RUN` and
-  `REPEAT_NOW`; no older episode is promoted in its place.
-- **Negative control:** select the first-inserted member of a contested episode, or average
-  the two; `AD-EPI-002`, `AD-EPI-003` and `AD-EPI-004` must fail. Move the two members three
-  minutes apart and the outputs must not change.
+  `ALK-EPISODE-SINGLE-OUTPUT-001` (owner decisions 17, 19, 27 and 28).
+- **Generator:** any ledger containing two or more measurements within 30 minutes of one
+  another. Permute event order, ids and insertion order; jitter the timestamps inside the
+  window.
+- **Assert:** identical `episodeStatus`, episode value, `combinedMeasurementCount`,
+  `position`, `outerBoundState`, `acceptedClusterIds[]`, `sigma_S`, `rapidConfirmed` and
+  recommendation across every permutation and every jitter; every episode holding a valid
+  measurement is `RESOLVED`; the episode value is the median of the pooled raw readings; no
+  consumer reads an individual member; no output is withheld on episode grounds.
+- **Negative control:** select the first-inserted member of an episode, or average two
+  cluster medians rather than pooling; `AD-EPI-002`, `AD-EPI-003` and `AD-EPI-004` must
+  fail. Move the two members three minutes apart and the outputs must not change.
+- **Amended by owner decision 27:** this invariant previously asserted that an
+  incompatible-method episode was `CONTESTED_METHODS`, emitted no value and drove
+  `position = NOT_RUN`, `outerBoundState = NOT_RUN`, `rapidConfirmed = NOT_RUN` and
+  `REPEAT_NOW`. The engine never knows the method, so that state is unreachable.
 - **Why it exists:** exact-timestamp coalescing left position, rapid and a three-minute
-  offset able to change a recommendation and an outer-bound classification by storage
+  offset able to change an actuator command and an outer-bound classification by storage
   order.
 
 ### INV-C14 — Canonical decimal thresholds compare exactly
@@ -580,7 +583,8 @@ Fixture bodies for the canon-named invariants are in
   and outer-bound edge.
 - **Assert:** an exact spread of 0.20 dKH is `OK` in every case; an exact spread above
   0.20 dKH is `ANOMALOUS` in every case; no epsilon is used and no reading is pre-rounded to
-  perform the comparison; the incompatible-method case never reaches the threshold at all.
+  perform the comparison; **every** repeat pair reaches the threshold, with no method
+  qualifier and no exemption route (owner decision 27 retires both).
 - **Negative control:** compare in binary64; the three straddling pairs must fail.
 - **Why it exists:** 317 of 600 tested decimal pairs whose exact difference is 0.20
   classified `ANOMALOUS` under binary64, which withholds a dose recommendation on an
@@ -676,6 +680,21 @@ Fixture bodies for the canon-named invariants are in
   `A_now`. It does not, at any level, and decision 24 **widened** that exposure by removing
   the ceiling that used to bound it. `OI-SIZINGFLAT-001` stays open.
 
+### INV-G14 — The advisory warning field has exactly two states
+- **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decisions 24 and 29).
+- **Generator:** every reachable state of the advisory boundary — resolved values below, at
+  and beyond each boundary; a resolved value with no boundary configured; an episode whose
+  every measurement is `INVALID`, so no observation exists at all.
+- **Assert:** `advisoryConfidenceWarning` takes only `ATTACHED` or `NONE`, in every state and
+  every fixture. `NOT_RUN` never appears. Where nothing resolves, the field is `NONE` —
+  absent because there is nothing to describe — and the absence of an observation is not
+  represented as a third value of this field.
+- **Negative control:** reinstate `NOT_RUN` anywhere — the data-contract enumeration, a
+  fixture leaf, or the algorithm contract's failure state; `AD-ESC-003` must fail.
+- **Why it exists:** `OI-ADVISORYWARNSTATE-001` recorded that the third value's trigger set
+  was never stated in the rule that owns the field. Owner decision 29 removes the value
+  rather than specifying it.
+
 ### INV-G14 — `D_current` and `D_history` are never interchanged
 - **Canon:** `ALK-DELIVERY-RATE-BASIS-001` (owner decision 20);
   `ALK-CONSUMPTION-ESTIMATE-001`; `ALK-HIGH-BREACH-SAFETY-SIZING-001`.
@@ -747,6 +766,22 @@ Fixture bodies for the canon-named invariants are in
   connection that does not exist.
 
 
+### INV-C15 — Repeats inside 30 minutes are one observation, and the count is stated
+- **Canon:** `ALK-TESTING-EPISODE-001` (owner decision 28); `ALK-008` (unchanged).
+- **Generator:** pairs and triples of measurements at separations sweeping 0 to 60 minutes,
+  including 29, 30 and 31 minutes exactly; and pairs separated by hours and by days.
+- **Assert:** separation `<= 30 min` gives one observation whose
+  `combinedMeasurementCount` equals the number of measurements combined; separation
+  `> 30 min` gives that many observations, each with `combinedMeasurementCount = 1`; the
+  count is an integer field and never engine-authored prose; no explicit repeat relationship
+  is required for combining and none prevents it; the 24-hour trend-independence rule is
+  evaluated on the resulting observations and is unchanged by any of this.
+- **Negative control:** change the window from 30 minutes; make the boundary exclusive at
+  exactly 30; drop the count field; or require an explicit repeat relationship.
+  `AD-EPI-005`, `AD-EPI-006` and `AD-EPI-007` must fail.
+- **Why it exists:** decision 28 makes proximity in time the whole test, and the count is
+  what lets a keeper see that three tests became one point.
+
 ---
 
 ## Coverage
@@ -755,14 +790,14 @@ Fixture bodies for the canon-named invariants are in
 |---|---|
 | A — Determinism and replay | 4 |
 | B — Layer separation | 7 |
-| C — Evidence integrity | 14 |
+| C — Evidence integrity | 15 |
 | D — Consumption and maintenance | 6 |
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
-| G — Safety | 16 |
+| G — Safety | 17 |
 | H — History and provenance | 5 |
 | I — Ownership and output contract | 10 |
-| **Total** | **74** |
+| **Total** | **76** |
 
 Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
 checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
@@ -771,6 +806,10 @@ could not have caught the defects review found: it never read the canon, and it 
 recomputed a fixture. `INV-G10` and `INV-C12` pin the two amendments whose failure mode is
 a wrong recommendation or safety action — recommending a pause on an uncertainty-limited estimate,
 and letting storage order decide which cluster counts.
+
+`INV-C15` was added by owner decision 28, and `INV-C13` and `INV-C14` were amended by owner
+decision 27 — the contested-episode assertions in `INV-C13` and the method qualifier in
+`INV-C14` are both unreachable now that the engine never knows what produced a reading.
 
 Three more were added by owner decisions 16–19. `INV-G11` pins the high-breach safety rate
 to its formula so no classification can choose it. `INV-C13` pins one episode output for

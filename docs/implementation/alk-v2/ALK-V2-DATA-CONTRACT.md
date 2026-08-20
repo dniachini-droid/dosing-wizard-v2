@@ -136,7 +136,6 @@ One raw test result. Never a cluster, never a derived value.
 | `rawValueDkh` | dKH | `REQ` `IMMUT` | The value as entered. Never overwritten by a rounded, median, fitted or normalized value (Part II §3.1). |
 | `canonicalUnit` | — | `REQ` | `dKH` for Alk. Entry in meq/L converts at `1 meq/L = 2.8 dKH` and stores both the original entry and the canonical value. |
 | `enteredValue` / `enteredUnit` | — | `OPT` | Preserved exactly as typed, for audit. |
-| `methodId` | — | `OPT` | Test kit / method identity. |
 | `userEnteredPrecision` | — | `OPT` | Metadata only. **Never** automatically becomes uncertainty (Part II §3 comment). |
 | `baseUncertaintyDkh` | dKH | `REQ` | `SIGMA_ALK_BASE = 0.10` for Alk (`ALK-004`). Working analytical floor, not a kit accuracy claim, not a position tolerance. |
 | `source` | — | `REQ` | `MANUAL` \| `IMPORTED` \| `DEVICE`. |
@@ -190,38 +189,47 @@ One testing episode. Prevents repeat testing from satisfying evidence counts
 | `spreadDkh` | dKH | `max − min` over members. |
 | `madDkh` | dKH | `median(|x_i − median(x)|)`. |
 | `sigmaClusterDkh` | dKH | `max(SIGMA_ALK_BASE, 1.4826 · madDkh)`. **Never** divided by `√n` (Part II §5.6). |
-| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`), compared as **exact decimals** (`ALK-DECIMAL-THRESHOLD-001`): an exact spread of `0.20` is `OK`. Applies to same-method members only (`ALK-REPEAT-SPREAD-DOMAIN-001`). |
+| `clusterStatus` | — | `OK` \| `ANOMALOUS`. `ANOMALOUS` when `spreadDkh > 0.20` (`ALK-005`), compared as **exact decimals** (`ALK-DECIMAL-THRESHOLD-001`): an exact spread of `0.20` is `OK`. Applies to every repeat member, with **no method qualifier** (`ALK-REPEAT-SPREAD-DOMAIN-001`, owner decision 27). |
 | `independent` | — | `true` when accepted by forward-greedy selection (`ALK-INDEPENDENT-SELECTION-001`). `false` does **not** mean excluded: the cluster still serves position, anomaly confirmation, `ALK-RAPID-BASIS-001` and time-resolved intervention calculation. |
-| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling **same-method** measurements inside one testing episode (`ALK-TESTING-EPISODE-001`). The source clusters are retained for audit; the resolved episode value is what selection sees. |
-| `episodeId` | — | The `TestingEpisode` this cluster belongs to (`ALK-TESTING-EPISODE-001`). A cluster is the **same-method pool inside** an episode; it is not the episode. |
+| `coalescedFromClusterIds[]` | — | Set when this cluster was built by pooling measurements inside one testing episode (`ALK-TESTING-EPISODE-001`). The source clusters are retained for audit; the resolved episode value is what selection sees. |
+| `episodeId` | — | The `TestingEpisode` this cluster belongs to (`ALK-TESTING-EPISODE-001`). A cluster is the pooled set **inside** an episode; it is not the episode. |
 
 ### `TestingEpisode`
 
 One owner constructs the episode and every Alk consumer reads its output
 (`ALK-EPISODE-SINGLE-OUTPUT-001`). It is a **distinct record**, not a field on
-`MeasurementCluster`: a `CONTESTED_METHODS` episode has two or more same-method pools and no
-single cluster that could carry its status.
+`MeasurementCluster`: the episode owns the count of what was combined and the cluster does
+not.
 
 | Field | Unit | Meaning |
 |---|---|---|
 | `episodeId` | — | Identity. Content-derived like every other id (`OI-DETERMINISM-001`). |
 | `memberMeasurementIds[]` | — | Every measurement in the episode, `INVALID` members included and marked. Nothing is deleted, hidden or down-weighted. |
-| `episodeMethods[]` | — | The distinct methods present after `INVALID` exclusion. More than one, with no canon compatibility classification, is what makes an episode contested. |
-| `episodeStatus` | — | `RESOLVED` \| `CONTESTED_METHODS` (`ALK-EPISODE-RESOLUTION-001`). `CONTESTED_METHODS` emits **no** episode value; members are preserved and kept distinct, `ALK-005` is not applied across them, and the affected inference is withheld. |
-| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads. `NOT_RUN` on a contested episode. |
-| `episodeAt` | — | The one canonical episode time, under Part II §5.5. `NOT_RUN` on a contested episode. |
-| `clusterIds[]` | — | The same-method pool(s) inside the episode. Exactly one when `RESOLVED`. |
-| `episodeSpreadDkh` | dKH | Spread of the resolved pool, under Part II §5.6. Not computed across methods. |
-| `episodeClusterStatus` | — | `OK` \| `ANOMALOUS` for a resolved episode, under `ALK-005`. Independent of `episodeStatus`: a resolved episode can be anomalous on its own same-method spread. |
+| `episodeStatus` | — | `RESOLVED` (`ALK-EPISODE-RESOLUTION-001`). The only value: every episode holding at least one valid measurement resolves. |
+| `combinedMeasurementCount` | count | How many measurements were combined into this observation (`ALK-TESTING-EPISODE-001`, owner decision 28). `1` for a lone measurement. A **structured field** the interface renders plainly — "3 tests combined" — never engine-authored prose. |
+| `episodeValueDkh` | dKH | The one canonical value every Alk consumer reads. |
+| `episodeAt` | — | The one canonical episode time, under Part II §5.5. |
+| `clusterIds[]` | — | The pooled set inside the episode. Exactly one. |
+| `episodeSpreadDkh` | dKH | Spread of the pooled readings, under Part II §5.6. |
+| `episodeClusterStatus` | — | `OK` \| `ANOMALOUS`, under `ALK-005`, over the pooled readings with **no method qualifier**. An anomalous episode is an ordinary anomalous cluster and takes Part II §48's path. |
+
+**Superseded by owner decisions 27 and 28**, preserved here rather than deleted: this record
+formerly carried `episodeMethods[]` — *"the distinct methods present after `INVALID`
+exclusion. More than one, with no canon compatibility classification, is what makes an
+episode contested"* — and `episodeStatus` took the value `CONTESTED_METHODS`, on which
+`episodeValueDkh` and `episodeAt` were `NOT_RUN`. `Reading.methodId` is removed with them:
+the application does not record, ask for, infer or store what produced a measurement.
 
 `obs.episode` (`ALK-V2-MODULE-DESIGN.md`) is the single producer. `obs.cluster` builds the
-same-method pool **inside** an episode and has no independent grouping authority; the two are
-one inference with one owner (`MASTER RULE 1`).
+pooled set **inside** an episode and has no independent grouping authority; the two are one
+inference with one owner (`MASTER RULE 1`).
 
-Automatic grouping (Part II §5.3) requires: same parameter; same or compatible method;
-member `measuredAt` within `REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention
-between them. The window is an internal data-model constant, **not** a Setup question and
-not a chemistry threshold.
+Automatic grouping requires: same parameter; member `measuredAt` within
+`REPEAT_CLUSTER_WINDOW = 30 min`; no relevant intervention between them. Part II §5.3 also
+lists "same or compatible method"; that condition is **inoperative for alkalinity** under
+owner decision 27, and the shared wording is recorded as an open item rather than edited
+here. The window is an internal data-model constant, **not** a Setup question and not a
+chemistry threshold.
 
 ---
 
@@ -718,7 +726,7 @@ dose running (`ALK-056`, `WG-ALK-015`, `AUDIT-021`).
 | `currentDoseMlPerDay` (safety context) | mL/day | `D_current` — the delivery rate **the doser is configured to be delivering at the time of the recommendation**, and the quantity the high-breach sizing reduces. **Renamed from `establishedDoseMlPerDay` by owner decision 20**; the old name was also used for the interval-mean rate. Unknown ⇒ the safety rate and the recommendation are both `NOT_RUN` and **neither is `0`** (`ALK-DELIVERY-RATE-BASIS-001`). |
 | `advisoryCeilingDkh` | dKH | `outerMax + 1.0`. A boundary derived as an **offset** from the configured bound, not a pinned level (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 21). |
 | `advisoryFloorDkh` | dKH | `outerMin − 1.0`. Same construction, low side. |
-| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED` \| `NOT_RUN`. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). `NOT_RUN` where no episode value resolves. Does **not** change `outerBoundState`. |
+| `advisoryConfidenceWarning` | — | `NONE` \| `ATTACHED`. **Two states only** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 29): present or absent. `NOT_RUN` is **retired** — where no reading resolves there is nothing to warn about and the field is absent, which is `NONE`, not a third value. `ATTACHED` where the resolved episode value is at or beyond either advisory boundary. **The ordinary recommendation is still produced, by the ordinary rules — it is not withheld and it is not zero** (`ALK-ADVISORY-RANGE-BOUNDARY-001`, owner decision 24, superseding decision 21's withholding). The warning may not alter the recommended rate, the trajectory, the consumption estimate or the retest schedule, and it renders the scheduler's retest interval rather than stating one of its own (owner decision 26). `NOT_RUN` where no episode value resolves. Does **not** change `outerBoundState`. |
 | `rDownDkh` | dKH | `min(A_now − A_safe,high, 0.50)`. The requested downward effect, rail-bounded. |
 | `safetyDoseReason` | — | e.g. `HIGH_BREACH_CONSUMPTION_NOT_USABLE_FOR_SIZING`. |
 | `maintenanceEstimateStatus` | — | `RESOLVED` \| `UNRESOLVED`. A zero safety dose is **not** a new maintenance estimate. |

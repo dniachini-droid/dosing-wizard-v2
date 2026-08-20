@@ -2658,7 +2658,7 @@ therefore Day +6 under the 48-hour cadence. Feeds `OI-DAY4-001`.
 | position in range | `RangeMin ≤ A ≤ RangeMax` | `ALK-004`: 8.19 vs edge 8.20 is *below* range |
 | outer-bound breach | `A < OuterMin` / `A > OuterMax`, strict | `ALK-003A`: "At exactly an outer bound, the level is not `BREACHED`" |
 | safety-return completion | `A ≥ A_safe,low` / `A ≤ A_safe,high` | `ALK-003A` Completion |
-| repeat-cluster spread | anomalous when `max − min > 0.20`, compared as exact decimals, same-method only | `ALK-005`; `ALK-DECIMAL-THRESHOLD-001`; `ALK-REPEAT-SPREAD-DOMAIN-001` |
+| repeat-cluster spread | anomalous when `max − min > 0.20`, compared as exact decimals, with no method qualifier | `ALK-005`; `ALK-DECIMAL-THRESHOLD-001`; `ALK-REPEAT-SPREAD-DOMAIN-001` (owner decision 27) |
 | water-change materiality | material when `|ΔA_WC| ≥ 0.10` | `ALK-033` |
 | unknown water-change break | breaks when `f ≥ 0.05` | `ALK-WATERCHANGE-UNKNOWN-001` |
 | independent spacing | independent when `Δt ≥ 24 h` | `ALK-008` excludes `< 24 h`; `ALK-RAPID-001` accepts "at least 24 hours" |
@@ -2712,6 +2712,173 @@ actionable next-test message (`IX-005`). No fallback to an older segment exists.
 
 ---
 
+# A7. Owner decisions 27 and 28 — the method sweep and the 30-minute window
+
+## OI-METHODUNKNOWN-001 — the engine cannot distinguish one test method from another
+
+- **Class:** `OWNER_DECISION_REQUIRED` (foundational constraint)
+- **Canon:** `ALK-REPEAT-SPREAD-DOMAIN-001`; `ALK-TESTING-EPISODE-001`; `ALK-EPISODE-RESOLUTION-001`; `ALK-EPISODE-SINGLE-OUTPUT-001`; `ALK-ADVISORY-RANGE-BOUNDARY-001`; `ALK-005`
+- **Owner module:** `SEGMENTATION`
+
+> **RESOLVED by owner decision 27.**
+>
+> The application does not record, ask for, infer or store the test method, kit, device or
+> instrument behind any reading, so it has no basis on which to call two readings compatible
+> or incompatible. A reading is a reading. Retired entirely: method compatibility,
+> incompatible methods, cross-method disagreement, the `CONTESTED_METHODS` episode state,
+> `compatibleMethodClassification`, `crossMethodConcordanceThreshold`, `Reading.methodId`,
+> `TestingEpisode.episodeMethods[]`, and six reason codes. Where canon withheld, refused or
+> classified differently because an episode was contested, **ordinary logic applies
+> instead**. `ALK-005`'s 0.20 dKH spread rule keeps its threshold, its strict `>`, its
+> exact-decimal comparison and its boundary, and loses only the method qualifier; its
+> *"unless a known testing method justifies another value"* clause can never fire and is
+> marked inoperative.
+>
+> No guidance, warning or prompt about method differences is added anywhere.
+
+### What this retires outright
+
+| Concept | Why it is gone |
+|---|---|
+| a contested episode suppressing `position`, `outerBoundState`, `rapidConfirmed` and issuing `REPEAT_NOW` | there is no contested state; every episode resolves |
+| the member-wise reading of an episode at the advisory boundary | already retired by decision 24; decision 27 removes the state it was scoped to |
+| `ALK-005`'s method escape clause | a known testing method is never available |
+| `ALK-RETEST-SCHEDULER-001`'s contested submitter | added for the contested `REPEAT_NOW`; withdrawn with it |
+
+### What survives with independent substance
+
+| Finding | What survives |
+|---|---|
+| Part II §5.3's *"no relevant intervention between them"* condition | untouched by decision 28 and **retained**; `OI-EPISODEINTERVENTION-001` |
+| the 30-minute window's governance | it is now the whole membership test but is still described by Part II §5.3 as an implementation constant; `OI-EPISODEWINDOW-001` |
+| window anchoring | pairwise versus from-first is untouched and now load-bearing; `OI-EPISODEANCHOR-001` |
+| `SUSPECT` and `SUPERSEDED` members | `INVALID` is excluded by Part II §4.3; the other two are unstated; `OI-EPISODESUSPECT-001` |
+| shared canon's method wording | `OI-PII53METHOD-001` |
+| high-breach sizing findings | untouched: they are sizing, not episodes |
+
+---
+
+## OI-EPISODEMEMBERSHIP-001 — what makes two measurements repeats of one test
+
+- **Class:** `OWNER_DECISION_REQUIRED`
+- **Canon:** `ALK-TESTING-EPISODE-001`
+- **Owner module:** `SEGMENTATION`
+
+> **RESOLVED by owner decision 28.**
+>
+> Measurements of the same parameter within 30 minutes of one another are repeats of a
+> single test and combine into one observation under the existing representative-value
+> rules. More than 30 minutes apart, they are separate observations. Proximity in time is
+> the whole test: no method qualifier, no explicit repeat-relationship requirement. The
+> window is the existing 30 minutes, inclusive at exactly 30.
+>
+> The resolved observation carries `combinedMeasurementCount`, a structured field the
+> interface renders plainly ("3 tests combined"). The engine emits the integer and does not
+> author the sentence.
+>
+> This supersedes `ALK-TESTING-EPISODE-001`'s decision-17 membership conditions. It does
+> **not** change the 24-hour trend-independence rule, and episode resolution stays distinct
+> from trend independence.
+>
+> **Fixtures:** `AD-EPI-005` (5 minutes, count 2), `AD-EPI-001` (three inside 30 minutes,
+> count 3), `AD-EPI-006` (45 minutes, two observations), `AD-EPI-007` (29 / 30 / 31 minutes).
+
+---
+
+## OI-EPISODEINTERVENTION-001 — does an intervention inside 30 minutes split an episode
+
+- **Class:** `CANON_DEFECT` + `OWNER_DECISION_REQUIRED`
+- **Status:** **OPEN.** Opened by owner decision 28.
+- **Canon:** `ALK-TESTING-EPISODE-001`; Part II §5.3
+
+Part II §5.3's automatic grouping requires *"no relevant intervention between them"*.
+Decision 28 removes the method and explicit-relationship conditions and says *"no
+exceptions"*, without naming the intervention condition either way. Canon and the algorithm
+contract **retain** it, which is the status quo and the conservative reading.
+
+**Failure scenario.** A dose change is logged at 09:05; readings at 09:00 and 09:12 sit
+either side of it. Retaining the condition gives two observations, one before and one after
+a known input. Dropping it merges a pre-change and a post-change reading into one value,
+which is what segmentation exists to prevent. **Not decided here.**
+
+---
+
+## OI-EPISODEWINDOW-001 — the 30-minute window is not frozen as a chemistry constant
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Sharpened by owner decision 28.
+- **Canon:** Part II §5.3; `ALK-005`; `ALK-TESTING-EPISODE-001`
+
+Part II §5.3 calls the window *"an internal implementation constant/policy"*, a
+*"recommended default … subject to implementation review"*, and *"not a chemistry
+threshold"*. After decision 28 it is the whole membership test, and therefore decides
+`position`, the outer-bound classification and `rapidConfirmed`. An implementation that
+reviews it to 45 minutes — which §5.3 expressly permits — gets different answers.
+`CLAUDE.md` requires any cadence that governs behaviour to be stated in frozen canon.
+**Not decided here**; decision 28 kept the value, not the governance of it.
+
+---
+
+## OI-EPISODEANCHOR-001 — is the window measured pairwise or from the first measurement
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Sharpened by owner decision 28.
+- **Canon:** Part II §5.3; `ALK-TESTING-EPISODE-001`
+
+"Within 30 minutes of one another" and "timestamps within an internal
+`repeatClusterWindow`" do not say whether the window is measured between consecutive
+measurements or from the episode's first. For an episode of two they agree. For readings at
+09:00, 09:25 and 09:50, chaining gives one episode spanning 50 minutes; anchoring gives two.
+**Not decided here.** No fixture depends on it: `AD-EPI-001` keeps all three readings within
+30 minutes of each other *and* of the first, and `AD-EPI-007`'s cases have two readings each.
+
+---
+
+## OI-EPISODESUSPECT-001 — does a `SUSPECT` or `SUPERSEDED` member pool
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Narrowed by owner decision 27, not closed.
+- **Canon:** `ALK-EPISODE-RESOLUTION-001`; Part II §4.2, §4.3, §4.4
+
+`ALK-EPISODE-RESOLUTION-001` excludes `INVALID` members under Part II §4.3 and names no
+other status. `ReadingQuality` also has `SUSPECT` ("in analysis: conditionally") and
+`SUPERSEDED` ("not in analysis"). Whether either participates in the pooled value and in
+`combinedMeasurementCount` is unstated, and both change the episode value and the count.
+`AD-ESC-003` deliberately uses an `INVALID` member rather than a `SUSPECT` one so that no
+fixture depends on the answer. **Not decided here.**
+
+---
+
+## OI-ANOMLATESTSAFETY-001 — what the outer-bound safety path does beside an anomalous latest cluster
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Pre-existing; made reachable more often by owner decision 27.
+- **Canon:** Part II §48; `ALK-OUTER-BOUND-ACTION-001`; `ALK-005`
+
+Part II §48 withholds "ordinary dose escalation/reversal" while the latest cluster is
+anomalous, "unless a parameter-specific safety override requires action". Whether
+`ALK-003A`'s outer-bound path is such an override is not stated. Before decision 27, two
+widely disagreeing readings became a contested episode and the question did not arise; now
+they combine into one anomalous cluster and it does. `AD-ESC-003` and `AD-EPI-004` assert
+`automaticMaintenanceAction = WITHHELD` and assert **nothing** about the safety rate.
+**Not decided here.**
+
+---
+
+## OI-PII53METHOD-001 — shared canon still carries method-conditional grouping
+
+- **Class:** `CANON_DEFECT` (shared)
+- **Status:** **OPEN.** Opened by owner decision 27.
+- **Canon:** Part II §5.3, under `SHARED_V2_FREEZE_2`
+
+Part II §5.3 still reads *"same test method or compatible method"*. That is shared canon,
+and owner decision 27 is an alkalinity decision recorded in the Alk parameter canon. For
+alkalinity the condition is inoperative and the Alk rules govern; the shared wording is left
+as it stands. A shared reissue should reconcile it — **not done here**, because editing
+shared canon is outside this pass and would change a freeze this decision does not name.
+
+---
+
 # A6. Findings OUTSIDE owner decisions 23–26 — RECORDED, NOT DECIDED
 
 The owner's brief for the decisions 23–26 round said, of anything the reviewers found that
@@ -2755,8 +2922,26 @@ behaviour, so it is the owner's.
 
 ## OI-ADVISORYWARNSTATE-001 — `advisoryConfidenceWarning`'s third value has no stated trigger set
 
+> **RESOLVED by owner decision 29.**
+>
+> The field has exactly two states: `ATTACHED` (present) and `NONE` (absent). `NOT_RUN` is
+> **removed**, not specified — the owner resolved the gap by deleting the value rather than
+> giving it a trigger set. Where no reading resolves there is nothing to warn about and the
+> field is absent, which is `NONE`.
+>
+> Owner decision 27 independently removes the contested episode, which
+> `ALK-ADVISORY-RANGE-BOUNDARY-001` gave as the value's only documented trigger. The
+> algorithm contract's `FAILURE STATE` — bounds unavailable — now says the *check* does not
+> run, which is a statement about the check and not a third value of the field.
+>
+> Encoded in `ALK-ADVISORY-RANGE-BOUNDARY-001` (canon), `ALK-V2-DATA-CONTRACT.md`,
+> `ALK-V2-ALGORITHM-CONTRACT.md` A40b, `INV-G14` and `AD-ESC-003`.
+>
+> Everything below this box is the pre-decision analysis, preserved as the record of why the
+> decision was needed.
+
 - **Class:** `CANON_DEFECT`
-- **Status:** **OPEN.**
+- **Status:** **RESOLVED by owner decision 29.**
 - **Canon:** `ALK-ADVISORY-RANGE-BOUNDARY-001` (owner decision 24); data contract
   `advisoryConfidenceWarning`.
 - **Raised by:** `canon-conformance-auditor`, decisions 23–26 review, finding F-18.
