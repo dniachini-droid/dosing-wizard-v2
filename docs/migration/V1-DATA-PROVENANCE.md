@@ -142,7 +142,7 @@ the characterisation. Every stored row records its origin.
 
 ### 2.4 Reminders — 11 rows
 
-- **What it is:** the eleven built-in reminders, **with owner edits on top** — one test interval changed from 3 days to 7, and one carrying a manual due-date override with its reason.
+- **What it is:** the eleven built-in reminders, **with owner edits on top** — one test interval changed from its shipped default, four carrying a manual due-date override with its reason, and one carrying an override attributed to a dose change.
 - **Genuine?** The edits are the owner's; the defaults are the app's.
 - **How to import truthfully:** import the **edited configuration**, not the seed defaults. Take test cadences from canon, not from these rows.
 - **V2 eligibility:** configuration, not evidence.
@@ -183,8 +183,10 @@ the characterisation. Every stored row records its origin.
 ### 2.9 Record identity — a design constraint, not a dataset
 
 Reading ids **do not survive an export/restore round trip**: zero id overlap between the
-two consecutive exports, while the rows themselves match. **Any V2 importer must key on
-natural keys — parameter, date, value — never on ids.**
+two consecutive exports, while the rows themselves match. **A V2 importer therefore cannot key on ids.** V1's own merge logic keyed on natural keys
+— parameter, date, value — for exactly this reason. *Recorded as a V1 finding and as a
+constraint any importer inherits; the technical decision itself belongs in `DECISIONS.md`,
+and this document does not make it.*
 
 ---
 
@@ -204,6 +206,13 @@ Therefore, over that period:
 - **trend-based dose recommendation** — refuses;
 - **historical controller replay** — refuses;
 - **any reconstruction of what V2 would have recommended at the time** — refuses.
+
+**This list is longer than the four named in `DATA-PROVENANCE.md` §4, and it is not a
+second rule.** That document's list is explicitly non-exhaustive and states the general
+test: if an analysis needs to know what was being done to the tank between two readings,
+and that context is missing, the analysis is ineligible. The two extra entries here are
+that test applied, not new policy. **`DATA-PROVENANCE.md` remains the owner**; if the two
+ever diverge, it governs.
 
 They refuse because a required input is absent, which is the ordinary behaviour of a
 system that will not launder a gap into a number. **They do not refuse because the

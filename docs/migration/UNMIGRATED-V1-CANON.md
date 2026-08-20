@@ -70,8 +70,10 @@ per `CLAUDE.md`. It never arrives by being quoted here.
 | `LEAVE_BEHIND` | Deliberately not carried forward. |
 
 **The governing rule for this document: every non-Alk chemistry figure is
-`REVALIDATE_SCIENTIFICALLY`.** No exceptions. Canon Parts IV–VIII say the same thing —
-future parameter domains "are not cloned from alkalinity."
+`REVALIDATE_SCIENTIFICALLY`.** No exceptions. `CLAUDE.md` says the same thing — future
+parameter domains "require independent scientific revalidation. They are not cloned from
+alkalinity" — and canon Part VIII states the principle as "one engine does **not** imply
+one algorithm."
 
 ---
 
@@ -87,7 +89,7 @@ future parameter domains "are not cloned from alkalinity."
 | Nutrients, salinity, ammonia | Canon Part VIII — a status stub | **Unowned** |
 | pH, potassium | none | **Unowned** |
 | Notice lifecycle | none — Part IX holds wording only | **Unowned** |
-| Wording rules | Canon Part IX `IX-001` holds the first of seven | **Partly owned** |
+| Wording rules | Canon Part IX `IX-001` holds **all seven**; `X-INV-005` requires contract tests over most | **Owned** — only V1's reasoning and its enforcement table are unowned |
 | Terminology and colour registries | none | **Unowned** |
 | Summary and headline rules | none | **Unowned** |
 | Band and steadiness vocabularies | Canon Part I §7 owns state dimensions, not presentation vocabulary | **Partly owned** |
@@ -231,10 +233,13 @@ Practice source: `docs/journeys/journey-3-magnesium.md`.
 ### What V1 decided
 
 **1. The maintenance dose is never tuned from readings — exempt, not delayed.**
-V1's argument is arithmetic and checkable: a modest dose error takes **over a thousand
-days** to produce a movement clearing magnesium's kit noise floor, so "any answer the app
-produced would be invented." A V1 prototype independently measured the same figure at
-1,347 days. **Canon Part V names this rule specifically** as "explicitly REVALIDATE
+V1's argument is arithmetic and checkable: a modest dose error takes **years** to produce
+a movement clearing magnesium's kit noise floor, so "any answer the app produced would be
+invented." A V1 prototype derived the same conclusion independently, from the same two
+inputs — the noise floor and an assumed dose-error fraction — and reached the same order of
+magnitude. **Both figures are in V1** (`reef-chemistry.md` §10 and
+`legacy/protocol/README.md`); neither is reproduced here, because that arithmetic is
+exactly what a revalidation should redo rather than inherit. **Canon Part V names this rule specifically** as "explicitly REVALIDATE
 SCIENTIFICALLY, not automatically carried forward and not automatically deleted."
 
 **2. Corrections are not exempt, and the distinction is the point.** A one-off dose of a
@@ -259,7 +264,8 @@ most carefully drawn part of §10:
 
 **5. The gate's cost, measured and accepted.** On a three-year simulation, holding the
 alkalinity dose while magnesium sat under its alert level cost a substantial alkalinity
-decline over six weeks before the outer-bound warning took over. V1 recorded this
+decline before the outer-bound warning took over. **The magnitude and the interval are in
+V1** (`reef-chemistry.md` §10). V1 recorded this
 "so that whoever finds the simulation result later knows it was seen and weighed, rather
 than re-deriving the narrow reading and quietly restoring it."
 
@@ -300,7 +306,7 @@ The non-precipitation finding: `REVALIDATE_SCIENTIFICALLY`.
 ### What V1 decided
 
 Outer bounds, a shipped range, a two-sided alert pair, a rate rail, a movement threshold, a
-fast-movement threshold at twice the movement threshold, an analysis window, a noise floor,
+fast-movement threshold derived from it by a fixed rule, an analysis window, a noise floor,
 an out-of-band margin and a steadiness spread. **Figures in the sections cited.**
 
 **Salinity is graded because the app acts on it.** V1's stated reason for giving salinity a
@@ -521,15 +527,31 @@ parameter outside a registered set of complete-sentence forms.
 - **Rule 6 has a precondition the V1 engine could not answer** — what counts as "recent", and whether the engine knew about a change made outside its own flow. A change made elsewhere fell through to a branch that produced exactly the card the rule forbids. **V2's first-class intervention model answers this properly.**
 - **Nothing asserted §23.** V1's one wording checker covered a single field of a single loop in a single function, and checked for a claim without checking for its supporting figure — rule 1's own failure mode, unchecked.
 
-### Classification
+### V2 already owns all seven rules — corrected after review
 
-Rules 1–5 and 7: `PORT_AS_IS`.
-Rule 6: `REBUILD_THE_IDEA` — the rule is right; V2's intervention model supplies the precondition.
-The seven-check enforcement table: `PORT_WITH_CLEANUP`.
+**An earlier draft of this section claimed canon held only the first of the seven. That was
+wrong.** Canon `IX-001` states **all seven**, mapping one-to-one onto the list above, and
+`X-INV-005` already requires contract tests over conclusion-before-basis, no unsupported
+causal speculation, dose-only-when-relevant, units-present and recent-intervention
+precedence.
 
-**V2 owner:** **partly.** Canon Part IX `IX-001` retains "global V1 wording rules" and
-states the first one. **The remaining six, the enforcement table, and the
-withdrawn-exception reasoning are not in V2.**
+**Classifying these rules `PORT_AS_IS` would have been the defect V2 exists to prevent** —
+a second statement of a rule canon already owns, which `MASTER RULE 1` calls a defect
+rather than a coincidence. The correction is recorded rather than quietly applied, because
+the near-miss is the useful part.
+
+### Classification — what is actually unowned
+
+| Element | Classification | Owner |
+|---|---|---|
+| The seven rules themselves | **Already owned — do not restate** | Canon `IX-001` |
+| Their enforcement | **Already owned in part** | Canon `X-INV-005` |
+| **The reasoning behind rules 1 and 5** — why a checkable claim beats a trusted one, and the withdrawn-exception argument | `REFERENCE_ONLY` | none |
+| **Rule 3's third case** — a card must say the dose is already correct when that is why no change is recommended, or it reads as the app failing to notice | `REFERENCE_ONLY` | none — canon states rule 3 without this case |
+| **The seven-check enforcement table** | `PORT_WITH_CLEANUP` | none — `X-INV-005` names five checks in prose, not seven as a table |
+
+**V2 owner:** **canon Part IX, for the rules.** What is unowned is narrower than this
+section originally claimed: V1's *reasoning*, rule 3's third case, and the check table.
 
 ---
 
@@ -544,7 +566,7 @@ twenty-three concept-to-word rows, each with its banned alternatives.
 
 Three structural rules inside it are the transferable part:
 
-- **The app never says "safe" or "unsafe" about any reading.** It reports position relative to the user's own ranges and nothing more. V1's outer-bound thresholds are an *internal* name, and the app does not say it out loud.
+- **The app never says "safe" or "unsafe" about any reading.** It reports position relative to the user's own ranges and nothing more. V1's outer-bound thresholds are an *internal* name, and the app does not say it out loud. **Already owned:** canon `IX-006` states the same prohibition. Listed for completeness, not as something V2 needs from here.
 - **Canon's own vocabulary is not app copy.** Several words are reserved for canon's internal use and are never rendered — the internal name of a band, the engine name for the downward instrument, and one state id that is never displayed. "A file name is not a user-facing word."
 - **A pair of near-opposites that shared one word until they were separated** — one meaning *inside the range and sliding toward an edge*, the other meaning *outside the range and moving about while it is there*. "Neither may be used for the other, and neither may be used loosely for movement in general."
 
@@ -571,8 +593,9 @@ lists, any synonym is a finding: `PORT_AS_IS`.
 The **rows**: `PORT_WITH_CLEANUP` — several V1 words attach to V1 concepts V2 replaces.
 The measured-not-eyeballed colour discipline: `PORT_AS_IS`.
 
-**V2 owner:** **none.** Canon `X-INV-005` requires a surface wording contract but
-**registers no vocabulary**.
+**V2 owner:** **none, for the registry.** Canon `X-INV-005` requires a surface wording
+contract but **registers no vocabulary**, and no V2 document registers colours at all.
+One row is already canon's — the safe/unsafe prohibition, `IX-006`.
 
 ---
 
@@ -614,7 +637,9 @@ no constraint and changes no figure. It decides which of two parameters is named
 **6. Ties break on a fixed parameter order**, not on display order — "a display arrangement
 that may change for display reasons cannot be what makes a headline checkable."
 
-**7. Both comparisons run at stored precision**, never at display precision.
+**7. Both comparisons run at stored precision**, never at display precision. *(This one is
+already canon's — §2.3. It is listed because it is part of V1's rule, not because V2 needs
+it from here.)*
 
 **8. A literal in the summary's code path is a finding.**
 
@@ -687,15 +712,22 @@ graded verdict.
 |---|---|
 | Two vocabularies, never substituting | `PORT_AS_IS` |
 | No surface may invent a third | `PORT_AS_IS` |
-| The four boundary rules | `PORT_AS_IS` |
+| Band-edge inclusivity, and stored-precision comparison / display-only rounding | **Already owned — do not restate** (canon §2.3, and Alk boundary inclusivity) |
+| The alert-tier-first tie-break, and one-notice-per-value | `PORT_AS_IS` — not stated in V2 |
 | Refuse per axis, not wholesale; a single reading still states position | `PORT_AS_IS` |
 | "Decided, not derived" | `PORT_AS_IS` as a principle |
 | "No verdict at all, by decision, and not waiting on you" | `PORT_AS_IS` as a principle |
 | The eight steadiness spread figures | `REVALIDATE_SCIENTIFICALLY` |
 | The band set itself | `REBUILD_THE_IDEA` — V2's structured state dimensions replace a flat enum |
 
-**V2 owner:** **partly.** Canon Part I §7 owns the **state dimensions**. **No V2 rule
-registers a presentation vocabulary or its boundary arithmetic.**
+**V2 owner:** **partly.** Canon Part I §7 owns the **state dimensions**, and canon §2.3
+plus the Alk boundary rules own **half the boundary arithmetic** — stored-precision
+comparison, display-only rounding, and inclusivity at a boundary. **What no V2 rule
+registers is the presentation vocabulary itself, and the tie-break when two rules claim one
+value.**
+
+*(An earlier draft of this section said no V2 rule owned any of the boundary arithmetic.
+Corrected after review.)*
 
 ---
 
@@ -741,7 +773,7 @@ dial."
 
 ## B7 — The refusal list
 
-**V1 source:** `reef-chemistry.md` §12 — twenty-one enumerated things the app will not do.
+**V1 source:** `reef-chemistry.md` §12 — **twenty** enumerated things the app will not do.
 
 ### What V1 decided
 
@@ -861,7 +893,7 @@ Every item below has **no V2 owner** at `7aaadef`.
 | 12 | The rate-of-change premise — **uncited** | A8 | none |
 | 13 | Diurnal swing and reading comparability | A8 | none |
 | 14 | **The notice lifecycle** | B1 | none |
-| 15 | Wording rules 2–7 and the seven-check enforcement table | B2 | Part IX holds rule 1 only |
+| 15 | The *reasoning* behind wording rules 1 and 5, rule 3's third case, and the seven-check enforcement table — **the rules themselves are canon's** | B2 | none |
 | 16 | The terminology registry and the colour registry | B3 | none |
 | 17 | **The summary and headline rules** — prior art for PR #6 Gap 2 | B4 | none |
 | 18 | The presentation vocabularies and their boundary arithmetic | B5 | Part I owns state dimensions only |

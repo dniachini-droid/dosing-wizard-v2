@@ -132,7 +132,7 @@ domain is not complete until they are closed under the Freeze-4 reopening rule.
 `docs/migration/V1-OPEN-OWNER-QUESTIONS.md`. None blocks the Alk domain. One — *what is a
 task* — blocks any design of the tasks-and-calendar area, which
 `docs/migration/V1-APPLICATION-SALVAGE.md` §12 identifies as the largest omission from the
-build-one screen set. Four are chemistry and would close through a governed canon reissue
+build-one screen set. Five are chemistry and would close through a governed canon reissue
 rather than a ledger entry.
 
 If the frozen canon source files cannot be accessed from a cloud session, that must be

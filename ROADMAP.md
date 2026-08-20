@@ -79,17 +79,15 @@ Create a clean V2 project without losing hard-won V1 knowledge.
 - V1 material is clearly marked reference-only where appropriate.
 - No application runtime has yet been built accidentally from V1 assumptions.
 
-## Status
+## A sequencing fact this work measured
 
-The salvage deliverables above are **complete**. Whether Phase 0 is closed also depends on
-the remaining exit criteria and is `PROJECT-STATE.md`'s to record, not this document's.
+The build-one screen set was designed before the application salvage inventory existed, and
+omits substantial V1 surfaces — the tasks and maintenance calendar, the Test Lab checklist,
+the reading-arrival moment, the dose-expectation moment and the ICP flow among them.
+`docs/migration/V1-APPLICATION-SALVAGE.md` §12 lists them in full.
 
-**A gap this work measured, recorded here because it is a sequencing fact.** The build-one
-screen set was designed before the application salvage inventory existed, and omits
-substantial V1 surfaces — the tasks and maintenance calendar, the Test Lab checklist, the
-reading-arrival moment, the dose-expectation moment and the ICP flow among them.
-`docs/migration/V1-APPLICATION-SALVAGE.md` §12 lists them in full. **Nothing here decides
-whether any of them enters build one.**
+**Nothing here decides whether any of them enters build one**, and current status remains
+`PROJECT-STATE.md`'s to record, per this document's own scope note.
 
 ---
 
