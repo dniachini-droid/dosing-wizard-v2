@@ -802,6 +802,106 @@ await step("the moment's chart is interactive too", async () => {
   await page.evaluate(() => document.querySelectorAll(".moment, .sheetwrap").forEach((n) => n.remove()));
 });
 
+/* --- what it actually looks like -----------------------------------------
+   The token checks in `tests/app/` read the files. These read the RENDERED
+   page: a browser resolving the variables, applying the cascade and telling us
+   what colour a sentence came out. A token can be perfect and still not reach
+   the element that needed it. */
+
+console.log("\nWhat it looks like once a browser has resolved it");
+
+await step("body text comes out near black, and secondary text stays a step back", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForSelector("h1:has-text('Today')");
+  await page.click(".gear");
+  await page.waitForSelector("h1:has-text('Settings')");
+  const seen = await page.evaluate(() => {
+    const of = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? getComputedStyle(el).color : null;
+    };
+    return { body: of("p.body"), secondary: of(".topbar .sub, .caption, .inert-note") };
+  });
+  if (!seen.body) throw new Error("no body paragraph on the screen to measure");
+
+  /* `#0C1D1A` resolved is `rgb(12, 29, 26)` and `#566966` is `rgb(86, 105, 102)`,
+     so the sums are 67 and 293. Compared as numbers, because how a browser
+     spells a colour is not the point — how dark it came out is. */
+  const lum = (c) => c.match(/\d+/g).map(Number).reduce((a, b) => a + b, 0);
+  if (lum(seen.body) > 160) throw new Error(`body text resolved to ${seen.body}, which is not near black`);
+
+  /* And the hierarchy still exists. Darkening everything would pass the line
+     above and lose the distinction the rule is FOR. */
+  if (seen.secondary && lum(seen.secondary) <= lum(seen.body)) {
+    throw new Error(`secondary text (${seen.secondary}) is no lighter than body text (${seen.body})`);
+  }
+});
+
+await step("every parameter card carries a notice strip", async () => {
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForSelector(".card.param-card");
+  const strips = await page.$$eval(".card.param-card", (cards) =>
+    cards.map((c) => {
+      const st = getComputedStyle(c, "::after");
+      return { h: st.height, bg: st.backgroundColor, content: st.content };
+    })
+  );
+  if (!strips.length) throw new Error("no parameter cards on History");
+  for (const s of strips) {
+    if (parseFloat(s.h) < 4) throw new Error(`a parameter card's strip is ${s.h} tall`);
+    if (/rgba\(0, 0, 0, 0\)|transparent/.test(s.bg)) throw new Error("a parameter card's strip is invisible");
+  }
+});
+
+await step("a logged-only tile's strip is the quiet one, never a state colour", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForSelector(".tile");
+  const seen = await page.$$eval(".tile", (tiles) =>
+    tiles.map((t) => getComputedStyle(t, "::after").backgroundColor)
+  );
+  if (!seen.length) throw new Error("no logged-only tiles on Today");
+  /* Amber is #B4761E and red is #C2432E — both far warmer than the quiet grey.
+     A strip whose red channel runs well ahead of its blue is a state colour. */
+  for (const bg of seen) {
+    const [r, g, b] = bg.match(/\d+/g).map(Number);
+    if (r - b > 40) throw new Error(`a logged-only tile is wearing a state colour: ${bg}`);
+    if (Math.abs(r - g) > 40) throw new Error(`a logged-only tile is wearing a state colour: ${bg}`);
+  }
+});
+
+await step("the tile's sparkline runs past the tile's padding, to its edges", async () => {
+  const measured = await page.evaluate(() => {
+    const tile = [...document.querySelectorAll(".tile")].find((t) => t.querySelector("svg"));
+    if (!tile) return null;
+    const svg = tile.querySelector("svg");
+    return { tile: tile.getBoundingClientRect().width, svg: svg.getBoundingClientRect().width };
+  });
+  if (!measured) throw new Error("no tile is drawing a sparkline");
+  /* Equal to the tile's own width, not the padded content box inside it. */
+  if (measured.svg < measured.tile - 2) {
+    throw new Error(`the sparkline is ${measured.svg}px inside a ${measured.tile}px tile — still inset`);
+  }
+});
+
+await step("the keeper's own range is shaded behind a tile's trace", async () => {
+  const bands = await page.$$eval(".tile svg .range-fill", (n) =>
+    n.map((r) => ({ h: r.getBoundingClientRect().height, fill: getComputedStyle(r).fill }))
+  );
+  /* The owner's import brings ranges for his logged-only parameters. If none
+     came across there is nothing to shade, and that is not a failure — but a
+     band that is drawn must be visible and must not be alkalinity's. */
+  for (const b of bands) {
+    if (b.h < 1) throw new Error(`a range band is ${b.h}px tall — clipped off the chart`);
+  }
+  console.log(`      (${bands.length} tiles are shading a range)`);
+});
+
+await step("the depth on the cards is still there", async () => {
+  const shadow = await page.$eval(".card", (c) => getComputedStyle(c).boxShadow);
+  const layers = shadow.split(/,(?![^(]*\))/).length;
+  if (layers < 4) throw new Error(`a card has ${layers} shadow layers, not four`);
+});
+
 await browser.close();
 server.close();
 

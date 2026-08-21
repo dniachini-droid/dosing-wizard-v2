@@ -37,6 +37,7 @@ const SUITES = [
   "test-chart.mjs",
   "test-strings.mjs",
   "test-shell.mjs",
+  "test-tokens.mjs",
 ];
 
 /* Run every suite from a given tree, and return {id -> error|null}. A fresh

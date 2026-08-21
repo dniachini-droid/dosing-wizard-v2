@@ -27,6 +27,7 @@ import { h, mount } from "./ui/dom.js";
 import { runAssessment, nowAsOf } from "./assess.js";
 import { onEngineState, warmUp, ENGINE_STATE } from "./engine/client.js";
 import { todayLocal } from "./store/time.js";
+import { keeperRange } from "./store/config.js";
 import { fmtDayName } from "./ui/format.js";
 import {
   currentMode,
@@ -184,11 +185,15 @@ const ctx = {
 
     const config = await store.config.current();
     const vals = series.map((s) => s.value);
-    /* The axis pad wants a low and a high. Alkalinity has the keeper's own
-       configured range; nothing else has a range at all, so its own extremes
-       are used and no band is drawn. */
-    const min = def.assessed && config?.targetRangeMinDkh != null ? config.targetRangeMinDkh : Math.min(...vals);
-    const max = def.assessed && config?.targetRangeMaxDkh != null ? config.targetRangeMaxDkh : Math.max(...vals);
+    /* The axis pad wants a low and a high, and the band is drawn between them.
+       This file used to pick the range itself, and only knew about alkalinity's
+       — so a calcium reading arrived on a chart with no band while History drew
+       one from the very same configuration. `keeperRange` is the one owner of
+       that choice now. Where he has set no range the readings' own extremes are
+       used and no band is drawn. */
+    const range = keeperRange(def, config);
+    const min = range ? range.min : Math.min(...vals);
+    const max = range ? range.max : Math.max(...vals);
 
     momentReadingArrival({
       def: { ...def, min, max },

@@ -165,3 +165,35 @@ export function createConfigStore(backend) {
 
   return { history, current, append, forEngine, forEngineUpTo, missingFacts };
 }
+
+/* ============================================================================
+   THE KEEPER'S OWN RANGE, FOR DISPLAY
+   ----------------------------------------------------------------------------
+   The band shaded behind a trace, wherever a trace is drawn. It is here, in the
+   configuration module, because more than one screen shades it — History draws
+   a full chart per parameter and Today shades the same band behind each
+   parameter card's sparkline — and two implementations of "which range is his"
+   is precisely the defect canon `MASTER RULE 1` calls a defect rather than a
+   coincidence. Once they agreed by luck; the moment his own imported ranges
+   arrived they would not have.
+
+   Alkalinity's range lives in the two fields the engine reads, because the
+   engine reads them. Every other parameter's lives in `parameterRanges`, which
+   `forEngine` strips before the engine ever sees it: those are the keeper's own
+   preference, they are display, and they govern nothing.
+
+   Neither is a canon band edge. Nothing in this function decides chemistry —
+   it reads back a number the keeper typed, and the screens that draw it say
+   whose numbers they are.
+   ========================================================================= */
+
+export function keeperRange(def, config) {
+  if (!def || !config) return null;
+  if (def.assessed) {
+    return config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null
+      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
+      : null;
+  }
+  const r = config.parameterRanges && config.parameterRanges[def.key];
+  return r && Number.isFinite(r.min) && Number.isFinite(r.max) ? r : null;
+}

@@ -20,6 +20,7 @@
 import { h } from "../ui/dom.js";
 import { interactiveChart } from "../ui/chart.js";
 import { parameterDef } from "../store/ledger.js";
+import { keeperRange } from "../store/config.js";
 import { fmtShort, fmtTimeOfDay, fmtDayName } from "../ui/format.js";
 import { instructsDoseChange, selectCard, isAbsent, isPresent } from "../present/cards.js";
 import {
@@ -59,7 +60,11 @@ const CARD_TONE = Object.freeze({
 
 export function renderAssessment(result, { onOpenDetail, onOpenEntry, readings, config } = {}) {
   const card = selectCard(result);
-  const box = h("section", { class: "card" });
+  /* `param-card` earns the notice strip along the bottom edge. Its COLOUR is
+     the line below — `CARD_TONE` maps the engine's own output class to
+     `is-attention` or `is-safety` and to nothing else, so the strip reports a
+     state this file was told, never one it worked out. */
+  const box = h("section", { class: "card param-card" });
 
   box.append(
     h(
@@ -588,10 +593,11 @@ function renderPayload(payload) {
    The Today card is where the keeper looks most, and it was the one chart he
    could not touch. It has the same gestures as every other now. */
 function renderTrace(readings, config, result, def, onOpenEntry) {
-  const range =
-    config?.targetRangeMinDkh != null && config?.targetRangeMaxDkh != null
-      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
-      : null;
+  /* The keeper's own band, from the one function that decides which range is
+     his. It used to be decided here as well, and in `main.js`, and in History —
+     three readings of the same configuration, which `MASTER RULE 1` calls a
+     defect rather than a coincidence. */
+  const range = keeperRange(def, config);
 
   const { node } = interactiveChart({
     points: readings.map((r) => ({
@@ -612,7 +618,7 @@ function renderTrace(readings, config, result, def, onOpenEntry) {
        point on the Today card could not be opened. It can now: a tap says what
        the reading is, and a second tap on the same point opens it. */
     onPointTap: onOpenEntry ? (p) => onOpenEntry(p.eventId) : null,
-    ariaLabel: traceLabel(readings, config),
+    ariaLabel: traceLabel(readings, def, config),
   });
 
   const legend = h("div", { class: "legend" });
@@ -631,7 +637,7 @@ function renderTrace(readings, config, result, def, onOpenEntry) {
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--faint)" } }),
+        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--text-meta)" } }),
         t("assessment.legend.excluded")
       )
     );
@@ -639,15 +645,10 @@ function renderTrace(readings, config, result, def, onOpenEntry) {
   return h("div", null, node, legend);
 }
 
-function traceLabel(readings, config) {
+function traceLabel(readings, def, config) {
   const first = readings[0], last = readings[readings.length - 1];
-  const range =
-    config?.targetRangeMinDkh != null
-      ? t("assessment.chart.ariaRange", {
-          min: config.targetRangeMinDkh,
-          max: config.targetRangeMaxDkh,
-        })
-      : "";
+  const band = keeperRange(def, config);
+  const range = band ? t("assessment.chart.ariaRange", { min: band.min, max: band.max }) : "";
   return t("assessment.chart.aria", {
     from: first.value,
     fromDate: fmtShort(first.date),

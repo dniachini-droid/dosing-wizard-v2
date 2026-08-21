@@ -181,7 +181,7 @@ function renderCalendar(ctx, { month, today, tasks, completions, projected, sugg
   const legend = h("div", { class: "legend" });
   legend.append(
     h("span", null, h("span", { class: "swatch", style: { background: "var(--done-ink)" } }), t("tasks.calendar.legendDone")),
-    h("span", null, h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px solid var(--faint)" } }), t("tasks.calendar.legendScheduled")),
+    h("span", null, h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px solid var(--text-meta)" } }), t("tasks.calendar.legendScheduled")),
     h("span", null, h("span", { class: "swatch", style: { background: "var(--suggest-edge)" } }), t("tasks.calendar.legendSuggested")),
     h("span", null, h("span", { class: "swatch", style: { background: "var(--attention)" } }), t("tasks.calendar.legendOverdue"))
   );

@@ -37,6 +37,7 @@
 import { h } from "../ui/dom.js";
 import { interactiveChart } from "../ui/chart.js";
 import { parameterDefs, KIND } from "../store/ledger.js";
+import { keeperRange } from "../store/config.js";
 import { fmtShort, fmtDayName, fmtEventTime } from "../ui/format.js";
 import { addDays, hasExactInstant, todayLocal } from "../store/time.js";
 /* WHERE DOSE HISTORY BEGINS HAS ONE OWNER.
@@ -140,7 +141,11 @@ export async function renderHistory(ctx) {
 }
 
 function renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment, doseBoundary) {
-  const card = h("section", { class: "card" });
+  /* `param-card` carries the notice strip along the bottom edge. It stays the
+     quiet colour on every card on this screen, including alkalinity's: History
+     is the record, and the record reports no state. The engine's answer is on
+     Today, on the one card that holds it. */
+  const card = h("section", { class: "card param-card" });
   /* Counted back from the application's clock in whole calendar days, not from
      `Date.now()` in milliseconds. Two reasons, and both were real: 86400000 is
      the wrong length of day twice a year, and the wall clock is the wrong
@@ -206,7 +211,7 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
      the ranges he set himself. Neither is a canon band edge and neither
      governs anything — they are drawn because he asked to see where he likes
      to keep the tank, and the legend says whose numbers they are. */
-  const range = rangeFor(def, config);
+  const range = keeperRange(def, config);
   /* The boundary belongs on the assessed parameter's chart, because it is
      about what can be analysed and only alkalinity is analysed in this
      build. */
@@ -241,7 +246,7 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--faint)" } }),
+        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--text-meta)" } }),
         t("history.legend.noTime", { n: noTime })
       )
     );
@@ -251,7 +256,7 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--faint)" } }),
+        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--text-meta)" } }),
         t("history.legend.noZone", { n: noZone })
       )
     );
@@ -261,7 +266,7 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--faint)" } }),
+        h("span", { class: "swatch", style: { background: "var(--text-meta)" } }),
         t("assessment.legend.repeats")
       )
     );
@@ -272,7 +277,7 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--faint)" } }),
+        h("span", { class: "swatch", style: { background: "var(--text-meta)" } }),
         t(EVENT_MARKS[k].label)
       )
     );
@@ -301,22 +306,10 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
   return card;
 }
 
-/* The band this parameter is drawn with, if the keeper set one.
-
-   Alkalinity's lives in the two fields the engine reads, because the engine
-   reads them. Every other parameter's lives in `parameterRanges`, which the
-   configuration store strips before the engine ever sees it — they are the
-   keeper's own preference, they are display, and they govern nothing. */
-function rangeFor(def, config) {
-  if (!config) return null;
-  if (def.assessed) {
-    return config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null
-      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
-      : null;
-  }
-  const r = config.parameterRanges && config.parameterRanges[def.key];
-  return r && Number.isFinite(r.min) && Number.isFinite(r.max) ? r : null;
-}
+/* The band this parameter is drawn with now lives in `store/config.js`, because
+   Today's parameter cards shade it too and two implementations of "which range
+   is his" is the defect canon `MASTER RULE 1` names. `keeperRange` is imported
+   at the top of this file. */
 
 function reportedRepeatWindow(latestAssessment) {
   const codes = latestAssessment?.engineResult?.reasonCodes || [];

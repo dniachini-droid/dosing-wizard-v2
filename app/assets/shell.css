@@ -18,7 +18,7 @@ html, body {
 
 body {
   font-family: var(--font);
-  color: var(--ink);
+  color: var(--text);
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
@@ -57,7 +57,7 @@ body {
   font: inherit;
   font-size: var(--t-micro);
   font-weight: var(--w-bold);
-  color: var(--grey);
+  color: var(--text-2);
   /* The accessibility floor: "this app is used one-handed, wet-handed,
      standing at a tank." Touch targets are at least 44px. */
   min-height: 44px;
@@ -82,7 +82,7 @@ body {
   background: var(--alk);
 }
 
-#tabbar .tab.off { color: var(--faint); }
+#tabbar .tab.off { color: var(--text-meta); }
 
 /* Out of flow. In flow it made the Tools tab taller than its neighbours, the
    button overflowed the bar, and the bar itself then intercepted the tap — a
@@ -96,7 +96,7 @@ body {
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
 }
 #tabbar .tab.off { padding-bottom: var(--sp-3); }
 
@@ -169,7 +169,7 @@ button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
   background: none;
   font-size: var(--t-h1);
   line-height: 1;
-  color: var(--grey);
+  color: var(--text-2);
   cursor: pointer;
   min-width: 44px;
   min-height: 44px;
@@ -200,8 +200,8 @@ button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
 .moment .mval { display: flex; align-items: baseline; justify-content: center; gap: var(--sp-1); }
 .moment .mval > span:first-child,
 .moment .mval .rc-sheen { font-size: var(--t-hero); font-weight: var(--w-heavy); letter-spacing: var(--ls-hero); }
-.moment .mfrom { font-size: var(--t-h2); font-weight: var(--w-heavy); color: var(--grey); }
-.moment .marrow { font-size: var(--t-h2); color: var(--grey); }
+.moment .mfrom { font-size: var(--t-h2); font-weight: var(--w-heavy); color: var(--text-2); }
+.moment .marrow { font-size: var(--t-h2); color: var(--text-2); }
 .moment .mlabel { font-size: var(--t-small); font-weight: var(--w-heavy); margin-top: var(--sp-1); }
 .moment .mtick { font-size: var(--t-hero); line-height: 1; }
 .moment .mhead { font-size: var(--t-h2); font-weight: var(--w-heavy); color: var(--alk); margin: 0 0 var(--sp-2); }
@@ -212,7 +212,7 @@ button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
 .moment .mcap:last-child {
   background: var(--inset);
   font-size: var(--t-micro);
-  color: var(--grey);
+  color: var(--text-2);
   padding: var(--sp-3);
 }
 
@@ -290,7 +290,7 @@ button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
 .moment .mval.landed .rc-sheen {
   background-image: linear-gradient(100deg,
     currentColor 0%, currentColor 38%,
-    rgba(255, 255, 255, 0.95) 50%,
+    var(--ma-sheen-light) 50%,
     currentColor 62%, currentColor 100%);
   background-size: 260% 100%;
   -webkit-background-clip: text;
@@ -333,7 +333,7 @@ button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
 .windowbar { display: flex; gap: var(--sp-2); margin: 0 var(--gutter) var(--sp-2); }
 .windowbar .opt { flex: 1; }
 
-.pt-repeat { stroke: var(--faint); stroke-width: 1.5; }
+.pt-repeat { stroke: var(--text-meta); stroke-width: 1.5; }
 
 .scroll-x { overflow-x: auto; }
 
@@ -354,4 +354,4 @@ select.input { -webkit-appearance: none; appearance: none; }
 
 .elgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); }
 .elgrid .elcell { display: flex; align-items: center; gap: var(--sp-2); }
-.elgrid .elcell > span { width: 2.5em; font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); }
+.elgrid .elcell > span { width: 2.5em; font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); }

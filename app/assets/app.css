@@ -16,7 +16,7 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--ground);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font);
   font-size: var(--t-body);
   line-height: var(--lh-body);
@@ -48,7 +48,7 @@ a { color: var(--alk); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
   margin: 0 0 var(--sp-2);
 }
 .topbar h1 {
@@ -60,14 +60,14 @@ a { color: var(--alk); }
 .topbar .sub {
   margin: var(--sp-2) 0 0;
   font-size: var(--t-small);
-  color: var(--grey);
+  color: var(--text-2);
 }
 
 .backlink {
   display: inline-block;
   font-size: var(--t-small);
   font-weight: var(--w-semi);
-  color: var(--grey);
+  color: var(--text-2);
   text-decoration: none;
   margin-bottom: var(--sp-3);
 }
@@ -85,6 +85,39 @@ a { color: var(--alk); }
 .card.tight { padding: var(--sp-3) var(--sp-4); }
 .card.flush { padding-bottom: var(--sp-2); }
 
+/* --- A parameter card's notice strip --------------------------------------
+   A band across the bottom edge of a card that stands for one parameter. It is
+   a CONSTANT of such a card — always present, never absent — and only its
+   colour carries meaning: quiet grey where the card reports no state, amber
+   where attention is needed, red where the tank is outside range.
+
+   This file colours a decision it does not make. `is-attention` and
+   `is-safety` are put on the card by `assessment.js` from the engine's own
+   output class and from nothing else; a logged-only parameter has no engine
+   and therefore no class, which is exactly why its strip is colourless.
+
+   No parameter colour appears here. Identity is carried by the card's mark,
+   its trace and its range shading; state is carried by this strip alone.
+
+   A strip and not a border, so the card's own bottom radius is followed and
+   the shadow is undisturbed. The bottom padding is extended by exactly the
+   strip's height, so nothing ever sits underneath it. */
+
+.param-card {
+  position: relative;
+  padding-bottom: calc(var(--card-pad) + var(--strip-h));
+}
+.param-card::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--strip-h);
+  background: var(--strip-quiet);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+}
+.param-card.is-attention::after { background: var(--strip-attention); }
+.param-card.is-safety::after    { background: var(--strip-safety); }
+
 .card-head {
   display: flex;
   align-items: center;
@@ -100,7 +133,7 @@ a { color: var(--alk); }
 }
 .card-head .aside {
   font-size: var(--t-micro);
-  color: var(--faint);
+  color: var(--text-meta);
   font-weight: var(--w-semi);
   white-space: nowrap;
 }
@@ -131,7 +164,7 @@ a { color: var(--alk); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
   margin: var(--sp-6) 0 var(--sp-3);
 }
 .seclabel:first-child { margin-top: 0; }
@@ -153,23 +186,23 @@ a { color: var(--alk); }
 .unit {
   font-size: var(--t-small);
   font-weight: var(--w-bold);
-  color: var(--faint);
+  color: var(--text-meta);
   letter-spacing: 0;
   margin-left: var(--sp-1);
 }
 .caption {
   font-size: var(--t-small);
-  color: var(--grey);
+  color: var(--text-2);
   margin: var(--sp-2) 0 0;
 }
 .meta {
   font-size: var(--t-micro);
-  color: var(--faint);
+  color: var(--text-meta);
   margin: var(--sp-1) 0 0;
 }
-p.body { margin: 0 0 var(--sp-3); color: var(--grey); font-size: var(--t-body); }
+p.body { margin: 0 0 var(--sp-3); color: var(--text); font-size: var(--t-body); }
 p.body:last-child { margin-bottom: 0; }
-p.body strong { color: var(--ink); font-weight: var(--w-bold); }
+p.body strong { color: var(--text); font-weight: var(--w-bold); }
 
 /* --- Pills --------------------------------------------------------------- */
 
@@ -214,7 +247,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
   margin-bottom: var(--sp-2);
 }
 .dim dd {
@@ -222,7 +255,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-size: var(--t-small);
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-head);
-  color: var(--ink);
+  color: var(--text);
 }
 .dim .why {
   display: block;
@@ -230,7 +263,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-size: var(--t-micro);
   font-weight: var(--w-regular);
   letter-spacing: 0;
-  color: var(--grey);
+  color: var(--text-2);
   line-height: 1.35;
 }
 .dim.is-attention dd { color: var(--attention); }
@@ -255,7 +288,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
 .slopebox .lbl {
   font-size: var(--t-micro);
   font-weight: var(--w-bold);
-  color: var(--grey);
+  color: var(--text-2);
   letter-spacing: 0;
   display: block;
   margin-bottom: var(--sp-1);
@@ -266,7 +299,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-value);
 }
-.slopebox .sub { font-size: var(--t-micro); color: var(--faint); display: block; margin-top: 2px; }
+.slopebox .sub { font-size: var(--t-micro); color: var(--text-meta); display: block; margin-top: 2px; }
 
 /* --- Recommendation block ------------------------------------------------ */
 
@@ -282,7 +315,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
   margin-bottom: var(--sp-2);
 }
 .reco .headline {
@@ -292,7 +325,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   margin: 0 0 var(--sp-2);
   line-height: 1.3;
 }
-.reco .detail { font-size: var(--t-small); color: var(--grey); margin: 0; }
+.reco .detail { font-size: var(--t-small); color: var(--text); margin: 0; }
 .reco.is-safety { background: var(--safety-bg); box-shadow: none; }
 .reco.is-safety .verb { color: var(--safety); }
 .reco.is-attention { background: var(--attention-bg); box-shadow: none; }
@@ -328,7 +361,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-head);
 }
-.refusal p { margin: 0 0 var(--sp-3); font-size: var(--t-small); color: var(--grey); }
+.refusal p { margin: 0 0 var(--sp-3); font-size: var(--t-small); color: var(--text); }
 .refusal p:last-child { margin-bottom: 0; }
 .refusal .fix {
   display: inline-block;
@@ -370,7 +403,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
 }
 .notices > summary .chev {
   font-size: var(--t-small);
-  color: var(--faint);
+  color: var(--text-meta);
   font-weight: var(--w-bold);
 }
 .notices[open] > summary .chev::after { content: "\2212"; }
@@ -400,27 +433,27 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-family: var(--mono);
   font-size: var(--t-code);
   font-weight: var(--w-bold);
-  color: var(--ink);
+  color: var(--text);
   letter-spacing: 0;
   word-break: break-word;
 }
-.notice .say { font-size: var(--t-small); color: var(--grey); }
+.notice .say { font-size: var(--t-small); color: var(--text); }
 .notice .payload {
   font-family: var(--mono);
   font-size: var(--t-code);
-  color: var(--grey);
+  color: var(--text-2);
   background: var(--inset);
   border-radius: var(--r-inner);
   padding: var(--sp-2);
   line-height: 1.7;
   word-break: break-word;
 }
-.notice .payload b { color: var(--ink); font-weight: var(--w-bold); }
-.notice .payload .k { color: var(--faint); }
+.notice .payload b { color: var(--text); font-weight: var(--w-bold); }
+.notice .payload .k { color: var(--text-meta); }
 
 .sev-INFO     { background: var(--neutral-chip-bg); color: var(--neutral-chip); }
 .sev-GATING   { background: var(--attention-bg);    color: var(--attention); }
-.sev-REFUSAL  { background: var(--inset-deep);      color: var(--ink); }
+.sev-REFUSAL  { background: var(--inset-deep);      color: var(--text); }
 .sev-SAFETY   { background: var(--safety-bg);       color: var(--safety); }
 
 /* A notice row is as tall as it has content. The severity chip spans exactly
@@ -448,7 +481,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-family: var(--mono);
   font-size: var(--t-code);
   font-weight: var(--w-bold);
-  color: var(--faint);
+  color: var(--text-meta);
   background: var(--inset);
   border-radius: var(--r-inner);
   width: var(--sz-rank); height: var(--sz-rank);
@@ -465,7 +498,7 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
 }
 .attention-item .d {
   font-size: var(--t-micro);
-  color: var(--grey);
+  color: var(--text-2);
   display: block;
   margin-top: 2px;
 }
@@ -484,10 +517,15 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
   box-shadow: var(--shadow-raised);
-  padding: var(--sp-3);
+  /* No bottom padding: the sparkline runs to the tile's own edges and the
+     notice strip closes it off. `overflow: hidden` is what clips the
+     full-bleed chart to the tile's corners. */
+  padding: var(--tile-pad) var(--tile-pad) 0;
   text-decoration: none;
   color: inherit;
   display: block;
+  position: relative;
+  overflow: hidden;
 }
 .tile .name {
   font-size: var(--t-micro);
@@ -503,13 +541,34 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   margin-top: var(--sp-2);
   display: block;
 }
-.tile .when { font-size: var(--t-micro); color: var(--faint); display: block; margin-top: 2px; }
+.tile .when { font-size: var(--t-micro); color: var(--text-meta); display: block; margin-top: 2px; }
 .tile .dot { width: var(--sz-dot); height: var(--sz-dot); border-radius: var(--r-chip); flex: none; }
-.tile svg { display: block; margin-top: var(--sp-2); width: 100%; height: var(--sz-spark); }
+/* Full bleed. The chart is pulled back out by exactly the tile's own padding
+   on each side and sits directly on the notice strip. */
+.tile svg {
+  display: block;
+  margin: var(--sp-2) calc(-1 * var(--tile-pad)) var(--strip-h);
+  width: calc(100% + 2 * var(--tile-pad));
+  height: var(--sz-spark);
+}
+/* A tile with too few readings to draw holds the same space, so a row of
+   tiles does not go ragged because one parameter was tested twice. */
+.tile .sparkgap {
+  display: block;
+  margin: var(--sp-2) 0 var(--strip-h);
+  height: var(--sz-spark);
+}
+.tile::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--strip-h);
+  background: var(--strip-quiet);
+}
 
 .inert-note {
   font-size: var(--t-micro);
-  color: var(--faint);
+  color: var(--text-2);
   margin: var(--sp-3) 0 0;
   line-height: 1.45;
 }
@@ -526,10 +585,10 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-size: var(--t-small);
 }
 .kv-row:first-child { border-top: 0; }
-.kv-k { color: var(--grey); min-width: 0; overflow-wrap: anywhere; }
+.kv-k { color: var(--text-2); min-width: 0; overflow-wrap: anywhere; }
 .kv-v { font-weight: var(--w-bold); text-align: right; min-width: 0; overflow-wrap: anywhere; }
-.kv-v .sub { display: block; font-weight: var(--w-regular); color: var(--faint); font-size: var(--t-micro); }
-.kv-v.is-absent { color: var(--faint); font-weight: var(--w-semi); font-style: italic; }
+.kv-v .sub { display: block; font-weight: var(--w-regular); color: var(--text-meta); font-size: var(--t-micro); }
+.kv-v.is-absent { color: var(--text-2); font-weight: var(--w-semi); font-style: italic; }
 
 /* --- Working sections (expandable) --------------------------------------- */
 
@@ -553,8 +612,8 @@ p.body strong { color: var(--ink); font-weight: var(--w-bold); }
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-head);
 }
-.work > summary .ws { font-size: var(--t-micro); color: var(--faint); font-weight: var(--w-semi); }
-.work > summary .chev { color: var(--faint); font-weight: var(--w-bold); }
+.work > summary .ws { font-size: var(--t-micro); color: var(--text-meta); font-weight: var(--w-semi); }
+.work > summary .chev { color: var(--text-meta); font-weight: var(--w-bold); }
 .work[open] > summary .chev::after { content: "\2212"; }
 .work:not([open]) > summary .chev::after { content: "+"; }
 .work-body {
@@ -578,7 +637,7 @@ table.data th {
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
   padding: var(--sp-2) var(--sp-2) var(--sp-2) 0;
   border-bottom: 1px solid var(--border);
   vertical-align: bottom;
@@ -590,8 +649,8 @@ table.data td {
 }
 table.data td:last-child, table.data th:last-child { padding-right: 0; text-align: right; }
 table.data .n { font-weight: var(--w-bold); }
-table.data .off { color: var(--faint); }
-table.data tr.excluded td { color: var(--faint); }
+table.data .off { color: var(--text-meta); }
+table.data tr.excluded td { color: var(--text-meta); }
 
 .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -608,8 +667,8 @@ table.data tr.excluded td { color: var(--faint); }
 .chain li:first-child { border-top: 0; }
 .chain .lab { font-size: var(--t-small); font-weight: var(--w-bold); }
 .chain .num { font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-value); text-align: right; white-space: nowrap; }
-.chain .exp { grid-column: 1 / -1; font-size: var(--t-micro); color: var(--grey); }
-.chain .fld { grid-column: 1 / -1; font-family: var(--mono); font-size: var(--t-code); color: var(--faint); }
+.chain .exp { grid-column: 1 / -1; font-size: var(--t-micro); color: var(--text-2); }
+.chain .fld { grid-column: 1 / -1; font-family: var(--mono); font-size: var(--t-code); color: var(--text-meta); }
 
 .constraint {
   display: grid;
@@ -624,11 +683,11 @@ table.data tr.excluded td { color: var(--faint); }
 .constraint .ord {
   font-family: var(--mono);
   font-size: var(--t-code);
-  color: var(--faint);
+  color: var(--text-meta);
   width: var(--sz-ord);
 }
 .constraint .nm { font-family: var(--mono); font-size: var(--t-code); font-weight: var(--w-bold); }
-.constraint .fx { grid-column: 2 / -1; font-size: var(--t-micro); color: var(--grey); margin-top: -6px; }
+.constraint .fx { grid-column: 2 / -1; font-size: var(--t-micro); color: var(--text-2); margin-top: -6px; }
 
 /* --- Forms --------------------------------------------------------------- */
 
@@ -639,26 +698,26 @@ table.data tr.excluded td { color: var(--faint); }
   font-weight: var(--w-bold);
   margin-bottom: var(--sp-2);
 }
-.field .hint { font-size: var(--t-micro); color: var(--grey); margin: var(--sp-2) 0 0; line-height: 1.45; }
+.field .hint { font-size: var(--t-micro); color: var(--text); margin: var(--sp-2) 0 0; line-height: 1.45; }
 
 .input {
   width: 100%;
   font-family: var(--font);
   font-size: var(--t-body);
   font-weight: var(--w-semi);
-  color: var(--ink);
+  color: var(--text);
   background: var(--card-top);
   border: 1px solid var(--border);
   border-radius: var(--r-field);
   padding: var(--sp-3);
   box-shadow: var(--shadow-inset);
 }
-.input::placeholder { color: var(--faint); font-weight: var(--w-regular); }
+.input::placeholder { color: var(--text-meta); font-weight: var(--w-regular); }
 .input.is-empty { background: var(--inset); }
 
 .inline { display: flex; gap: var(--sp-2); align-items: center; }
 .inline .input { flex: 1 1 0; min-width: 0; }
-.suffix { font-size: var(--t-small); font-weight: var(--w-bold); color: var(--faint); flex: none; white-space: nowrap; }
+.suffix { font-size: var(--t-small); font-weight: var(--w-bold); color: var(--text-meta); flex: none; white-space: nowrap; }
 
 /* Segmented control — used for time precision and for three-state fields. */
 .seg {
@@ -674,7 +733,7 @@ table.data tr.excluded td { color: var(--faint); }
   text-align: center;
   font-size: var(--t-micro);
   font-weight: var(--w-bold);
-  color: var(--grey);
+  color: var(--text-2);
   padding: var(--sp-2) var(--sp-1);
   border-radius: var(--r-inner);
   cursor: pointer;
@@ -682,12 +741,12 @@ table.data tr.excluded td { color: var(--faint); }
 }
 .seg .opt.on {
   background: var(--card-top);
-  color: var(--ink);
+  color: var(--text);
   box-shadow: var(--shadow-raised);
 }
 .seg.stack-opts { flex-direction: column; }
 .seg.stack-opts .opt { text-align: left; padding: var(--sp-3); }
-.seg .opt .oz { display: block; font-weight: var(--w-regular); color: var(--faint); margin-top: 2px; }
+.seg .opt .oz { display: block; font-weight: var(--w-regular); color: var(--text-meta); margin-top: 2px; }
 
 /* Three-state control: KNOWN / UNKNOWN / ABSENT must all be expressible. */
 .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
@@ -701,7 +760,7 @@ table.data tr.excluded td { color: var(--faint); }
   border-radius: var(--r-inner);
   border: 1px solid var(--border);
   background: var(--card-top);
-  color: var(--grey);
+  color: var(--text-2);
   cursor: pointer;
 }
 .tri .opt.on { background: var(--alk-bg); color: var(--alk); border-color: var(--alk-bg); }
@@ -717,7 +776,7 @@ table.data tr.excluded td { color: var(--faint); }
   border-radius: var(--r-field);
   border: 1px solid var(--border);
   background: var(--card-gradient);
-  color: var(--ink);
+  color: var(--text);
   box-shadow: var(--shadow-raised);
   text-decoration: none;
   cursor: pointer;
@@ -725,7 +784,7 @@ table.data tr.excluded td { color: var(--faint); }
 }
 .btn-primary { background: var(--alk); border-color: var(--alk); color: var(--card-top); }
 .btn-safety  { background: var(--safety); border-color: var(--safety); color: var(--card-top); }
-.btn-quiet   { background: transparent; box-shadow: none; color: var(--grey); }
+.btn-quiet   { background: transparent; box-shadow: none; color: var(--text-2); }
 .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
 .btn-row .btn { margin-bottom: 0; }
 
@@ -745,8 +804,8 @@ table.data tr.excluded td { color: var(--faint); }
 }
 .picker .t { font-size: var(--t-small); font-weight: var(--w-bold); }
 .picker a > span { min-width: 0; }
-.picker .d { font-size: var(--t-micro); color: var(--grey); display: block; margin-top: 2px; line-height: 1.35; }
-.picker .go { color: var(--faint); font-weight: var(--w-bold); }
+.picker .d { font-size: var(--t-micro); color: var(--text-2); display: block; margin-top: 2px; line-height: 1.35; }
+.picker .go { color: var(--text-meta); font-weight: var(--w-bold); }
 
 /* --- Steps (setup) ------------------------------------------------------- */
 
@@ -780,13 +839,13 @@ table.data tr.excluded td { color: var(--faint); }
    keeper's own ranges for calcium, magnesium, nitrate and phosphate arrived. */
 .chart .range-fill { fill: var(--alk-bg); opacity: var(--chart-range-alpha); }
 .chart .range-edge { stroke: var(--alk); stroke-width: 1; opacity: var(--chart-range-edge-alpha); }
-.chart .axis { fill: var(--faint); font-size: var(--t-axis); font-family: var(--font); font-weight: var(--w-bold); }
+.chart .axis { fill: var(--text-meta); font-size: var(--t-axis); font-family: var(--font); font-weight: var(--w-bold); }
 .chart .trace { fill: none; stroke-width: var(--chart-trace-w); stroke-linecap: round; stroke-linejoin: round; }
 .chart .pt { fill: var(--card-top); stroke-width: 2; }
 .chart .pt-last { stroke-width: 2; }
-.chart .pt-excluded { fill: var(--card-top); stroke: var(--faint); stroke-width: 1.5; stroke-dasharray: 2 2; }
-.chart .evline { stroke: var(--faint); stroke-width: 1; stroke-dasharray: var(--chart-event-dash); }
-.chart .evmark { fill: var(--faint); }
+.chart .pt-excluded { fill: var(--card-top); stroke: var(--text-meta); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.chart .evline { stroke: var(--text-meta); stroke-width: 1; stroke-dasharray: var(--chart-event-dash); }
+.chart .evmark { fill: var(--text-meta); }
 .chart .evmark-safety { fill: var(--safety); }
 .chart .evline-safety { stroke: var(--safety); stroke-width: 1; stroke-dasharray: var(--chart-event-dash); }
 
@@ -825,7 +884,7 @@ table.data tr.excluded td { color: var(--faint); }
 @keyframes fadein { to { opacity: 1; } }
 
 .legend { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-3); }
-.legend > span { font-size: var(--t-micro); color: var(--grey); display: inline-flex; align-items: center; gap: var(--sp-1); }
+.legend > span { font-size: var(--t-micro); color: var(--text-2); display: inline-flex; align-items: center; gap: var(--sp-1); }
 .legend .swatch { width: var(--sz-swatch); height: var(--sz-swatch); border-radius: var(--r-swatch); flex: none; }
 .legend .rule { width: var(--sz-mark); height: 0; flex: none; border-top: 2px dashed currentColor; }
 
@@ -854,14 +913,14 @@ table.data tr.excluded td { color: var(--faint); }
   justify-content: center;
   gap: 2px;
   text-decoration: none;
-  color: var(--faint);
+  color: var(--text-meta);
   font-size: var(--t-micro);
   font-weight: var(--w-bold);
   line-height: 1.2;
 }
 .tab .ic { font-size: var(--t-small); font-weight: var(--w-heavy); }
 .tab.on { color: var(--alk); }
-.tab.off { color: var(--faint); opacity: 0.45; pointer-events: none; }
+.tab.off { color: var(--text-meta); opacity: 0.45; pointer-events: none; }
 .tab .soon {
   font-size: var(--t-nano);
   letter-spacing: var(--ls-caps);
@@ -880,7 +939,7 @@ table.data tr.excluded td { color: var(--faint); }
 }
 .callout.attention { background: var(--attention-bg); color: var(--attention); }
 .callout.safety    { background: var(--safety-bg);    color: var(--safety); }
-.callout.quiet     { background: var(--inset);        color: var(--grey); }
+.callout.quiet     { background: var(--inset);        color: var(--text); }
 .callout strong { font-weight: var(--w-heavy); }
 
 .mockup-note {
@@ -888,14 +947,14 @@ table.data tr.excluded td { color: var(--faint); }
   border-radius: var(--r-panel);
   padding: var(--sp-3) var(--sp-4);
   font-size: var(--t-micro);
-  color: var(--grey);
+  color: var(--text-2);
   line-height: 1.5;
   margin-bottom: var(--stack);
   background: var(--inset);
 }
-.mockup-note b { color: var(--ink); }
+.mockup-note b { color: var(--text); }
 
-.code { font-family: var(--mono); font-size: var(--t-code); color: var(--grey); overflow-wrap: anywhere; }
+.code { font-family: var(--mono); font-size: var(--t-code); color: var(--text-2); overflow-wrap: anywhere; }
 
 /* --- Reduced motion ------------------------------------------------------ */
 
@@ -927,7 +986,7 @@ table.data tr.excluded td { color: var(--faint); }
   box-shadow: var(--shadow-raised);
   display: grid; place-items: center;
   flex: none;
-  color: var(--grey);
+  color: var(--text-2);
   text-decoration: none;
   font-size: var(--t-h2);
   margin-top: var(--sp-5);
@@ -953,13 +1012,13 @@ table.data tr.excluded td { color: var(--faint); }
   border-radius: var(--r-inner);
   display: grid; place-items: center;
   flex: none;
-  color: var(--grey);
+  color: var(--text-2);
   text-decoration: none;
   font-weight: var(--w-heavy);
   font-size: var(--t-h2);
   background: var(--inset);
 }
-.stepper .arrow.off { color: var(--faint); opacity: 0.4; pointer-events: none; }
+.stepper .arrow.off { color: var(--text-meta); opacity: 0.4; pointer-events: none; }
 .stepper .when { flex: 1; min-width: 0; text-align: center; }
 .stepper .when .d {
   font-size: var(--t-small);
@@ -969,7 +1028,7 @@ table.data tr.excluded td { color: var(--faint); }
 }
 .stepper .when .r {
   font-size: var(--t-micro);
-  color: var(--faint);
+  color: var(--text-meta);
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
@@ -994,8 +1053,8 @@ table.data tr.excluded td { color: var(--faint); }
 .expandable > summary::-webkit-details-marker { display: none; }
 .expandable > summary > span { min-width: 0; }
 .expandable .t { font-size: var(--t-small); font-weight: var(--w-bold); display: block; line-height: 1.35; }
-.expandable .d { font-size: var(--t-micro); color: var(--grey); display: block; margin-top: 2px; }
-.expandable .chev { color: var(--faint); font-weight: var(--w-bold); margin-left: auto; flex: none; }
+.expandable .d { font-size: var(--t-micro); color: var(--text-2); display: block; margin-top: 2px; }
+.expandable .chev { color: var(--text-meta); font-weight: var(--w-bold); margin-left: auto; flex: none; }
 .expandable[open] .chev::after { content: "\2212"; }
 .expandable:not([open]) .chev::after { content: "+"; }
 
@@ -1009,7 +1068,7 @@ table.data tr.excluded td { color: var(--faint); }
 .inline-log .row { display: flex; gap: var(--sp-2); align-items: center; }
 .inline-log .row .input { flex: 1 1 0; min-width: 0; }
 .inline-log .btn { width: auto; flex: none; margin-bottom: 0; padding: var(--sp-3); }
-.inline-log .note { font-size: var(--t-micro); color: var(--grey); margin: var(--sp-2) 0 0; line-height: 1.45; }
+.inline-log .note { font-size: var(--t-micro); color: var(--text); margin: var(--sp-2) 0 0; line-height: 1.45; }
 
 /* --- Month calendar -------------------------------------------------------
    Monday-start. Each day carries COMPLETED and SCHEDULED separately, because a
@@ -1020,13 +1079,13 @@ table.data tr.excluded td { color: var(--faint); }
   margin-bottom: var(--sp-3);
 }
 .cal-head .m { flex: 1; font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); }
-.cal-head .n { font-size: var(--t-micro); color: var(--faint); font-weight: var(--w-semi); }
+.cal-head .n { font-size: var(--t-micro); color: var(--text-meta); font-weight: var(--w-semi); }
 .cal-head .arrow {
   width: var(--sz-gear); height: var(--sz-gear);
   border-radius: var(--r-inner);
   background: var(--inset);
   display: grid; place-items: center;
-  color: var(--grey); text-decoration: none;
+  color: var(--text-2); text-decoration: none;
   font-weight: var(--w-heavy); flex: none;
 }
 
@@ -1040,7 +1099,7 @@ table.data tr.excluded td { color: var(--faint); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--text-meta);
 }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .cal-cell {
@@ -1057,7 +1116,7 @@ table.data tr.excluded td { color: var(--faint); }
   color: inherit;
 }
 .cal-cell.blank { border-color: transparent; background: transparent; }
-.cal-cell .dn { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); }
+.cal-cell .dn { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); }
 .cal-cell.is-today { border-color: var(--today-ring); box-shadow: 0 0 0 1px var(--today-ring); }
 .cal-cell.is-today .dn { color: var(--today-ring); font-weight: var(--w-heavy); }
 .cal-cell.is-past { background: var(--inset); }
@@ -1068,7 +1127,7 @@ table.data tr.excluded td { color: var(--faint); }
   flex: none;
 }
 .cal-cell .dot.done { background: var(--done-ink); }
-.cal-cell .dot.sched { background: var(--card-top); border: 1px solid var(--faint); }
+.cal-cell .dot.sched { background: var(--card-top); border: 1px solid var(--text-meta); }
 .cal-cell .dot.suggest { background: var(--suggest-edge); }
 .cal-cell .dot.attention { background: var(--attention); }
 
@@ -1095,13 +1154,13 @@ table.data tr.excluded td { color: var(--faint); }
   display: grid; place-items: center;
   font-size: var(--t-micro);
   font-weight: var(--w-heavy);
-  color: var(--faint);
+  color: var(--text-meta);
   flex: none;
 }
 .tick.done { background: var(--done-bg); border-color: var(--done-bg); color: var(--done-ink); }
 .taskrow .t { font-size: var(--t-small); font-weight: var(--w-bold); display: block; line-height: 1.35; }
-.taskrow .d { font-size: var(--t-micro); color: var(--grey); display: block; margin-top: 2px; }
-.taskrow .when { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); text-align: right; white-space: nowrap; }
+.taskrow .d { font-size: var(--t-micro); color: var(--text-2); display: block; margin-top: 2px; }
+.taskrow .when { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); text-align: right; white-space: nowrap; }
 .taskrow .when.is-overdue { color: var(--attention); }
 
 /* The engine's suggestion. It sits in the same timeline and reads differently,
@@ -1124,7 +1183,7 @@ table.data tr.excluded td { color: var(--faint); }
   margin-bottom: var(--sp-2);
 }
 .suggested .t { font-size: var(--t-small); font-weight: var(--w-heavy); display: block; }
-.suggested .d { font-size: var(--t-micro); color: var(--grey); display: block; margin-top: var(--sp-1); line-height: 1.45; }
+.suggested .d { font-size: var(--t-micro); color: var(--text); display: block; margin-top: var(--sp-1); line-height: 1.45; }
 .suggested .impact {
   background: var(--card-top);
   border-radius: var(--r-inner);
@@ -1156,7 +1215,7 @@ table.data tr.excluded td { color: var(--faint); }
 .labrow:first-of-type { border-top: 0; }
 .labrow .who { min-width: 0; }
 .labrow .nm { font-size: var(--t-small); font-weight: var(--w-bold); display: block; }
-.labrow .last { font-size: var(--t-micro); color: var(--faint); display: block; margin-top: 1px; }
+.labrow .last { font-size: var(--t-micro); color: var(--text-meta); display: block; margin-top: 1px; }
 .labrow .entry { display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-2); }
 .labrow .entry .input { flex: 1 1 0; min-width: 0; }
 .labrow .entry .btn { width: auto; flex: none; margin-bottom: 0; }
@@ -1201,7 +1260,7 @@ table.data tr.excluded td { color: var(--faint); }
   font-weight: var(--w-heavy);
   letter-spacing: var(--ls-head);
 }
-.sheet .who { font-size: var(--t-micro); color: var(--faint); margin: 0 0 var(--sp-4); }
+.sheet .who { font-size: var(--t-micro); color: var(--text-2); margin: 0 0 var(--sp-4); }
 @keyframes sheetup { from { transform: translateY(var(--sp-6)); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* --- The moments ----------------------------------------------------------
@@ -1232,16 +1291,16 @@ table.data tr.excluded td { color: var(--faint); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--grey);
+  color: var(--text-2);
 }
 .mcap .figure { display: flex; align-items: baseline; justify-content: center; gap: var(--sp-1); margin-top: var(--sp-2); }
 .mcap .who { font-size: var(--t-small); font-weight: var(--w-heavy); margin-top: var(--sp-1); }
-.mcap .move { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); margin-top: var(--sp-1); }
+.mcap .move { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); margin-top: var(--sp-1); }
 .mbody { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
 .mbody .headline { font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); text-align: center; }
-.mbody .line { font-size: var(--t-small); color: var(--grey); text-align: center; margin: var(--sp-2) 0 0; line-height: 1.5; }
+.mbody .line { font-size: var(--t-small); color: var(--text); text-align: center; margin: var(--sp-2) 0 0; line-height: 1.5; }
 .mbody .facts { background: var(--inset); border-radius: var(--r-panel); padding: var(--sp-3); margin-top: var(--sp-4); }
-.mclose { font-size: var(--t-micro); color: var(--faint); font-weight: var(--w-bold); text-align: center; margin: var(--sp-3) 0 0; }
+.mclose { font-size: var(--t-micro); color: var(--text-meta); font-weight: var(--w-bold); text-align: center; margin: var(--sp-3) 0 0; }
 
 /* The value counts up as the line draws to it. Both are read from one progress
    value — see moments.js. */
@@ -1257,7 +1316,7 @@ table.data tr.excluded td { color: var(--faint); }
 .mval.landed .sheen {
   background-image: linear-gradient(100deg,
     currentColor 0%, currentColor 38%,
-    rgba(255, 255, 255, 0.95) 50%,
+    var(--ma-sheen-light) 50%,
     currentColor 62%, currentColor 100%);
   background-size: 260% 100%;
   -webkit-background-clip: text; background-clip: text;
@@ -1333,7 +1392,7 @@ table.data tr.excluded td { color: var(--faint); }
 .gaps { display: flex; gap: var(--sp-1); align-items: flex-end; margin-top: var(--sp-3); }
 .gaps .g { flex: 1; min-width: 0; text-align: center; }
 .gaps .g i { display: block; background: var(--alk-bg); border-radius: var(--r-swatch); }
-.gaps .g b { display: block; font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); margin-top: var(--sp-1); }
+.gaps .g b { display: block; font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); margin-top: var(--sp-1); }
 
 /* --- ICP element grid ----------------------------------------------------- */
 
@@ -1344,7 +1403,7 @@ table.data tr.excluded td { color: var(--faint); }
   padding: var(--sp-2);
   min-width: 0;
 }
-.elcell .e { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); display: block; }
+.elcell .e { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-2); display: block; }
 .elcell .v { font-size: var(--t-small); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); display: block; margin-top: 1px; }
 .elcell.is-off { background: var(--attention-bg); }
 .elcell.is-off .v { color: var(--attention); }
@@ -1373,9 +1432,9 @@ table.data tr.excluded td { color: var(--faint); }
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--grey);
+  color: var(--text-2);
 }
-.devview > summary .chev { color: var(--faint); font-weight: var(--w-bold); }
+.devview > summary .chev { color: var(--text-meta); font-weight: var(--w-bold); }
 .devview[open] > summary .chev::after { content: "\2212"; }
 .devview:not([open]) > summary .chev::after { content: "+"; }
 .devview .devbody {
@@ -1385,7 +1444,7 @@ table.data tr.excluded td { color: var(--faint); }
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
   background: var(--inset);
 }
-.devview .devnote { font-size: var(--t-micro); color: var(--grey); margin: 0 0 var(--sp-3); line-height: 1.5; }
+.devview .devnote { font-size: var(--t-micro); color: var(--text-2); margin: 0 0 var(--sp-3); line-height: 1.5; }
 
 /* --- Durability, offline and the crashed tab ------------------------------ */
 
@@ -1400,13 +1459,13 @@ table.data tr.excluded td { color: var(--faint); }
 .tier .h .n { flex: 1; font-size: var(--t-small); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); }
 .tier .limit {
   font-size: var(--t-micro);
-  color: var(--grey);
+  color: var(--text-2);
   margin: var(--sp-2) 0 0;
   line-height: 1.5;
   padding-top: var(--sp-2);
   border-top: 1px solid var(--hairline);
 }
-.tier .limit b { color: var(--ink); }
+.tier .limit b { color: var(--text); }
 
 .crash {
   border: 1px solid var(--border);
@@ -1417,7 +1476,7 @@ table.data tr.excluded td { color: var(--faint); }
   margin-bottom: var(--stack);
 }
 .crash h2 { margin: 0 0 var(--sp-2); font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); }
-.crash p { margin: 0 0 var(--sp-3); font-size: var(--t-small); color: var(--grey); }
+.crash p { margin: 0 0 var(--sp-3); font-size: var(--t-small); color: var(--text); }
 .crash p:last-child { margin-bottom: 0; }
 
 /* --- History window control ----------------------------------------------- */
@@ -1430,7 +1489,7 @@ table.data tr.excluded td { color: var(--faint); }
   border-radius: var(--r-inner);
   background: var(--inset);
   display: grid; place-items: center;
-  color: var(--grey); text-decoration: none;
+  color: var(--text-2); text-decoration: none;
   font-weight: var(--w-heavy);
 }
 
@@ -1488,9 +1547,9 @@ table.data tr.excluded td { color: var(--faint); }
   margin-top: var(--sp-2);
 }
 .chartread .v { font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); }
-.chartread .u { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--faint); }
-.chartread .d { font-size: var(--t-micro); font-weight: var(--w-semi); color: var(--grey); }
-.chartread .go { font-size: var(--t-micro); color: var(--faint); margin-left: auto; }
+.chartread .u { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--text-meta); }
+.chartread .d { font-size: var(--t-micro); font-weight: var(--w-semi); color: var(--text-2); }
+.chartread .go { font-size: var(--t-micro); color: var(--text-meta); margin-left: auto; }
 
 .chartfoot {
   display: flex;
@@ -1499,7 +1558,7 @@ table.data tr.excluded td { color: var(--faint); }
   gap: var(--sp-3);
   margin-top: var(--sp-1);
 }
-.charthint { font-size: var(--t-micro); color: var(--faint); font-weight: var(--w-semi); }
+.charthint { font-size: var(--t-micro); color: var(--text-2); font-weight: var(--w-semi); }
 .chartreset {
   border: 0;
   background: transparent;

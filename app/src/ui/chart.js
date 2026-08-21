@@ -113,6 +113,27 @@ export function niceAxis(min, max, padFrac = 0.18) {
   return { domain: [clean(lo), clean(hi)], ticks, format, formatValue, step, decimals };
 }
 
+/* --- the vertical extent of a small chart ---------------------------------
+
+   Which values a sparkline has to fit between. The readings always, and the
+   keeper's own band as well wherever he has set one — because a band drawn
+   outside the extent of the readings is silently clipped, and a clipped band
+   reads as no band at all. A tank sitting comfortably above its range would
+   then look identical to a tank with no range set.
+
+   Separate from the drawing so it can be checked by running it rather than by
+   reading it. `range` may be null; the readings alone are then the extent. */
+export function sparkDomain(values, range) {
+  const vals = values.filter((v) => Number.isFinite(v));
+  if (!vals.length) return { lo: 0, hi: 1 };
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (range && Number.isFinite(range.min) && Number.isFinite(range.max)) {
+    lo = Math.min(lo, range.min);
+    hi = Math.max(hi, range.max);
+  }
+  return { lo, hi };
+}
+
 /* --- the gestures ---------------------------------------------------------
 
    V1's `ZoomableLineChart` effect body, lifted out so there is ONE owner of
