@@ -352,6 +352,14 @@ await step("Settings renders", async () => {
 
 console.log("\nTest mode");
 
+/* The real store exactly as it stands before test mode is touched at all.
+   Every assertion below compares against this rather than against a threshold. */
+const realBefore = await page.evaluate(async () => {
+  const { createStore } = await import("/app/src/store/index.js");
+  const events = await createStore().ledger.allEvents();
+  return { count: events.length, values: events.map((e) => e.normalizedValue).filter((v) => v != null) };
+});
+
 await step("turns on from Settings, with a date", async () => {
   await page.click("text=Set up test mode");
   await page.waitForSelector("h1:has-text('Test mode')");
@@ -396,9 +404,17 @@ await step("the app's today is the chosen date", async () => {
   if (!/Mar/.test(txt)) throw new Error("the day stepper is not on the chosen date: " + txt);
 });
 
-await step("a series goes in in one action", async () => {
+await step("the tank facts are in force at the app's date", async () => {
   await page.click("#modemarker .modemarker");
   await page.waitForSelector("h1:has-text('Test mode')");
+  const txt = await page.innerText("#app");
+  if (!/In force from/.test(txt)) throw new Error("the facts' effective date is not stated");
+  if (!/Mar/.test(txt.slice(txt.indexOf("In force from")))) {
+    throw new Error("the facts are not in force at the app's date: " + txt.slice(txt.indexOf("In force from"), txt.indexOf("In force from") + 60));
+  }
+});
+
+await step("a series goes in in one action", async () => {
   await page.fill(
     ".input.series",
     ["2026-03-01 dose 9.0", "2026-03-08 07:40 alk 9.0", "2026-03-10 07:40 alk 8.9", "2026-03-12 alk 8.8"].join("\n")
@@ -426,22 +442,33 @@ await step("stepping the date moves the app's today", async () => {
 });
 
 await step("the real tank's store is untouched by all of that", async () => {
-  const counts = await page.evaluate(async () => {
+  /* Snapshotted rather than sampled. An earlier version reported a seeded
+     value in the real store only if the real store ALSO held more than eight
+     events — a compound condition that could pass while contaminated. */
+  const now = await page.evaluate(async () => {
     const { createStore } = await import("/app/src/store/index.js");
     const { createIdbBackend, DB_NAME, TEST_DB_NAME } = await import("/app/src/store/db.js");
-    const real = createStore(createIdbBackend(DB_NAME));
-    const test = createStore(createIdbBackend(TEST_DB_NAME));
+    const real = await createStore(createIdbBackend(DB_NAME)).ledger.allEvents();
+    const test = await createStore(createIdbBackend(TEST_DB_NAME)).ledger.allEvents();
     return {
-      real: (await real.ledger.allEvents()).length,
-      test: (await test.ledger.allEvents()).length,
-      realValues: (await real.ledger.allEvents()).map((e) => e.normalizedValue),
+      realCount: real.length,
+      realValues: real.map((e) => e.normalizedValue).filter((v) => v != null),
+      testCount: test.length,
+      testValues: test.map((e) => e.normalizedValue).filter((v) => v != null),
     };
   });
-  if (counts.test < 4) throw new Error(`the test store did not take the series: ${counts.test}`);
-  if (counts.realValues.some((v) => v === 8.9 && counts.real > 8)) {
-    throw new Error("a seeded value reached the real store");
+  if (now.testCount < 4) throw new Error(`the test store did not take the series: ${now.testCount}`);
+  if (now.realCount !== realBefore.count) {
+    throw new Error(`the real store's event count changed: ${realBefore.count} -> ${now.realCount}`);
   }
-  if (counts.real === 0) throw new Error("the real store lost its own records");
+  if (JSON.stringify(now.realValues) !== JSON.stringify(realBefore.values)) {
+    throw new Error(`the real store's values changed: ${realBefore.values} -> ${now.realValues}`);
+  }
+  for (const v of now.testValues) {
+    if (realBefore.values.includes(v) && !now.realValues.includes(v)) {
+      throw new Error("a value moved between the two stores");
+    }
+  }
 });
 
 await step("clearing the test data empties the test store only", async () => {
@@ -460,7 +487,9 @@ await step("clearing the test data empties the test store only", async () => {
     };
   });
   if (counts.test !== 0) throw new Error(`the test store still holds ${counts.test}`);
-  if (counts.real === 0) throw new Error("the reset reached the real store");
+  if (counts.real !== realBefore.count) {
+    throw new Error(`the reset reached the real store: ${realBefore.count} -> ${counts.real}`);
+  }
 });
 
 await step("turning it off restores the real tank and the real date", async () => {

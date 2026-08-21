@@ -1039,6 +1039,26 @@ export const STRINGS = Object.freeze({
     "touched by this.",
   "testmode.reset.confirmNote": "This clears the test store only.",
   "testmode.reset.confirmAction": "Yes, clear it",
+  "testmode.reset.failed": ({ reason }) =>
+    `The test data was NOT cleared, and it is all still there. ${reason} ` +
+    `If this app is open in another tab or window, close it and try again.`,
+
+  "testmode.facts.title": "The test tank's facts",
+  "testmode.facts.none":
+    "This store has no tank facts yet. It does not borrow your real tank's, so it needs its own before the " +
+    "engine has anything to work from.",
+  "testmode.facts.set": "Set the test tank up",
+  "testmode.facts.change": "Change them",
+  "testmode.facts.effectiveFrom": "In force from",
+  "testmode.facts.beforeHead": "The app's date is before the tank facts take effect.",
+  "testmode.facts.beforeBody": ({ date }) =>
+    `The engine resolves the settings in force at the moment it is asked about, and there are none before ` +
+    `${date} — so it will refuse rather than answer. Move the date forward, or set the facts again from an ` +
+    `earlier date.`,
+  "testmode.facts.moveTo": ({ date }) => `Move the app's date to ${date}`,
+  "testmode.facts.note":
+    "Tank facts take effect from the app's date at the moment you save them, so set the date to the start of " +
+    "the period you want to look at before entering them.",
 
   "testmode.err.notInTestMode": "That only works in test mode, and test mode is off.",
 
@@ -1051,7 +1071,13 @@ export const STRINGS = Object.freeze({
   "seed.err.fractionRange":
     "A water change given as a fraction has to be less than 1. Add an L for litres.",
   "seed.err.noVolume":
-    "A water change in litres needs the tank volume, and this store has not been told it yet.",
+    "A water change in litres needs the tank volume, and this store has not been told it yet. " +
+    "Set the tank facts first, or give the change as a fraction of the tank.",
+  "seed.err.noVolumeText": "the water change in litres",
+  "seed.err.doseBeforeLedger":
+    "This dose is dated before a dose already recorded here, and what was running earlier cannot be " +
+    "worked out from it. Clear the test data and enter the series in date order.",
+  "seed.err.doseBeforeLedgerText": "the dose line",
 
   "platform.title": "Offline, install and updates",
   "platform.network": "Network",

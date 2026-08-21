@@ -21,6 +21,8 @@ import { KEEPER_FACTS, CANON_DEFAULT_KEYS } from "../store/config.js";
 import { openSheet } from "./entry.js";
 import { fmtDayName } from "../ui/format.js";
 import { describe } from "../engine/client.js";
+import { nowIso } from "../store/time.js";
+import { MODE } from "../store/mode.js";
 import { t } from "../strings.js";
 import { PREFERENCE, readPreference } from "../store/suggestion.js";
 
@@ -127,9 +129,27 @@ export async function renderSetup(ctx) {
               msg.textContent = t("setup.rangeOrder");
               return;
             }
+            /* THE APPLICATION'S CLOCK, NOT THE WALL CLOCK.
+
+               Canon §518 makes an assessment resolve the configuration version
+               effective at its `assessmentAsOf`, and the engine refuses with
+               `M-12` when no version is effective by then. Stamped from the
+               wall clock, a configuration created inside test mode is
+               effective at the real instant it was typed — so every assessment
+               the keeper backdates finds no configuration at all and refuses,
+               with a reason about historical configuration that reads as
+               nonsense to someone who set the tank up two minutes ago. The
+               feature did not work on its own primary path.
+
+               This is not a fabricated date. In test mode the application's
+               "now" IS the chosen instant; the keeper is stating the tank
+               facts as of the moment the app is standing at, in a store that
+               is a hypothetical by construction and can never reach the real
+               tank. In normal operation the two clocks are the same value, so
+               nothing about real use changes. */
             await ctx.store.config.append(
               { ...defaults, ...values, selectedPotencySource: "THEORETICAL_OR_CONFIGURED" },
-              new Date().toISOString()
+              nowIso()
             );
             ctx.go("today");
           },
@@ -312,7 +332,7 @@ export async function renderSettings(ctx) {
      Here rather than on the tab bar, because it is not part of keeping a tank
      — it is a way of asking the engine what it would say on a day that has not
      happened. Off unless the keeper turned it on, and the row says which. */
-  const testing = ctx.mode ? ctx.mode() === "TEST" : false;
+  const testing = ctx.mode ? ctx.mode() === MODE.TEST : false;
   screen.append(
     h(
       "section",

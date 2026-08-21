@@ -13,7 +13,7 @@
 
 import { h } from "../ui/dom.js";
 import { openSheet } from "./entry.js";
-import { knownDose, parseSeries, plan, summarise } from "../store/seed.js";
+import { doseContext, parseSeries, plan, summarise } from "../store/seed.js";
 import { KIND } from "../store/ledger.js";
 import { MODE, DB_NAME, TEST_DB_NAME } from "../store/mode.js";
 import { fmtDayName } from "../ui/format.js";
@@ -36,6 +36,7 @@ export async function renderTestMode(ctx) {
   screen.append(on ? whenCard(ctx, at) : offCard(ctx, at));
 
   if (on) {
+    screen.append(await factsCard(ctx, at));
     screen.append(await seriesCard(ctx));
     screen.append(await separationCard(ctx));
     screen.append(resetCard(ctx));
@@ -128,13 +129,73 @@ function whenCard(ctx, at) {
   );
 }
 
+/* --- on: the tank facts, and the date they take effect --------------------
+
+   Canon §518 resolves the configuration version effective at the assessment
+   instant, and the engine refuses outright when none is effective by then. In
+   test mode that is easy to walk into: the facts are stamped at the app's date
+   when they are saved, so stepping back BEFORE that date leaves the engine
+   with no configuration to resolve and a refusal the keeper cannot read as
+   anything but a fault.
+
+   So the date is stated, and when the app is standing before it the screen
+   says exactly what is wrong and offers the one move that fixes it. A refusal
+   the keeper cannot act on is the failure this project has ruled out
+   repeatedly, and it applies here as much as anywhere. */
+async function factsCard(ctx, at) {
+  const config = await ctx.store.config.current();
+  const card = h("section", { class: "card" });
+  card.append(h("div", { class: "card-head" }, h("h2", null, t("testmode.facts.title"))));
+
+  if (!config) {
+    card.append(
+      h("p", { class: "body" }, t("testmode.facts.none")),
+      h("button", { class: "btn btn-primary", type: "button", onclick: () => ctx.go("setup") }, t("testmode.facts.set"))
+    );
+    return card;
+  }
+
+  const from = config.effectiveFrom.slice(0, 10);
+  card.append(
+    h("div", { class: "kv" },
+      h("div", { class: "kv-row" },
+        h("span", { class: "kv-k" }, t("testmode.facts.effectiveFrom")),
+        h("span", { class: "kv-v" }, fmtDayName(from)))
+    )
+  );
+
+  if (at.date < from) {
+    card.append(
+      h(
+        "div",
+        { class: "callout attention" },
+        h("p", null, t("testmode.facts.beforeHead")),
+        h("p", null, t("testmode.facts.beforeBody", { date: fmtDayName(from) })),
+        h(
+          "button",
+          { class: "btn", type: "button", onclick: () => ctx.setTestInstant({ date: from }) },
+          t("testmode.facts.moveTo", { date: fmtDayName(from) })
+        )
+      )
+    );
+  }
+
+  card.append(
+    h("button", { class: "btn btn-quiet", type: "button", onclick: () => ctx.go("setup") }, t("testmode.facts.change")),
+    h("p", { class: "inert-note" }, t("testmode.facts.note"))
+  );
+  return card;
+}
+
 /* --- on: bulk entry ------------------------------------------------------ */
 
 async function seriesCard(ctx) {
   const card = h("section", { class: "card" });
   /* Read once, at render, and handed to the planner — so the preview counts
-     exactly what the write will produce rather than guessing at it. */
-  const startingDose = await knownDose(ctx.store);
+     exactly what the write will produce, and refuses exactly what the write
+     will refuse, rather than guessing at either. */
+  const ledgerDose = await doseContext(ctx.store);
+  const config = await ctx.store.config.current();
   const box = h("textarea", {
     class: "input series",
     rows: "10",
@@ -147,7 +208,13 @@ async function seriesCard(ctx) {
 
   function preview() {
     report.replaceChildren();
-    const { rows, problems } = parseSeries(box.value);
+    const parsed = parseSeries(box.value);
+    const rows = parsed.rows;
+    /* Planned here as well as at write time, and by the same function — so
+       every refusal the write would make is on screen before the keeper
+       presses anything. */
+    const { planned, problems: planProblems } = plan(rows, { ...ledgerDose, config });
+    const problems = [...parsed.problems, ...planProblems].sort((a, b) => a.line - b.line);
     if (problems.length) {
       const list = h("ul", { class: "tasklist" });
       for (const p of problems) {
@@ -176,7 +243,7 @@ async function seriesCard(ctx) {
       report.append(h("p", { class: "body" }, t("testmode.series.nothing")));
       return null;
     }
-    const s = summarise(plan(rows, { knownDose: startingDose }));
+    const s = summarise(planned);
     const kv = h("div", { class: "kv" });
     for (const [kind, n] of Object.entries(s.counts)) {
       kv.append(
@@ -275,11 +342,13 @@ async function separationCard(ctx) {
 /* --- on: reset ----------------------------------------------------------- */
 
 function resetCard(ctx) {
+  const msg = h("p", { class: "hint" });
   return h(
     "section",
     { class: "card" },
     h("div", { class: "card-head" }, h("h2", null, t("testmode.reset.title"))),
     h("p", { class: "body" }, t("testmode.reset.body")),
+    msg,
     h(
       "button",
       {
@@ -302,7 +371,13 @@ function resetCard(ctx) {
                   type: "button",
                   onclick: async () => {
                     close();
-                    await ctx.resetTest();
+                    try {
+                      await ctx.resetTest();
+                    } catch (e) {
+                      /* Said out loud. A clear that did not clear must never
+                         look like one that did. */
+                      msg.textContent = e.message;
+                    }
                   },
                 },
                 t("testmode.reset.confirmAction")

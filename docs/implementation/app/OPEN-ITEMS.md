@@ -312,3 +312,54 @@ within `1e-9`. A keeper who sets 2.49 against a 2.5 recommendation keeps the
 confirmation ask. Left open rather than fixed because choosing a tolerance is
 choosing a number that governs behaviour, and this build does not originate
 those.
+
+---
+
+## AI-011 — Test mode: what the review found and did not close
+
+Recorded during the test-mode build (`test-engineer`, then `jake`). The defects
+they found were fixed and are named in the commit; these are what was left.
+
+**A configuration created inside test mode is dated by the app's own clock, and
+whether that is right is a product question.** Setup stamped `effectiveFrom`
+from the wall clock, so a configuration created while the assessment instant
+sat in March was effective at the real instant it was typed — and canon §518
+then resolved no version at all, so the engine refused every backdated
+assessment with `M-12`. The feature did not work on its own primary path. It
+now stamps from the application clock, which in normal operation is the same
+value and in test mode is the instant the keeper is standing at.
+
+What is NOT settled: whether a store that exists to be dated by hand should
+also let its configuration be re-dated. The screen states the effective date
+and offers to move the app's date forward when it sits behind it, which makes
+the consequence visible and actionable, but a keeper who wants to look at a
+window *earlier* than the facts must clear the test data and start again.
+Canon §518 and `ALK-V2-DATA-CONTRACT.md:353` govern the semantics; `DEC-003`
+governs provenance; neither settles what a deliberately-dated evaluation store
+should do. Not taken here.
+
+**The IndexedDB backend is still exercised only by the smoke aid.** `AI-010`
+already records this for the store as a whole; test mode adds to it. That two
+databases with different names are genuinely isolated, that `deleteDatabase`
+succeeds against a memoised connection, and that `onblocked` behaves as assumed
+are all evidenced by `tools/app/smoke.mjs` — a development aid, not a gate. The
+committed checks prove the rules against `memoryBackend`, and the injectable
+backend factory (`useBackendFactory`) is what lets them go through the
+production routing rather than around it.
+
+**`ledger.append` refuses an id collision where `assessments.js` retries.** A
+keeper who sets the device clock backwards, reloads and seeds a second batch
+can regenerate an id already in the store. The store declines with a visible
+error rather than overwriting, so nothing is lost — but the two write paths
+handle the same situation differently, and only one of them is a design. Not
+introduced by test mode; test mode makes the trigger likelier by inviting date
+experimentation.
+
+**Bulk entry is O(n²) in transactions.** `ledger.append` reads every key to
+derive the next ordinal, so a 400-line paste is 400 full key scans. Measured on
+the memory backend at 6 ms; on IndexedDB it is unmeasured. Acceptable for the
+fourteen-reading case the feature exists for, and named rather than assumed.
+
+**Requirement 4's perceptual half is not machine-checkable.** That the marker is
+rendered on every render including the crash render is pinned (`TM-24`). That it
+is *unmistakable* is not, and no test was written that would pretend to be one.

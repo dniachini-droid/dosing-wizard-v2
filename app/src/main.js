@@ -321,7 +321,12 @@ const ctx = {
 
   async resetTest() {
     if (!isTestMode()) throw new Error(t("testmode.err.notInTestMode"));
-    await resetTestData();
+    const r = await resetTestData();
+    /* A clear that did not clear is reported. Another tab holding the database
+       open blocks the delete, and the previous version showed the keeper an
+       emptied screen over a store that still held the last run — so the next
+       series he seeded landed on top of it. */
+    if (!r || !r.ok) throw new Error(t("testmode.reset.failed", { reason: (r && r.reason) || "" }));
     await switchedMode();
   },
 };

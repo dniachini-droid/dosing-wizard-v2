@@ -130,9 +130,26 @@ export function isTestMode() {
    wrong twice a year in a timezone with daylight saving. */
 export function testInstant() {
   return {
-    date: slots.get(KEY_DATE) || isoLocalDate(new Date()),
+    date: normaliseDate(slots.get(KEY_DATE) || isoLocalDate(new Date())),
     time: slots.get(KEY_TIME) || DEFAULT_TEST_TIME,
   };
+}
+
+/* THE MARKER AND THE CLOCK MUST NAME THE SAME DAY.
+
+   `localDateTime("2026-02-30", ...)` is a real `Date` — the 2nd of March —
+   because `new Date(y, m, d)` rolls over. So a stored value of `2026-02-30`
+   printed one day on the marker while the engine was asked about another. It
+   cannot be typed into a date input, but it can arrive from a stale or
+   hand-edited stored value, and a marker that names the wrong day is precisely
+   the deception the marker exists to prevent.
+
+   Normalised rather than refused, and normalised HERE, so there is one answer
+   to "what day is it" — every reader goes through `testInstant()`. */
+function normaliseDate(text) {
+  const iso = String(text).slice(0, 10);
+  const rolled = isoLocalDate(localDateTime(iso, "12:00"));
+  return rolled;
 }
 
 /* --- the clock ----------------------------------------------------------- */
@@ -201,13 +218,31 @@ export function stepTestDays(n) {
 
 /* --- which store ---------------------------------------------------------- */
 
-/* Built once and kept, because a backend memoises its connection and building
-   a second one would open the same database twice. */
-let testBackendInstance = null;
+/* Backends are built once and kept, because a backend memoises its connection
+   and building a second one would open the same database twice. The real
+   tank's is the one `db.js` already exports, so there is exactly one
+   connection to it in the page however this module is used. */
+let makeBackend = createIdbBackend;
+const backends = new Map([[DB_NAME, idbBackend]]);
+
+/* Injectable for the same reason the slots are: `tests/app/` runs in Node with
+   no IndexedDB, and the alternative is a test that builds two stores by hand
+   and so proves a property of its own fixtures rather than of this module. The
+   routing below is what the shell actually calls, and it is what the tests
+   call too. */
+export function useBackendFactory(fn) {
+  makeBackend = fn || createIdbBackend;
+  backends.clear();
+  if (makeBackend === createIdbBackend) backends.set(DB_NAME, idbBackend);
+}
+
+function backendFor(name) {
+  if (!backends.has(name)) backends.set(name, makeBackend(name));
+  return backends.get(name);
+}
 
 export function testBackend() {
-  if (!testBackendInstance) testBackendInstance = createIdbBackend(TEST_DB_NAME);
-  return testBackendInstance;
+  return backendFor(TEST_DB_NAME);
 }
 
 /* THE ONE PLACE THAT DECIDES WHICH DATABASE THE APP IS USING.
@@ -218,7 +253,7 @@ export function testBackend() {
    defect rather than a coincidence — here the defect would be test readings in
    the keeper's own tank history. */
 export function backendForMode(mode) {
-  return mode === MODE.TEST ? testBackend() : idbBackend;
+  return backendFor(mode === MODE.TEST ? TEST_DB_NAME : DB_NAME);
 }
 
 /* The store for a mode. Two stores, two databases, no shared state: whichever
@@ -232,11 +267,19 @@ export function storeForMode(mode) {
 /* Clear all test data. Destroys the test database and nothing else — the name
    is fixed at the backend's construction, so this cannot be aimed elsewhere by
    a mistake in a caller. The connection is dropped with it, so the next read
-   opens a fresh, empty database. */
+   opens a fresh, empty database.
+
+   A FAILURE IS RETURNED, NOT SWALLOWED — and the memoised backend is kept when
+   it fails. `destroy()` reports `ok: false` when another tab is holding the
+   database open, and the previous version of this function threw that answer
+   away and cleared the memo regardless. The keeper then saw a confirmed,
+   apparently-successful clear over a database that still held the last run's
+   readings, and the next series he seeded landed on top of them. Every caller
+   must read this result. */
 export async function resetTestData() {
   const b = testBackend();
   const r = await b.destroy();
-  testBackendInstance = null;
+  if (r && r.ok) backends.delete(TEST_DB_NAME);
   return r;
 }
 

@@ -34,10 +34,13 @@
    fabricating delivery history. Every `dose` line after it is a change from
    the value before it, which is a fact the batch actually contains.
 
-   Half-apply a batch. Every line is parsed and checked first. If any line is
-   bad, nothing is written and every problem is reported with its line number,
-   so the keeper fixes the text rather than hunting for which of fourteen
-   readings landed.
+   Half-apply a batch. Every line is parsed AND planned first, and planning
+   raises every problem that is knowable before a write — a value that is not a
+   number, a date that is not a date, a water change in litres with no tank
+   volume on record, a dose line that would have to slip underneath dose
+   history the ledger already holds. If any line is bad, nothing is written and
+   every problem is reported with its line number, so the keeper fixes the text
+   rather than hunting for which of fourteen readings landed.
 
    A delivery anomaly is deliberately not in the grammar: it carries a span
    with two instants, and a line format that could express one would be a line
@@ -196,27 +199,85 @@ export function timeFor(row) {
 
 /* --- planning ------------------------------------------------------------
 
-   ONE OWNER OF WHAT EACH LINE BECOMES.
+   ONE OWNER OF WHAT EACH LINE BECOMES, AND ONE PLACE THAT CAN REFUSE.
 
    The preview and the write have to agree, and "they agree today" is not a
    design — canon `MASTER RULE 1`. So neither of them decides: `plan()` decides,
    `summarise()` counts a plan, and `applySeries()` writes one. A preview that
    said "dose changed" over a line that was about to be written as a standing
-   dose is exactly the disagreement this shape prevents, and it is the defect
-   that produced this function. */
-export function plan(rows, { knownDose = null } = {}) {
+   dose is exactly the disagreement this shape prevents.
+
+   `plan()` also reports every problem that is knowable BEFORE a write. That is
+   the other half of the module's promise never to half-apply a batch: a
+   refusal discovered in the middle of the loop has already written half the
+   ledger by the time it is raised, and the keeper who fixes the cause and
+   pastes the same text again then holds every earlier line twice. A litres
+   water change with no tank volume on record was exactly that — knowable at
+   planning time, raised at write time. It is raised here now.
+
+   ORDER
+   -----
+
+   Dose lines are resolved in EVENT-TIME order, not in the order they were
+   typed. Pasting `2026-03-05 dose 10.0` above `2026-03-01 dose 8.8` used to
+   record a standing dose of 10.0 on the 5th and a change FROM 10.0 on the
+   1st — a change away from a value that, in event time, had not yet been set.
+   That is fabricated delivery history arriving through a different door from
+   the one this module already guards.
+
+   The sort key gives a date-only line the start of its day. That is a display
+   and ordering convenience and never an instant: `sortLedger` in `ledger.js`
+   does the same thing for the same reason, and nothing derived from it is
+   stored or handed to the engine. */
+function orderKey(row) {
+  return `${row.date} ${row.time || "00:00"}`;
+}
+
+export function plan(rows, { knownDose = null, knownDoseAt = null, config = null } = {}) {
+  const problems = [];
+  const resolved = new Map();
+
+  /* Dose lines, in the order they happened. */
+  const doseRows = rows.filter((r) => r.kind === DOSE_LINE).sort((a, b) => (orderKey(a) < orderKey(b) ? -1 : orderKey(a) > orderKey(b) ? 1 : 0));
+
   let runningDose = knownDose;
-  return rows.map((row) => {
-    if (row.kind !== DOSE_LINE) return { ...row };
+  for (const row of doseRows) {
+    if (knownDoseAt && orderKey(row) < knownDoseAt) {
+      /* The ledger already holds a dose event later than this line. Slipping
+         earlier delivery history underneath it would need the existing event
+         rewritten from a standing dose into a change, and this ledger is
+         append-only. Refused rather than guessed at — and in test mode the way
+         through is to clear the test data and enter the series in order. */
+      problems.push({ line: row.line, text: t("seed.err.doseBeforeLedgerText"), why: t("seed.err.doseBeforeLedger") });
+      continue;
+    }
     /* Nothing has ever said what the pump is set to, so this line is that
        statement and not a change. Recording it as a change would need a `from`
        nobody has given, and the only way to produce one would be to invent
        it. */
     const kind = runningDose == null ? KIND.DOSE_STATE : KIND.DOSE_CHANGE;
-    const out = { ...row, kind, fromMlPerDay: runningDose };
+    resolved.set(row.line, { kind, fromMlPerDay: runningDose });
     runningDose = row.value;
-    return out;
+  }
+
+  const planned = rows.map((row) => {
+    if (row.kind !== DOSE_LINE) return { ...row };
+    const r = resolved.get(row.line);
+    /* A dose line that was refused above keeps its unresolved kind, and the
+       problem it carries stops the batch. */
+    return r ? { ...row, ...r } : { ...row };
   });
+
+  /* Knowable now, so raised now. */
+  const volume = config && Number(config.netVolumeL);
+  const haveVolume = Number.isFinite(volume) && volume > 0;
+  for (const row of planned) {
+    if (row.kind === KIND.WATER_CHANGE && row.fraction == null && !haveVolume) {
+      problems.push({ line: row.line, text: t("seed.err.noVolumeText"), why: t("seed.err.noVolume") });
+    }
+  }
+
+  return { planned, problems };
 }
 
 /* What a batch would do, said in counts, before anything is written. */
@@ -230,17 +291,23 @@ export function summarise(planned) {
   return { total: planned.length, counts, withTime: dated, dateOnly: planned.length - dated };
 }
 
-/* What the ledger already believes the pump is set to. Read once, and handed
-   to `plan()` so the preview and the write start from the same place. */
-export async function knownDose(store) {
+/* What the ledger already believes the pump is set to, and when it last said
+   so. Read once, and handed to `plan()` so the preview and the write start
+   from the same place. */
+export async function doseContext(store) {
   const projected = await store.ledger.projection();
   let dose = null;
+  let at = null;
   for (const r of projected) {
     if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
-    if (r.event.kind === KIND.DOSE_STATE) dose = r.event.detail.doseMlPerDay;
-    else if (r.event.kind === KIND.DOSE_CHANGE) dose = r.event.detail.toMlPerDay;
+    const e = r.event;
+    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
+    const key = `${e.time.localDate} ${e.time.localTime || (e.time.absoluteInstant ? e.time.absoluteInstant.slice(11, 16) : "00:00")}`;
+    if (at && key < at) continue;
+    at = key;
+    dose = e.kind === KIND.DOSE_STATE ? e.detail.doseMlPerDay : e.detail.toMlPerDay;
   }
-  return dose;
+  return { knownDose: dose, knownDoseAt: at };
 }
 
 /* --- applying ------------------------------------------------------------- */
@@ -254,7 +321,19 @@ export async function knownDose(store) {
    value rather than a second standing dose. */
 export async function applySeries(store, rows, { config } = {}) {
   const written = [];
-  const planned = plan(rows, { knownDose: await knownDose(store) });
+  const { planned, problems } = plan(rows, { ...(await doseContext(store)), config });
+
+  /* NOTHING IS WRITTEN UNTIL EVERY KNOWABLE PROBLEM IS CLEAR.
+
+     Raised before the loop rather than inside it. A refusal from the middle of
+     the loop leaves the ledger half-written, and the keeper who fixes the
+     cause and pastes the same text again then holds every earlier line
+     twice. */
+  if (problems.length) {
+    const e = new Error(problems[0].why);
+    e.problems = problems;
+    throw e;
+  }
 
   for (const row of planned) {
     const time = timeFor(row);
@@ -306,12 +385,9 @@ export async function applySeries(store, rows, { config } = {}) {
     }
 
     if (row.kind === KIND.WATER_CHANGE) {
-      let fraction = row.fraction;
-      if (fraction == null) {
-        const volume = config && Number(config.netVolumeL);
-        if (!Number.isFinite(volume) || volume <= 0) throw new Error(t("seed.err.noVolume"));
-        fraction = row.litres / volume;
-      }
+      /* `plan()` has already established that the volume is on record when a
+         line needs one, so there is no refusal left to make here. */
+      const fraction = row.fraction == null ? row.litres / Number(config.netVolumeL) : row.fraction;
       written.push(
         await store.ledger.append({
           kind: KIND.WATER_CHANGE,
