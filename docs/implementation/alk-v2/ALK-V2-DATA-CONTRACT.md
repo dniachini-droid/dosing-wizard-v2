@@ -463,7 +463,9 @@ trend segment yet still disqualify potency learning (`AUDIT-018`, `WG-ALK-022`).
 | `sigmaSDkhPerDay` | dKH/day | `sigmaPointDkh / √sxx`, or `√(σ₁²+σ₂²)/Δt` for two-point. |
 | `independentClusters` | count | |
 | `spanDays` | days | |
-| `pairwiseSlopes[]` | dKH/day | Audit. |
+| `pairwiseSlopes[]` | dKH/day | Audit. Emitted as `pairwiseSlopesDkhPerDay`. |
+| `pairwiseSlopesSorted` | dKH/day | The same list in ascending order, which is what the median was taken over. `AD-TRD-002` asserts it, and the even-count median convention is only checkable against the sorted form. Added by `DEC-023`. |
+| `madDkh` | dKH | `median(\|r_i\|)` — the residual MAD `sigmaResidDkh` is `1.4826 ×`. Added by `DEC-023`, asserted by `AD-TRD-002`, `AD-TRD-004`, `AD-TRD-005` and `AD-TRD-006`. **Note the collision it inherits:** `MeasurementCluster.madDkh` is the MAD of an episode's *member values*, a different quantity under the same name. Only one of the two is emitted today. Which name gives way belongs to a governed reissue and is recorded open. |
 | `pairwiseSlopeMadDkhPerDay` | dKH/day | **Diagnostic only.** Must not enter `sigma_S` (Part II §19.5). |
 | `directionConsistency` | 0..1 | Diagnostic metadata, not a threshold. |
 | `endpointMovementDkh` / `fittedMovementDkh` | dKH | |
@@ -563,6 +565,10 @@ Plus:
 | `doseStepRegime` | `ORDINARY` \| `BASELINE_ESTABLISHMENT`. |
 | `capApplied` | `NONE` \| `ORDINARY_25` \| `EXCEPTIONAL_50`. |
 | `bracketStatus` | `NOT_RUN` \| `CONSISTENT` \| `CONFLICT` — advisory only (`OI-BRACKETEFFECT-001`). |
+| `towardRangeHoldApplied` | `boolean`. Whether `ALK-TOWARD-RANGE-HOLD-001` fired. Added by `DEC-023`: the final action is `HOLD_CURRENT_DOSE` whether the toward-range gate fired or `ALK-011`'s uncertainty-limited branch did, so without this field a wrong rule path producing the right number is invisible — which the fixture schema's acceptance rule calls a failure. `AD-MNT-008` asserts it. |
+| `fiftyPercentCapUnlocked` | `boolean`. Whether the exceptional cap was *available*, which is a different fact from `capApplied`, which says which cap bound. Added by `DEC-023`, asserted by `AD-MNT-003`. |
+| `returnPlanOffer` | `AVAILABLE` \| `NOT_ELIGIBLE`. The opt-in offer's state, from `returnPlanEligibleTrajectory`. `ALK-049` P1 makes the offer an outcome of the ordinary maintenance path, which is why it is stated here rather than on `ReturnPlan` — there is no plan to hang it on until the keeper opts in. Added by `DEC-023`, asserted by `AD-MNT-006`, `AD-MNT-007` and `AD-MNT-008`. |
+| `returnPlanEligibleTrajectory` | `boolean`. `ALK-RETURN-ELIGIBLE-TRAJECTORY-001`. Declared elsewhere in this document as a `ReturnPlan` field; surfaced here because it is computed on every assessment, plan or no plan. |
 | `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds a recommendation rather than affirming the current dose. |
 | `reasonCodes[]` | |
 
@@ -659,8 +665,8 @@ recommendations use current potency (`WG-ALK-019`, `WG-ALK-020`, `WG-ALK-038`). 
 
 | Field | Unit | Notes |
 |---|---|---|
-| `postSlopeDkhPerDay` / `sigmaPost` | dKH/day | Genuine post-change clusters only; the Day-0 anchor is excluded. |
-| `preSlopeDkhPerDay` / `sigmaPre` | dKH/day | From the snapshot. |
+| `sPostDkhPerDay` / `sigmaPostDkhPerDay` | dKH/day | Genuine post-change clusters only; the Day-0 anchor is excluded. **Renamed from `postSlopeDkhPerDay` / `sigmaPost` by `DEC-023`**: five frozen fixtures assert the `sPost` spelling (`WG-ALK-007`, `WG-ALK-009`, `AD-RSP-001`, `AD-RSP-002`, `AD-RSP-003`) and `ALK-V2-REASON-CODES.md` states the `RESPONSE_*` payload as `S_post` / `sigma_post`. This is a rename rather than an addition, for the reason `DEC-022` gave: carrying both spellings would put two names on one meaning. `PotencyEvidence` keeps `preSlopeDkhPerDay` / `postSlopeDkhPerDay`, which are a **different record's** pre and post slopes and may legitimately differ from these. |
+| `sPreDkhPerDay` / `sigmaPreDkhPerDay` | dKH/day | From the snapshot. Renamed with the pair above. |
 | `expectedResponseDkhPerDay` | dKH/day | `R_exp = |ΔS_expected|` from the snapshot. |
 | `directedObservedResponseDkhPerDay` | dKH/day | `R_obs = u · (S_post − S_pre)`, `u = sign(ΔS_expected)`. |
 | `sigmaResponseDkhPerDay` | dKH/day | `√(σ_pre² + σ_post²)`. |
@@ -746,15 +752,26 @@ pump cannot be changed (`ALK-SAFETY-RETURN-INTEGRATION-001` §10).
 
 ```text
 RetestDecision {
-  action              REPEAT_NOW | TEST_AT | ROUTINE
+  selectedAction      REPEAT_NOW | TEST_AT | ROUTINE
   earliestUsefulAt    Instant
   recommendedAt       Instant
   latestSafeAt        Instant   OPT
   reasonCode          RetestReason      the selected candidate's code
+  selectedReasonCode  RetestReason      the same code, under the name the frozen
+                                        fixtures assert
   tiedReasonCodes[]   RetestReason[]    every OTHER candidate tying on the selected
                                         time; reason codes are additive, so a tie is
                                         recorded rather than broken (ALK-053A)
-  candidateTimes[]    { candidateClass, at, included|excluded, reason }
+  selectedApproxHours hours             the selected candidate's interval from asOf
+  observationCeilingHours   hours       the ~Day-4 ordinary observation ceiling in force
+  observationFloorApplied   boolean     whether the signal candidate's own floor bound
+  tSignalDays         days              raw T_signal, before its own floor and the ceiling
+  tSignalRawHours     hours             the same quantity in hours
+  tSignalHours        hours             the same quantity again, under the other name the
+                                        frozen fixtures use for it
+  tBoundaryDays       days              T_outer - 1.0, the forecast candidate's lead
+  candidateTimes[]    { candidateClass, at, included|excluded, reason,
+                        approxHours, rawHours, flooredHours, clampedHours, boundSide }
   candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
                       (T_detect, return-plan arrival cadence)
   clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED | RETEST_SIGNAL_FLOOR_APPLIED
@@ -766,15 +783,56 @@ One scheduler owns final next-test timing (`X-INV-004`). A notification surface 
 `recommendedAt`, `earliestUsefulAt`, `latestSafeAt` and `reasonCode` and must not compute
 any of them.
 
+#### What owner decision `DEC-022` added here, exhaustively
+
+`OD-012` recorded that `AD-RET-001`…`AD-RET-005` assert a vocabulary this record did not
+declare, so no contract-conformant engine could satisfy them. `DEC-022` closes it by
+extending the record. **This is the complete list; nothing else was added.**
+
+| Added | Where | Unit | What it is |
+|---|---|---|---|
+| `selectedApproxHours` | `RetestDecision` | hours | `recommendedAt − assessmentAsOf`. The same decision `recommendedAt` already states, as an interval. |
+| `selectedReasonCode` | `RetestDecision` | — | Identical in value to `reasonCode`, under the fixtures' name. |
+| `observationCeilingHours` | `RetestDecision` | hours | The ordinary-observation ceiling in force (96 h, `ALK-053`). |
+| `observationFloorApplied` | `RetestDecision` | — | Whether the `SIGNAL_ACCUMULATION` candidate's own 24 h floor bound. |
+| `approxHours` | `candidateTimes[]` | hours | That candidate's final interval, after its own formula's floor and after the ceiling. |
+| `rawHours` | `candidateTimes[]` | hours | That candidate's interval before its own floor. |
+| `flooredHours` | `candidateTimes[]` | hours | Its interval after the floor inside its own formula, before the ceiling. |
+| `clampedHours` | `candidateTimes[]` | hours | Its interval after the ordinary-observation ceiling. |
+| `boundSide` | `candidateTimes[]` | — | `OUTER_MIN` \| `OUTER_MAX`, for the forecast candidate. |
+| `tSignalDays` | `RetestDecision` | days | Raw `T_signal = 0.10 / \|S_supported\|`, before its own floor and before the ceiling. |
+| `tSignalRawHours` | `RetestDecision` | hours | The same quantity in hours. |
+| `tSignalHours` | `RetestDecision` | hours | The same quantity again: `AD-RET-002` calls it `tSignalRawHours` and `AD-RET-003` calls it `tSignalHours`, both meaning raw. Both names are declared and carry one value, because the fixtures are frozen and an engine that emitted only one of them would fail the other. |
+| `tBoundaryDays` | `RetestDecision` | days | `T_outer − 1.0`: the forecast candidate's 24 h safety lead, before it is converted to an instant. |
+
+Two of these are **renames rather than additions**, and the reason is mechanical rather
+than editorial. The harness resolves a fixture's expectation by field name across the whole
+`EngineResult`, which `INV-B7` / `ALK-VARIABLE-SEMANTICS-001` justify by making one name
+carry one meaning. Two names in this contract carried two:
+
+- `action` named both `RetestDecision`'s scheduling action and `DoseRecommendation.action`,
+  which is a `RecommendationAction` and normally differs. Any engine emitting both makes
+  every fixture asserting `action` unresolvable. `RetestDecision`'s is now
+  `selectedAction`, which is also the name the five fixtures use, so the disambiguation and
+  the extension are the same edit.
+- `reasonCode` named both the retest decision's selected code and `CapabilityState`'s.
+  `WG-ALK-001` and `WG-ALK-006` assert the retest one under the bare name, so it stays;
+  `CapabilityState`'s is renamed below.
+
+`Hours` is deliberately **not** added to §0's dimension-suffix vocabulary. These fields are
+the scheduler's own audit arithmetic over an elapsed duration whose canonical form stays
+`...At`, and adding a tenth suffix would license hour-valued twins of every instant in the
+contract.
+
 ### `CapabilityState` `DERIVED`
 
 ```text
 CapabilityState {
-  capabilityId      M-1 .. M-13
-  present           true | false
-  outcome           OK | DEGRADE | REFUSE | NOT_RUN
-  affectedOutputs[] the specific outputs withheld or degraded
-  reasonCode
+  capabilityId            M-1 .. M-13
+  present                 true | false
+  outcome                 OK | DEGRADE | REFUSE | NOT_RUN
+  affectedOutputs[]       the specific outputs withheld or degraded
+  capabilityReasonCode    renamed from `reasonCode` by DEC-022; see RetestDecision above
 }
 ```
 

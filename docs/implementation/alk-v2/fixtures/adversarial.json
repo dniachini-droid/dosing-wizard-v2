@@ -20,19 +20,38 @@
         "ALK-SLOPE-UNCERTAINTY-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "alkDkh": [
-          8.5,
-          8.5,
-          8.5,
-          8.5
-        ],
-        "currentDoseMlPerDay": 9.0
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": 0.0,
@@ -56,7 +75,38 @@
       "expectedReasonCodes": [
         "TRAJECTORY_STABLE",
         "MAINTENANCE_HOLD_STABLE"
-      ]
+      ],
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
     },
     {
       "fixtureId": "AD-TRD-002",
@@ -74,19 +124,38 @@
         "ALK-SLOPE-UNCERTAINTY-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "alkDkh": [
-          8.6,
-          8.46,
-          8.54,
-          8.4
-        ],
-        "currentDoseMlPerDay": 9.0
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.46,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.54,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 8.4,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "pairwiseSlopesSorted": [
@@ -128,6 +197,37 @@
       "forbidden": {
         "observedSlopeDkhPerDay": -0.033333333333,
         "note": "A low-median implementation returns -0.0333 and a different recommendation."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.6,
+          8.46,
+          8.54,
+          8.4
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -144,19 +244,38 @@
         "ALK-SUPPORTED-SLOPE-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "alkDkh": [
-          8.4,
-          8.54,
-          8.46,
-          8.6
-        ],
-        "currentDoseMlPerDay": 9.0
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.4,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.54,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.46,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 8.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": 0.024166666667,
@@ -175,6 +294,37 @@
       ],
       "forbidden": {
         "note": "Upper and lower mirrors must be symmetric; any asymmetry without an explicit safety exception is a defect."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "alkDkh": [
+          8.4,
+          8.54,
+          8.46,
+          8.6
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -266,19 +416,37 @@
         "ALK-SUPPORTED-SLOPE-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4,
-          6,
-          8
-        ],
-        "alkDkh": [
-          8.6,
-          8.32,
-          8.62,
-          8.18,
-          8.4
+        "events": [
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.32,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.62,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 8.18,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-09T09:00:00+10:00",
+            "rawValueDkh": 8.4,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
         ]
       },
       "expectedIntermediateEvidence": {
@@ -309,7 +477,34 @@
       "expectedReasonCodes": [
         "UNCERTAINTY_RESIDUAL_DOMINATES",
         "TRAJECTORY_UNCERTAINTY_LIMITED"
-      ]
+      ],
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "alkDkh": [
+          8.6,
+          8.32,
+          8.62,
+          8.18,
+          8.4
+        ],
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
     },
     {
       "fixtureId": "AD-TRD-006",
@@ -328,19 +523,38 @@
         "ALK-ROUNDING-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          1.5,
-          5.25,
-          9.0
-        ],
-        "alkDkh": [
-          8.6,
-          8.51,
-          8.285,
-          7.94
-        ],
-        "currentDoseMlPerDay": 9.0
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-02T21:00:00+10:00",
+            "rawValueDkh": 8.51,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-06T15:00:00+10:00",
+            "rawValueDkh": 8.285,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-10T09:00:00+10:00",
+            "rawValueDkh": 7.94,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.066666666667,
@@ -368,6 +582,37 @@
       ],
       "forbidden": {
         "note": "Sxx must use exact elapsed days, not evenly spaced index positions."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          1.5,
+          5.25,
+          9.0
+        ],
+        "alkDkh": [
+          8.6,
+          8.51,
+          8.285,
+          7.94
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -950,19 +1195,32 @@
         "ALK-ROUNDING-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4
-        ],
-        "alkDkh": [
-          8.3,
-          8.2,
-          8.1
-        ],
-        "currentDoseMlPerDay": 9.0,
-        "targetRangeMinDkh": 8.2,
-        "outerMinDkh": 7.0
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.3,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.2,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.1,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.05,
@@ -990,6 +1248,39 @@
       ],
       "forbidden": {
         "note": "Being outside the preferred range never unlocks the 50% cap. Contrast with AD-MNT-001: a 0.0685 mL/day candidate rounds UP to a real action while 0.0451 rounds to HOLD."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          8.3,
+          8.2,
+          8.1
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMinDkh": 8.2,
+        "outerMinDkh": 7.0,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0,
+        "targetRangeMinDkh": 8.2,
+        "outerMinDkh": 7.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -1009,12 +1300,26 @@
         "ALK-ROUNDING-001"
       ],
       "input": {
-        "twoPointReadings": {
-          "day0Dkh": 8.0,
-          "day1Dkh": 7.2
-        },
-        "currentDoseMlPerDay": 40.0,
-        "recommendationPrecisionMlPerDay": 0.1
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 40.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.0,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-02T09:00:00+10:00",
+            "rawValueDkh": 7.2,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.8,
@@ -1041,6 +1346,31 @@
       ],
       "forbidden": {
         "note": "The rail is a ceiling and is independently binding regardless of which percentage cap is available."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "twoPointReadings": {
+          "day0Dkh": 8.0,
+          "day1Dkh": 7.2
+        },
+        "currentDoseMlPerDay": 40.0,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 40.0,
+        "recommendationPrecisionMlPerDay": 0.1
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -1059,9 +1389,38 @@
         "ALK-024"
       ],
       "input": {
-        "continuesFrom": "AD-TRD-001",
-        "currentDoseMlPerDay": 9.0,
-        "selectedPotencyDkhPerMl": 0.0693
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 8.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "consumptionDkhPerDay": 0.6237,
@@ -1076,7 +1435,30 @@
       "expectedReasonCodes": [
         "CONSUMPTION_ESTIMATED",
         "MAINTENANCE_HOLD_STABLE"
-      ]
+      ],
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "continuesFrom": "AD-TRD-001",
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour.",
+          "the reading series is AD-TRD-001's, inlined. The fixture's own `continuesFrom: AD-TRD-001` states it; nothing is imported that this fixture did not name."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
     },
     {
       "fixtureId": "AD-MNT-006",
@@ -1097,25 +1479,32 @@
         "CORE-STABILISE-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4
-        ],
-        "alkDkh": [
-          7.3,
-          7.6,
-          7.9
-        ],
-        "currentDoseMlPerDay": 9.0,
-        "selectedPotencyDkhPerMl": 0.0693,
-        "recommendationPrecisionMlPerDay": 0.1,
-        "targetRangeMinDkh": 8.2,
-        "targetRangeMaxDkh": 8.8,
-        "activePlan": null,
-        "correction": null,
-        "waterChange": null,
-        "outerBoundBreach": false
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.3,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 7.9,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "position": "BELOW_RANGE",
@@ -1157,6 +1546,47 @@
           "MAINTENANCE_MATRIX_CELL_UNDETERMINED",
           "MAINTENANCE_DECREASE_RECOMMENDED"
         ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.3,
+          7.6,
+          7.9
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "activePlan": null,
+        "correction": null,
+        "waterChange": null,
+        "outerBoundBreach": false,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -1177,24 +1607,32 @@
         "ALK-TOWARD-RANGE-HOLD-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4
-        ],
-        "alkDkh": [
-          9.7,
-          9.4,
-          9.1
-        ],
-        "currentDoseMlPerDay": 9.0,
-        "selectedPotencyDkhPerMl": 0.0693,
-        "recommendationPrecisionMlPerDay": 0.1,
-        "targetRangeMinDkh": 8.2,
-        "targetRangeMaxDkh": 8.8,
-        "outerMaxDkh": 11.0,
-        "activePlan": null,
-        "outerBoundBreach": false
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 9.7,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 9.4,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 9.1,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "position": "ABOVE_RANGE",
@@ -1226,6 +1664,47 @@
           "MAINTENANCE_MATRIX_CELL_UNDETERMINED",
           "MAINTENANCE_INCREASE_RECOMMENDED"
         ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          9.7,
+          9.4,
+          9.1
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "outerMaxDkh": 11.0,
+        "activePlan": null,
+        "outerBoundBreach": false,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "recommendationPrecisionMlPerDay": 0.1,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "outerMaxDkh": 11.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -1244,6 +1723,77 @@
         "ALK-RESPONSE-DETECTABILITY-001"
       ],
       "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 8.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 8.3,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.0,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "DOSE_CHANGE",
+            "effectiveAt": "2026-09-05T09:28:48+10:00",
+            "from": 9.0,
+            "to": 10.5,
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-07T09:00:00+10:00",
+            "rawValueDkh": 7.954,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-09T09:00:00+10:00",
+            "rawValueDkh": 7.862,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "expectedIntermediateEvidence": {
+        "sPreDkhPerDay": -0.15,
+        "sigmaPreDkhPerDay": 0.035355339059,
+        "sPostDkhPerDay": -0.046,
+        "sigmaPostDkhPerDay": 0.070710678119,
+        "expectedResponseDkhPerDay": 0.10395,
+        "directedObservedResponseDkhPerDay": 0.104,
+        "sigmaResponseDkhPerDay": 0.079056941504,
+        "responseBandDkhPerDay": 0.101192885125,
+        "check": "R_obs 0.104 > B 0.101193 AND |0.104 - 0.10395| = 0.00005 <= B"
+      },
+      "expectedAction": {
+        "responseAttribution": "EXPECTED",
+        "positionEvent": "NONE",
+        "note": "7.862 is below range, so no overshoot."
+      },
+      "expectedReasonCodes": [
+        "RESPONSE_EXPECTED"
+      ],
+      "forbidden": {
+        "responseAttribution": "INCONCLUSIVE",
+        "note": "A boundary-straddling pair with WG-ALK-007 proves the band is applied exactly, not approximately."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
         "preReadings": {
           "timesDays": [
             0,
@@ -1270,30 +1820,20 @@
             7.954,
             7.862
           ]
-        }
+        },
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
       },
-      "expectedIntermediateEvidence": {
-        "sPreDkhPerDay": -0.15,
-        "sigmaPreDkhPerDay": 0.035355339059,
-        "sPostDkhPerDay": -0.046,
-        "sigmaPostDkhPerDay": 0.070710678119,
-        "expectedResponseDkhPerDay": 0.10395,
-        "directedObservedResponseDkhPerDay": 0.104,
-        "sigmaResponseDkhPerDay": 0.079056941504,
-        "responseBandDkhPerDay": 0.101192885125,
-        "check": "R_obs 0.104 > B 0.101193 AND |0.104 - 0.10395| = 0.00005 <= B"
-      },
-      "expectedAction": {
-        "responseAttribution": "EXPECTED",
-        "positionEvent": "NONE",
-        "note": "7.862 is below range, so no overshoot."
-      },
-      "expectedReasonCodes": [
-        "RESPONSE_EXPECTED"
-      ],
-      "forbidden": {
-        "responseAttribution": "INCONCLUSIVE",
-        "note": "A boundary-straddling pair with WG-ALK-007 proves the band is applied exactly, not approximately."
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, and the rate it carries is the source fixture's own doseChange.from, so nothing about the dose is imported.",
+          "The DOSE_CHANGE carries NO predictionSnapshot. The source fixture states none, and the engine reconstructs it from the state at the change instant - which is what makes this fixture a test of the snapshot as well as of the classifier."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -2516,22 +3056,32 @@
         "ALK-RETURN-ELIGIBLE-TRAJECTORY-001"
       ],
       "input": {
-        "timesDays": [
-          0,
-          2,
-          4
-        ],
-        "alkDkh": [
-          7.9,
-          7.94,
-          7.98
-        ],
-        "currentDoseMlPerDay": 9.0,
-        "selectedPotencyDkhPerMl": 0.0693,
-        "targetRangeMinDkh": 8.2,
-        "targetRangeMaxDkh": 8.8,
-        "activePlan": null,
-        "outerBoundBreach": false
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.9,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.94,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 7.98,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
       },
       "expectedIntermediateEvidence": {
         "position": "BELOW_RANGE",
@@ -2565,6 +3115,43 @@
           "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY"
         ],
         "note": "The final action is HOLD either way, so a wrong path here is only visible through the reason code and the return-plan offer. That is exactly why both are asserted: a wrong rule path producing the same number is a fixture failure."
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
+        "timesDays": [
+          0,
+          2,
+          4
+        ],
+        "alkDkh": [
+          7.9,
+          7.94,
+          7.98
+        ],
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "activePlan": null,
+        "outerBoundBreach": false,
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger."
+      },
+      "config": {
+        "currentDoseMlPerDay": 9.0,
+        "selectedPotencyDkhPerMl": 0.0693,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {
@@ -3450,7 +4037,7 @@
           "ALK-TESTING-EPISODE-001",
           "ALK-SAME-TIMESTAMP-COALESCE-001",
           "ALK-INDEPENDENT-SELECTION-001",
-          "Part II \u00a75.4",
+          "Part II §5.4",
           "ALK-005"
         ],
         "note": "Freeze 5 F5-14, amended by owner decisions 17, 27 and 28. Two clusters can reach selection at one sampling moment however they were recorded. They are one testing episode and are pooled under the existing representative-value rules. Pooled median of {8.60, 8.74} = 8.67; pooled spread 0.14 <= 0.20, so ALK-005 leaves the episode OK. No method is recorded on any reading."
@@ -3459,8 +4046,8 @@
         "ALK-TESTING-EPISODE-001",
         "ALK-SAME-TIMESTAMP-COALESCE-001",
         "ALK-INDEPENDENT-SELECTION-001",
-        "Part II \u00a75.4",
-        "Part II \u00a75.6",
+        "Part II §5.4",
+        "Part II §5.6",
         "ALK-005"
       ],
       "input": {
@@ -3705,7 +4292,7 @@
           "ALK-TESTING-EPISODE-001",
           "ALK-SAME-TIMESTAMP-COALESCE-001",
           "ALK-INDEPENDENT-SELECTION-001",
-          "Part II \u00a75.4",
+          "Part II §5.4",
           "ALK-005"
         ],
         "note": "Freeze 5 F5-14 negative control, amended by owner decisions 17, 27 and 28. Same shape as AD-SEG-007 with a wider disagreement: pooled spread 0.30 > 0.20, so ALK-005 marks the episode ANOMALOUS. The threshold applies to every repeat pool, with no method qualifier."
@@ -3714,8 +4301,8 @@
         "ALK-TESTING-EPISODE-001",
         "ALK-SAME-TIMESTAMP-COALESCE-001",
         "ALK-005",
-        "Part II \u00a75.6",
-        "Part II \u00a748"
+        "Part II §5.6",
+        "Part II §48"
       ],
       "input": {
         "clusters": [
@@ -3748,7 +4335,7 @@
         "coalescedSpreadDkh": 0.3,
         "alk005ThresholdDkh": 0.2,
         "coalescedClusterStatus": "ANOMALOUS",
-        "note": "0.30 > 0.20, so the pooled episode is ANOMALOUS under ALK-005. The episode is RESOLVED - one value exists - and separately ANOMALOUS on its spread; the two states are not the same thing. It is a historical episode here, not the latest, so Part II \u00a749 retention and the OI-ANOMCLUSTER-001 handling apply.",
+        "note": "0.30 > 0.20, so the pooled episode is ANOMALOUS under ALK-005. The episode is RESOLVED - one value exists - and separately ANOMALOUS on its spread; the two states are not the same thing. It is a historical episode here, not the latest, so Part II §49 retention and the OI-ANOMCLUSTER-001 handling apply.",
         "episodeStatus": "RESOLVED",
         "combinedMeasurementCount": 2
       },
@@ -4060,8 +4647,8 @@
           "ALK-TESTING-EPISODE-001",
           "ALK-EPISODE-RESOLUTION-001",
           "ALK-005",
-          "Part II \u00a75.4",
-          "Part II \u00a75.5"
+          "Part II §5.4",
+          "Part II §5.5"
         ],
         "note": "Owner decision 28. Every reading is within 30 minutes of every other AND of the first, so the fixture does not depend on how the window is anchored - that anchoring is recorded as open and is deliberately not exercised here. No method is recorded on any reading (owner decision 27)."
       },
@@ -4152,7 +4739,7 @@
           "ALK-TESTING-EPISODE-001",
           "ALK-EPISODE-RESOLUTION-001",
           "ALK-REPEAT-SPREAD-DOMAIN-001",
-          "Part II \u00a75.4"
+          "Part II §5.4"
         ],
         "note": "Owner decisions 27 and 28. Under decisions 17-19 this pair was CONTESTED_METHODS and withheld position, because the two readings came from methods the canon could not classify as compatible. The application does not know what produced either reading, so there is nothing to contest: they are two readings within 30 minutes and they combine. Even count, so Part II 5.4's median is the mean of the two central values: (10.95 + 11.14) / 2 = 11.045. Exact-decimal spread 0.19 <= 0.20, so ALK-005 leaves the episode OK. 11.045 > OuterMax 11.0."
       },
@@ -4286,7 +4873,7 @@
         "ALK-EPISODE-RESOLUTION-001",
         "ALK-010",
         "ALK-003A",
-        "Part II \u00a75.4"
+        "Part II §5.4"
       ],
       "input": {
         "outerMaxDkh": 11.0,
@@ -4409,7 +4996,7 @@
         "ALK-EPISODE-SINGLE-OUTPUT-001",
         "ALK-EPISODE-RESOLUTION-001",
         "ALK-005",
-        "Part II \u00a748"
+        "Part II §48"
       ],
       "input": {
         "cases": [
@@ -4550,7 +5137,7 @@
         "ALK-DECIMAL-THRESHOLD-001",
         "ALK-005",
         "ALK-REPEAT-SPREAD-DOMAIN-001",
-        "Part II \u00a75.6"
+        "Part II §5.6"
       ],
       "input": {
         "alk005ThresholdDkh": 0.2,
@@ -5747,7 +6334,7 @@
         "ALK-TESTING-EPISODE-001",
         "ALK-005",
         "ALK-DECIMAL-THRESHOLD-001",
-        "Part II \u00a748"
+        "Part II §48"
       ],
       "input": {
         "outerMaxDkh": 11.0,
@@ -6261,8 +6848,8 @@
         "canonSource": [
           "ALK-TESTING-EPISODE-001",
           "ALK-EPISODE-RESOLUTION-001",
-          "Part II \u00a75.4",
-          "Part II \u00a75.5"
+          "Part II §5.4",
+          "Part II §5.5"
         ],
         "note": "Owner decision 28. Even count, so Part II 5.4's median is the mean of the two central values: (8.60 + 8.66) / 2 = 8.63. Exact-decimal spread 0.06 <= 0.20."
       },
@@ -6270,8 +6857,8 @@
         "ALK-TESTING-EPISODE-001",
         "ALK-EPISODE-RESOLUTION-001",
         "ALK-005",
-        "Part II \u00a75.4",
-        "Part II \u00a75.5"
+        "Part II §5.4",
+        "Part II §5.5"
       ],
       "input": {
         "readings": [
@@ -6395,7 +6982,7 @@
         "class": "CANON_DERIVED",
         "canonSource": [
           "ALK-TESTING-EPISODE-001",
-          "Part II \u00a75.3",
+          "Part II §5.3",
           "ALK-005"
         ],
         "note": "Owner decision 28. The comparison is inclusive at exactly 30 minutes - ALK-V2-ALGORITHM-CONTRACT.md A3 has read `<= 30 minutes` since the package was first written, and decision 28 changes the window's role, not its value or its inclusivity."

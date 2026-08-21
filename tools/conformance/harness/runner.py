@@ -92,7 +92,10 @@ def _request_for(f: corpus_mod.Fixture, c: corpus_mod.Corpus) -> Dict[str, Any]:
     return {
         "op": "assess",
         "requestId": f"req-{abs(hash(f.fixture_id)) % 10**12:012d}",
-        "asOf": inp.get("asOf"),
+        # Stated by the fixture, or `DEC-021`'s default instant -- the moment of
+        # the last READING in its own ledger. `corpus.Fixture` owns that
+        # resolution; the runner does not re-derive it.
+        "asOf": f.resolved_as_of,
         "events": copy.deepcopy(inp.get("events") or []),
         "configuration": config,
         "configurationHistory": copy.deepcopy(configuration_history),
@@ -239,6 +242,7 @@ def run(
                     status=NOT_EXECUTABLE,
                     detail=f.reason,
                     skipped_prose=f.unreadable_expectations,
+                    as_of_derived=f.as_of_derived,
                 )
             )
             continue
@@ -259,6 +263,7 @@ def run(
                     expected="<fixture expectations>",
                     actual=ENGINE_ABSENT if reply.absent else reply.error,
                     skipped_prose=f.unreadable_expectations,
+                    as_of_derived=f.as_of_derived,
                 )
             )
             continue
@@ -348,6 +353,7 @@ def run(
                     if isinstance(q, str)
                 ],
                 compared=compared,
+                as_of_derived=f.as_of_derived,
             )
         )
 

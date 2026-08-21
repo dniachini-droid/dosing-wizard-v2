@@ -23,6 +23,15 @@ SUFFIX_TO_TOLERANCE_KEY = {
     "Dkh": "dkh",
     "Ml": "ml",
     "Fraction": "dimensionless",
+    # Durations. `Days` is a declared dimension suffix and `Hours` is not, but
+    # the corpus states retest intervals in both and an engine has to answer in
+    # the unit it was asked in. Without these two rows every duration fell
+    # through to the "strictest value in the table" fallback -- 1e-12, against
+    # goldens written to nine decimals -- so a correct engine failed on the
+    # fixture's own written precision. The gap could not be seen until an
+    # engine existed to produce a duration.
+    "Days": "days",
+    "Hours": "hours",
 }
 
 

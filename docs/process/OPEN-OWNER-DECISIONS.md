@@ -73,9 +73,395 @@ more than a tidy file.
 
 ## Open
 
+## OD-021 — Six worked goldens state a value rounded below the tolerance they are compared at
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `WG-ALK-001`, `WG-ALK-004`, `WG-ALK-006`, `WG-ALK-033`, `WG-ALK-062`,
+  `AD-MNT-002`, `AD-MNT-004` passing against any correct engine
+
+**The question, in plain language**
+
+Several goldens state an intermediate to fewer digits than the tolerance the gate
+compares it at, so a correct engine fails on the fixture's own rounding.
+
+Two different causes, and they need different answers.
+
+**Cause one — rounded before dividing.** The canon's own worked text for `WG-ALK-001`
+rounds the supported slope for legibility and then divides the rounded value by the
+potency. The fixture transcribed that intermediate as a full-precision expectation. An
+engine that keeps full precision throughout — which `ALK-002` and the determinism
+contract require — cannot reproduce it. Four goldens carry this.
+
+**Cause two — truncated for legibility.** `WG-ALK-006` states the supported slope to
+eight decimals and `WG-ALK-062` states the continuous dose to five. Both are correct to
+the digits written and both differ from the exact value by more than the tolerance.
+
+**Why it is only now visible**
+
+`recompute-goldens.py` recorded every one of these in `baselines/`, four separate times,
+as a discrepancy between the stated value and the recomputed one. It is a recorder rather
+than a gate, so nothing acted on it. The first engine turns each into a red fixture.
+
+**Options**
+
+1. **Reissue the affected goldens** at full precision, through the governed path. Largest
+   change; restores the fixtures as checks of the whole calculation.
+2. **State a per-fixture tolerance** on each, matched to the digits actually written. Cheap
+   and honest, but it weakens exactly the fields most worth pinning.
+3. **Drop the affected assertions** and rely on the fields that survive. Loses coverage
+   silently, which is the worst of the three.
+
+**Which direction being wrong hurts more**
+
+Leaving it open means seven fixtures stay red for a reason that is not the engine's, which
+trains a reader to skim red. Fixing it the wrong way means an intermediate stops being
+checked at all.
+
+**Recommendation, and what would make it wrong**
+
+Option 1 for cause one — the value is arithmetically wrong at the precision it claims, not
+merely coarse. No recommendation on cause two; whether a golden should be written to full
+precision or compared at the precision it states is the owner's call about what a golden
+is for.
+
+## OD-020 — Does `continuousActionCandidateMlPerDay` come before or after the rails and caps?
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `AD-MNT-002` and `AD-MNT-004` passing
+
+**The question, in plain language**
+
+`ALK-V2-DATA-CONTRACT.md` says the field is `D_current − S_supported/P`, "**before**
+physical limits and rounding". Two fixtures state it **after** them: `AD-MNT-004` states
+`47.215007215`, which is the rail-limited value, where the pre-limit candidate is
+`48.931899913`; `AD-MNT-002` states `11.25`, which is the 25%-capped value, where the
+pre-limit candidate is `11.954475700`.
+
+`ALK-ROUNDING-001` names its own input `D_continuous_feasible` — *feasible*, that is,
+after the constraints — which is a third reading again.
+
+**Why it is undecided**
+
+The contract states one thing in one sentence and the corpus states the other twice. Both
+are frozen against different authorities: the contract is the alk-v2 package, the fixtures
+are `ALK_V2_FREEZE_5`. `recompute-goldens.py` computed the pre-limit value and recorded
+both as discrepancies, so the disagreement is on record but unowned.
+
+**Options**
+
+1. The field is pre-limit, as the contract says, and a **second** field carries the
+   feasible candidate. Both fixtures then assert the second field's value under the
+   first's name and need a governed reissue.
+2. The field is post-constraint and pre-rounding, and the contract sentence is wrong.
+   `ALK-ROUNDING-001`'s "feasible" wording supports this.
+
+**Which direction being wrong hurts more**
+
+Either way the recommendation is unchanged — this is an audit field. What is at stake is
+whether a reader tracing a capped recommendation sees where the cap bit.
+
+**Recommendation** — option 1, because the two quantities genuinely differ and
+`ALK-VARIABLE-SEMANTICS-001` exists to stop one field carrying both. It would be wrong if
+the owner reads `D_continuous_feasible` as the same field under another name.
+
+## OD-019 — Two round-1 goldens state a retest answer the Freeze-5 scheduler contradicts
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `WG-ALK-001` and `WG-ALK-006` passing
+
+**The question, in plain language**
+
+`WG-ALK-001` expects the next test at 48 h under `RETEST_POST_CHANGE_FIRST`. Its ledger
+contains no dose change — the change is being *recommended* — and `ALK-053`'s post-change
+candidate is anchored on an **actual** change, which Part I §31 says only a confirmed
+actual change creates. Meanwhile Freeze 5's confidence-building candidate computes
+`T_signal = max(1 day, 0.10/0.104745) = 24 h` on the same inputs and is earlier, so the
+scheduler selects it.
+
+`WG-ALK-006` expects 24 h under `RETEST_RAPID_MOVEMENT`. Its own stated `tOuterLowDays` is
+`0.25`, so Freeze 5's forecast-boundary candidate gives `T_boundary = −0.75 d` and returns
+test-now, which outranks ordinary scheduling.
+
+Both goldens predate the two candidates that now beat them.
+
+**Why it is undecided**
+
+Neither expectation is wrong about the tank. Both are answers the scheduler gave before
+`ALK-RETEST-SCHEDULER-001` existed. Deciding whether a recommended-but-not-yet-implemented
+change opens a post-change regime is a real chemistry question, and it is the one that
+decides `WG-ALK-001`.
+
+**What must change alongside** — whichever way it goes, `AD-RET-001` is the control: it is
+the same shape as `WG-ALK-001` with the maintenance action held, and it selects the signal
+candidate at 24 h.
+
+**Recommendation** — none. This is a question about when a post-change regime begins, and
+that is chemistry.
+
+## OD-018 — The corpus asserts `approxHours` with two different meanings
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `WG-ALK-001` and `WG-ALK-006` passing, independently of `OD-019`
+
+**The question, in plain language**
+
+`WG-ALK-001` and `WG-ALK-006` assert `expectedRetest.approxHours` meaning *the selected
+interval*. `AD-RET-001` and `AD-RET-003` assert `candidateTimes[].approxHours` meaning
+*that candidate's* interval, and state several of them with different values in one
+fixture.
+
+The harness resolves an expectation by field name across the whole result, justified by
+`INV-B7` making a name unambiguous. Here it is not: an engine emitting the per-candidate
+values reports `approxHours` at three places with three values, and the older goldens'
+assertion cannot resolve.
+
+`DEC-022` gave the selected interval its own unambiguous name, `selectedApproxHours`, which
+is what the five converted retest fixtures use. The two older goldens use the bare name.
+
+**Why no session can settle it** — both sides are frozen `ALK_V2_FREEZE_5` content, and the
+two meanings are genuinely different quantities.
+
+**Options**
+
+1. Reissue `WG-ALK-001` and `WG-ALK-006` to say `selectedApproxHours`. Smallest edit;
+   needs the governed path because it edits frozen expectations.
+2. Rename the per-candidate field. Larger, and it edits the five fixtures `DEC-022` was
+   written for.
+
+**Recommendation** — option 1. Two fixtures move rather than five, and the name that
+survives is the one that says which interval it means.
+
+## OD-017 — The corpus asserts a large vocabulary the data contract does not declare
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** conversion of roughly a dozen stage-one fixtures, and two engine mutations
+
+**The question, in plain language**
+
+`OD-012` found the retest path asserting ten names the contract did not declare, and
+`DEC-022` closed it by extending the contract. `DEC-023` then applied the same answer
+wherever three conditions hold. **What is left is the residue those conditions
+deliberately exclude**, and it is not small: the corpus asserts about 553 distinct field
+names and the contract declares about 40.
+
+Four kinds, and they need different answers:
+
+- **A quantity the engine has, under a second name.** `latestPosition` for `position`
+  (`WG-ALK-033`); `positionDkh` for `latestValidValueDkh` (`AD-RET-005`);
+  `continuousDoseMlPerDay` for `continuousActionCandidateMlPerDay` (`WG-ALK-062`);
+  `pairwiseSlopes` for `pairwiseSlopesDkhPerDay` (`AD-RAP-001`); `roundedTo` for
+  `recommendedDoseMlPerDay` (`AD-MNT-001`). Bridging these puts two names on one meaning,
+  which `INV-B7` forbids — so `DEC-023` condition 3 stops at them.
+- **A working step, not an output.** `acceptedClusterTimesDays`,
+  `notAcceptedSeparationHours`, `coalescedValueDkh`, `pooledReadingsDkh`,
+  `seriesAfterCoalescing`, `roundingTie`, `episode1`/`episode2` — the fixture's own
+  arithmetic, written for a human reader. These are what `OD-009` calls for: a unit-level
+  fixture bound to a named module, rather than a whole-pipeline expectation.
+- **A presentation requirement in a domain fixture.** `AD-MNT-006`'s
+  `fullCardShows: [observedSlope, supportedSlope, maintenanceEstimate, forecastRangeEntry]`
+  is a Layer-5 statement. A domain engine cannot satisfy it and should not try:
+  `X-INV-004` and `DEC-003` put wording and card composition outside the domain entirely.
+- **A qualitative flag.** `automaticStatisticalSuspicionDetection`,
+  `outlierExcludedFromTrend`, `medianConclusionManufactured`, `allRawReadingsPreserved` —
+  assertions about what the engine did *not* do, with no natural field.
+
+**What it costs today** — `AD-MNT-001`, `AD-MNT-002`, `AD-MNT-006`, `AD-RAP-001`,
+`AD-SEG-001`, `AD-SEG-005`, `AD-SEG-007`, `AD-SEG-008`, `AD-EPI-001`, `AD-VAL-002`,
+`WG-ALK-062` and `WG-ALK-063` are unconverted or red for this reason alone, and two engine
+mutations (`E-6`, `E-18`, `E-19`) are blocked on them.
+
+**Options**
+
+1. **Extend the contract further**, accepting the duplicate names. Cheapest per fixture;
+   every duplicate weakens the by-name resolution the harness depends on.
+2. **Answer `OD-009`** — a unit-level fixture type bound to a named module. Fixes the
+   second kind properly and much of the first.
+3. **Reissue the fixtures** into the contract's vocabulary. Correct and expensive, and it
+   edits frozen expectations.
+4. **Leave them unconverted**, and accept that these paths are pinned by the fixtures that
+   do convert.
+
+**Recommendation** — option 2 for the working-step kind, option 3 for the duplicate-name
+kind, and **nothing at all** for the presentation kind: `fullCardShows` should not be
+asserted of a domain engine by any route, and a fixture that does is asserting the wrong
+layer.
+
+## OD-016 — Which tied retest candidate fills the single `reasonCode`?
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** nothing today. A determinism question with no fixture on it yet.
+
+**The question, in plain language**
+
+Canon is explicit that where retest candidates tie on time, every tied candidate's reason
+code is emitted and **no precedence between them is invented**. `RetestDecision`
+nevertheless declares one `reasonCode` — "the selected candidate's code" — and a
+`tiedReasonCodes[]` beside it. Something has to fill the singular field.
+
+Canon names two reachable ties: `T_signal` at 24.0 h against the rapid candidate, and at
+48.0 h against the routine cadence.
+
+**What the engine does today** — takes the tied candidate that comes first in `ALK-053A`'s
+own candidate-set table, emits every tied code, and records all of them in
+`candidateTimes[]`. Nothing is suppressed and the answer is deterministic, but the table
+order is not stated as a precedence anywhere.
+
+**Options** — name a precedence; or make `reasonCode` a list where a tie occurs; or state
+that the singular field is presentation and the audit record is the array.
+
+**Recommendation** — no recommendation. Which candidate a card should name first at a tie
+is a presentation judgement the canon deliberately did not make.
+
+## OD-015 — `AD-RET-004` asserts an `outerBoundState` value the vocabulary does not contain
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `AD-RET-004` passing. It is otherwise green.
+
+**The question, in plain language**
+
+`AD-RET-004` asserts `outerBoundState: "INSIDE_BOUND"`. The closed vocabulary is
+`WITHIN_BOUNDS | BREACHED_LOW | BREACHED_HIGH | RECOVERING_INSIDE_BOUND`, and the token
+`INSIDE_BOUND` appears exactly once in the whole repository: in that fixture. The canon
+uses `RECOVERING_INSIDE_BOUND` and nothing else.
+
+It is `OD-012`'s collision on a different field — except that `outerBoundState` is a
+chemistry state vocabulary rather than an output name, so `DEC-023` condition 3 stops
+short of it deliberately. Adding `INSIDE_BOUND` as a synonym for `WITHIN_BOUNDS` would put
+two names on one state, which is what a closed vocabulary exists to prevent.
+
+**Options** — reissue the fixture to say `WITHIN_BOUNDS`; or decide that `INSIDE_BOUND` is
+the canonical spelling and reissue the contract and canon. The first is one word in one
+fixture.
+
+**Recommendation** — the first, through the governed path, unless the owner reads
+`INSIDE_BOUND` as a distinct state nobody has defined.
+
+## OD-022 — Two retest fixtures state a partial candidate list, which the comparator reads as complete
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `AD-RET-002` and `AD-RET-005` passing
+
+**The question, in plain language**
+
+`candidateTimes[]` is the scheduler's audit record of every candidate it evaluated. The
+harness compares a list by length and then by element, so a fixture stating two entries
+asserts that exactly two candidates were evaluated.
+
+`AD-RET-002` states two — routine cadence and signal accumulation — on a tank that is
+below range and rising with `outerMax` configured, so the forecast-boundary candidate
+also applies. `AD-RET-001`, on the same rule and the same shape, **does** list it, at
+472 h, and its `forbidden` block says in terms that the candidate "must appear in the audit
+list rather than being dropped on an unstated horizon". The two fixtures cannot both be
+satisfied.
+
+`AD-RET-005` states two entries on a breached tank and omits both the routine cadence and
+the signal candidate, neither of which the canon suspends on a breach.
+
+The engine mutation set proves this mechanically rather than by argument: `E-9`, which
+withholds the forecast candidate from the scheduler, turns `AD-RET-001` and `AD-RET-003`
+red **and makes `AD-RET-002`'s failure disappear**.
+
+**Options** — reissue the two fixtures with their full candidate lists; or state that
+`candidateTimes[]` is asserted as a subset rather than a list, which would need a change to
+the comparator and would weaken every list assertion in the corpus.
+
+**Recommendation** — the first. A subset comparison would mean no fixture could ever assert
+that a candidate was *not* evaluated, which is precisely what `AD-RET-005` is for.
+
+## OD-023 — `AD-MNT-008` asserts a `trajectory` value outside the closed vocabulary
+
+- **Raised:** 2026-08-21 · **By:** first-engine run · **Status:** OPEN
+- **Blocks:** `AD-MNT-008` passing. It is otherwise green.
+
+**The question, in plain language**
+
+`AD-MNT-008` asserts both `trajectory: "UNCERTAINTY_LIMITED"` and
+`movementEvidence: "UNCERTAINTY_LIMITED"`. `Trajectory`'s closed vocabulary is
+`RISING | FALLING | STABLE | UNCERTAIN`; `UNCERTAINTY_LIMITED` belongs to
+`MovementEvidence`.
+
+`ALK-MOVEMENT-001` step 6 is explicit that where the supported slope shrinks to zero the
+trajectory takes **the direction of the observed slope** and the evidence state carries
+the uncertainty limitation. `WG-ALK-002` asserts exactly that pairing — `FALLING` with
+`UNCERTAINTY_LIMITED` — on the same rule. The two fixtures contradict each other.
+
+**Recommendation** — reissue `AD-MNT-008`'s `trajectory` to `RISING`, matching
+`WG-ALK-002`'s shape and the rule's own wording. It would be wrong if the owner intends
+the two fields to collapse, which `ALK-VARIABLE-SEMANTICS-001` would forbid anyway.
+
+
+## OD-024 — What tank alkalinity does a water-change step subtract from?
+
+- **Raised:** 2026-08-21 · **By:** first-engine review pass · **Status:** OPEN
+- **Blocks:** nothing today. The engine implements `ALK-033` on the reading it took;
+  this asks whether canon should state the reading rather than leave it to be taken.
+
+**The question, in plain language**
+
+`ALK-033` gives the known-input step as `dA_WC = f * (A_replacement - A_tank)`. It states
+`f` and `A_replacement` — both are on the water-change event. It does not state
+`A_tank`: the tank's alkalinity *at the moment of the change*, which is almost never a
+moment anybody tested at.
+
+The engine uses **the last resolved testing episode at or before the event**, which is
+the only recorded fact available. The alternatives a reasonable implementer might have
+picked instead are the fitted value of the trend at that instant, or the nearest episode
+in either direction. On a tank falling 0.05 dKH/day and a change three days after the
+last test, the three answers differ by about 0.15 dKH — larger than the 0.10 dKH
+materiality floor the same rule uses to decide whether to normalize at all. So the
+choice can flip a step from normalized to not.
+
+Where no episode precedes the event the step is not computable at all, and the engine
+falls through to `ALK-WATERCHANGE-UNKNOWN-001` rather than interpolating a tank value it
+was never told.
+
+**Recommendation** — state `A_tank` in canon as the last resolved episode at or before
+the event, which is the only choice that reads a recorded fact rather than a derived
+one, and matches `ALK-034`'s treatment of a known correction. It would be wrong if the
+owner intends normalization to run against the trend's fitted value, which would make a
+Layer-2 output an input to a Layer-1 normalization and cross a boundary `DEC-003` keeps
+separate.
+
+
+## OD-025 — The reason-code catalogue has no code for "not built in this release"
+
+- **Raised:** 2026-08-21 · **By:** first-engine review pass · **Status:** OPEN
+- **Blocks:** nothing failing. It makes the settled tank's card read worse than the
+  engine's actual answer.
+
+**The question, in plain language**
+
+`INV-I4` requires every `NOT_RUN` / `WITHHELD` output to be named in the
+`affectedOutputs` of a `GATING` or `REFUSAL` reason code. The only catalogued `GATING`
+code that can name an arbitrary output is `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE`, whose
+declared meaning is *"insufficiency stated with what is missing"*.
+
+But some outputs are not withheld for want of evidence — they are withheld because this
+release does not build them: the safety return's sizing, the gated potency dispersion,
+the empirical bracket. On a tank with four clean readings, a complete dosing record and
+a confident recommendation, the engine must currently attach an **insufficiency** code to
+say so, and the keeper reads "insufficient data" beside a recommendation the engine is
+in fact sure of.
+
+These are two different statements about the world and the catalogue has one code for
+both. Scoping the sweep to actual outputs (this pass) took the list from eleven entries
+to four; the remaining four are all declared debt and cannot be removed without either
+a new code or a weaker invariant.
+
+**Recommendation** — add an `INFO`-severity `OUTPUT_NOT_IMPLEMENTED_IN_RELEASE` to the
+catalogue and let `INV-I4` accept it for outputs named as declared debt. It would be
+wrong if the owner reads declared debt as a form of insufficiency, in which case the
+right fix is to `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE`'s **wording**, not a new code.
+Either way this is a contract change and belongs to a governed reissue, not to an
+implementation pass.
+
+
 ## OD-008 — What is the assessment instant of a worked golden?
 
-- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** CLOSED — see `DEC-021` (2026-08-21)
+- **Decided:** option 1. Where a fixture states no assessment instant, `asOf` is the
+  instant of the last `READING` in its ledger; a fixture that states its own keeps it.
+  The original analysis is preserved below as it was written.
 - **Blocks:** roughly forty reading-series fixtures, all six `NO_ASOF` fixtures, and
   every case-set expansion. It is the single largest blocker on making the corpus
   machine-checkable.
@@ -287,7 +673,10 @@ field.
 
 ## OD-012 — Which vocabulary owns the retest decision: the data contract's, or the fixtures'?
 
-- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** OPEN
+- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** CLOSED — see `DEC-022` (2026-08-21)
+- **Decided:** option 1. The contract gains the vocabulary the five fixtures assert. The
+  original analysis is preserved below as it was written; what was actually added is
+  listed in `ALK-V2-DATA-CONTRACT.md` §8 `RetestDecision`.
 - **Blocks:** whether `AD-RET-001..005` can pass against a real engine. Nothing today.
 
 **The question, in plain language**

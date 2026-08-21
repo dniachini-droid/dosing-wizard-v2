@@ -50,9 +50,17 @@ class Mutation:
     #: went red through the ordinary comparator while the checker it claimed
     #: to guard never fired.
     expect_mechanism: str = ""
+    #: For an oracle mutation, hook-point name -> sabotage. For an engine
+    #: mutation (`target == "ENGINE"`), `"package.module:attribute" -> value`,
+    #: applied with `setattr` for the duration of one run and restored after.
     hooks: Dict[str, Callable] = field(default_factory=dict)
     #: For BLOCKED entries: exactly what must be true for it to run.
     unblocks_when: str = ""
+    #: `"ORACLE"` (the default) sabotages the echo oracle and proves what the
+    #: *harness* detects. `"ENGINE"` sabotages the engine and proves what the
+    #: *fixtures* detect, which is what `DEC-020` clause 3 requires. The two are
+    #: different claims and are reported apart.
+    target: str = "ORACLE"
 
 
 # ---------------------------------------------------------------------------

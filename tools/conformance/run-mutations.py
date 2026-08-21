@@ -26,8 +26,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import mutations as mutation_set  # noqa: E402
 from mutations import documents as doc_mutations  # noqa: E402
+from mutations import engine_mutations as engine_mutation_set  # noqa: E402
 from harness import engine_adapter, results as results_mod, runner  # noqa: E402
 from reference import echo_oracle  # noqa: E402
+
+#: The engine lives beside the harness in this repository. Imported lazily and
+#: reported as unavailable rather than crashing, because the oracle arm of this
+#: harness must keep running whether or not an engine exists.
+ENGINE_ROOT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "engine",
+)
 
 RULE = "=" * 78
 THIN = "-" * 78
@@ -68,6 +77,126 @@ def _failure_texts(rep, subjects):
         if f"invariant:{i.inv_id}" in subjects:
             texts.extend(i.violations)
     return texts
+
+
+
+def _resolve(spec):
+    """`"package.module:attribute"` -> `(module, attribute_name)`."""
+    import importlib
+
+    mod_name, attr = spec.split(":", 1)
+    return importlib.import_module(mod_name), attr
+
+
+def _run_engine_arm(args):
+    """Apply each engine sabotage, re-run the corpus, and judge the delta."""
+    caught, missed, blocked = [], [], []
+    if ENGINE_ROOT not in sys.path:
+        sys.path.insert(0, ENGINE_ROOT)
+    try:
+        import alk_v2.adapter  # noqa: F401
+    except Exception as exc:  # noqa: BLE001
+        print(f"NO ENGINE — {type(exc).__name__}: {exc}")
+        print("Every engine mutation below is reported BLOCKED on that, which is")
+        print("the honest state: a control with nothing to sabotage proves nothing.")
+        print("")
+        return caught, [], list(engine_mutation_set.ENGINE_MUTATIONS)
+
+    engine_mutation_set.bind_originals(
+        {
+            key: getattr(*_resolve(spec))
+            for key, spec in engine_mutation_set.ORIGINAL_TARGETS.items()
+        }
+    )
+
+    def _engine():
+        return engine_adapter.CallableEngine("alk_v2.adapter:assess")
+
+    base_report = runner.run(_engine())
+    baseline = results_mod.failing_subject_ids(base_report)
+    print(f"baseline (unmutated engine): {len(baseline)} failing subject(s)")
+    for s_id in sorted(baseline):
+        print(f"   pre-existing: {s_id}")
+    print("  Each mutation below is judged on what it ADDS to this set.")
+    print("")
+
+    for m in engine_mutation_set.ENGINE_MUTATIONS:
+        if args.only and m.mid not in args.only:
+            continue
+        print(THIN)
+        print(f"{m.mid}  {m.title}")
+        print(f"    defect class : {m.defect_class}")
+        print(f"    sabotage     : {m.sabotage}")
+        print(f"    guards       : {m.guards}")
+        if m.status == mutation_set.BLOCKED:
+            blocked.append(m)
+            print("    result       : BLOCKED — not executable today")
+            print(f"    unblocks when: {m.unblocks_when}")
+            print("")
+            continue
+
+        saved = []
+        try:
+            for spec, value in m.hooks.items():
+                mod, attr = _resolve(spec)
+                saved.append((mod, attr, getattr(mod, attr)))
+                setattr(mod, attr, value)
+            rep = runner.run(_engine())
+        finally:
+            for mod, attr, value in reversed(saved):
+                setattr(mod, attr, value)
+
+        mutated = results_mod.failing_subject_ids(rep)
+        new = mutated - baseline
+        recovered = baseline - mutated
+        declared = set(m.expect_red)
+        declared_red = declared & new
+        # The mechanism must be named by a subject the mutation **declared**,
+        # not by whichever other subject happened to go red at the same time.
+        # Scanning all of `new` credited a mutation when unrelated subject B
+        # mentioned the field while declared subject A went red for its own
+        # reasons -- and a verification tool that mis-credits is worse than one
+        # that under-reports, because its report is what stops anyone looking
+        # again.
+        texts = _failure_texts(rep, declared_red if declared else new)
+        mechanism_hit = (not m.expect_mechanism) or any(
+            m.expect_mechanism in t for t in texts
+        )
+
+        if not new:
+            missed.append((m, "the corpus stayed green on this"))
+            print("    result       : *** NOT CAUGHT *** every fixture stayed green")
+        elif declared and not declared_red:
+            missed.append((m, "went red, but not on any subject it declared"))
+            print(
+                "    result       : *** NOT CAUGHT BY ITS NAMED SUBJECT *** "
+                f"{len(new)} other subject(s) went red"
+            )
+        elif not mechanism_hit:
+            missed.append(
+                (m, f"went red without the mechanism it guards ({m.expect_mechanism!r})")
+            )
+            print(
+                "    result       : *** NOT CAUGHT BY ITS NAMED MECHANISM *** "
+                f"nothing said {m.expect_mechanism!r}"
+            )
+        else:
+            caught.append(m)
+            print(f"    result       : CAUGHT — {len(new)} new failing subject(s)")
+            evidence = next((t for t in texts if m.expect_mechanism in t), "")
+            if evidence:
+                print(f"    via          : {evidence[:170]}")
+        for s_id in sorted(new):
+            marker = "as expected" if s_id in declared else "additional"
+            print(f"      went red: {s_id}  ({marker})")
+        for s_id in sorted(declared - new):
+            note = "already failing at baseline" if s_id in baseline else "did NOT go red"
+            print(f"      expected red but {note}: {s_id}")
+        if recovered:
+            for s_id in sorted(recovered):
+                print(f"      !! baseline failure disappeared under mutation: {s_id}")
+        print("")
+    return caught, missed, blocked
 
 
 def main(argv=None) -> int:
@@ -116,10 +245,11 @@ def main(argv=None) -> int:
         rep, mutated = _run(m.hooks, f"echo oracle + {m.mid}")
         new = mutated - baseline
         recovered = baseline - mutated
-        texts = _failure_texts(rep, new)
-
         declared = set(m.expect_red)
         declared_red = declared & new
+        # Same rule as the engine arm above: the mechanism is evidence only when
+        # a declared subject's own failure text names it.
+        texts = _failure_texts(rep, declared_red if declared else new)
         mechanism_hit = (not m.expect_mechanism) or any(
             m.expect_mechanism in t for t in texts
         )
@@ -158,6 +288,19 @@ def main(argv=None) -> int:
             for s_id in sorted(recovered):
                 print(f"      !! baseline failure disappeared under mutation: {s_id}")
         print("")
+
+    # ---- engine mutations --------------------------------------------------
+    # A different claim from everything above. The oracle arm proves the harness
+    # detects a defect class; this arm proves the *fixtures* detect it in the
+    # engine, which is what `DEC-020` clause 3 asks for. Each is judged against
+    # the engine's own baseline, not the oracle's.
+    print(RULE)
+    print("ENGINE MUTATIONS — negative controls for the engine, per DEC-020 clause 3")
+    print(RULE)
+    caught_e, missed_e, blocked_e = _run_engine_arm(args)
+    caught.extend(caught_e)
+    missed.extend(missed_e)
+    blocked.extend(blocked_e)
 
     # ---- document mutations ------------------------------------------------
     print(RULE)

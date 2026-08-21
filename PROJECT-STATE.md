@@ -78,12 +78,23 @@ Phase 0 — Preserve and found V2
   eight checks deliberately not carried across and what each dropped.
   `recompute-goldens.py` remains in the package and is unaffected: it is a recorder, not
   a gate.
-  The harness is **RED today, correctly**: no engine exists, so eleven executable fixtures
-  fail `ENGINE_ABSENT`, and five mechanical checks report pre-existing document defects
-  that predate this work and are listed in `docs/process/CONFORMANCE-HARNESS.md`.
+  The harness is **RED today, and every red is accounted for**. An engine now exists, so
+  the `ENGINE_ABSENT` failures are gone; what remains is the five mechanical checks
+  reporting pre-existing document defects that predate all of this work
+  (`docs/process/CONFORMANCE-HARNESS.md` lists them), the three invariants delegated to
+  those checks, and eleven fixtures whose expectations the first engine showed to be
+  wrong, unsatisfiable or out of the built scope — each one recorded as an open owner
+  decision rather than worked around.
+  **The mutation set is GREEN**: 80 mutations defined, 69 caught, 0 missed, 11 blocked
+  with their unblocking conditions stated. Twenty-seven of them are new engine mutations
+  under `DEC-020` clause 3.
 - An **executable fixture format** is defined in
-  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **11 of 204
-  fixtures execute**, up from 6: `AD-RET-001` … `AD-RET-005` were converted and each is
+  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **23 of 204
+  fixtures execute** and 12 pass. The eleven conversions the engine work added are
+  reading-series fixtures on the trend, uncertainty, support, consumption and maintenance
+  paths, each taking its assessment instant from `DEC-021`. The paragraph below records
+  the state before that; the counts in it are historical.
+  **11 of 204 fixtures executed**, up from 6: `AD-RET-001` … `AD-RET-005` were converted and each is
   demonstrated red under a mutation of the retest-scheduler rule it exercises.
   The harness now reports conversion coverage **per engine path**.
   `DEC-020` makes this a standing rule: an engine path is not complete until its
@@ -97,10 +108,50 @@ Phase 0 — Preserve and found V2
     expectations back. The disagreement is `OD-012` and no session may settle it: the
     fixture side is frozen, the contract side is out of scope. It will surface as five
     red fixtures on the first day of retest implementation.
+    **That day came, and the prediction held.** `DEC-022` closed `OD-012` by extending
+    the contract; three of the five now pass, and the other two fail for reasons the
+    conversion could not have seen — `AD-RET-004` asserts an `outerBoundState` value that
+    is in no vocabulary (`OD-015`) and `AD-RET-002` states a partial candidate list
+    (`OD-022`).
   - `AD-RET-001` additionally carries an unresolved question about its own input
     (`OD-011`); the harness now names it on the fixture's line and in the coverage table
     rather than showing an unqualified pass.
-- No V2 application runtime exists.
+- **The first engine code in the project exists**, under `engine/`. It is the Alk V2
+  domain engine and nothing else: pure functions of
+  `(eventLedger, configurationHistory, asOf)`, no I/O below a thin adapter, no clock, no
+  framework, no dependency outside the Python standard library. `engine/alk-v2-engine.py`
+  speaks the conformance harness's JSON line protocol.
+  - **Stage one — the normal path — is built**: readings in, observed trajectory,
+    uncertainty, supported trajectory, consumption, maintenance dose, retest date,
+    structured output with reason codes, on the **configured** potency.
+  - **Stage two — potency learning — is built and remains `CAPABILITY_GATED`** as
+    `ALK-POTENCY-CAPABILITY-GATE-001` states. While gated the learner still observes and
+    reports what it would conclude; what the gate withholds is the promotion.
+  - **Stage three — response classification — is built**: the six deterministic classes,
+    the terminal and non-terminal states, the three eligibility gates, and the
+    **immutable prediction snapshot captured at the instant of the dose change**. A dose
+    change whose pre-change state cannot be recovered is permanently unclassifiable and
+    says so, which is the failure this stage exists to stop happening to new data.
+  - Safety returns and outer-bound *handling*, correction and return plans, and every
+    capability and refusal branch not reachable on these paths are **deliberately
+    unbuilt**, and each presents as the canon's stated `NOT_RUN` / `WITHHELD` with its
+    reason code rather than as a plausible number.
+  - **This is not a stack selection.** The engine sits behind a documented process
+    boundary and speaks JSON; `ALK-V2-MODULE-DESIGN.md` still chooses no language, and
+    `ROADMAP.md` Phase 1 is still unstarted. What exists is a conformant reference
+    implementation of the domain, not the application.
+  - **It has had independent review in a fresh context, and one fix pass.**
+    `test-engineer`, then `normal-operation-reviewer`, then `jake` over both.
+    `normal-operation-reviewer`'s eleven findings were hand-traces; all eleven were
+    executed against the real engine and all eleven were confirmed. Thirteen findings
+    were fixed, the largest being that **one unmeasured water change used to stop the
+    engine answering permanently** (a confounder read as a state rather than `A7`'s
+    boundary), and that a **measured** water change was read as tank movement because
+    `ALK-033` normalization was not implemented — the engine recommended cutting the dose
+    on a tank whose consumption had not changed. Both are fixed. The full record,
+    including every finding recorded and left open, is
+    `docs/process/runs/2026-08-21-alk-v2-first-engine.md`.
+- No V2 application runtime exists — no persistence, no UI, no scheduler, no notifications.
 - No technical stack has been selected.
 
 ---
@@ -167,7 +218,18 @@ frozen canon does not contain; none may be resolved in code. Implementation may 
 without them — every affected output refuses explicitly rather than defaulting — but the
 domain is not complete until they are closed under the Freeze-4 reopening rule.
 
-**`OD-008` blocks most of the fixture corpus becoming machine-checkable.** The engine
+**`OD-008` and `OD-012` are closed** (`DEC-021`, `DEC-022`), and `DEC-023` extends
+`OD-012`'s answer to the same collision on other paths under three stated conditions.
+Building the first engine turned a long list of inert disagreements into measured ones,
+and nine further owner decisions are now open (`OD-015` … `OD-023`) recording them: a
+fixture asserting a state name that is in no vocabulary, two retest fixtures stating a
+partial candidate list, six goldens stating values rounded below the tolerance they are
+compared at, and the general gap between the ~553 field names the corpus asserts and the
+~40 the data contract declares.
+
+The paragraph below is preserved as it stood before `DEC-021` closed it.
+
+**`OD-008` blocked most of the fixture corpus becoming machine-checkable.** The engine
 interface is a function of `(eventLedger, configurationHistory, asOf)`; almost no fixture
 states an `asOf`, and choosing one decides what the fixture meant. It blocks roughly forty
 reading-series fixtures directly and every case-set expansion behind them. It does not

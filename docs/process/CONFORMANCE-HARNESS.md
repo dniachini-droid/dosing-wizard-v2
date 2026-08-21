@@ -83,20 +83,34 @@ under the reason they cannot be run:
 | Class | Count | Why |
 |---|---|---|
 | `EXECUTABLE` | 11 | carries an event ledger and an `asOf` |
-| `NO_ASOF` | 6 | carries an event ledger but states no `asOf`; choosing one would be inventing an input |
+| `NO_ASOF` | 0 | carries an event ledger with no `asOf` **and** no `READING` carrying an absolute instant, so `DEC-021`'s default has nothing to name. The class survives; nothing reaches it today |
 | `ABSTRACT_INPUT` | 141 | `input` is a scenario description in an ad-hoc vocabulary (`sPreDkhPerDay`, `readings: 4`, `day0: {...}`), not an event ledger |
 | `CROSS_REFERENCE` | 22 | no `input`; defers to another fixture via `equivalentTo` |
 | `NO_INPUT` | 6 | no `input` and no cross-reference; nothing to submit |
 | `PROPERTY_FIXTURE` | 18 | a property plus a generator, not a single input/output pair |
 
-**The binding constraint is `asOf`, not the ad-hoc vocabulary.** The fixture
-schema already states a complete time convention (`epochDay0`, `dayN =
+**The binding constraint used to be `asOf`, and `DEC-021` removed it.** The
+fixture schema already states a complete time convention (`epochDay0`, `dayN =
 epochDay0 + N × 24 h`), so `timesDays: [0, 2, 4]` resolves to absolute instants
-mechanically. But of the 193 unexecutable fixtures, **one** now states an
-assessment instant (`WG-ALK-049`, which states reading *days* with no reading
-*values* and so is blocked twice over). Nothing else in the corpus states one.
-That is `OD-008`, and it is the largest single blocker on the corpus becoming
-machine-checkable. The full analysis, including the eleven distinct shapes the
+mechanically; what was missing was the third argument. `DEC-021` supplies it:
+where a fixture states no assessment instant, `asOf` is the instant of the last
+`READING` in its ledger. The harness derives it and **names every fixture whose
+instant was derived**, on the fixture's own line and again in a list, so a
+derived instant never reads as a stated one.
+
+What remains blocking is the ordinary conversion work, one engine path at a
+time, under `DEC-020`. `WG-ALK-049` is blocked for a different reason: it states
+reading *days* with no reading *values*, and inventing them would invent the
+trend.
+
+`NO_ASOF` now has a narrower meaning than its name suggests, and the narrowing
+matters. An `input.events` array counts as a ledger only when its elements carry
+the absolute-time fields the format declares. Six fixtures write `atDay: 0` and
+`fromDay: 1`; they were `NO_ASOF` under the old test and are `ABSTRACT_INPUT`
+under this one, which is what they always were. Without that change the default
+instant would have promoted six unreadable ledgers to `EXECUTABLE`.
+
+The full analysis, including the eleven distinct shapes the
 corpus actually takes, is in
 `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`.
 
