@@ -144,3 +144,55 @@ scheduled with the same event shape as alkalinity, and are simply not assessed.
 
 Everything is on the device and nowhere else. An export is the only copy that
 survives losing the phone; Settings says so in those words.
+
+## Deploying it so a phone can install it from anywhere
+
+A phone will not install this over plain http from an IP address — a service
+worker needs `localhost` or HTTPS. So getting it onto a phone that is not on
+your network means putting it on an HTTPS host.
+
+**Do not publish the repository root.** The application fetches the engine's
+Python source, the canon's default configuration and the reason-code catalogue
+from outside `app/`, so the site root has to be a root that contains all of
+them — but the repository root also contains the canon, the decision ledger,
+the run records and research marked NON-AUTHORITATIVE — UNDER REVIEW.
+
+Build the deploy tree instead:
+
+```
+python3 tools/app/vendor-runtime.py          # if not already done
+python3 tools/app/build-deploy-tree.py       # writes ./deploy
+```
+
+That assembles only `app/`, `engine/alk_v2/` and the two documents the app
+reads, at the paths the service worker precaches. It stops rather than
+producing a tree that would give a blank app: a missing file, a path that
+reaches outside what may be published, or a tree that would not be installable
+all fail loudly and name what is wrong. The tree is gitignored — it is derived,
+and rebuilt in one command.
+
+Upload the **contents** of `deploy/` as the site root, so the app is at `/app/`
+and the engine at `/engine/`. With Cloudflare Pages:
+
+```
+npx wrangler pages deploy deploy --project-name dosing-wizard
+```
+
+Then check the deployed site, rather than trusting the host's documentation:
+
+```
+python3 tools/app/build-deploy-tree.py --check https://<your-site>
+```
+
+That verifies the two things a static host actually gets wrong: a `.wasm`
+served as anything but `application/wasm` fails `instantiateStreaming`, and a
+`.py` or `.md` served as a download — or not served at all — takes the engine
+and its reason-code catalogue with it. Both produce an app that loads and then
+does nothing, which reads as a bug in the application.
+
+### Trying it on a phone without deploying
+
+`cloudflared tunnel --url http://localhost:8000` against a running `serve.py`
+gives an HTTPS URL immediately, with no account and no deploy. The URL is
+ephemeral and the machine has to stay up, so it is for trying it, not for
+living with.

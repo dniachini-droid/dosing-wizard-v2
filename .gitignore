@@ -11,3 +11,9 @@ mockups/dosing-wizard-v2-mockups.html
 # script is committed, the 12 MB artefact is not, on the same principle as the
 # single-file mockup build above.
 app/vendor/pyodide/
+
+# The deploy tree, assembled by tools/app/build-deploy-tree.py.
+# Derived from the source, 13 MB, and rebuilt in one command — committing it
+# would put a second copy of the application in the repository, which is the
+# drift this whole approach exists to prevent.
+deploy/

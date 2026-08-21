@@ -14,7 +14,12 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+/* The repository by default. `--root deploy` points it at the deploy tree
+   instead, which is the only way to prove that tree actually runs the app
+   rather than merely containing the right filenames. */
+const REPO = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+const rootArg = process.argv.indexOf("--root");
+const ROOT = rootArg > -1 ? path.resolve(REPO, process.argv[rootArg + 1]) : REPO;
 
 const TYPES = {
   ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json",

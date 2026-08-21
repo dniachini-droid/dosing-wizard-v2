@@ -46,6 +46,15 @@ const SHELL_FILES = [
   "./assets/app.css",
   "./assets/shell.css",
   "./assets/icon.svg",
+  /* The icons the manifest and `index.html` name. They were missing, so an
+     install that had never fetched them online had no icon offline — and
+     `icon-180.png` is the apple-touch-icon, which is the one iOS uses for the
+     home screen the whole product is installed onto. `SHELL-02` derives this
+     from what actually references them, so it cannot go missing again. */
+  "./assets/icon-180.png",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/icon-maskable.png",
   "./src/main.js",
   "./src/assess.js",
   "./src/ui/dom.js",

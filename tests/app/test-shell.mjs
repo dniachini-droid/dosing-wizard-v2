@@ -70,15 +70,48 @@ s.test("SHELL-01", "every application module is precached — an offline open ca
   );
 });
 
-s.test("SHELL-02", "the non-module shell files exist too", () => {
-  const listed = [...SW.matchAll(/"(\.\/[^"]+\.(?:html|css|svg|webmanifest))"/g)].map((m) => m[1]);
-  ok(listed.length >= 6, `the shell lists its documents and styles: ${listed.length}`);
+s.test("SHELL-02", "the non-module shell files exist, and everything referenced is precached", () => {
+  const listed = [...SW.matchAll(/"(\.\/[^"]+\.(?:html|css|svg|png|webmanifest))"/g)].map((m) => m[1]);
+  ok(listed.length >= 6, `the shell lists its documents, styles and icons: ${listed.length}`);
   for (const f of listed) {
     ok(
       fs.existsSync(path.join(ROOT, "app", f.slice(2))),
       `${f} exists, so the install will not fail on it`
     );
   }
+
+  /* THE OTHER DIRECTION, which is where the defect was.
+
+     Checking that every listed file exists says nothing about a file that is
+     REFERENCED and not listed. Five icons were in exactly that position: named
+     by `index.html` and by the manifest, absent from the precache, so an
+     install that had never fetched them online had no icon at all — including
+     `icon-180.png`, the apple-touch-icon iOS uses for the home screen this
+     product is installed onto.
+
+     So the required set is derived from what actually references them. */
+  const precached = new Set(listed.map((f) => f.slice(2)));
+
+  const html = fs.readFileSync(path.join(ROOT, "app/index.html"), "utf8");
+  const fromHtml = [...html.matchAll(/(?:src|href)="([^":]+)"/g)].map((m) => m[1]);
+
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "app/manifest.webmanifest"), "utf8"));
+  const fromManifest = (manifest.icons || []).map((i) => i.src);
+
+  const referenced = [...new Set([...fromHtml, ...fromManifest])]
+    .map((r) => r.replace(/^\.\//, ""))
+    /* `src/main.js` is covered by SHELL-01's module sweep. */
+    .filter((r) => !r.startsWith("src/"));
+
+  ok(referenced.length >= 8, `there are references to check: ${referenced.length}`);
+  const unlisted = referenced.filter((r) => !precached.has(r));
+  eq(
+    unlisted.length,
+    0,
+    unlisted.length
+      ? `referenced by index.html or the manifest but never precached: ${unlisted.join(", ")}`
+      : "everything referenced is precached"
+  );
 });
 
 export default s;
