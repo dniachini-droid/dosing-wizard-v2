@@ -17,6 +17,14 @@
 </head>
 <body>
 
+<!-- The test-mode marker. Empty and hidden unless the app's assessment instant
+     has been set by hand, in which case it is pinned above every screen and
+     cannot be scrolled away from. It lives outside `#app` because `#app` is
+     replaced wholesale on every render, including by the crash screen — and
+     the crash screen is the one place the keeper most needs to know which
+     world they are looking at. -->
+<div id="modemarker" hidden></div>
+
 <!-- The first paint, before any script runs. If the module below fails to
      load — an old browser, a corrupted cache — this is what stays on screen,
      and it says something rather than being a white page. -->

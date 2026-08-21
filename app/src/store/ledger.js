@@ -83,6 +83,19 @@ export const PARAMETERS = Object.freeze([
   { key: "NO3", unit: "mg/L", decimals: 2, tone: "no3", assessed: false },
   { key: "PO4", unit: "mg/L", decimals: 3, tone: "po4", assessed: false },
   { key: "SAL", unit: "ppt", decimals: 1, tone: "sal", assessed: false },
+  /* pH and potassium exist here because the keeper's own history contains 17
+     and 13 of them respectively, and the import's rule is that every reading
+     comes across as the real measurement it is. A parameter this list does not
+     name is a reading that cannot be stored truthfully at all.
+
+     Adding one is not a chemistry decision and does not become one. This list
+     carries no range, no threshold and no cadence for any parameter — the
+     comment above says why — so a row here states only that the keeper
+     measures the thing and how it is written down. pH has no unit because pH
+     has no unit; `decimals` is where the display rounds, and display rounding
+     never enters a calculation (`ALK-V2-DATA-CONTRACT.md` §0). */
+  { key: "PH", unit: "", decimals: 2, tone: "ph", assessed: false },
+  { key: "K", unit: "mg/L", decimals: 0, tone: "k", assessed: false },
 ]);
 
 export function parameterDef(key) {
@@ -365,10 +378,75 @@ export function project(events, annotations) {
    engine is the one allowed to decide it cannot enter a trend, and it says so
    with a reason code the interface then renders. Dropping it here would make
    the app silently disagree with the record it is showing. */
-export function toEngineEvents(projected) {
+/* WHOSE DOSE IS THIS?
+
+   The Alk engine's `DOSE_STATE` and `DOSE_CHANGE` carry no parameter, because
+   the engine assesses alkalinity and has no vocabulary for anything else. That
+   was harmless while every dose event in the app was an alkalinity one. It
+   stopped being harmless the moment a real history arrived carrying calcium
+   dose changes as well: handed over unmarked, 14 mL/day of calcium solution
+   would be read as the alkalinity dose, and the engine would attribute the
+   tank's alkalinity movement to a delivery that never touched it. Manufactured
+   delivery history, which `DATA-PROVENANCE.md` §3 forbids by name.
+
+   An event with no parameter is alkalinity's. That is what every dose event
+   this app has ever written means — the dose forms set no parameter — so
+   nothing about existing records changes, and a dose event that names a
+   parameter is only sent when that parameter is the one being assessed. */
+function isAlkalinityDose(e) {
+  return e.parameter == null || e.parameter === "ALK";
+}
+
+/* HAD THIS HAPPENED YET?
+
+   An event with an instant is compared as an instant. An event with only a
+   calendar day is compared as a calendar day, against the day `asOf` falls on
+   in its own offset — because a date-only record says nothing finer than the
+   day, and treating it as midnight would be reading a time into a record that
+   has none.
+
+   The comparison is inclusive: a reading taken at the assessment instant, or on
+   the day of it, had happened. */
+export function happenedBy(time, asOf) {
+  if (!asOf) return true;
+  const at = time.absoluteInstant || null;
+  if (at) {
+    const a = Date.parse(at), b = Date.parse(asOf);
+    return Number.isFinite(a) && Number.isFinite(b) ? a <= b : true;
+  }
+  return String(time.localDate || "") <= String(asOf).slice(0, 10);
+}
+
+/* THE LEDGER AS IT STOOD AT THE ASSESSMENT INSTANT.
+
+   `asOf` is required for anything that will be shown as an answer. Without it
+   the engine is handed the whole ledger, including records dated AFTER the
+   instant it was asked about — and it does not filter readings itself
+   (`observation.episodes` takes no horizon, and `observation.position` takes
+   the maximum over everything it is given). The consequence was measured, not
+   assumed: seeded with a fortnight of a falling tank and asked about the first
+   day of it, the engine returned the FOURTEENTH day's reading as the latest
+   value, with a slope and a dose recommendation computed over readings that had
+   not been taken yet.
+
+   That is wrong in normal operation — a reading the keeper dates a week ahead
+   enters today's answer — and it is fatal in test mode, whose whole claim is
+   that stepping to a date shows what the app would have said on that date. The
+   claim is only true if the engine is handed the ledger that existed then.
+
+   This is not a chemistry rule and it does not duplicate one. It is a statement
+   about which records EXISTED, which is the store's own business; what may then
+   be READ from them stays entirely the engine's, including its own `asOf`
+   handling for dose changes and boundary events, which is untouched.
+
+   Canon §64 makes replay a function of the event ledger, the configuration
+   versions and the engine version. This is what makes "the event ledger" mean
+   the same thing on a replay as it did on the day. */
+export function toEngineEvents(projected, asOf = null) {
   const out = [];
   for (const row of projected) {
     if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;
+    if (!happenedBy(row.event.time, asOf)) continue;
     const e = row.event;
     const at = e.time.absoluteInstant || null;
     const eff = (e.effectiveTime && e.effectiveTime.absoluteInstant) || at;
@@ -385,14 +463,14 @@ export function toEngineEvents(projected) {
         rawValueDkh: e.normalizedValue,
         timeProvenance: e.time.timeProvenance,
       });
-    } else if (e.kind === KIND.DOSE_STATE) {
+    } else if (e.kind === KIND.DOSE_STATE && isAlkalinityDose(e)) {
       out.push({
         kind: "DOSE_STATE",
         programmedDoseMlPerDay: e.detail.doseMlPerDay,
         effectiveAt: eff,
         effectiveAtConfidence: e.detail.effectiveAtConfidence,
       });
-    } else if (e.kind === KIND.DOSE_CHANGE) {
+    } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {
       const ev = {
         kind: "DOSE_CHANGE",
         effectiveAt: eff,

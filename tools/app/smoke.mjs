@@ -343,6 +343,572 @@ await step("Settings renders", async () => {
   if (/This screen stopped/.test(txt)) throw new Error("crashed: " + txt.slice(0, 300));
 });
 
+/* --------------------------------------------------------------------------
+   TEST MODE
+
+   The part `tests/app/test-testmode.mjs` cannot reach from Node: two real
+   IndexedDB databases in one origin, and the marker actually on screen.
+   ----------------------------------------------------------------------- */
+
+console.log("\nTest mode");
+
+/* The real store exactly as it stands before test mode is touched at all.
+   Every assertion below compares against this rather than against a threshold. */
+const realBefore = await page.evaluate(async () => {
+  const { createStore } = await import("/app/src/store/index.js");
+  const events = await createStore().ledger.allEvents();
+  return { count: events.length, values: events.map((e) => e.normalizedValue).filter((v) => v != null) };
+});
+
+await step("turns on from Settings, with a date", async () => {
+  await page.click("text=Set up test mode");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  const [date, time] = await page.$$(".card .field .inline .input");
+  await date.fill("2026-03-14");
+  await time.fill("09:30");
+  await page.click("text=Turn test mode on");
+  await page.waitForTimeout(900);
+});
+
+await step("the marker is on screen and names the date", async () => {
+  await page.waitForSelector("#modemarker .modemarker", { timeout: 8000 });
+  const txt = await page.innerText("#modemarker");
+  if (!/TEST MODE/.test(txt)) throw new Error("the marker does not say what it is: " + txt);
+  if (!/Mar/.test(txt)) throw new Error("the marker does not name the date: " + txt);
+});
+
+await step("the marker survives moving between screens", async () => {
+  /* The test store has no tank facts of its own, because nothing is copied
+     across. Fill them in on its own setup screen, then walk the tabs. */
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(500);
+  await page.click("text=Set the tank up").catch(() => {});
+  await page.waitForSelector("h1:has-text('Set up your tank')", { timeout: 8000 });
+  const inputs = await page.$$(".card .field .input");
+  const vals = ["77", "8.6", "9.2", "0.0693", "0.1"];
+  for (let i = 0; i < vals.length && i < inputs.length; i++) await inputs[i].fill(vals[i]);
+  await page.click("text=Save and start").catch(() => {});
+  await page.waitForTimeout(900);
+  for (const tab of ["Today", "Test Lab", "Tasks", "History"]) {
+    await page.click(`#tabbar .tab:has-text('${tab}')`);
+    await page.waitForTimeout(400);
+    const on = await page.$("#modemarker .modemarker");
+    if (!on) throw new Error(`the marker is missing on ${tab}`);
+  }
+});
+
+await step("the app's today is the chosen date", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(500);
+  const txt = await page.innerText(".stepper");
+  if (!/Mar/.test(txt)) throw new Error("the day stepper is not on the chosen date: " + txt);
+});
+
+await step("the tank facts are in force at the app's date", async () => {
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  const txt = await page.innerText("#app");
+  if (!/In force from/.test(txt)) throw new Error("the facts' effective date is not stated");
+  if (!/Mar/.test(txt.slice(txt.indexOf("In force from")))) {
+    throw new Error("the facts are not in force at the app's date: " + txt.slice(txt.indexOf("In force from"), txt.indexOf("In force from") + 60));
+  }
+});
+
+await step("a series goes in in one action", async () => {
+  await page.fill(
+    ".input.series",
+    ["2026-03-01 dose 9.0", "2026-03-08 07:40 alk 9.0", "2026-03-10 07:40 alk 8.9", "2026-03-12 alk 8.8"].join("\n")
+  );
+  await page.waitForTimeout(400);
+  const preview = await page.innerText(".seedreport");
+  if (!/4 records/.test(preview)) throw new Error("the preview did not count them: " + preview);
+  if (!/2 of 4/.test(preview)) throw new Error("the preview did not count the date-only ones: " + preview);
+  await page.click("text=Add these");
+  await page.waitForTimeout(1200);
+});
+
+await step("stepping the date moves the app's today", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(400);
+  const before = await page.innerText(".stepper");
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click(".card.is-testmode .stepper .arrow:last-of-type");
+  await page.waitForTimeout(900);
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(400);
+  const after = await page.innerText(".stepper");
+  if (before === after) throw new Error("the day did not move: " + after);
+});
+
+await step("the real tank's store is untouched by all of that", async () => {
+  /* Snapshotted rather than sampled. An earlier version reported a seeded
+     value in the real store only if the real store ALSO held more than eight
+     events — a compound condition that could pass while contaminated. */
+  const now = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const { createIdbBackend, DB_NAME, TEST_DB_NAME } = await import("/app/src/store/db.js");
+    const real = await createStore(createIdbBackend(DB_NAME)).ledger.allEvents();
+    const test = await createStore(createIdbBackend(TEST_DB_NAME)).ledger.allEvents();
+    return {
+      realCount: real.length,
+      realValues: real.map((e) => e.normalizedValue).filter((v) => v != null),
+      testCount: test.length,
+      testValues: test.map((e) => e.normalizedValue).filter((v) => v != null),
+    };
+  });
+  if (now.testCount < 4) throw new Error(`the test store did not take the series: ${now.testCount}`);
+  if (now.realCount !== realBefore.count) {
+    throw new Error(`the real store's event count changed: ${realBefore.count} -> ${now.realCount}`);
+  }
+  if (JSON.stringify(now.realValues) !== JSON.stringify(realBefore.values)) {
+    throw new Error(`the real store's values changed: ${realBefore.values} -> ${now.realValues}`);
+  }
+  for (const v of now.testValues) {
+    if (realBefore.values.includes(v) && !now.realValues.includes(v)) {
+      throw new Error("a value moved between the two stores");
+    }
+  }
+});
+
+await step("clearing the test data empties the test store only", async () => {
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click("text=Clear all test data");
+  await page.waitForSelector(".sheetwrap");
+  await page.click("text=Yes, clear it");
+  await page.waitForTimeout(1500);
+  const counts = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const { createIdbBackend, DB_NAME, TEST_DB_NAME } = await import("/app/src/store/db.js");
+    return {
+      real: (await createStore(createIdbBackend(DB_NAME)).ledger.allEvents()).length,
+      test: (await createStore(createIdbBackend(TEST_DB_NAME)).ledger.allEvents()).length,
+    };
+  });
+  if (counts.test !== 0) throw new Error(`the test store still holds ${counts.test}`);
+  if (counts.real !== realBefore.count) {
+    throw new Error(`the reset reached the real store: ${realBefore.count} -> ${counts.real}`);
+  }
+});
+
+await step("turning it off restores the real tank and the real date", async () => {
+  await page.click("#modemarker .modemarker").catch(() => {});
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click("text=Turn test mode off");
+  await page.waitForTimeout(1200);
+  const marker = await page.$("#modemarker .modemarker");
+  if (marker) throw new Error("the marker is still on screen");
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForTimeout(600);
+  const txt = await page.innerText("#app");
+  if (!/8\.7|8\.9/.test(txt)) throw new Error("the real readings did not come back");
+});
+
+/* --------------------------------------------------------------------------
+   THE IMPORT, AGAINST THE OWNER'S REAL EXPORT
+
+   The one thing `tests/app/` cannot do: drive the file chooser, and run the
+   whole 353-reading file through a real IndexedDB.
+   ----------------------------------------------------------------------- */
+
+const BACKUP = "/root/.claude/uploads/9485fbac-d9ce-558d-b38b-caaa2ae22ef7/23565005-danstankbackup20260821.json";
+if (fs.existsSync(BACKUP)) {
+  console.log("\nImporting the owner's history");
+
+  await step("the report is shown before anything is imported", async () => {
+    await page.click("#tabbar .tab:has-text('Today')");
+    await page.waitForTimeout(400);
+    await page.click(".gear");
+    await page.waitForSelector("h1:has-text('Settings')");
+    await page.click("text=Import your history");
+    await page.waitForSelector("h1:has-text('Import your history')");
+    await page.setInputFiles('input[type="file"]', BACKUP);
+    await page.waitForSelector("text=What would come across", { timeout: 20000 });
+
+    const before = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    if (before > 20) throw new Error(`something was imported before the button: ${before}`);
+  });
+
+  await step("the report's counts are the file's", async () => {
+    const txt = await page.innerText("#app");
+    for (const want of ["353", "325", "28", "104", "87", "43", "42", "41", "17", "13"]) {
+      if (!txt.includes(want)) throw new Error(`the report does not state ${want}`);
+    }
+    if (!/11 Aug/.test(txt)) throw new Error("the report does not name where dose history begins");
+  });
+
+  await step("it imports, and every count matches", async () => {
+    await page.click("text=Bring these across");
+    await page.waitForSelector("h2:has-text('Brought across')", { timeout: 60000 });
+    const counts = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      const s = createStore();
+      const events = await s.ledger.allEvents();
+      const by = {};
+      for (const e of events) by[e.kind] = (by[e.kind] || 0) + 1;
+      const prov = {};
+      for (const e of events) prov[e.time.timeProvenance] = (prov[e.time.timeProvenance] || 0) + 1;
+      return {
+        by,
+        prov,
+        withInstant: events.filter((e) => e.time.absoluteInstant).length,
+        tasks: (await s.tasks.tasks()).length,
+        completions: (await s.tasks.completions()).length,
+      };
+    });
+    /* The smoke run logs a handful of readings of its own before this point,
+       so the imported ones are counted as "at least". */
+    if (counts.by.READING < 353) throw new Error(`readings: ${counts.by.READING}`);
+    if (counts.by.WATER_CHANGE < 25) throw new Error(`water changes: ${counts.by.WATER_CHANGE}`);
+    if (counts.by.ICP_PANEL !== 2) throw new Error(`ICP panels: ${counts.by.ICP_PANEL}`);
+    if (counts.by.HUSBANDRY !== 1) throw new Error(`lighting notes: ${counts.by.HUSBANDRY}`);
+    if (counts.tasks !== 11) throw new Error(`reminders: ${counts.tasks}`);
+    if (counts.completions < 36) throw new Error(`completions: ${counts.completions}`);
+  });
+
+  await step("not one date-only record gained a time it did not have", async () => {
+    const seen = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      const events = await createStore().ledger.allEvents();
+      /* Everything the import wrote carries an origin; the smoke run's own
+         earlier entries do not. */
+      const imported = events.filter((e) => e.detail && e.detail.origin);
+      const by = {};
+      for (const e of imported) by[e.time.timeProvenance] = (by[e.time.timeProvenance] || 0) + 1;
+      return {
+        total: imported.length,
+        by,
+        dateOnlyWithClock: imported.filter(
+          (e) => e.time.timeProvenance === "DATE_ONLY" && (e.time.localTime || e.time.absoluteInstant)
+        ).length,
+        reconstructedWithoutProof: imported.filter(
+          (e) => e.time.timeProvenance === "RECONSTRUCTED_WITH_PROVENANCE" && !e.time.reconstruction
+        ).length,
+        /* The one thing about this design that must not slip: what was assumed
+           is recorded AS an assumption, and never as something he said. */
+        claimedAsKeeperStatement: imported.filter(
+          (e) => e.time.reconstruction && (e.time.reconstruction.assumed !== true || e.time.reconstruction.statedByKeeper !== false)
+        ).length,
+        offsets: [...new Set(imported.filter((e) => e.time.localTime).map((e) => e.time.offsetMinutes))],
+      };
+    });
+    if (seen.total < 380) throw new Error(`too few imported records to check: ${seen.total}`);
+    if (seen.by.DATE_ONLY !== 353) throw new Error(`date-only records: ${JSON.stringify(seen.by)}`);
+    if (seen.by.RECONSTRUCTED_WITH_PROVENANCE !== 32) {
+      throw new Error(`reconstructed records: ${JSON.stringify(seen.by)}`);
+    }
+    if (seen.dateOnlyWithClock !== 0) {
+      throw new Error(`${seen.dateOnlyWithClock} date-only records gained a clock`);
+    }
+    if (seen.reconstructedWithoutProof !== 0) {
+      throw new Error(`${seen.reconstructedWithoutProof} worked-out records carry no record of what was assumed`);
+    }
+    if (seen.claimedAsKeeperStatement !== 0) {
+      throw new Error(`${seen.claimedAsKeeperStatement} records claim the keeper stated something he did not`);
+    }
+    if (seen.offsets.length !== 1) {
+      throw new Error(`the timed records got ${seen.offsets.length} different offsets: ${seen.offsets.join("/")}`);
+    }
+  });
+
+  await step("running it again changes nothing", async () => {
+    const before = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    await page.click("#tabbar .tab:has-text('Today')");
+    await page.waitForTimeout(400);
+    await page.click(".gear");
+    await page.waitForSelector("h1:has-text('Settings')");
+    await page.click("text=Import again");
+    await page.waitForSelector("h1:has-text('Import your history')");
+    await page.setInputFiles('input[type="file"]', BACKUP);
+    await page.waitForSelector("text=already here", { timeout: 30000 });
+    const after = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    if (after !== before) throw new Error(`the record changed on a second run: ${before} -> ${after}`);
+  });
+
+  await step("History draws the boundary where dose history begins", async () => {
+    await page.click("#tabbar .tab:has-text('History')");
+    await page.waitForSelector("h1:has-text('History')");
+    await page.click("text=A year");
+    await page.waitForTimeout(1200);
+    const txt = await page.innerText("#app");
+    if (!/Records of what was being dosed start on/.test(txt)) {
+      throw new Error("the boundary note is not on the History screen");
+    }
+    const marks = await page.$$(".chart .boundary");
+    if (!marks.length) throw new Error("no boundary marker is drawn");
+    const excluded = /no time of day/.test(txt);
+    if (!excluded) throw new Error("History does not say WHY a reading is excluded");
+  });
+}
+
+/* --------------------------------------------------------------------------
+   THE CHARTS ARE TOUCHABLE
+
+   `tests/app/` has no DOM, so this is where the gestures are actually driven.
+   ----------------------------------------------------------------------- */
+
+console.log("\nInteractive charts");
+
+async function pinch(sel, factor) {
+  /* Two fingers, moved apart or together, through real touch events. */
+  await page.evaluate(
+    ([selector, f]) => {
+      const el = document.querySelector(selector);
+      const r = el.getBoundingClientRect();
+      const cy = r.top + r.height / 2;
+      const mk = (x, y) => new Touch({ identifier: x, target: el, clientX: x, clientY: y });
+      const send = (type, touches) =>
+        el.dispatchEvent(
+          new TouchEvent(type, { touches, targetTouches: touches, changedTouches: touches, bubbles: true, cancelable: true })
+        );
+      const x1 = r.left + r.width * 0.35;
+      const x2 = r.left + r.width * 0.65;
+      send("touchstart", [mk(x1, cy), mk(x2, cy)]);
+      const mid = (x1 + x2) / 2;
+      send("touchmove", [mk(mid - ((mid - x1) * f), cy), mk(mid + ((x2 - mid) * f), cy)]);
+      send("touchend", []);
+    },
+    [sel, factor]
+  );
+  await page.waitForTimeout(250);
+}
+
+await step("History's chart zooms, and the reset appears", async () => {
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForSelector("h1:has-text('History')");
+  await page.waitForSelector(".chartplot .chart", { timeout: 15000 });
+
+  const hidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (!hidden) throw new Error("the reset is showing before anything is zoomed");
+
+  const before = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  await pinch(".chartplot", 3);
+  const after = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  if (after >= before) throw new Error(`zooming showed no fewer points: ${before} -> ${after}`);
+
+  const stillHidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (stillHidden) throw new Error("the reset did not appear after zooming");
+});
+
+await step("zooming does not alter a single reading", async () => {
+  const same = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const events = await createStore().ledger.allEvents();
+    return events.filter((e) => e.kind === "READING").map((e) => e.normalizedValue);
+  });
+  if (!same.length) throw new Error("no readings to check");
+  const drawn = await page.$$eval(".chartplot .chart .pt-hit", (n) => n.map((x) => x.getAttribute("aria-label")));
+  for (const label of drawn) {
+    const m = label.match(/([\d.]+)/);
+    if (!m) continue;
+    if (!same.some((v) => Math.abs(v - Number(m[1])) < 0.005)) {
+      throw new Error(`the chart shows ${m[1]}, which is not a value in the record`);
+    }
+  }
+});
+
+await step("the reset button restores the whole series", async () => {
+  const zoomed = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  await page.click(".chartreset");
+  await page.waitForTimeout(300);
+  const full = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  if (full <= zoomed) throw new Error(`the reset did not restore the series: ${zoomed} -> ${full}`);
+  const hidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (!hidden) throw new Error("the reset is still showing after resetting");
+});
+
+await step("tapping a point reports THAT point's value and date", async () => {
+  /* Tapped where a specific point actually is, and checked against that
+     point's own label. With six months of readings the points are three units
+     apart in a 320-unit box, which is where per-point tap targets went wrong:
+     they overlapped eight deep and the tap went to a neighbour. */
+  const target = await page.evaluate(() => {
+    const g = document.querySelector(".chartplot .chart");
+    const hits = [...g.querySelectorAll(".pt-hit")];
+    const pick = hits[Math.floor(hits.length / 2)];
+    const box = g.getBoundingClientRect();
+    const vb = g.getAttribute("viewBox").split(/\s+/).map(Number);
+    const cx = Number(pick.getAttribute("cx"));
+    return {
+      label: pick.getAttribute("aria-label"),
+      clientX: box.left + ((cx - vb[0]) / vb[2]) * box.width,
+      clientY: box.top + box.height / 2,
+    };
+  });
+  await page.mouse.click(target.clientX, target.clientY);
+  await page.waitForTimeout(250);
+
+  const read = await page.innerText(".chartread");
+  if (!read.trim()) throw new Error("nothing was reported");
+  const value = target.label.match(/([\d.]+)/)[1];
+  if (!read.includes(value)) {
+    throw new Error(`tapped the point labelled "${target.label}" and the readout says "${read}"`);
+  }
+  if (!/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(read)) {
+    throw new Error(`the readout carries no date: "${read}"`);
+  }
+});
+
+await step("every chart names its parameter and its unit", async () => {
+  const labels = await page.$$eval(".chartplot .chart", (n) => n.map((x) => x.getAttribute("aria-label")));
+  if (!labels.length) throw new Error("no charts found");
+  for (const l of labels) {
+    if (!/Alkalinity|Calcium|Magnesium|Nitrate|Phosphate|Salinity|pH|Potassium/.test(l)) {
+      throw new Error(`a chart does not name its parameter: "${l}"`);
+    }
+    if (!/dKH|mg\/L|ppt|no unit/.test(l)) throw new Error(`a chart does not name its unit: "${l}"`);
+  }
+});
+
+await step("the moment's chart is interactive too", async () => {
+  /* The Today card's own chart needs an assessment, and the engine cannot
+     start in this sandbox — see the earlier failures, which are the same on an
+     unmodified tree. `CH-12` pins by source that the Today card draws the
+     ported chart. The moment renders without the engine, so its gestures are
+     driven here for real. */
+  await page.click("#tabbar .tab:has-text('Test Lab')");
+  await page.waitForSelector("h1:has-text('Test Lab')");
+  await page.click(".card .seg .opt:has-text('Now')");
+  const row = await page.$(".labrow:has-text('Alkalinity')");
+  await (await row.$(".labentry .input")).fill("8.85");
+  await (await row.$(".labentry .btn")).click();
+  await page.waitForSelector(".moment .rc-host .rc-chart", { timeout: 15000 });
+
+  const hint = await page.innerText(".moment .charthint");
+  if (!/Pinch to zoom/.test(hint)) throw new Error("the moment's chart offers no gestures");
+
+  const before = await page.$eval(".moment .rc-chart", (g) => g.getAttribute("viewBox"));
+  await pinch(".moment .rc-host", 3);
+  const after = await page.$eval(".moment .rc-chart", (g) => g.getAttribute("viewBox"));
+  if (before === after) throw new Error(`the moment's chart did not zoom: ${after}`);
+
+  /* Clicked at a point inside the chart's own box rather than at the element's
+     centre: the moment card is a small scrim and the centre of `.rc-chart`
+     can sit under the readout beneath it. */
+  const at = await page.$eval(".moment .rc-chart", (g) => {
+    const b = g.getBoundingClientRect();
+    return { x: b.left + b.width * 0.6, y: b.top + b.height * 0.35 };
+  });
+  await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(250);
+  const read = await page.innerText(".moment .chartread");
+  if (!read.trim()) throw new Error("tapping the moment's chart reported nothing");
+  if (!/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(read)) {
+    throw new Error(`the moment's readout carries no date: "${read}"`);
+  }
+  await page.evaluate(() => document.querySelectorAll(".moment, .sheetwrap").forEach((n) => n.remove()));
+});
+
+/* --- what it actually looks like -----------------------------------------
+   The token checks in `tests/app/` read the files. These read the RENDERED
+   page: a browser resolving the variables, applying the cascade and telling us
+   what colour a sentence came out. A token can be perfect and still not reach
+   the element that needed it. */
+
+console.log("\nWhat it looks like once a browser has resolved it");
+
+await step("body text comes out near black, and secondary text stays a step back", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForSelector("h1:has-text('Today')");
+  await page.click(".gear");
+  await page.waitForSelector("h1:has-text('Settings')");
+  const seen = await page.evaluate(() => {
+    const of = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? getComputedStyle(el).color : null;
+    };
+    return { body: of("p.body"), secondary: of(".topbar .sub, .caption, .inert-note") };
+  });
+  if (!seen.body) throw new Error("no body paragraph on the screen to measure");
+
+  /* `#0C1D1A` resolved is `rgb(12, 29, 26)` and `#566966` is `rgb(86, 105, 102)`,
+     so the sums are 67 and 293. Compared as numbers, because how a browser
+     spells a colour is not the point — how dark it came out is. */
+  const lum = (c) => c.match(/\d+/g).map(Number).reduce((a, b) => a + b, 0);
+  if (lum(seen.body) > 160) throw new Error(`body text resolved to ${seen.body}, which is not near black`);
+
+  /* And the hierarchy still exists. Darkening everything would pass the line
+     above and lose the distinction the rule is FOR. */
+  if (seen.secondary && lum(seen.secondary) <= lum(seen.body)) {
+    throw new Error(`secondary text (${seen.secondary}) is no lighter than body text (${seen.body})`);
+  }
+});
+
+await step("every parameter card carries a notice strip", async () => {
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForSelector(".card.param-card");
+  const strips = await page.$$eval(".card.param-card", (cards) =>
+    cards.map((c) => {
+      const st = getComputedStyle(c, "::after");
+      return { h: st.height, bg: st.backgroundColor, content: st.content };
+    })
+  );
+  if (!strips.length) throw new Error("no parameter cards on History");
+  for (const s of strips) {
+    if (parseFloat(s.h) < 4) throw new Error(`a parameter card's strip is ${s.h} tall`);
+    if (/rgba\(0, 0, 0, 0\)|transparent/.test(s.bg)) throw new Error("a parameter card's strip is invisible");
+  }
+});
+
+await step("a logged-only tile's strip is the quiet one, never a state colour", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForSelector(".tile");
+  const seen = await page.$$eval(".tile", (tiles) =>
+    tiles.map((t) => getComputedStyle(t, "::after").backgroundColor)
+  );
+  if (!seen.length) throw new Error("no logged-only tiles on Today");
+  /* Amber is #B4761E and red is #C2432E — both far warmer than the quiet grey.
+     A strip whose red channel runs well ahead of its blue is a state colour. */
+  for (const bg of seen) {
+    const [r, g, b] = bg.match(/\d+/g).map(Number);
+    if (r - b > 40) throw new Error(`a logged-only tile is wearing a state colour: ${bg}`);
+    if (Math.abs(r - g) > 40) throw new Error(`a logged-only tile is wearing a state colour: ${bg}`);
+  }
+});
+
+await step("the tile's sparkline runs past the tile's padding, to its edges", async () => {
+  const measured = await page.evaluate(() => {
+    const tile = [...document.querySelectorAll(".tile")].find((t) => t.querySelector("svg"));
+    if (!tile) return null;
+    const svg = tile.querySelector("svg");
+    return { tile: tile.getBoundingClientRect().width, svg: svg.getBoundingClientRect().width };
+  });
+  if (!measured) throw new Error("no tile is drawing a sparkline");
+  /* Equal to the tile's own width, not the padded content box inside it. */
+  if (measured.svg < measured.tile - 2) {
+    throw new Error(`the sparkline is ${measured.svg}px inside a ${measured.tile}px tile — still inset`);
+  }
+});
+
+await step("the keeper's own range is shaded behind a tile's trace", async () => {
+  const bands = await page.$$eval(".tile svg .range-fill", (n) =>
+    n.map((r) => ({ h: r.getBoundingClientRect().height, fill: getComputedStyle(r).fill }))
+  );
+  /* The owner's import brings ranges for his logged-only parameters. If none
+     came across there is nothing to shade, and that is not a failure — but a
+     band that is drawn must be visible and must not be alkalinity's. */
+  for (const b of bands) {
+    if (b.h < 1) throw new Error(`a range band is ${b.h}px tall — clipped off the chart`);
+  }
+  console.log(`      (${bands.length} tiles are shading a range)`);
+});
+
+await step("the depth on the cards is still there", async () => {
+  const shadow = await page.$eval(".card", (c) => getComputedStyle(c).boxShadow);
+  const layers = shadow.split(/,(?![^(]*\))/).length;
+  if (layers < 4) throw new Error(`a card has ${layers} shadow layers, not four`);
+});
+
 await browser.close();
 server.close();
 

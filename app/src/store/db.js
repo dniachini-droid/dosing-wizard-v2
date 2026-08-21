@@ -30,6 +30,20 @@
 import { t } from "../strings.js";
 
 export const DB_NAME = "dosing-wizard-v2";
+
+/* THE TEST STORE IS A DIFFERENT DATABASE, NOT A FLAG ON A ROW.
+
+   Test mode's rule is that nothing entered in it can ever reach the real
+   tank's ledger and nothing in the real ledger can be touched by it. A
+   `isTest` column would make that rule a filter — one every reader has to
+   remember, in a codebase whose whole point is that the record is the record.
+   One missed `WHERE` and a seeded reading is in the keeper's own history,
+   indistinguishable from a real one afterwards.
+
+   A separate database makes the rule structural. The two stores share no
+   object store, no key space and no connection; there is no query that can
+   see both, and no migration or copy between them, in either direction. */
+export const TEST_DB_NAME = "dosing-wizard-v2-testmode";
 export const DB_VERSION = 1;
 
 export const EVENTS = "events";
@@ -59,154 +73,206 @@ const STORES = [
    falls back to whatever still works without it. */
 const OPEN_TIMEOUT_MS = 4000;
 
-let dbPromise = null;
-let lastReason = null;
+/* ---------------------------------------------------------------------------
+   ONE CONNECTION PER DATABASE, AND THE DATABASE IS NAMED BY THE CALLER.
 
-/* Why a connection is dropped rather than repaired: it is memoised, so a
-   connection that has turned out to be unusable would otherwise be handed to
-   every later caller. */
-const onCloseListeners = new Set();
-export function onDbClosed(fn) {
-  onCloseListeners.add(fn);
-}
+   This used to be a module-level singleton — one `dbPromise`, one `lastReason`,
+   one hard-wired `DB_NAME`. Test mode needs a second, wholly separate
+   database, and a second module opening it at its own version is exactly the
+   failure V1's comment at the top of this file warns about.
 
-export function closeDb() {
-  const pending = dbPromise;
-  dbPromise = null;
-  lastReason = null;
-  for (const fn of onCloseListeners) fn();
-  if (pending) {
-    pending.then(
-      (db) => {
+   So the singleton became a closure. `createIdbBackend(name)` owns its own
+   connection, its own memoised promise and its own last reason; two backends
+   share nothing but this code. The default export `idbBackend` is the real
+   tank's, at `DB_NAME`, and behaves exactly as it did before.
+   ------------------------------------------------------------------------ */
+
+export function createIdbBackend(dbName) {
+  let dbPromise = null;
+  let lastReason = null;
+
+  /* Why a connection is dropped rather than repaired: it is memoised, so a
+     connection that has turned out to be unusable would otherwise be handed to
+     every later caller. */
+  const onCloseListeners = new Set();
+
+  function onDbClosed(fn) {
+    onCloseListeners.add(fn);
+  }
+
+  function closeDb() {
+    const pending = dbPromise;
+    dbPromise = null;
+    lastReason = null;
+    for (const fn of onCloseListeners) fn();
+    if (pending) {
+      pending.then(
+        (db) => {
+          try {
+            if (db) db.close();
+          } catch {
+            /* already gone */
+          }
+        },
+        () => {}
+      );
+    }
+  }
+
+  function openDb() {
+    return new Promise((resolve) => {
+      let idb;
+      try {
+        idb = self.indexedDB;
+      } catch {
+        idb = null;
+      }
+      if (!idb || typeof idb.open !== "function") {
+        lastReason = t("err.dbNoIndexedDb");
+        return resolve(null);
+      }
+
+      let settled = false;
+      const done = (db, reason) => {
+        if (settled) return;
+        settled = true;
+        if (reason) lastReason = reason;
+        resolve(db);
+      };
+      const timer = setTimeout(() => done(null, t("err.dbTimeout")), OPEN_TIMEOUT_MS);
+      const finish = (db, reason) => {
+        clearTimeout(timer);
+        done(db, reason);
+      };
+
+      let req;
+      try {
+        req = idb.open(dbName, DB_VERSION);
+      } catch (e) {
+        /* Safari in a private window has historically thrown here rather than
+           reporting an error on the request. */
+        return finish(null, (e && e.message) || t("err.dbCouldNotOpen"));
+      }
+      if (!req || typeof req !== "object") return finish(null, t("err.dbCouldNotOpen"));
+
+      req.onupgradeneeded = () => {
         try {
-          if (db) db.close();
+          const db = req.result;
+          for (const name of STORES) {
+            if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
+          }
         } catch {
-          /* already gone */
+          /* reported by the failure that follows */
         }
+      };
+      req.onerror = () =>
+        finish(null, (req.error && req.error.message) || t("err.dbCouldNotOpen"));
+      req.onblocked = () => finish(null, t("err.dbBlocked"));
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!db || !db.objectStoreNames) return finish(null, t("err.dbMissingStores"));
+        /* A connection that dies later — the database is deleted, or a newer
+           version wants in — must not be handed out again. Both go through the
+           same teardown as an explicit close, so there is one way to forget a
+           connection rather than three that have to agree. */
+        db.onclose = closeDb;
+        db.onversionchange = closeDb;
+        finish(db, null);
+      };
+    });
+  }
+
+  function db() {
+    if (!dbPromise) dbPromise = openDb();
+    return dbPromise;
+  }
+
+  /* One transaction, one result. `ok: false` always carries a `reason` a human
+     could act on — the app says what happened rather than showing nothing. */
+  function run(store, mode, fn) {
+    return db().then(
+      (conn) => {
+        if (!conn) return { ok: false, value: undefined, reason: lastReason };
+        if (!conn.objectStoreNames.contains(store)) {
+          return { ok: false, value: undefined, reason: t("err.dbMissingStores") };
+        }
+        return new Promise((resolve) => {
+          let tx;
+          try {
+            tx = conn.transaction(store, mode);
+          } catch (e) {
+            dbPromise = null;
+            return resolve({
+              ok: false,
+              value: undefined,
+              reason: (e && e.message) || t("err.dbUnusable"),
+            });
+          }
+          let req;
+          try {
+            req = fn(tx.objectStore(store));
+          } catch (e) {
+            return resolve({
+              ok: false,
+              value: undefined,
+              reason: (e && e.message) || t("err.notStored"),
+            });
+          }
+          /* The request's own error is the useful one; the transaction's abort
+             is the backstop for a quota refusal, which surfaces there
+             instead. */
+          req.onsuccess = () => resolve({ ok: true, value: req.result, reason: null });
+          req.onerror = () =>
+            resolve({
+              ok: false,
+              value: undefined,
+              reason: (req.error && req.error.message) || t("err.notStored"),
+            });
+          tx.onabort = () =>
+            resolve({
+              ok: false,
+              value: undefined,
+              reason: (tx.error && tx.error.message) || t("err.noRoom"),
+            });
+        });
       },
-      () => {}
+      (e) => ({ ok: false, value: undefined, reason: (e && e.message) || t("err.dbUnusable") })
     );
   }
-}
 
-function openDb() {
-  return new Promise((resolve) => {
-    let idb;
-    try {
-      idb = self.indexedDB;
-    } catch {
-      idb = null;
-    }
-    if (!idb || typeof idb.open !== "function") {
-      lastReason = t("err.dbNoIndexedDb");
-      return resolve(null);
-    }
-
-    let settled = false;
-    const done = (db, reason) => {
-      if (settled) return;
-      settled = true;
-      if (reason) lastReason = reason;
-      resolve(db);
-    };
-    const timer = setTimeout(() => done(null, t("err.dbTimeout")), OPEN_TIMEOUT_MS);
-    const finish = (db, reason) => {
-      clearTimeout(timer);
-      done(db, reason);
-    };
-
-    let req;
-    try {
-      req = idb.open(DB_NAME, DB_VERSION);
-    } catch (e) {
-      /* Safari in a private window has historically thrown here rather than
-         reporting an error on the request. */
-      return finish(null, (e && e.message) || t("err.dbCouldNotOpen"));
-    }
-    if (!req || typeof req !== "object") return finish(null, t("err.dbCouldNotOpen"));
-
-    req.onupgradeneeded = () => {
+  /* Drop this database entirely. Test mode's "clear all test data" is this and
+     nothing else — no scan, no per-store loop, no filter that could be written
+     to match the wrong rows. The name is fixed at construction, so a reset can
+     only ever destroy the database this backend was built for. */
+  function destroy() {
+    return new Promise((resolve) => {
+      closeDb();
+      let idb;
       try {
-        const db = req.result;
-        for (const name of STORES) {
-          if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
-        }
+        idb = self.indexedDB;
       } catch {
-        /* reported by the failure that follows */
+        idb = null;
       }
-    };
-    req.onerror = () =>
-      finish(null, (req.error && req.error.message) || t("err.dbCouldNotOpen"));
-    req.onblocked = () => finish(null, t("err.dbBlocked"));
-    req.onsuccess = () => {
-      const db = req.result;
-      if (!db || !db.objectStoreNames) return finish(null, t("err.dbMissingStores"));
-      /* A connection that dies later — the database is deleted, or a newer
-         version wants in — must not be handed out again. Both go through the
-         same teardown as an explicit close, so there is one way to forget a
-         connection rather than three that have to agree. */
-      db.onclose = closeDb;
-      db.onversionchange = closeDb;
-      finish(db, null);
-    };
-  });
-}
-
-function db() {
-  if (!dbPromise) dbPromise = openDb();
-  return dbPromise;
-}
-
-/* One transaction, one result. `ok: false` always carries a `reason` a human
-   could act on — the app says what happened rather than showing nothing. */
-export function run(store, mode, fn) {
-  return db().then(
-    (conn) => {
-      if (!conn) return { ok: false, value: undefined, reason: lastReason };
-      if (!conn.objectStoreNames.contains(store)) {
-        return { ok: false, value: undefined, reason: t("err.dbMissingStores") };
+      if (!idb || typeof idb.deleteDatabase !== "function") {
+        return resolve({ ok: false, reason: t("err.dbNoIndexedDb") });
       }
-      return new Promise((resolve) => {
-        let tx;
-        try {
-          tx = conn.transaction(store, mode);
-        } catch (e) {
-          dbPromise = null;
-          return resolve({
-            ok: false,
-            value: undefined,
-            reason: (e && e.message) || t("err.dbUnusable"),
-          });
-        }
-        let req;
-        try {
-          req = fn(tx.objectStore(store));
-        } catch (e) {
-          return resolve({
-            ok: false,
-            value: undefined,
-            reason: (e && e.message) || t("err.notStored"),
-          });
-        }
-        /* The request's own error is the useful one; the transaction's abort is
-           the backstop for a quota refusal, which surfaces there instead. */
-        req.onsuccess = () => resolve({ ok: true, value: req.result, reason: null });
-        req.onerror = () =>
-          resolve({
-            ok: false,
-            value: undefined,
-            reason: (req.error && req.error.message) || t("err.notStored"),
-          });
-        tx.onabort = () =>
-          resolve({
-            ok: false,
-            value: undefined,
-            reason: (tx.error && tx.error.message) || t("err.noRoom"),
-          });
-      });
-    },
-    (e) => ({ ok: false, value: undefined, reason: (e && e.message) || t("err.dbUnusable") })
-  );
+      let req;
+      try {
+        req = idb.deleteDatabase(dbName);
+      } catch (e) {
+        return resolve({ ok: false, reason: (e && e.message) || t("err.dbUnusable") });
+      }
+      req.onsuccess = () => resolve({ ok: true, reason: null });
+      req.onerror = () =>
+        resolve({ ok: false, reason: (req.error && req.error.message) || t("err.notRemoved") });
+      /* Another tab holding the database open blocks the delete. Reported
+         rather than waited on: an unbounded wait would be a spinner that never
+         ends, and the keeper can close the other tab. */
+      req.onblocked = () => resolve({ ok: false, reason: t("err.dbBlocked") });
+    });
+  }
+
+  return backendMethods({ run, db, dbName, lastReason: () => lastReason, closeDb, onDbClosed, destroy });
 }
 
 /* ---------------------------------------------------------------------------
@@ -219,7 +285,15 @@ export function run(store, mode, fn) {
    another. The tests exercise the same rules the phone does.
    ------------------------------------------------------------------------ */
 
-export const idbBackend = {
+function backendMethods({ run, db, dbName, lastReason, closeDb, onDbClosed, destroy }) {
+  return {
+  /* Which database this backend speaks to. Read by nothing at runtime; it is
+     here so a test can assert that the real store and the test store are not
+     the same database, which is the whole guarantee. */
+  dbName,
+  closeDb,
+  onDbClosed,
+  destroy,
   async get(store, key) {
     const r = await run(store, "readonly", (s) => s.get(key));
     /* Same rule: `undefined` means "no such key", not "could not look". */
@@ -262,11 +336,16 @@ export const idbBackend = {
   },
   async health() {
     const conn = await db();
-    return conn ? { ok: true, reason: null } : { ok: false, reason: lastReason };
+    return conn ? { ok: true, reason: null } : { ok: false, reason: lastReason() };
   },
-};
+  };
+}
 
-export function memoryBackend() {
+/* The real tank's store. Same object shape, same behaviour, same database name
+   as before this file learned to make more than one. */
+export const idbBackend = createIdbBackend(DB_NAME);
+
+export function memoryBackend(dbName = "memory") {
   const m = new Map();
   const of = (store) => {
     if (!m.has(store)) m.set(store, new Map());
@@ -278,6 +357,16 @@ export function memoryBackend() {
      that the phone would fail. */
   const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
   return {
+    dbName,
+    closeDb() {},
+    onDbClosed() {},
+    /* The in-memory equivalent of dropping the database: every store, gone.
+       Same shape of answer as the IndexedDB one so a caller cannot tell them
+       apart, which is what lets the reset be tested without a browser. */
+    async destroy() {
+      m.clear();
+      return { ok: true, reason: null };
+    },
     async get(store, key) {
       return copy(of(store).get(key));
     },

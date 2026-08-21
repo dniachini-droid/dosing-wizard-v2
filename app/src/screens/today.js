@@ -27,6 +27,8 @@ import { computeSchedule } from "../store/schedule.js";
 import { renderAssessment, renderDeveloperView } from "./assessment.js";
 import { logReading, timeControl } from "./entry.js";
 import { parameterDefs, parameterDef, KIND } from "../store/ledger.js";
+import { keeperRange } from "../store/config.js";
+import { sparkDomain } from "../ui/chart.js";
 import { instructsDoseChange, isPresent, selectCard } from "../present/cards.js";
 import { sayCapability, sayParameterMid, num } from "../present/wording.js";
 import { t } from "../strings.js";
@@ -147,13 +149,14 @@ export async function renderToday(ctx) {
         readings,
         config,
         onOpenDetail: () => ctx.go("assessment-detail"),
+        onOpenEntry: (eventId) => ctx.openEntry(eventId),
       })
     );
     screen.append(renderDeveloperView(engineResult, state.assessment.record));
   }
 
   /* --- logged-only parameters ------------------------------------------- */
-  screen.append(h("p", { class: "seclabel" }, t("today.inert.label")), renderInertTiles(ctx, projected));
+  screen.append(h("p", { class: "seclabel" }, t("today.inert.label")), renderInertTiles(ctx, projected, config));
 
   return screen;
 }
@@ -839,7 +842,7 @@ function renderSetupNeeded(ctx) {
    A visibly different class of card: value, date, chart. No status, no range
    position, no notice — because there is no engine for them and the app will
    not imply one. */
-function renderInertTiles(ctx, projected) {
+function renderInertTiles(ctx, projected, config) {
   const card = h("section", { class: "card" });
   const grid = h("div", { class: "tilegrid" });
 
@@ -865,7 +868,7 @@ function renderInertTiles(ctx, projected) {
           h("span", { class: "unit" }, def.unit)
         ),
         h("span", { class: "when" }, last ? fmtShort(last.date) : t("today.inert.never")),
-        rows.length >= 3 ? sparkline(rows, def) : h("span", { class: "sparkgap" })
+        rows.length >= 3 ? sparkline(rows, def, keeperRange(def, config)) : h("span", { class: "sparkgap" })
       )
     );
   }
@@ -881,12 +884,22 @@ function renderInertTiles(ctx, projected) {
 }
 
 /* Inline sparkline. Ported in shape from V1's `MicroSpark`
-   (`DoseExpectation.jsx:197`), `GENERIC_COMPONENT_SAFE_TO_PORT` — with V1's
-   band removed, because these parameters have no canon range to draw. */
-function sparkline(rows, def) {
+   (`DoseExpectation.jsx:197`), `GENERIC_COMPONENT_SAFE_TO_PORT`.
+
+   V1's band was removed when this was ported, because at the time these
+   parameters had no range to draw. They have one now — the keeper's own, the
+   same one History shades, read from the same function so the two cannot
+   disagree — and it is drawn behind the trace in the PARAMETER'S own tint. It
+   is his preference and not a canon edge; nothing here judges the reading
+   against it and no status is shown. The tile still says value, date and shape
+   and nothing more.
+
+   When a range is drawn the vertical scale is widened to contain it, so a band
+   the readings sit clear of is visible as a band they sit clear OF, rather than
+   being silently clipped off the top of a 30-unit box. */
+function sparkline(rows, def, range) {
   const W = 100, H = 30, P = 2;
-  const vals = rows.map((r) => r.value);
-  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const { lo, hi } = sparkDomain(rows.map((r) => r.value), range);
   const span = hi - lo || 1;
   const x = (i) => (i / (rows.length - 1)) * W;
   const y = (v) => H - P - ((v - lo) / span) * (H - P * 2);
@@ -897,6 +910,16 @@ function sparkline(rows, def) {
   s.setAttribute("preserveAspectRatio", "none");
   s.setAttribute("class", `chart c-${def.tone}`);
   s.setAttribute("aria-hidden", "true");
+  if (range) {
+    const top = y(range.max), bottom = y(range.min);
+    const band = document.createElementNS(ns, "rect");
+    band.setAttribute("class", "range-fill");
+    band.setAttribute("x", "0");
+    band.setAttribute("y", top.toFixed(1));
+    band.setAttribute("width", String(W));
+    band.setAttribute("height", Math.max(0, bottom - top).toFixed(1));
+    s.append(band);
+  }
   const p = document.createElementNS(ns, "path");
   p.setAttribute("class", "trace");
   p.setAttribute("d", d);
@@ -1003,6 +1026,9 @@ function alkTrace(projected, engineResult) {
     .slice(-12)
     .map((r) => ({
       date: r.event.time.localDate,
+      /* Shown beside the value when the record has one, and absent when it
+         does not. There is no branch that supplies one. */
+      time: r.event.time.localTime || null,
       value: r.event.normalizedValue,
       eventId: r.event.eventId,
       /* Eligibility is a property of the record's time, and `time.js` owns the

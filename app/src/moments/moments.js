@@ -189,7 +189,7 @@ var css = getComputedStyle(document.documentElement);
       var g = el("g", { class: "rc-band" });
       g.appendChild(el("line", {
         x1: geo.AXIS - 4, x2: W, y1: geo.y(val), y2: geo.y(val),
-        stroke: isBand ? tone : css.getPropertyValue("--faint").trim(),
+        stroke: isBand ? tone : css.getPropertyValue("--text-meta").trim(),
         "stroke-opacity": isBand ? 0.32 : 0.22,
         "stroke-width": 1,
         "stroke-dasharray": isBand ? "3 3" : "2 4"

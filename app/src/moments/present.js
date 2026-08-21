@@ -35,6 +35,7 @@
 
 import { h } from "../ui/dom.js";
 import { playMoments } from "./moments.js";
+import { attachGestures } from "../ui/chart.js";
 import { daysBetween } from "../store/time.js";
 import { fmtDayName, fmtShort } from "../ui/format.js";
 import { isPresent } from "../present/cards.js";
@@ -133,7 +134,101 @@ export function momentReadingArrival({ def, series, onClose }) {
   wrap.append(host);
   document.body.append(wrap);
   playMoments(wrap);
+  /* The moment's chart is a chart, and the keeper asked for every chart to be
+     touchable. `moments.js` is ported V1 motion code carried unchanged on
+     purpose, so nothing is done to it: the gestures are attached from out
+     here, to the host it drew into, by the same `attachGestures` the ported
+     chart uses. Two implementations of how a chart answers a finger would be
+     two owners of one behaviour, and `MASTER RULE 1` calls that a defect. */
+  makeMomentChartInteractive(host, { def, series });
   return { close };
+}
+
+/* --- making the moment's chart touchable --------------------------------- */
+
+/* Pinch, pan, double-tap and tap-a-point, over the animation rather than
+   instead of it. The animation owns the drawing and is untouched; this owns
+   the view and the readout.
+
+   Zoom is a uniform viewBox transform. `moments.js` draws into a fixed
+   `0 0 W H` box and the SVG has a fixed CSS height, so scaling the box about
+   the pinch centre magnifies exactly what is there. Nothing about the series
+   is recomputed, resampled or clipped — as on every other chart in the app,
+   zoom and pan do not touch the data. */
+function makeMomentChartInteractive(host, { def, series }) {
+  const mount = host.querySelector(".rc-host");
+  if (!mount || !series.length) return;
+
+  const readout = h("div", { class: "chartread moment", role: "status", "aria-live": "polite" });
+  mount.after(readout);
+  mount.append(h("span", { class: "charthint moment" }, t("chart.hint")));
+
+  /* The chart ARRIVES — `--ma-chart-in` translates it as it lands — so its
+     painted box and its layout box are not the same rectangle. A tap inside
+     the chart the keeper can see could therefore land outside `.rc-host`'s
+     layout box and hit whatever lays out there instead, which was the readout
+     directly beneath it. Nothing happened, and nothing said why.
+
+     So the tap is taken by the SVG itself, whose hit area follows the
+     transform, and the readout is made untouchable in CSS. The gestures stay
+     on the host: a touch on the SVG bubbles to it. */
+  const svgOf = () => mount.querySelector(".rc-chart");
+
+  let range = { start: 0, end: 1 };
+
+  const view = () => {
+    const svg = mount.querySelector(".rc-chart");
+    if (!svg) return null;
+    const box = svg.getAttribute("data-basebox") || svg.getAttribute("viewBox");
+    svg.setAttribute("data-basebox", box);
+    const [bx, by, bw, bh] = box.split(/\s+/).map(Number);
+    return { svg, bx, by, bw, bh };
+  };
+
+  attachGestures(mount, {
+    getRange: () => range,
+    onChange: (r) => {
+      range = r;
+      const v = view();
+      if (!v) return;
+      const span = Math.max(0.04, r.end - r.start);
+      const w = v.bw * span;
+      const hgt = v.bh * span;
+      const cx = v.bx + v.bw * (r.start + span / 2);
+      const cy = v.by + v.bh / 2;
+      v.svg.setAttribute("viewBox", `${cx - w / 2} ${cy - hgt / 2} ${w} ${hgt}`);
+    },
+  });
+
+  /* Tap a point. `moments.js` spaces readings evenly across the plot — its
+     `readingGeometry` is `AXIS + (i / (n - 1)) * (W - AXIS - PAD)` — so the
+     reading under a finger is found from where the finger is, without a second
+     copy of that geometry living here. */
+  const onTap = (e) => {
+    const v = view();
+    if (!v) return;
+    const rect = v.svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const css = getComputedStyle(document.documentElement);
+    const axis = Number(css.getPropertyValue("--ma-axis"));
+    const pad = Number(css.getPropertyValue("--ma-pad"));
+    const [vx, , vw] = v.svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    const inBox = vx + ((e.clientX - rect.left) / rect.width) * vw;
+    const plot = v.bw - axis - pad;
+    const frac = plot > 0 ? (inBox - axis) / plot : 0;
+    const i = Math.round(frac * (series.length - 1));
+    const p = series[Math.max(0, Math.min(series.length - 1, i))];
+    if (!p) return;
+    readout.replaceChildren(
+      h("span", { class: "v" }, p.value.toFixed(def.decimals)),
+      h("span", { class: "u" }, def.unit),
+      h("span", { class: "d" }, fmtDayName(p.date))
+    );
+  };
+
+  const svg = svgOf();
+  if (svg) svg.addEventListener("click", onTap);
+  mount.addEventListener("click", onTap);
 }
 
 /* --- b. the dose expectation --------------------------------------------- */

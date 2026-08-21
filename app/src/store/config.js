@@ -66,6 +66,28 @@ export const CANON_DEFAULT_KEYS = Object.freeze([
   "potencyLearning",
 ]);
 
+/* CONFIGURATION FIELDS THAT ARE THE APPLICATION'S, NOT THE CONTRACT'S.
+
+   Kept in the configuration record because they are effective-dated keeper
+   settings and belong in the same append-only history as the rest — a range
+   the keeper set in August is not a range that was in force in March. Stripped
+   on the way to the engine because the engine has no input named by any of
+   them, and handing it a field it does not declare would be inventing an
+   input.
+
+   `parameterRanges` is a map of parameter key to `{min, max}` for the
+   parameters this build does not assess. They are the KEEPER's own numbers,
+   typed by him or carried across from his own V1 settings, and they govern
+   nothing: they are drawn on his charts and stated in his history. No engine
+   reads them, no recommendation depends on one, and none of them is a canon
+   band edge. A target range that governed behaviour would have to come from
+   the canon and from nowhere else (`CLAUDE.md`); one that only says "this is
+   where I like to keep it" is a keeper fact, like the tank's volume.
+
+   `importedFrom` records where a configuration version came from, and what it
+   superseded. It is provenance, not a setting. */
+const APP_ONLY_KEYS = new Set(["parameterRanges", "importedFrom"]);
+
 export function createConfigStore(backend) {
   async function history() {
     const list = await backend.all(CONFIGURATIONS);
@@ -98,9 +120,17 @@ export function createConfigStore(backend) {
   }
 
   /* What the engine is handed: the list, with the application's own bookkeeping
-     stripped. `schemaVersion` is the app's, not the contract's. */
+     stripped. `schemaVersion` is the app's, not the contract's; so are the
+     fields in `APP_ONLY_KEYS` below. */
   async function forEngine() {
-    return (await history()).map(({ schemaVersion, ...rest }) => rest);
+    return (await history()).map((c) => {
+      const out = {};
+      for (const [k, v] of Object.entries(c)) {
+        if (k === "schemaVersion" || APP_ONLY_KEYS.has(k)) continue;
+        out[k] = v;
+      }
+      return out;
+    });
   }
 
   /* The configuration history AS IT STOOD when a given version was current.
@@ -118,7 +148,11 @@ export function createConfigStore(backend) {
     const h = await history();
     const cut = h.findIndex((c) => c.configVersionId === configVersionId);
     if (cut < 0) return null; /* Named a version this device does not hold. */
-    return h.slice(0, cut + 1).map(({ schemaVersion, ...rest }) => rest);
+    /* Stripped exactly as `forEngine` strips, and by the same rule — a replay
+       that handed the engine a different shape from the original run would
+       report a divergence caused by this function. */
+    const all = await forEngine();
+    return all.slice(0, cut + 1);
   }
 
   /* Which keeper facts are still missing. The setup screen renders this, and so
@@ -130,4 +164,36 @@ export function createConfigStore(backend) {
   }
 
   return { history, current, append, forEngine, forEngineUpTo, missingFacts };
+}
+
+/* ============================================================================
+   THE KEEPER'S OWN RANGE, FOR DISPLAY
+   ----------------------------------------------------------------------------
+   The band shaded behind a trace, wherever a trace is drawn. It is here, in the
+   configuration module, because more than one screen shades it — History draws
+   a full chart per parameter and Today shades the same band behind each
+   parameter card's sparkline — and two implementations of "which range is his"
+   is precisely the defect canon `MASTER RULE 1` calls a defect rather than a
+   coincidence. Once they agreed by luck; the moment his own imported ranges
+   arrived they would not have.
+
+   Alkalinity's range lives in the two fields the engine reads, because the
+   engine reads them. Every other parameter's lives in `parameterRanges`, which
+   `forEngine` strips before the engine ever sees it: those are the keeper's own
+   preference, they are display, and they govern nothing.
+
+   Neither is a canon band edge. Nothing in this function decides chemistry —
+   it reads back a number the keeper typed, and the screens that draw it say
+   whose numbers they are.
+   ========================================================================= */
+
+export function keeperRange(def, config) {
+  if (!def || !config) return null;
+  if (def.assessed) {
+    return config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null
+      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
+      : null;
+  }
+  const r = config.parameterRanges && config.parameterRanges[def.key];
+  return r && Number.isFinite(r.min) && Number.isFinite(r.max) ? r : null;
 }

@@ -484,12 +484,32 @@ export const STRINGS = Object.freeze({
     "Stored with the date and no time. It stays that way permanently — the app will never fill the time in later.",
   "time.needTime": "Enter the time, or choose “date only”.",
   "time.needAnswer": "Say how well you know the time.",
+  "entry.detail.origin": "Where this came from",
+  "entry.origin.here": "Entered in this app",
+  "entry.origin.keeper": "Your own records, brought across from the old app",
+  "entry.origin.unconfirmed": "Brought across from the old app — unconfirmed",
+  "entry.origin.configuration": "Settings brought across from the old app",
+  "entry.origin.unconfirmedHead": "It is not certain this one is yours.",
+  "entry.origin.unconfirmedBody":
+    "The review of your old app found records like this identical to values that shipped inside the app " +
+    "itself. It is kept either way, and marked, rather than quietly counted as something you recorded.",
+
+  "entry.reconstructed.head": "This time was worked out, not recorded.",
+  "entry.reconstructed.body": ({ zone, date }) =>
+    `The old app stored the time of day and not the timezone. You said on ${date} that these readings were ` +
+    `taken in ${zone}, and that is what the exact moment here was worked out from — including which side of ` +
+    `a daylight-saving change the date falls on.`,
+  "entry.reconstructed.note":
+    "If that is wrong, this reading's exact moment is wrong with it. The date, the time of day and the value " +
+    "are unaffected — they are what your file recorded.",
+
   "time.describe.exact": "Date and time recorded",
   "time.describe.dateOnly": "Date only — the time of day was not recorded",
   "time.describe.local": "Time of day recorded, but the timezone it was in is not known",
   "time.describe.reconstructed": "Time reconstructed from evidence recorded at the time",
   "time.describe.none": "No time recorded",
   "time.fmt.dateOnly": ({ date }) => `${date} · time of day not recorded`,
+  "time.fmt.localOnly": ({ date, time }) => `${date} ${time} · timezone not recorded`,
 
   /* Relative days. "Today" and "Tomorrow" read better than a date for anything
      close and worse for anything far, so both forms live here. */
@@ -814,8 +834,44 @@ export const STRINGS = Object.freeze({
   "history.emptyWindow": "Nothing recorded in this window.",
   "history.showAll": "Show every parameter",
   "history.everyEntry": "Every entry",
-  "history.chart.aria": ({ label, days, n }) =>
-    `${label} over the last ${days} days, ${n} observations.`,
+  /* ======================================================================
+     THE INTERACTIVE CHART
+     ================================================================== */
+
+  "chart.hint": "Pinch to zoom · drag to pan · double-tap to reset",
+  "chart.reset": "Reset",
+  "chart.nothingHere": "Nothing in this part of the range.",
+  "chart.openEntry": "tap again to open it",
+  "chart.aria": ({ label, unit, n, from, fromDate, to, toDate }) =>
+    `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
+  "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
+
+  "err.assumedNeedsOffset":
+    "A time built from an assumption needs the offset that was assumed. Without one there is nothing to " +
+    "build it from.",
+  "err.assumptionNeedsRecord":
+    "A time built from an assumption has to carry the assumption. A record that claims the stronger " +
+    "precision without saying what was assumed is the thing this rule exists to prevent.",
+
+  "err.chartNeedsLabel":
+    "A chart must be told which parameter it is drawing. This one was not, which is the defect carried over " +
+    "from the old app.",
+  "err.chartNeedsUnit":
+    "A chart must be told what unit it is drawing in. An empty unit is a real answer; leaving it out is not.",
+
+  "history.legend.yourRange": ({ min, max, unit }) => `your range, ${min}–${max} ${unit}`,
+  "history.legend.noTime": ({ n }) => `${n} with no time of day`,
+  "history.legend.noZone": ({ n }) => `${n} with a time but no timezone`,
+  "history.entry.noTime": " · no time of day, so it cannot enter a trend",
+  "history.entry.noZone": " · the timezone was not recorded, so it cannot enter a trend",
+  "history.boundary.mark": "dosing",
+  "history.boundary.note": ({ date }) =>
+    `Records of what was being dosed start on ${date}. Readings before that are yours and are real; what was ` +
+    `going into the tank between them is simply not written down, so how much the tank was using cannot be ` +
+    `worked out from that period.`,
+
+  "history.chart.aria": ({ label, unit, days, n }) =>
+    `${label} in ${unit || "no unit"}, over the last ${days} days, ${n} observations.`,
   "history.point.aria": ({ value, unit, date }) => `${value} ${unit} on ${date}`,
   "history.inertNote":
     "Logged and charted, not assessed. No range is shaded because there is no range for this parameter in " +
@@ -924,6 +980,400 @@ export const STRINGS = Object.freeze({
   "survives.note":
     "There is no cloud copy in this build. An export you keep somewhere else is the only thing that survives " +
     "the second list.",
+
+  /* ======================================================================
+     TEST MODE
+     ================================================================== */
+
+  "settings.testmode.offBody":
+    "Set the app's date by hand and enter a series of readings, to see what the engine says about a run of " +
+    "days without waiting a month for them to happen. It uses its own separate store, so nothing you enter " +
+    "there ever touches this tank.",
+  "settings.testmode.onBody":
+    "Test mode is on. The app is showing a date you set and a store that is not this tank's. Nothing on any " +
+    "screen right now is about your actual tank.",
+  "settings.testmode.setUp": "Set up test mode",
+  "settings.testmode.open": "Test mode controls",
+  "settings.testmode.note":
+    "Off by default, and here rather than on the tab bar, because it is not part of keeping a tank.",
+
+  "testmode.title": "Test mode",
+  "testmode.subtitle": "Set the date. Enter the readings. See what the engine says.",
+  "testmode.on": "on",
+  "testmode.off": "off",
+
+  "testmode.offTitle": "Test mode is off",
+  "testmode.offBody":
+    "Everything you see is your real tank, and the app's date is today. Turning test mode on changes two " +
+    "things: the moment the assessment is worked out for, and which store the app reads and writes.",
+  "testmode.startAt": "Start at",
+  "testmode.startHint":
+    "This is the moment the engine is asked about — not the time of any reading. You can move it a day at a " +
+    "time afterwards.",
+  "testmode.startDate": "Starting date",
+  "testmode.startTime": "Starting time of day",
+  "testmode.turnOn": "Turn test mode on",
+
+  "testmode.whatItIsTitle": "What this is",
+  "testmode.whatItIs":
+    "A way of telling the app what the readings were and what day it is, and reading back what the engine " +
+    "makes of it. It does not generate readings, model a tank or predict anything.",
+  "testmode.whatItIsNot":
+    "It is not a way of changing real data. Your real readings are not editable from here, and a test reading " +
+    "never becomes a real one.",
+  "testmode.samePathNote":
+    "The engine is called by exactly the same code in both modes, with the same two inputs. Only the date and " +
+    "the store differ — so what you see here is what the app would have said on that day with those readings.",
+
+  "testmode.onTitle": "The app's date",
+  "testmode.onBody":
+    "This is the moment every screen is working from. Move it and the assessment, what is due, the retest " +
+    "date and what counts as stale all follow it.",
+  "testmode.stepper.aria": "Move the app's date",
+  "testmode.stepper.back": "A day earlier",
+  "testmode.stepper.forward": "A day later",
+  "testmode.jumpTo": "Jump to",
+  "testmode.timeOfDay": "Time of day",
+  "testmode.goTo": "Go to this moment",
+  "testmode.turnOff": "Turn test mode off",
+  "testmode.stepNote":
+    "Turning it off restores the real date and the real store, and copies nothing in either direction. " +
+    "Whatever you entered here is still here next time.",
+
+  "testmode.marker.tag": "TEST MODE",
+  "testmode.marker.detail": ({ date, time }) => `not your tank · ${date}, ${time}`,
+
+  "testmode.series.title": "Enter a series",
+  "testmode.series.body":
+    "One record per line. Paste a fortnight in one go rather than filling in fourteen forms. Blank lines and " +
+    "lines starting with a hash are ignored.",
+  "testmode.series.grammar":
+    "2026-03-01        alk     8.6\n" +
+    "2026-03-03 09:15  alk     8.4\n" +
+    "2026-03-05        dose    8.8\n" +
+    "2026-03-06        water   0.13\n" +
+    "2026-03-06        water   10L\n" +
+    "2026-03-07        manual  20\n" +
+    "2026-03-08        note    skimmer overflowed",
+  "testmode.series.aria": "The series to enter",
+  "testmode.series.placeholder": "One record per line",
+  "testmode.series.note":
+    "A line with no time is stored with no time — not midnight, not midday. The first dose line is recorded " +
+    "as what the pump is set to; every one after it is a change from the value before it. A dosing problem " +
+    "needs a start and an end, so it has its own form rather than a line here.",
+  "testmode.series.add": "Add these",
+  "testmode.series.added": ({ n }) => `${n} added.`,
+  "testmode.series.willAdd": ({ n }) => `${n} records will be added:`,
+  "testmode.series.nothing": "Nothing to add yet.",
+  "testmode.series.dateOnly": "Without a time",
+  "testmode.series.dateOnlyCount": ({ n, total }) => `${n} of ${total}`,
+  "testmode.series.problems": ({ n }) =>
+    n === 1 ? "One line cannot be read, and nothing will be added until it is fixed:"
+            : `${n} lines cannot be read, and nothing will be added until they are fixed:`,
+  "testmode.series.problemLine": ({ n }) => `Line ${n}`,
+  "testmode.series.fixFirst": "Fix the lines above first — nothing was added.",
+
+  "testmode.separation.title": "Where this is being kept",
+  "testmode.separation.reading": "Reading and writing",
+  "testmode.separation.real": "Your real tank",
+  "testmode.separation.held": "Records held here",
+  "testmode.separation.body":
+    "Two separate databases. There is no query that can see both, and no path that copies between them in " +
+    "either direction.",
+  "testmode.separation.note":
+    "Test mode has its own tank facts too, for the same reason. The first time you turn it on it will ask for " +
+    "them, rather than borrowing your real tank's.",
+
+  "testmode.reset.title": "Clear the test data",
+  "testmode.reset.body":
+    "Removes everything entered in test mode — readings, doses, tasks, assessments and its tank facts. Your " +
+    "real tank is not touched.",
+  "testmode.reset.action": "Clear all test data",
+  "testmode.reset.confirmTitle": "Clear all test data?",
+  "testmode.reset.confirmBody":
+    "Everything entered in test mode is removed and cannot be got back. Your real tank's records are not " +
+    "touched by this.",
+  "testmode.reset.confirmNote": "This clears the test store only.",
+  "testmode.reset.confirmAction": "Yes, clear it",
+  "testmode.reset.failed": ({ reason }) =>
+    `The test data was NOT cleared, and it is all still there. ${reason} ` +
+    `If this app is open in another tab or window, close it and try again.`,
+
+  "testmode.facts.title": "The test tank's facts",
+  "testmode.facts.none":
+    "This store has no tank facts yet. It does not borrow your real tank's, so it needs its own before the " +
+    "engine has anything to work from.",
+  "testmode.facts.set": "Set the test tank up",
+  "testmode.facts.change": "Change them",
+  "testmode.facts.effectiveFrom": "In force from",
+  "testmode.facts.beforeHead": "The app's date is before the tank facts take effect.",
+  "testmode.facts.beforeBody": ({ date }) =>
+    `The engine resolves the settings in force at the moment it is asked about, and there are none before ` +
+    `${date} — so it will refuse rather than answer. Move the date forward, or set the facts again from an ` +
+    `earlier date.`,
+  "testmode.facts.moveTo": ({ date }) => `Move the app's date to ${date}`,
+  "testmode.facts.note":
+    "Tank facts take effect from the app's date at the moment you save them, so set the date to the start of " +
+    "the period you want to look at before entering them.",
+
+  "testmode.err.notInTestMode": "That only works in test mode, and test mode is off.",
+
+  "seed.err.tooShort": "A line needs at least a date, what it is, and a value.",
+  "seed.err.badDate": ({ text }) => `${text} is not a date in the form 2026-03-01.`,
+  "seed.err.needValue": "This line has no value on it.",
+  "seed.err.needNote": "A note line needs something written after the word note.",
+  "seed.err.unknownWord": ({ text }) =>
+    `${text} is not something this can record. Use a parameter name, or dose, water, manual or note.`,
+  "seed.err.fractionRange":
+    "A water change given as a fraction has to be less than 1. Add an L for litres.",
+  "seed.err.noVolume":
+    "A water change in litres needs the tank volume, and this store has not been told it yet. " +
+    "Set the tank facts first, or give the change as a fraction of the tank.",
+  "seed.err.noVolumeText": "the water change in litres",
+  "seed.err.doseBeforeLedger":
+    "This dose is dated before a dose already recorded here, and what was running earlier cannot be " +
+    "worked out from it. Clear the test data and enter the series in date order.",
+  "seed.err.doseBeforeLedgerText": "the dose line",
+
+  /* ======================================================================
+     IMPORTING THE KEEPER'S V1 HISTORY
+     ================================================================== */
+
+  "settings.import.title": "Bring your old records across",
+  "settings.import.body":
+    "A one-time import of your history from the previous app. You choose the file, read what it will do, and " +
+    "then decide. It never runs on its own.",
+  "settings.import.done":
+    "Your history has been brought across. Running it again changes nothing — it says so before you press " +
+    "anything.",
+  "settings.import.action": "Import your history",
+  "settings.import.again": "Import again",
+  "settings.import.note": "Nothing is overwritten, and the file you choose is kept exactly as it arrived.",
+
+  "import.title": "Import your history",
+  "import.subtitle": "Read what it will do, then decide.",
+  "import.chooseTitle": "Choose the file",
+  "import.chooseBody":
+    "The export from your old app. Nothing happens when you choose it — the next thing you see is a report of " +
+    "what it contains and what would be brought across.",
+  "import.chooseFile": "The export file",
+  "import.reading": "Reading it…",
+
+  "import.assumed.title": "The recorded times, and what is assumed about them",
+  "import.assumed.offset": "Offset applied",
+  "import.assumed.offsetWith": ({ offset, zone }) => `${offset} (${zone})`,
+  "import.assumed.noOffset": "none — this device does not know its own",
+  "import.assumed.applies": "Readings it applies to",
+  "import.assumed.untouched": "Readings it does not touch",
+  "import.assumed.body": ({ n }) =>
+    `${n} of your readings carry a time of day. Your old app did not record which timezone that clock was in, ` +
+    `so this one applies the offset your device is on now — the same offset to every reading.`,
+  "import.assumed.elapsed":
+    "That is safe for the thing it is used for. Your tank does not travel, so the same offset applies to all " +
+    "of them, and the time BETWEEN any two readings comes out exactly right — which is the only thing worked " +
+    "out from these times. What it cannot tell you is where those readings sit on a world clock.",
+  "import.assumed.recorded":
+    "It is written down as an assumption, on every reading it touched: what was assumed, and that nobody told " +
+    "us it. It is not recorded as something you said.",
+  "import.assumed.note":
+    "Readings with no time of day gain nothing from this and are not touched. There is no clock reading to " +
+    "work from, and inventing one is the thing this app will not do.",
+
+  "import.potency.label": "Solution strength (dKH per mL, in your tank)",
+  "import.potency.hint":
+    "Your file carries a figure that does not match your actual solution. This is the corrected one, and it " +
+    "is what will be stored. Change it if it is wrong.",
+
+  "import.err.notJson": ({ error }) => `That file could not be read as an export. ${error}`,
+  "import.err.wrongFormat": ({ format }) =>
+    `That is not an export from the old app — it says it is "${format}".`,
+  "import.err.wrongVersion": ({ version }) =>
+    `That export is version ${version}, and this can only read version 1.`,
+  "import.err.noData": "That export has no records in it.",
+  "import.err.unknownParameter": ({ text }) =>
+    `The file has readings of "${text}", which this app has no place to keep.`,
+  "import.err.notANumber": ({ text, date }) => `A reading on ${date} has the value "${text}", which is not a number.`,
+  "import.err.badDose": ({ text, date }) => `A dose record on ${date} is for "${text}" and could not be read.`,
+  "import.err.badWater": ({ date }) => `A water change on ${date} has no volume on it.`,
+  "import.err.badDate": ({ what, text }) =>
+    `A ${what} record has "${text}" where its date should be, which is not a date. Nothing has been imported.`,
+  "import.err.badTime": ({ what, date, text }) =>
+    `A ${what} record on ${date} has "${text}" where its time should be, which is not a time of day. ` +
+    `Nothing has been imported.`,
+  "import.err.notAList": ({ name }) =>
+    `The ${name} section of that file is not a list of records, so it could not be read.`,
+  "import.err.emptyIcp": ({ date }) => `The ICP panel dated ${date} has no results in it.`,
+  "import.err.doseNoBounds": ({ date }) =>
+    `The dose record on ${date} has no time of day, and without knowing which timezone your records were in ` +
+    `there is no way to say even roughly when it took effect. Give the timezone, or leave that record out.`,
+  "import.err.badRange": ({ text }) =>
+    `Your file's target range for "${text}" has no usable numbers on it.`,
+  "import.err.unknownRange": ({ text }) =>
+    `Your file has a target range for "${text}", which this app has no place to keep.`,
+  "import.err.badReminder": ({ text }) => `The reminder "${text}" has no interval on it.`,
+
+  "import.refused.title": "That file cannot be imported",
+  "import.refused.counts": "The file disagrees with itself",
+  "import.refused.countsBody":
+    "The export states how many records it holds, and that is not how many are in it. Nothing has been " +
+    "imported. A file that does not match its own count is not the file it says it is, and guessing which " +
+    "half to believe is not something this will do.",
+  "import.countMismatch": ({ stated, actual }) => `says ${stated}, contains ${actual}`,
+  "import.countUnstated": ({ actual }) => `says nothing, contains ${actual}`,
+  "import.refused.countsUnstated":
+    "That export does not say how many records it holds, so there is nothing to check its contents against. " +
+    "A file that has been cut short looks exactly like a complete one. Nothing has been imported.",
+  "import.refused.rows": "Some rows could not be read",
+  "import.refused.rowsBody": ({ n }) =>
+    n === 1
+      ? "One row could not be read, and nothing has been imported."
+      : `${n} rows could not be read, and nothing has been imported.`,
+
+  "import.what.title": "What would come across",
+  "import.what.readingRow": ({ n, withTime }) =>
+    withTime ? `${n} readings · ${withTime} with a time` : `${n} readings · none with a time`,
+  "import.what.span": ({ from, to }) => `${from} to ${to}`,
+  "import.what.readings": "Readings",
+  "import.what.doses": "Dose records",
+  "import.what.water": "Water changes",
+  "import.what.icps": "ICP panels",
+  "import.what.lighting": "Lighting notes",
+  "import.what.tasks": "Reminders",
+  "import.what.completions": "Things marked done",
+  "import.what.notImported": ({ findings, plans }) =>
+    `Not brought across: ${findings} hidden-notice records, which are hide-state for notices this app does ` +
+    `not have; and ${plans} active dosing plans, which carry no record of what was predicted at the time.`,
+
+  "import.time.title": "How well the times are known",
+  "import.time.dateOnly": "Date, no time of day",
+  "import.time.withTime": "Date and a time of day",
+  "import.time.exact": "Time provable to the second",
+  "import.time.of": ({ n, total }) => `${n} of ${total}`,
+  "import.time.body":
+    "A reading with no time of day is stored with no time of day. Not midnight, not midday, not the time you " +
+    "usually test — nothing. That cannot be undone later, so it is not done at all.",
+  "import.time.local":
+    "The readings that do carry a time are read as local times and given this device's offset, so the time " +
+    "between any two of them is exact. Which offset was assumed is recorded on each one.",
+  "import.time.note":
+    "This is the one thing about an import that cannot be corrected afterwards: a made-up time is " +
+    "indistinguishable from a real one the moment it is stored.",
+
+  "import.eligibility.title": "What can be worked out from it",
+  "import.eligibility.everything":
+    "Every reading comes across as a real measurement. They all chart, they all appear in your history, and " +
+    "they are all part of the record. What can be worked OUT from them is a narrower question, and the answer " +
+    "is not the same for every period.",
+  "import.eligibility.doseFrom": "Dose history begins",
+  "import.eligibility.before": "Alkalinity readings before it",
+  "import.eligibility.after": "Alkalinity readings from then on",
+  "import.eligibility.beforeBody": ({ date }) =>
+    `Before ${date} nothing in your records says what was being dosed. The readings are true; what was going ` +
+    `into the tank between them is simply not written down anywhere, so how much the tank was using cannot be ` +
+    `worked out from them. That is a gap in the record, not a doubt about the numbers.`,
+  "import.eligibility.afterBody":
+    "From then on there are dose records either side of the readings, which is the part with enough context " +
+    "to be worth analysing.",
+  "import.eligibility.noDoseHistory":
+    "Nothing in the file says what was being dosed at any point, so none of the period has delivery context.",
+  "import.eligibility.noInstantHead":
+    "Even the part with dose records cannot be analysed, and it is worth knowing why now.",
+  "import.eligibility.noInstantBody": ({ date }) =>
+    `None of the readings from ${date} onwards carries a time of day. Working out how fast the tank is using ` +
+    `something means dividing by how much time passed between two readings, and a date on its own does not ` +
+    `say — so the engine will decline rather than estimate. Nothing is lost by importing: the readings are ` +
+    `kept either way, and one more test with a time on it starts the clock.`,
+
+  "import.eligibility.note":
+    "This app does not decide which readings are usable. They are stored with what is true about them, and " +
+    "the engine says what it can and cannot do with each — with its reason, on your history screen.",
+
+  "import.provenance.title": "Records worth a second look",
+  "import.provenance.body":
+    "The review of your old app found these identical to values that shipped inside the app itself, rather " +
+    "than looking like something typed in. That is not proof either way: the app's own note says the values " +
+    "were built from your practice, and a copy cannot be told from the thing it was copied from.",
+  "import.provenance.question":
+    "They come across, flagged as unconfirmed rather than quietly treated as yours. If they are your records, " +
+    "nothing needs doing. If they are not, they should not be read as history.",
+  "import.provenance.note":
+    "Recorded rather than decided. One answer from you settles all three.",
+
+  "import.config.title": "Your settings, as they stand now",
+  "import.config.body":
+    "These come across as your CURRENT settings, dated today. They are not applied backwards over your old " +
+    "readings: the file has no record of when any of them changed, and pretending otherwise would rewrite " +
+    "history that was never recorded.",
+  "import.config.volume": "Tank volume",
+  "import.config.litres": ({ n }) => `${n} L`,
+  "import.config.alkRange": "Alkalinity range",
+  "import.config.range": ({ min, max, unit }) => `${min}–${max} ${unit}`,
+  "import.config.potencyHead": "One figure is being corrected.",
+  "import.config.potencyBody": ({ imported, corrected }) =>
+    `The file carries ${imported} for your alkalinity solution's strength. You have said the real figure is ` +
+    `${corrected} dKH per mL in your tank. The corrected figure is what gets stored.`,
+  "import.config.potencyKept":
+    "The figure from the file is kept alongside it, recorded as superseded. Nothing already worked out is " +
+    "recomputed with either number.",
+  "import.config.note":
+    "Your reminders come across with the intervals your file carries — see below.",
+
+  "import.reminders.title": "Your reminders",
+  "import.reminders.body": ({ n }) =>
+    `All ${n} come across with the intervals your file has on them, so what you actually have in front of you ` +
+    `is what you get here.`,
+  "import.reminders.unverified":
+    "What the file does not record is which of them you chose. The review of your old app found that one " +
+    "interval had been changed and the rest were the defaults it shipped with — and there is nothing in the " +
+    "export that says which is which. So they are brought across marked as unverified rather than as your " +
+    "choices, and you can change any of them.",
+  "import.reminders.row": ({ label, interval }) => `${label} · every ${interval} days`,
+
+  "import.run.title": "Run the import",
+  "import.run.body":
+    "Everything above is what will happen. Nothing in your records is overwritten — every one of these is a " +
+    "new entry beside what is already there.",
+  "import.run.action": "Bring these across",
+  "import.run.working": "Bringing them across…",
+  "import.run.done": ({ n }) => `${n} records brought across.`,
+  "import.run.note":
+    "The file you chose is kept exactly as it arrived, so what it actually said can always be checked.",
+
+  "import.nothingNew.title": "Everything in this file is already here",
+  "import.nothingNew.body":
+    "Every record in it matches one your history already holds, so running the import would add nothing. " +
+    "Nothing has been changed.",
+  "import.alreadyHeld.readings": "Readings already held",
+  "import.alreadyHeld.doses": "Dose records already held",
+  "import.alreadyHeld.water": "Water changes already held",
+  "import.alreadyHeld.icps": "ICP panels already held",
+  "import.alreadyHeld.completions": "Completions already held",
+  "import.nothingNew.note":
+    "Records are matched on what they say — what was measured, on what day, at what time, and the value — " +
+    "not on the identifiers the old app gave them, because those do not survive an export.",
+
+  "import.done.title": "Brought across",
+  "import.done.body": ({ n }) =>
+    `${n} records are now in your history, alongside your reminders and what you had already marked done.`,
+  "import.done.note":
+    "The file is kept exactly as it arrived. Importing it again will add nothing, and will say so.",
+
+  "import.run.failed": ({ reason }) =>
+    `The import stopped part-way through and did not finish. ${reason} Nothing is lost and nothing is ` +
+    `duplicated: run it again with the same file and it will add only what is missing.`,
+
+  "import.previously.incompleteTitle": "An import did not finish",
+  "import.previously.incompletePill": "unfinished",
+  "import.previously.incompleteBody":
+    "An earlier run stopped part-way through. Your file was kept, so nothing is lost — run it again with the " +
+    "same file and it will add only the records that are missing.",
+
+  "import.previously.title": "Already imported",
+  "import.previously.when": "Brought across",
+  "import.previously.file": "From",
+  "import.previously.readings": "Readings",
+  "import.previously.note":
+    "The file is kept with the record of what was made from it. Importing the same file again adds nothing.",
 
   "platform.title": "Offline, install and updates",
   "platform.network": "Network",
@@ -1167,6 +1617,8 @@ export const STRINGS = Object.freeze({
   "parameter.NO3": "Nitrate",
   "parameter.PO4": "Phosphate",
   "parameter.SAL": "Salinity",
+  "parameter.PH": "pH",
+  "parameter.K": "Potassium",
 
   /* The same names mid-sentence. English lowercases them there and the
      specification's copy reads "Test alkalinity on Saturday"; other languages

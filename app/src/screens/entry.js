@@ -32,7 +32,9 @@ import {
   dateOnly,
   exactInstant,
   localOffsetMinutes,
+  localTimeZoneUnknown,
   localZone,
+  now,
   todayLocal,
   describeTime,
 } from "../store/time.js";
@@ -138,11 +140,18 @@ export function timeControl({ initialDate, initialTime, initialProvenance, onCha
           buttons.forEach((x, i) => x.classList.toggle("on", OPTIONS[i].key === o.key));
           if (o.fillsFromClock) {
             /* Read once, here, at the moment of the press. Visible in the field
-               immediately, and the keeper can still change it. */
-            const now = new Date();
+               immediately, and the keeper can still change it.
+
+               It reads the APPLICATION's clock rather than the wall clock, so
+               that in test mode "now" is the instant the keeper set. A button
+               labelled "now" that stamped the real time while the whole rest
+               of the app was three weeks earlier would file the reading
+               outside the window being examined, which is the one thing this
+               button must not do. */
+            const at = now();
             const p = (n) => String(n).padStart(2, "0");
-            state.date = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
-            state.time = `${p(now.getHours())}:${p(now.getMinutes())}`;
+            state.date = `${at.getFullYear()}-${p(at.getMonth() + 1)}-${p(at.getDate())}`;
+            state.time = `${p(at.getHours())}:${p(at.getMinutes())}`;
             dateInput.value = state.date;
           }
           /* When the answer is "date only" the time field is removed, not
@@ -193,7 +202,18 @@ export function timeControl({ initialDate, initialTime, initialProvenance, onCha
     /* The other two provenances are honest weaker answers. This build stores
        the wall-clock reading the keeper gave and labels it for what it is; it
        does NOT convert it into an absolute instant, because converting it
-       would be exactly the fabrication this control exists to prevent. */
+       would be exactly the fabrication this control exists to prevent.
+
+       `LOCAL_TIME_ZONE_UNKNOWN` goes through `time.js`'s constructor, so this
+       control and the importer build that record the same way and by the same
+       code. `RECONSTRUCTED_WITH_PROVENANCE` deliberately does not: the
+       contract's `RECONSTRUCTED` means the historical offset was independently
+       proven AND the proof recorded, and this control records no proof. It
+       stores the wall-clock reading and its label, which is the honest thing a
+       control with no proof can do. */
+    if (state.provenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN) {
+      return { ok: true, time: localTimeZoneUnknown(state.date, state.time) };
+    }
     return {
       ok: true,
       time: Object.freeze({

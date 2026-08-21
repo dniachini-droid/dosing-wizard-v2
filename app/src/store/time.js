@@ -65,8 +65,51 @@ export function parseLocalDate(iso) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-export function todayLocal(now) {
-  return isoLocalDate(now instanceof Date ? now : new Date());
+/* --- THE APPLICATION'S CLOCK — ONE OWNER --------------------------------
+   Canon `INV-A2` forbids the DOMAIN holding a clock. The application holds
+   one, and this is it: the single function that answers "what moment is the
+   app being asked about". `assess.js` reads it and passes the answer down as
+   `asOf`; nothing below the application layer ever calls it.
+
+   It is replaceable because of test mode. The engine is a pure function of
+   (events, configuration, asOf), and `asOf` is already an explicit input — so
+   letting the keeper state the moment needs no second code path, no flag
+   inside the engine and no alternative pipeline. It needs exactly this: one
+   place that says what "now" is, and one caller allowed to change it.
+
+   `MASTER RULE 1` is why it is one function rather than each screen reading
+   `new Date()` for itself. Twenty readers of the wall clock are twenty places
+   that would have to agree, and "they agree today" is not a design.
+
+   WHAT THIS DELIBERATELY DOES NOT COVER
+   -------------------------------------
+
+   `recordedAt` — when the app was TOLD something — is not this clock and must
+   not become it. The app genuinely was running at the real instant, and
+   `ledger.js` says so in as many words: "`recordedAt` is when the app was
+   told, and it is always exact." A seeded record entered while the assessment
+   instant sits in March was still typed today, and the record says so. Every
+   `recordedAt` in the app therefore reads `new Date()` directly, on purpose. */
+let readClock = () => new Date();
+
+/* Install a clock. `null` restores the wall clock. `store/mode.js` is the only
+   caller; nothing else may set one, because two setters is two owners. */
+export function setClock(fn) {
+  readClock = typeof fn === "function" ? fn : () => new Date();
+}
+
+export function now() {
+  const d = readClock();
+  return d instanceof Date && Number.isFinite(d.getTime()) ? d : new Date();
+}
+
+/* The assessment instant, in the shape the engine's `asOf` takes. */
+export function nowIso() {
+  return now().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+export function todayLocal(at) {
+  return isoLocalDate(at instanceof Date ? at : now());
 }
 
 export function addDays(iso, n) {
@@ -129,6 +172,109 @@ export function dateOnly(localDate) {
   });
 }
 
+/* The record carries a wall-clock time and no proof of what offset was in
+   force. Historical data, and nothing else: this is the provenance an importer
+   produces and a live entry never should.
+
+   It is a THIRD constructor rather than a flag on `exactInstant`, because the
+   difference between the two is the whole point. There is no `absoluteInstant`
+   here and there is no branch that computes one. Applying the keeper's current
+   timezone to an old local stamp is forbidden "absolutely" by
+   `ALK-V2-DATA-CONTRACT.md` §1 and by canon `SHARED-LEGACY-TIME-001`, and the
+   reason is that once applied it cannot be told from a real offset afterwards.
+   The local time is kept because it is true and worth showing; it is not
+   promoted into an instant, so nothing can compute an elapsed interval from
+   it. */
+export function localTimeZoneUnknown(localDate, localTime) {
+  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
+  return Object.freeze({
+    timeProvenance: PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN,
+    localDate: String(localDate).slice(0, 10),
+    localTime: String(localTime).slice(0, 5),
+    /* No absoluteInstant, for the same reason `dateOnly` has none. */
+  });
+}
+
+/* --- an assumed instant, and the assumption written down ------------------
+
+   OWNER DECISION, 2026-08-21, overriding the earlier instruction to ask the
+   keeper which timezone his old records were in.
+
+   The tank does not travel. Every one of these readings was taken in front of
+   the same tank, in whatever zone that tank stands in, so applying ONE offset
+   to all of them leaves every elapsed interval between them exactly right —
+   and elapsed interval is the only thing the engine computes from these times.
+   Which offset it is affects where the whole run sits on the world clock, and
+   nothing the engine does depends on that.
+
+   So there is no question to ask, and there is no per-record daylight-saving
+   resolution: a one-hour step twice a year is not distinguishable from
+   measurement noise against intervals measured in days, and the owner has ruled
+   it irrelevant. An hour daylight saving skipped or repeated is not refused
+   either; it is read like every other hour.
+
+   WHERE THIS SITS AGAINST CANON
+
+   `SHARED-LEGACY-TIME-001` forbids "silently applying the keeper's current
+   timezone to old local timestamps". The word doing the work is SILENTLY, and
+   this is the opposite of silent: the assumption is stated on the import screen
+   before anything is written, and it is recorded on every record it touched —
+   `assumed: true`, the offset applied, and the fact that NOBODY STATED IT.
+   Jake's objection to the earlier design stands and is honoured here: a default
+   nobody typed must never be recorded as something the keeper said.
+
+   That is a reading of the rule, not a licence, and the owner's decision
+   conflicts with the rule as drafted. The conflict is recorded as an open canon
+   item in `docs/implementation/app/OPEN-ITEMS.md` rather than argued away. */
+
+export const ASSUMPTION = Object.freeze({
+  /* The device's own offset, applied because nothing better exists and the tank
+     does not move. Not a statement by anybody. */
+  DEVICE_ZONE: "ASSUMED_DEVICE_ZONE",
+});
+
+/* An instant built from a local wall time and ONE assumed offset, carrying the
+   assumption that produced it.
+
+   `assumption.assumed` is always true and is written here rather than taken
+   from the caller, so no caller can build one of these that reads as a fact. */
+export function assumedLocalInstant(localDate, localTime, offsetMinutes, assumption) {
+  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
+  if (!Number.isFinite(offsetMinutes)) throw new Error(t("err.assumedNeedsOffset"));
+  if (!assumption || !assumption.basis || !assumption.appliedAt) {
+    /* Half of what makes this legitimate is that the assumption travels with
+       the record. A record carrying the improved provenance and no note of what
+       was assumed is the thing the canon rule exists to prevent, so it cannot
+       be built here. */
+    throw new Error(t("err.assumptionNeedsRecord"));
+  }
+
+  const [y, mo, d] = String(localDate).slice(0, 10).split("-").map(Number);
+  const [hh, mi] = String(localTime).slice(0, 5).split(":").map(Number);
+  const off = offsetMinutes;
+  const sign = off < 0 ? "-" : "+";
+  const abs = Math.abs(off);
+  const pad = (n) => String(n).padStart(2, "0");
+  const offset = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  const local = new Date(Date.UTC(y, mo - 1, d, hh, mi)).toISOString().replace(/\.\d{3}Z$/, "");
+
+  return Object.freeze({
+    timeProvenance: PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE,
+    absoluteInstant: local + offset,
+    displayTimeZoneId: assumption.zoneId || localZone(),
+    localDate: String(localDate).slice(0, 10),
+    localTime: String(localTime).slice(0, 5),
+    offsetMinutes: off,
+    /* What was assumed, that it WAS assumed, and that no one stated it. */
+    reconstruction: Object.freeze({
+      ...assumption,
+      assumed: true,
+      statedByKeeper: false,
+      offsetMinutes: off,
+    }),
+  });
+}
+
 function shiftIso(utcIso, offsetMinutes) {
   const ms = Date.parse(utcIso + "Z") + offsetMinutes * 60000;
   return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "");
@@ -143,7 +289,7 @@ export function localZone() {
 }
 
 export function localOffsetMinutes(at) {
-  return -(at instanceof Date ? at : new Date()).getTimezoneOffset();
+  return -(at instanceof Date ? at : now()).getTimezoneOffset();
 }
 
 /* The calendar day a stored time falls on, for grouping in the app's own

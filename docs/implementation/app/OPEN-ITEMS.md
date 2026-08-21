@@ -312,3 +312,203 @@ within `1e-9`. A keeper who sets 2.49 against a 2.5 recommendation keeps the
 confirmation ask. Left open rather than fixed because choosing a tolerance is
 choosing a number that governs behaviour, and this build does not originate
 those.
+
+---
+
+## AI-011 — Test mode: what the review found and did not close
+
+Recorded during the test-mode build (`test-engineer`, then `jake`). The defects
+they found were fixed and are named in the commit; these are what was left.
+
+**A configuration created inside test mode is dated by the app's own clock, and
+whether that is right is a product question.** Setup stamped `effectiveFrom`
+from the wall clock, so a configuration created while the assessment instant
+sat in March was effective at the real instant it was typed — and canon §518
+then resolved no version at all, so the engine refused every backdated
+assessment with `M-12`. The feature did not work on its own primary path. It
+now stamps from the application clock, which in normal operation is the same
+value and in test mode is the instant the keeper is standing at.
+
+What is NOT settled: whether a store that exists to be dated by hand should
+also let its configuration be re-dated. The screen states the effective date
+and offers to move the app's date forward when it sits behind it, which makes
+the consequence visible and actionable, but a keeper who wants to look at a
+window *earlier* than the facts must clear the test data and start again.
+Canon §518 and `ALK-V2-DATA-CONTRACT.md:353` govern the semantics; `DEC-003`
+governs provenance; neither settles what a deliberately-dated evaluation store
+should do. Not taken here.
+
+**The IndexedDB backend is still exercised only by the smoke aid.** `AI-010`
+already records this for the store as a whole; test mode adds to it. That two
+databases with different names are genuinely isolated, that `deleteDatabase`
+succeeds against a memoised connection, and that `onblocked` behaves as assumed
+are all evidenced by `tools/app/smoke.mjs` — a development aid, not a gate. The
+committed checks prove the rules against `memoryBackend`, and the injectable
+backend factory (`useBackendFactory`) is what lets them go through the
+production routing rather than around it.
+
+**`ledger.append` refuses an id collision where `assessments.js` retries.** A
+keeper who sets the device clock backwards, reloads and seeds a second batch
+can regenerate an id already in the store. The store declines with a visible
+error rather than overwriting, so nothing is lost — but the two write paths
+handle the same situation differently, and only one of them is a design. Not
+introduced by test mode; test mode makes the trigger likelier by inviting date
+experimentation.
+
+**Bulk entry is O(n²) in transactions.** `ledger.append` reads every key to
+derive the next ordinal, so a 400-line paste is 400 full key scans. Measured on
+the memory backend at 6 ms; on IndexedDB it is unmeasured. Acceptable for the
+fourteen-reading case the feature exists for, and named rather than assumed.
+
+**Requirement 4's perceptual half is not machine-checkable.** That the marker is
+rendered on every render including the crash render is pinned (`TM-24`). That it
+is *unmistakable* is not, and no test was written that would pretend to be one.
+
+---
+
+## AI-012 — The import, the charts and the appearance: what the reviews left open
+
+Recorded during the four-stage build on `claude/test-import-charts-styling-1czhoz`
+(test mode, the V1 import, the ported chart, the appearance tokens). Reviewed by
+`test-engineer`, `migration-auditor`, `normal-operation-reviewer` and `jake`.
+Everything they found that was a defect is fixed and named in the commits; these
+are the ones left open, and most of them are the owner's rather than mine.
+
+### The canon conflict, recorded rather than argued away
+
+**`SHARED-LEGACY-TIME-001` forbids "silently applying the keeper's current
+timezone to old local timestamps". This build applies the device's offset to the
+28 imported readings that carry a clock time.** That is an owner decision, taken
+on 2026-08-21 in these words: the tank does not travel, so one offset applied to
+every row leaves every elapsed interval between them exactly right, and elapsed
+interval is the only thing the engine computes from these times; a one-hour
+daylight-saving discrepancy twice a year is not distinguishable from measurement
+uncertainty against intervals measured in days.
+
+The reading that makes it lawful is that the word doing the work in the canon
+rule is *silently*. This is not silent: the import screen states the offset
+before anything is written, and every record it touches carries `assumed: true`,
+`statedByKeeper: false` and the offset that was applied. A later reader can see
+it was worked out, from what, and can disbelieve it.
+
+That is a reading, not a licence, and it is recorded here as a conflict for the
+owner to resolve properly at the next canon reissue. Three things follow from
+it and are open:
+
+- Whether `RECONSTRUCTED_WITH_PROVENANCE` should admit an assumption at all.
+  Canon admits it when the offset is "independently proven **and** the
+  reconstruction is recorded". An assumption is the second half without the
+  first. `kernel.py:32` then lets those instants into exact-elapsed arithmetic
+  in full.
+- Whether a dose row built this way should report `effectiveAtConfidence: EXACT`.
+  It does, and the reasoning is written into `IMP-28`: with one uniform offset
+  the dose's position *relative* to the readings either side of it is exactly
+  what the file recorded, and that relative position is what `M-5`'s
+  straddling-interval test reads. What the assumption cannot fix is where the
+  whole run sits on a world clock, and no engine rule depends on that.
+- Whether the earlier design — asking the keeper and recording his answer as his
+  statement — should return in some form. It was built and then removed on the
+  owner's instruction. `jake`'s objection to it stands and is honoured either
+  way: a default nobody typed must never be recorded as something the keeper
+  said.
+
+### Decisions for the owner, surfaced and not taken
+
+- **A derived `fromMlPerDay`.** V1 records each dose change as one number — the
+  new rate. This importer derives the "from" by reading the previous recorded
+  change. It is now marked `fromMlPerDayDerived: true` so a reader can tell it
+  from the value the file actually holds, but *whether a derived `from` is
+  acceptable at all*, or whether the first change must stay open-ended, is the
+  owner's.
+- **A derived `changedFraction`.** The file records litres and no tank volume,
+  so the fraction the engine reads is computed from the volume configured now —
+  which may not be the volume the tank had in February. Marked
+  `changedFractionDerived` with `changedFractionFromVolumeL`. Whether to derive
+  a fraction at all, or to import the litres and let the engine have no readable
+  water change, is the owner's.
+- **Whether the V1-seeded rows are his.** 25 water changes, 2 ICP panels and the
+  lighting note import flagged `V1_SEED_UNCONFIRMED`; the tank settings and
+  custom ranges as `V1_CONFIGURATION_UNVERIFIED`. The file does not record which
+  rows the keeper entered and which the old app defaulted. Surfaced on the
+  import screen rather than decided. It is material: whether those 25 water
+  changes are real drives the engine's segmentation.
+- **Whether this import is owner-only.** `importv1.js` pre-fills the corrected
+  potency `0.0693` — one keeper's number, on a shipped screen, and every dose
+  recommendation scales linearly in it. Fine for him and wrong for anybody else.
+  If the flow is his alone that should be said somewhere; if not, the default is
+  a confident wrong number in a field nobody is prompted to check.
+- **Which side of the dose-history boundary a reading dated exactly on it falls.**
+  Currently `>=`. No fixture sits on the line and nothing states the rule.
+
+### Observations, recorded because they are worth knowing
+
+- **The potency figure may have been right and read in the wrong unit.** The
+  export holds `dkhPerMlPer100L: 0.0533`, which converted for 77 L is 0.0692
+  dKH/mL — within 0.1% of the owner's corrected 0.0693. Importing 0.0693 and
+  recording 0.0533 as superseded is correct under either reading, and nothing is
+  recomputed with either figure.
+- **`rawValue` cannot be honest for an imported reading.** The event carries what
+  the keeper typed, as a string, before normalisation. The V1 export stores
+  numbers, so that string is gone; the importer writes the number's own string
+  form. Nothing computes from `rawValue`, and only trailing zeros are lost.
+- **`AI-008` is now load-bearing.** A `DATE_ONLY` record has no instant, and the
+  wire form sends the bare calendar day. With 325 of them the engine reports each
+  as a record whose time could not be read, beside the app's own honest "kept in
+  your history". Two accounts of one fact. Closes only by a contract ruling.
+
+### Found by review and NOT fixed here, because they are outside these four stages
+
+- **An `INSUFFICIENT_DATA` answer renders as "not available".** `assessment.js`
+  gates its "here is what I am holding at" branch on `HOLD_CURRENT_DOSE`, but the
+  engine populates `recommendedDoseMlPerDay` with the standing dose on
+  `INSUFFICIENT_DATA` too — `dosing.py` says in as many words that it does so
+  "so a card can say what it is holding against". The card discards it. The day
+  after the keeper changes his dose on the app's advice, it tells him it cannot
+  state anything. Pre-existing; a rendering defect, not a chemistry one.
+- **The chart's x axis is the reading's INDEX, not its date.** V1's, ported
+  deliberately and unchanged. On an irregular series — after a holiday, or across
+  six months of imported history — a nine-day gap draws the same width as a
+  two-day one, so the visible slope can be several times the rate the card
+  states. Changing it would be a reimplementation rather than a port, which the
+  brief for this work forbade; it should be an explicit decision.
+- **Which readings the engine used is decided twice.** `history.js` marks a point
+  eligible from its time provenance. The engine also drops readings for the
+  14-day lookback cap, for segment boundaries and for cluster selection, and the
+  chart shows those as usable. `MASTER RULE 1` and `X-INV-004`: the engine is the
+  one analytical owner and the chart should render its statement, not compute a
+  weaker version of it.
+- **A single touch on a chart prevents the page scrolling.** Inherited from V1's
+  gesture code, which claims any one-finger touch as a pan.
+- **A parameter with no readings can draw a NaN-geometry sparkline**, and a
+  dead-flat logged-only series gets an axis expanded ±5% around it.
+
+### Test-suite gaps named by review and not closed
+
+`test-engineer` found 54 surviving mutations; the ones with real consequence
+are closed and pinned (`TM-26`..`TM-28`, `IMP-41`..`IMP-43`, `CH-01`, `CH-07`,
+`CH-14`, `TOK-12`, `TOK-16`). What is left is the tail:
+
+- **23 checks have no negative control naming them.** The repository's own rule
+  is that every check has one. Most are falsifiable; none is declared.
+- `import-v1.js`: the litres guard, the ICP `lab` field, `ledgerDoses`'s
+  latest-wins ordering, `validTime`'s truncation and the completion key are all
+  removable without turning anything red.
+- `seed.js`: a bare `water 5` line is not refused as a 500% change.
+- `mode.js`: `normaliseDate` rolls an impossible date forward rather than
+  refusing it.
+- `daysBetween` uses `Math.round`, and no test straddles a daylight-saving day
+  in a zone that has one. `TM-16`'s child-process idiom is the way to close it.
+- **Determinism across the app and the engine is not tested end to end**, because
+  the engine cannot run under `tests/app/`. That belongs in the conformance
+  harness. The three conditions canon §64 names are individually pinned
+  (`ASS-01`, `ASS-09`).
+
+### One harness defect, found and fixed
+
+`run-app-tests.mjs` did not copy `docs/` into a mutation tree, so `STR-06` was
+red in every tree before any mutation was applied — which made `AM-60`, the one
+control that names it, report CAUGHT on every run without `STR-06` ever having
+detected anything. A control that cannot distinguish the mutation from its own
+environment is not a control, and it made "0 missed" a claim the arm had not
+earned. Fixed, and the arm now also warns when a mutation names a test no suite
+defines.

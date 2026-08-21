@@ -35,9 +35,31 @@
 
   /* --- Ink ---------------------------------------------------------------- */
 
-  --ink:               #0C1D1A;   /* values, headings */
-  --grey:              #566966;   /* body copy, secondary labels */
-  --faint:             #8DA09B;   /* metadata, units in small type, captions */
+  --ink:               #0C1D1A;   /* near-black */
+  --grey:              #566966;   /* mid */
+  --faint:             #8DA09B;   /* light */
+
+  /* --- Text roles ----------------------------------------------------------
+     The three inks above are the palette. These three are the RULE for using
+     them, and they are what `app.css` actually references — no rule in that
+     file names an ink directly.
+
+     The rule, stated once here so it can be read and changed in one place:
+
+       --text       any sentence the keeper is expected to READ. Near-black.
+       --text-2     genuinely secondary lines — a label beside a value, a
+                    caption under a heading, a control that is not the point
+                    of the screen.
+       --text-meta  dates, axis labels, unit suffixes and chrome glyphs. Never
+                    a sentence.
+
+     Body copy used to be `--grey`, which is why too much of this app read as
+     grey-on-pale-green. Separating the ROLE from the COLOUR is what makes
+     "darken the body text" one edit here rather than forty in `app.css`. */
+
+  --text:              var(--ink);
+  --text-2:            var(--grey);
+  --text-meta:         var(--faint);
 
   /* --- Parameter identity -------------------------------------------------
      Icon tint and header tint only. Never a state signal. */
@@ -60,6 +82,18 @@
   --sal:               #2A6CAE;
   --sal-bg:            #E4EFFA;
 
+  /* pH and potassium. Added when the keeper's own six-month history arrived
+     carrying 17 pH readings and 13 potassium ones: a parameter with no colour
+     is a parameter with no identity, and the alternative was leaving thirty of
+     his real measurements with nowhere to be shown. Chosen to sit clear of the
+     six above at the same lightness, and used exactly as they are — icon tint,
+     header tint, trace, range shading. Never a state. */
+  --ph:                #7A6A21;
+  --ph-bg:             #F3F0DF;
+
+  --k:                 #167F9B;
+  --k-bg:              #E0F0F5;
+
   /* --- State ---------------------------------------------------------------
      Pills, markers and notices only. Amber is attention; red is safety and
      outer-bound breach. There is no third state colour: a refusal is rendered
@@ -75,6 +109,48 @@
      designed outputs and must not read as errors. */
   --neutral-chip:      #566966;
   --neutral-chip-bg:   #E8EFEC;
+
+  /* --- A parameter card's notice strip --------------------------------------
+     A band across the full width of a parameter card's bottom edge, tinted to
+     the card's STATE — and "state" here means the class the ENGINE put on its
+     answer, not a comparison this file makes:
+
+       red     a safety return. An outer-bound breach with a plan to come back.
+       amber   an answer this build has no card for, which is a state of the APP
+               and worth flagging.
+       quiet   everything else, including an ordinary answer about a tank
+               sitting outside the keeper's preferred band. Being outside a
+               band he chose is not an alarm, and `AUDIT-008` keeps the
+               preferred band and the outer bounds firmly apart.
+
+     A logged-only parameter has no engine and therefore no state, and its strip
+     says so by being colourless rather than by being absent — the band is a
+     constant of the card, and only its colour carries meaning.
+
+     The strip is not the only place state is signalled: the recommendation
+     block and the outer-bound dimension carry it too. It is the card-level
+     summary of what those already say, and it invents nothing of its own.
+
+     No parameter colour appears here. A parameter's colour is identity and is
+     never a state, so a card's identity is carried by its mark, its trace and
+     its range shading, and its state is carried by this strip alone. */
+
+  --strip-h:           6px;
+  --strip-quiet:       var(--inset-deep);
+  --strip-attention:   var(--attention);
+  --strip-safety:      var(--safety);
+
+  /* --- Test mode -----------------------------------------------------------
+     Deliberately outside the palette above. Every other colour in this file is
+     either a parameter's identity or a state of the tank; this one is a state
+     of the APP, and it has to be unmistakable at a glance and impossible to
+     confuse with either. A saturated indigo is used nowhere else. */
+
+  --testmode:          #3B2E86;
+  --testmode-bg:       #ECE8FB;
+  --testmode-ink:      #FFFFFF;
+  --testmode-edge:     #2A2065;
+  --testmode-h:        34px;   /* the height of the pinned marker bar */
 
   /* --- Radii ------------------------------------------------------------- */
 
@@ -161,7 +237,12 @@
   --sz-swatch:         10px;   /* legend swatch */
   --sz-steprail:       4px;    /* setup progress rail */
   --sz-dot:            8px;    /* inert tile dot */
-  --sz-spark:          30px;   /* tile sparkline height */
+  --sz-spark:          44px;   /* tile sparkline height */
+
+  /* The logged-only tile's own padding, named because the sparkline is pulled
+     back out to the card edges by exactly this much. Two places have to agree
+     and this is the one number they both read. */
+  --tile-pad:          var(--sp-3);
 
   /* --- Motion --------------------------------------------------------------
      The trace animates left to right on load and event markers appear as the
@@ -179,6 +260,16 @@
   --chart-grid-dash:   1 4;
   --chart-event-dash:  3 4;
   --chart-range-alpha: 0.55;
+  --chart-range-edge-alpha: 0.25;
+
+  /* --- The interactive chart -----------------------------------------------
+     Ported from V1 `ZoomableChart.jsx`. The hit radius is the one value that
+     is NOT V1's: V1 relied on Recharts' own `activeDot` proximity, and a bare
+     4px SVG circle is far below the ~44px a finger actually needs. The visible
+     dot stays small and a transparent disc behind it takes the tap. */
+  --chart-h:           190px;  /* the plot's own height, before the readout */
+  --chart-hit-r:       14;     /* SVG units — the transparent tap target */
+  --chart-selected-w:  2.5px;
 }
 
 /* ============================================================================
@@ -278,6 +369,9 @@
   --ma-value-pulse:    700ms;
   --ma-sheen:          1100ms;
   --ma-sheen-clear:    1250ms;
+  /* The light itself. The one appearance literal that used to sit in
+     `app.css`; it is here so that file holds no colour of its own. */
+  --ma-sheen-light:    rgba(255, 255, 255, 0.95);
 
   /* The card's contents arrive in order, so the eye is led from the result to
      the reasoning. base.css:62-63; delays ReadingConfirmation.jsx:551,555. */
