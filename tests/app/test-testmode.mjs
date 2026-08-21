@@ -57,6 +57,7 @@ import {
   useSlots,
 } from "../../app/src/store/mode.js";
 import { applySeries, doseContext, parseSeries, plan, summarise, timeFor } from "../../app/src/store/seed.js";
+import { exactInstant, now } from "../../app/src/store/time.js";
 
 const s = suite("test mode");
 
@@ -822,6 +823,96 @@ s.test("TM-13", "the wall clock is restored when test mode is off", () => {
   setClock(null);
   eq(isTestMode(), false, "off");
   eq(todayLocal(), todayLocal(new Date()), "and today is today again");
+});
+
+/* -------------------------------------------------------------------------
+   What an independent test review found surviving.
+   ---------------------------------------------------------------------- */
+
+s.test("TM-26", "the chosen TIME OF DAY reaches the app's clock, not just the chosen date", () => {
+  /* Requirement 1 says date AND time. Only the date was ever asserted: TM-04
+     checks the day, TM-06 checks the STORED slot. So the hours and minutes
+     could be dropped on the way to the clock — the marker would say 09:30 and
+     the engine would be asked about midnight — and the whole suite stayed
+     green in every timezone tried.
+
+     Read back off the clock itself, in local components, so the assertion holds
+     wherever it is run. */
+  useSlots(new Map());
+  enterTestMode({ date: "2026-03-14", time: "09:30" });
+
+  const at = now();
+  eq(at.getHours(), 9, "the clock is at the hour he chose");
+  eq(at.getMinutes(), 30, "and the minute");
+  eq(at.getDate(), 14, "on the day he chose");
+  eq(at.getMonth(), 2, "in the month he chose");
+
+  /* Moved, and it moves. */
+  setTestInstant({ date: "2026-03-14", time: "22:05" });
+  eq(now().getHours(), 22, "changing the time moves the clock");
+  eq(now().getMinutes(), 5, "to the minute");
+
+  /* And stepping a day carries the time of day with it rather than resetting
+     it — a step is a step, not a new instant. */
+  stepTestDays(1);
+  eq(now().getDate(), 15, "a step moves the day");
+  eq(now().getHours(), 22, "and keeps the time of day");
+  eq(now().getMinutes(), 5, "exactly");
+
+  leaveTestMode();
+});
+
+s.test("TM-27", "a pasted line records the parameter it names", async () => {
+  /* Nothing asserted the `parameter` field of a seeded reading, so the whole
+     feature could have been writing calcium and stayed green: the keeper pastes
+     a fortnight of alkalinity, the alkalinity engine sees an empty history, and
+     every check passes. */
+  const parsed = parseSeries(
+    ["2026-03-01 09:00 alk 8.60", "2026-03-02 09:00 ca 430", "2026-03-03 mg 1400"].join("\n")
+  );
+  eq(parsed.problems.length, 0, `the three lines parse: ${JSON.stringify(parsed.problems)}`);
+  const planned = plan(parsed.rows, {});
+  eq(planned.problems.length, 0, `and they plan: ${JSON.stringify(planned.problems)}`);
+
+  const store = createMemoryStore();
+  await applySeries(store, planned.planned);
+  const readings = (await store.ledger.allEvents()).filter((e) => e.kind === KIND.READING);
+  eq(readings.length, 3, "three readings written");
+
+  const seen = readings.map((r) => `${r.parameter}=${r.normalizedValue}`).sort();
+  deepEq(seen, ["ALK=8.6", "CA=430", "MG=1400"], "each is the parameter its line named");
+});
+
+s.test("TM-28", "an exact instant is the moment it names, with the offset that was in force", () => {
+  /* `exactInstant` is the constructor every live entry goes through, and NO
+     test anywhere asserted the value it produces — only that one was produced.
+     Three separate mutations survived because of it, including the one canon
+     `SHARED-LEGACY-TIME-001` names by title: applying the device's offset TODAY
+     to a moment six months away.
+
+     Stated with the offset supplied, so this holds in any timezone. */
+  const t = exactInstant("2026-03-14", "09:30", 660, "Australia/Sydney");
+  eq(t.absoluteInstant, "2026-03-14T09:30:00+11:00", "the instant is the local time with its own offset");
+  eq(t.offsetMinutes, 660, "and the offset is the one it was given");
+  eq(t.localDate, "2026-03-14", "the local day is unchanged");
+  eq(t.localTime, "09:30", "and so is the local time");
+
+  /* The sign is not a coin toss: west of Greenwich is the other way. */
+  const west = exactInstant("2026-03-14", "09:30", -300, "America/New_York");
+  eq(west.absoluteInstant, "2026-03-14T09:30:00-05:00", "a western offset is written as one");
+
+  /* The same wall time in two offsets is two different moments, five hours
+     apart plus the sixteen between them. */
+  const gap = (Date.parse(west.absoluteInstant) - Date.parse(t.absoluteInstant)) / 3600000;
+  eq(gap, 16, "and the two are genuinely different instants");
+
+  /* A half-hour zone, because a whole-hour assumption is easy to write and
+     wrong for a great many people. */
+  eq(
+    exactInstant("2026-03-14", "09:30", 330, "Asia/Kolkata").absoluteInstant,
+    "2026-03-14T09:30:00+05:30",
+    "a half-hour offset is written to the minute"
+  );
 });
 
 export default s;

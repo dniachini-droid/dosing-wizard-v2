@@ -141,9 +141,16 @@ export function sparkDomain(values, range) {
    implementations that agreed today would be a defect rather than a
    coincidence (canon `MASTER RULE 1`).
 
-   `onChange({start, end})` is called with the visible window as two fractions
-   of the whole series. The caller decides what to do with it — slice a series,
-   move a viewBox — and this decides nothing about the data. */
+   `onChange({start, end}, meta)` is called with the visible window as two
+   fractions of the whole series. The caller decides what to do with it — slice
+   a series, move a viewBox — and this decides nothing about the data.
+
+   `meta.reset` is true when the change came from a double-tap. The caller needs
+   it because a double-tap on a touch screen also produces a `click`, and a
+   chart that opens an entry on a tap would open one every time the keeper reset
+   the zoom — which the hint under the chart tells him to do. Reported rather
+   than swallowed here, because whether a click matters is the caller's
+   business and this owns the gesture, not the consequence. */
 export function attachGestures(el, { onChange, getRange }) {
   const gestureRef = { current: null };
   const lastTapRef = { current: 0 };
@@ -166,7 +173,7 @@ export function attachGestures(el, { onChange, getRange }) {
     } else if (e.touches.length === 1) {
       const now = Date.now();
       if (now - lastTapRef.current < 300) {
-        onChange({ start: 0, end: 1 });
+        onChange({ start: 0, end: 1 }, { reset: true });
         gestureRef.current = null;
         lastTapRef.current = 0;
         return;
@@ -217,7 +224,7 @@ export function attachGestures(el, { onChange, getRange }) {
 
   /* A trackpad and a mouse have no pinch, and a desktop browser is where this
      gets developed. `dblclick` is the double-tap's equivalent there. */
-  const onDoubleClick = () => onChange({ start: 0, end: 1 });
+  const onDoubleClick = () => onChange({ start: 0, end: 1 }, { reset: true });
 
   el.addEventListener("touchstart", onTouchStart, { passive: true });
   el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -270,7 +277,16 @@ export function interactiveChart({
   let rangeWindow = { start: 0, end: 1 };
   let selected = null;
 
-  function setRange(r) {
+  /* When the range was last reset by a double-tap. A double-tap on a touch
+     screen produces a `click` as well, which the tap surface below would
+     otherwise read as "open this reading" — so the keeper doing exactly what
+     the hint tells him to do ("double-tap to reset") got an entry sheet in the
+     face every time. The click that belongs to the reset is ignored; a
+     deliberate tap a moment later is not. */
+  let lastResetAt = 0;
+
+  function setRange(r, meta) {
+    if (meta && meta.reset) lastResetAt = Date.now();
     rangeWindow = r;
     draw();
   }
@@ -398,6 +414,9 @@ export function interactiveChart({
         width: R - L,
         height: B - T,
         onclick: (e) => {
+          /* The tail of a double-tap, not a tap. V1's own 300 ms window, plus a
+             little, because the click follows the second `touchstart`. */
+          if (Date.now() - lastResetAt < 400) return;
           const box = g.getBoundingClientRect();
           if (!box.width) return;
           const inView = ((e.clientX - box.left) / box.width) * W;

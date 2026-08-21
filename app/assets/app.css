@@ -94,10 +94,14 @@ a { color: var(--alk); }
    This file colours a decision it does not make. `is-attention` and
    `is-safety` are put on the card by `assessment.js` from the engine's own
    output class and from nothing else; a logged-only parameter has no engine
-   and therefore no class, which is exactly why its strip is colourless.
+   and therefore no class, which is exactly why its strip is colourless. Which
+   class gets which colour is in `tokens.css` beside the tokens, and pinned by
+   `TOK-12` against the map itself rather than against its shape.
 
    No parameter colour appears here. Identity is carried by the card's mark,
-   its trace and its range shading; state is carried by this strip alone.
+   its trace and its range shading. The strip is the card-level summary of the
+   state the recommendation block and the outer-bound dimension already state;
+   it adds no signal of its own.
 
    A strip and not a border, so the card's own bottom radius is followed and
    the shadow is undisturbed. The bottom padding is extended by exactly the
@@ -698,7 +702,7 @@ table.data tr.excluded td { color: var(--text-meta); }
   font-weight: var(--w-bold);
   margin-bottom: var(--sp-2);
 }
-.field .hint { font-size: var(--t-micro); color: var(--text); margin: var(--sp-2) 0 0; line-height: 1.45; }
+.field .hint { font-size: var(--t-micro); color: var(--text-2); margin: var(--sp-2) 0 0; line-height: 1.45; }
 
 .input {
   width: 100%;

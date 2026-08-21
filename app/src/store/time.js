@@ -195,128 +195,83 @@ export function localTimeZoneUnknown(localDate, localTime) {
   });
 }
 
-/* --- reconstruction, the one governed way provenance may improve ----------
+/* --- an assumed instant, and the assumption written down ------------------
 
-   Canon `SHARED-LEGACY-TIME-001`: `RECONSTRUCTED_WITH_PROVENANCE` "may
-   participate normally ONLY when the historical timezone/offset is
-   independently proven and the reconstruction is recorded." Both halves are
-   load-bearing, and this function refuses to produce a record that satisfies
-   only one of them.
+   OWNER DECISION, 2026-08-21, overriding the earlier instruction to ask the
+   keeper which timezone his old records were in.
 
-   What is forbidden is the SILENT version — the canon's own list is "silently
-   assigning noon; silently applying the keeper's current timezone to old local
-   timestamps; silently treating a local HH:MM as an absolute instant". A
-   keeper who states which zone he was in, whose statement is recorded with its
-   reasoning and travels with every record it touched, is the opposite of
-   silent. He is also the only person who knows.
+   The tank does not travel. Every one of these readings was taken in front of
+   the same tank, in whatever zone that tank stands in, so applying ONE offset
+   to all of them leaves every elapsed interval between them exactly right —
+   and elapsed interval is the only thing the engine computes from these times.
+   Which offset it is affects where the whole run sits on the world clock, and
+   nothing the engine does depends on that.
 
-   So the reconstruction is stored as HIS STATEMENT, not as a fact: `basis`
-   says where the offset came from, `statedAt` says when he said it, and both
-   are on every record. A later reader can see that this was reconstructed, by
-   whom, from what, and can disbelieve it.
+   So there is no question to ask, and there is no per-record daylight-saving
+   resolution: a one-hour step twice a year is not distinguishable from
+   measurement noise against intervals measured in days, and the owner has ruled
+   it irrelevant. An hour daylight saving skipped or repeated is not refused
+   either; it is read like every other hour.
 
-   THE OFFSET IS RESOLVED PER RECORD, NOT ONCE.
+   WHERE THIS SITS AGAINST CANON
 
-   Sydney is +11:00 until early April and +10:00 from then until October, and
-   the keeper's history spans February to August — so a single offset applied
-   to the whole run would be wrong for roughly half of it. Each local moment is
-   resolved against the zone's own rules at that moment.
+   `SHARED-LEGACY-TIME-001` forbids "silently applying the keeper's current
+   timezone to old local timestamps". The word doing the work is SILENTLY, and
+   this is the opposite of silent: the assumption is stated on the import screen
+   before anything is written, and it is recorded on every record it touched —
+   `assumed: true`, the offset applied, and the fact that NOBODY STATED IT.
+   Jake's objection to the earlier design stands and is honoured here: a default
+   nobody typed must never be recorded as something the keeper said.
 
-   AND WHERE IT CANNOT BE RESOLVED, IT IS NOT.
+   That is a reading of the rule, not a licence, and the owner's decision
+   conflicts with the rule as drafted. The conflict is recorded as an open canon
+   item in `docs/implementation/app/OPEN-ITEMS.md` rather than argued away. */
 
-   An hour that daylight saving skipped never happened, and an hour it repeated
-   happened twice. Neither has one answer, and this returns `null` for both
-   rather than picking. The caller then keeps `LOCAL_TIME_ZONE_UNKNOWN`, which
-   is the truth about a record whose instant cannot be established. */
+export const ASSUMPTION = Object.freeze({
+  /* The device's own offset, applied because nothing better exists and the tank
+     does not move. Not a statement by anybody. */
+  DEVICE_ZONE: "ASSUMED_DEVICE_ZONE",
+});
 
-/* The zone's offset from UTC, in minutes, at a given absolute instant. */
-export function zoneOffsetMinutesAt(zoneId, utcMs) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: zoneId,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const parts = {};
-  for (const p of dtf.formatToParts(new Date(utcMs))) parts[p.type] = p.value;
-  const asIfUtc = Date.UTC(
-    Number(parts.year),
-    Number(parts.month) - 1,
-    Number(parts.day),
-    Number(parts.hour) % 24,
-    Number(parts.minute),
-    Number(parts.second)
-  );
-  return (asIfUtc - utcMs) / 60000;
-}
+/* An instant built from a local wall time and ONE assumed offset, carrying the
+   assumption that produced it.
 
-/* The absolute instant a local wall time names in a zone, or `null` when it
-   names none or names two. */
-export function resolveLocalInZone(localDate, localTime, zoneId) {
+   `assumption.assumed` is always true and is written here rather than taken
+   from the caller, so no caller can build one of these that reads as a fact. */
+export function assumedLocalInstant(localDate, localTime, offsetMinutes, assumption) {
+  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
+  if (!Number.isFinite(offsetMinutes)) throw new Error(t("err.assumedNeedsOffset"));
+  if (!assumption || !assumption.basis || !assumption.appliedAt) {
+    /* Half of what makes this legitimate is that the assumption travels with
+       the record. A record carrying the improved provenance and no note of what
+       was assumed is the thing the canon rule exists to prevent, so it cannot
+       be built here. */
+    throw new Error(t("err.assumptionNeedsRecord"));
+  }
+
   const [y, mo, d] = String(localDate).slice(0, 10).split("-").map(Number);
   const [hh, mi] = String(localTime).slice(0, 5).split(":").map(Number);
-  if (![y, mo, d, hh, mi].every(Number.isFinite)) return null;
-  const naive = Date.UTC(y, mo - 1, d, hh, mi);
-
-  /* Both offsets in play around this moment. On an ordinary day they are the
-     same number and the second pass changes nothing. */
-  const candidates = new Set();
-  const first = zoneOffsetMinutesAt(zoneId, naive);
-  candidates.add(first);
-  candidates.add(zoneOffsetMinutesAt(zoneId, naive - first * 60000));
-  candidates.add(zoneOffsetMinutesAt(zoneId, naive - 12 * 3600000));
-  candidates.add(zoneOffsetMinutesAt(zoneId, naive + 12 * 3600000));
-
-  /* Keep only the offsets that actually round-trip: an instant that, shown in
-     this zone, reads back as the wall time we started from. */
-  const valid = [];
-  for (const off of candidates) {
-    const utcMs = naive - off * 60000;
-    if (zoneOffsetMinutesAt(zoneId, utcMs) === off) valid.push(utcMs);
-  }
-  const distinct = [...new Set(valid)];
-
-  /* None: the hour was skipped. Two: the hour was repeated. Neither has one
-     answer, and this does not pick one. */
-  if (distinct.length !== 1) return null;
-  return { utcMs: distinct[0], offsetMinutes: (naive - distinct[0]) / 60000 };
-}
-
-/* A reconstructed instant, with its proof attached. Returns `null` where the
-   local moment cannot be resolved to exactly one instant. */
-export function reconstructedInstant(localDate, localTime, zoneId, reconstruction) {
-  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
-  if (!zoneId) throw new Error(t("err.reconstructionNeedsZone"));
-  if (!reconstruction || !reconstruction.basis || !reconstruction.statedAt) {
-    /* "The reconstruction is recorded" is half the canon's condition. A record
-       that carries the improved provenance and not the proof of it is exactly
-       the thing the rule exists to prevent, so it cannot be built here. */
-    throw new Error(t("err.reconstructionNeedsRecord"));
-  }
-
-  const resolved = resolveLocalInZone(localDate, localTime, zoneId);
-  if (!resolved) return null;
-
-  const off = resolved.offsetMinutes;
+  const off = offsetMinutes;
   const sign = off < 0 ? "-" : "+";
   const abs = Math.abs(off);
   const pad = (n) => String(n).padStart(2, "0");
   const offset = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
-  const local = new Date(resolved.utcMs + off * 60000).toISOString().replace(/\.\d{3}Z$/, "");
+  const local = new Date(Date.UTC(y, mo - 1, d, hh, mi)).toISOString().replace(/\.\d{3}Z$/, "");
 
   return Object.freeze({
     timeProvenance: PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE,
     absoluteInstant: local + offset,
-    displayTimeZoneId: zoneId,
+    displayTimeZoneId: assumption.zoneId || localZone(),
     localDate: String(localDate).slice(0, 10),
     localTime: String(localTime).slice(0, 5),
     offsetMinutes: off,
-    /* The proof, travelling with the record it justifies. */
-    reconstruction: Object.freeze({ ...reconstruction, zoneId, offsetMinutes: off }),
+    /* What was assumed, that it WAS assumed, and that no one stated it. */
+    reconstruction: Object.freeze({
+      ...assumption,
+      assumed: true,
+      statedByKeeper: false,
+      offsetMinutes: off,
+    }),
   });
 }
 

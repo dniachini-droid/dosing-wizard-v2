@@ -128,6 +128,19 @@ async function main() {
     /* The engine source and the reason-code catalogue are read by the strings
        test; they are not mutated, so they are linked rather than copied. */
     fs.cpSync(path.join(ROOT, "engine"), path.join(tree, "engine"), { recursive: true });
+    /* AND `docs`, WITHOUT WHICH THE ARM LIES ABOUT ITSELF.
+
+       `test-strings.mjs` reads the data contract out of `docs/` to build the
+       closed vocabulary `STR-06` checks. It was not copied, so `STR-06` was RED
+       in every mutation tree before any mutation was applied — which made
+       `AM-60`, the one control that names it, report CAUGHT on every run
+       without `STR-06` ever having detected anything. A negative control that
+       cannot distinguish the mutation from its own environment is not a
+       control, and it made "0 missed" a claim the arm had not earned.
+
+       Found by an independent test review, which proved it with a no-op
+       mutation: it reported CAUGHT before this line and SURVIVED after. */
+    fs.cpSync(path.join(ROOT, "docs"), path.join(tree, "docs"), { recursive: true });
 
     const target = path.join(tree, m.file);
     const before = fs.readFileSync(target, "utf8");
@@ -143,8 +156,17 @@ async function main() {
     const results = await runFrom(path.join(tree, "tests", "app"), `${i}-${Date.now()}`);
     const stillGreen = m.breaks.filter((id) => {
       const r = results.get(id);
-      /* A suite that failed to load counts as red for every test in it. */
-      if (r === undefined) return ![...results.values()].some((v) => v && v.loadError);
+      /* A test id that did not run at all. If SOME suite failed to load the id
+         may genuinely have been in it, so it counts as red; if every suite
+         loaded, the id does not exist and naming it is a defect in the
+         mutation, not a catch. Reported rather than silently counted, because
+         the previous form let a mutation name a test that had been renamed and
+         still read as caught. */
+      if (r === undefined) {
+        const anyLoadError = [...results.values()].some((v) => v && v.loadError);
+        if (!anyLoadError) console.log(`\n[WARNING ] ${m.id} names ${id}, which no suite defines`);
+        return !anyLoadError;
+      }
       return r === null;
     });
 

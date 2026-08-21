@@ -15,7 +15,7 @@
    ========================================================================= */
 
 import { assess as callEngine, describe } from "./engine/client.js";
-import { toEngineEvents } from "./store/ledger.js";
+import { happenedBy, toEngineEvents } from "./store/ledger.js";
 import { nowIso } from "./store/time.js";
 
 /* `asOf` is the assessment instant. The application supplies it; nothing below
@@ -76,9 +76,14 @@ export async function runAssessment(store, asOf) {
     };
   }
 
-  const events = toEngineEvents(projected);
+  const events = toEngineEvents(projected, asOf);
+  /* The events the engine was actually given, named as its inputs. It used to
+     name every live row, which on a backdated assessment included records that
+     had not happened yet — so a replay would report events "still present" that
+     the original run never read. */
   const inputEventIds = projected
     .filter((r) => r.state !== "SUPERSEDED" && r.state !== "INVALID")
+    .filter((r) => happenedBy(r.event.time, asOf))
     .map((r) => r.event.eventId);
 
   const engineResult = await callEngine({ events, configurationHistory, asOf });
@@ -126,7 +131,7 @@ export async function replay(store, assessmentId) {
 
   const keep = new Set(rec.inputEventIds);
   const kept = projected.filter((r) => keep.has(r.event.eventId));
-  const events = toEngineEvents(kept);
+  const events = toEngineEvents(kept, rec.asOf);
   const engineResult = await callEngine({
     events,
     configurationHistory: configThen,

@@ -19,7 +19,7 @@
 import { h } from "../ui/dom.js";
 import { fmtDayName, fmtShort } from "../ui/format.js";
 import { parameterDef } from "../store/ledger.js";
-import { localZone, nowIso } from "../store/time.js";
+import { ASSUMPTION, localZone, localOffsetMinutes, nowIso } from "../store/time.js";
 import {
   applyImport,
   checkCounts,
@@ -38,25 +38,33 @@ import { t } from "../strings.js";
    answering a question, and he can change it before pressing the button. */
 const STATED_POTENCY_DKH_PER_ML = "0.0693";
 
-/* THE KEEPER'S STATEMENT ABOUT HIS OWN CLOCK READINGS.
+/* WHAT IS ASSUMED ABOUT THE RECORDED CLOCK TIMES, AND WHO ASSUMED IT.
 
-   Canon `SHARED-LEGACY-TIME-001` allows `RECONSTRUCTED_WITH_PROVENANCE` "only
-   when the historical timezone/offset is independently proven and the
-   reconstruction is recorded", and what it forbids is the SILENT version:
-   assigning noon, applying the current timezone to an old stamp, treating a
-   local HH:MM as an absolute instant. None of those is what this is. He is
-   asked, in so many words, which zone he was in; his answer is recorded with
-   its reasoning and travels on every record it touched; and a later reader can
-   see it was reconstructed, from what, and disbelieve it.
+   OWNER DECISION, 2026-08-21. An earlier build asked the keeper which timezone
+   his old clock readings were in and recorded the answer as his statement. It
+   was removed: the tank does not travel, so one offset applied to every row
+   leaves every elapsed interval between them exactly right, and elapsed
+   interval is all the engine computes from these times. There is nothing worth
+   asking him.
 
-   `KEEPER_STATEMENT` is the basis, and it is deliberately not called proof of
-   anything else. He is the only person who knows where he was. */
-const RECONSTRUCTION_BASIS = "KEEPER_STATEMENT";
+   So the device's offset is applied, and the record says plainly that it was
+   ASSUMED. `assumedLocalInstant` writes `assumed: true` and
+   `statedByKeeper: false` onto every record it builds. That distinction is
+   jake's, and it is the load-bearing part: a default nobody typed must never be
+   stored as something the keeper said. It is not silent either — the screen
+   states it, with the offset, before anything is written.
 
-function reconstructionFrom(zoneInput) {
-  const zoneId = zoneInput && zoneInput.value ? String(zoneInput.value).trim() : "";
-  if (!zoneId) return null;
-  return { zoneId, basis: RECONSTRUCTION_BASIS, statedAt: nowIso() };
+   Where this sits against canon `SHARED-LEGACY-TIME-001` is recorded as an open
+   item, not argued away. See `store/time.js`. */
+const ASSUMPTION_BASIS = ASSUMPTION.DEVICE_ZONE;
+
+function assumptionNow() {
+  return {
+    basis: ASSUMPTION_BASIS,
+    zoneId: localZone() || null,
+    offsetMinutes: localOffsetMinutes(),
+    appliedAt: nowIso(),
+  };
 }
 
 export async function renderImportV1(ctx) {
@@ -84,17 +92,6 @@ export async function renderImportV1(ctx) {
 
   const report = h("div");
 
-  /* Defaulted to the device's own zone, which is a suggestion and not an
-     assumption: it is visible, it is editable, and nothing is stored until he
-     presses the button. Emptying it is a real answer — "I would rather not
-     say" — and leaves every timed reading exactly as it arrived. */
-  const zone = h("input", {
-    class: "input",
-    value: localZone() || "",
-    spellcheck: "false",
-    "aria-label": t("import.zone.label"),
-  });
-
   const potency = h("input", {
     class: "input",
     inputmode: "decimal",
@@ -118,7 +115,7 @@ export async function renderImportV1(ctx) {
         report.replaceChildren(h("p", { class: "body" }, err.message));
         return;
       }
-      await showReport(ctx, report, { text, filename: f.name, potency, zone });
+      await showReport(ctx, report, { text, filename: f.name, potency });
     },
   });
 
@@ -129,13 +126,6 @@ export async function renderImportV1(ctx) {
       h("div", { class: "card-head" }, h("h2", null, t("import.chooseTitle"))),
       h("p", { class: "body" }, t("import.chooseBody")),
       h("div", { class: "field" }, h("span", { class: "flabel" }, t("import.chooseFile")), file),
-      h(
-        "div",
-        { class: "field" },
-        h("span", { class: "flabel" }, t("import.zone.label")),
-        zone,
-        h("p", { class: "hint" }, t("import.zone.hint"))
-      ),
       h(
         "div",
         { class: "field" },
@@ -205,7 +195,7 @@ function previouslyCard(record) {
 
 /* --- the report ---------------------------------------------------------- */
 
-async function showReport(ctx, host, { text, filename, potency, zone }) {
+async function showReport(ctx, host, { text, filename, potency }) {
   host.replaceChildren();
 
   const parsed = parseBackup(text);
@@ -251,9 +241,9 @@ async function showReport(ctx, host, { text, filename, potency, zone }) {
     existing: projected,
     existingCompletions: completions,
     config,
-    reconstruction: reconstructionFrom(zone),
+    assumption: assumptionNow(),
   });
-  const described = describePlan(planned, reconstructionFrom(zone));
+  const described = describePlan(planned, assumptionNow());
 
   if (planned.problems.length) {
     const list = h("ul", { class: "tasklist" });
@@ -295,8 +285,8 @@ async function showReport(ctx, host, { text, filename, potency, zone }) {
   }
 
   host.append(whatComesAcross(planned, described));
-  host.append(timeCard(described, zone));
-  host.append(zoneCard(described));
+  host.append(timeCard(described));
+  host.append(assumptionCard(described));
   host.append(eligibilityCard(described));
   host.append(provenanceCard(planned));
   host.append(remindersCard(planned));
@@ -334,14 +324,14 @@ async function showReport(ctx, host, { text, filename, potency, zone }) {
                 filename,
                 state: "STARTED",
                 potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
-                reconstruction: reconstructionFrom(zone),
+                assumption: assumptionNow(),
                 originalFile: text,
               });
               try {
                 const written = await applyImport(ctx.store, planned, {
                   asOf: at,
                   correctedPotencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
-                  reconstruction: reconstructionFrom(zone),
+                  assumption: assumptionNow(),
                 });
                 /* THE ORIGINAL FILE IS PRESERVED, VERBATIM.
 
@@ -356,7 +346,7 @@ async function showReport(ctx, host, { text, filename, potency, zone }) {
                   state: "DONE",
                   written,
                   potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
-                  reconstruction: reconstructionFrom(zone),
+                  assumption: assumptionNow(),
                   originalFile: text,
                 });
                 /* WHAT HAPPENED, ON A SCREEN THAT SURVIVES THE REDRAW.
@@ -379,7 +369,7 @@ async function showReport(ctx, host, { text, filename, potency, zone }) {
                   state: "INCOMPLETE",
                   reason: err.message,
                   potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
-                  reconstruction: reconstructionFrom(zone),
+                  assumption: assumptionNow(),
                   originalFile: text,
                 });
                 e.target.disabled = false;
@@ -461,36 +451,41 @@ function whatComesAcross(planned, described) {
   return card;
 }
 
-/* What the keeper's answer about his timezone actually does, said before he
-   presses anything: which readings become usable, which are untouched, and
-   which the zone cannot resolve. */
-function zoneCard(described) {
+/* WHAT WAS ASSUMED ABOUT THE RECORDED TIMES, SAID BEFORE ANYTHING IS WRITTEN.
+
+   The keeper is not asked anything here. He is TOLD what will be assumed, what
+   it does and does not change, and that the assumption goes on the record as an
+   assumption rather than as something he said. */
+function assumptionCard(described) {
   const card = h("section", { class: "card" });
-  card.append(h("div", { class: "card-head" }, h("h2", null, t("import.zone.title"))));
-
-  if (!described.reconstructedZone) {
-    card.append(h("p", { class: "body" }, t("import.zone.notStated")));
-    return card;
-  }
-
+  card.append(h("div", { class: "card-head" }, h("h2", null, t("import.assumed.title"))));
   card.append(
     h(
       "div",
       { class: "kv" },
-      kv(t("import.zone.stated"), described.reconstructedZone),
-      kv(t("import.zone.reconstructed"), String(described.exactElapsedAvailable)),
-      kv(t("import.zone.unresolved"), String(described.unreconstructable))
+      kv(t("import.assumed.offset"), offsetWords(described.assumedOffsetMinutes, described.assumedZoneId)),
+      kv(t("import.assumed.applies"), String(described.exactElapsedAvailable)),
+      kv(t("import.assumed.untouched"), String(described.dateOnly))
     ),
-    h("p", { class: "body" }, t("import.zone.body", { zone: described.reconstructedZone, n: described.withTime })),
-    h("p", { class: "body" }, t("import.zone.dateOnlyUntouched", { n: described.dateOnly }))
+    h("p", { class: "body" }, t("import.assumed.body", { n: described.withTime })),
+    h("p", { class: "body" }, t("import.assumed.elapsed")),
+    h("p", { class: "body" }, t("import.assumed.recorded")),
+    h("p", { class: "inert-note" }, t("import.assumed.note"))
   );
-  if (described.unreconstructable) {
-    card.append(h("p", { class: "body" }, t("import.zone.unresolvedBody", { n: described.unreconstructable })));
-  }
   return card;
 }
 
-function timeCard(described, zone) {
+/* `+10:00`, with the zone's own name beside it where the device has one. */
+function offsetWords(offsetMinutes, zoneId) {
+  if (!Number.isFinite(offsetMinutes)) return t("import.assumed.noOffset");
+  const sign = offsetMinutes < 0 ? "-" : "+";
+  const abs = Math.abs(offsetMinutes);
+  const pad = (n) => String(n).padStart(2, "0");
+  const off = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  return zoneId ? t("import.assumed.offsetWith", { offset: off, zone: zoneId }) : off;
+}
+
+function timeCard(described) {
   return h(
     "section",
     { class: "card" },
@@ -526,28 +521,20 @@ function eligibilityCard(described) {
       h("p", { class: "body" }, t("import.eligibility.afterBody"))
     );
 
-    /* THE THING THE KEEPER MOST NEEDS TO READ, AND THE ONE HE WILL LIKE
-       LEAST.
+    /* THE THING THE KEEPER MOST NEEDS TO READ.
 
        The period with dose records either side of it is the part worth
-       analysing, and it still cannot be analysed — not for want of dose
-       context, but because its readings carry a clock reading and no timezone.
-       Canon `SHARED-LEGACY-TIME-001` makes that ineligible for anything
-       needing exact elapsed time, which a consumption rate is.
-
-       Said here, before the import runs, rather than left for him to discover
-       as a refusal afterwards. And the one thing that would change it is
-       stated too, because it is his to decide and not the app's: the offset
-       has to be independently proven and the proof recorded. He is the only
-       person who knows it. */
+       analysing, and whether it CAN be analysed turns on how many of its
+       readings carry an instant behind them. That is counted rather than
+       assumed — and where the answer is none, he is told here, before the
+       import runs, rather than left to discover it as a refusal afterwards. */
     if (described.exactElapsedAvailable === 0 && described.alkAfterBoundary > 0) {
       card.append(
         h(
           "div",
           { class: "callout attention" },
-          h("p", null, t("import.eligibility.timezoneHead")),
-          h("p", null, t("import.eligibility.timezoneBody", { date: fmtDayName(described.doseHistoryFrom) })),
-          h("p", null, t("import.eligibility.timezoneWhat"))
+          h("p", null, t("import.eligibility.noInstantHead")),
+          h("p", null, t("import.eligibility.noInstantBody", { date: fmtDayName(described.doseHistoryFrom) }))
         )
       );
     }

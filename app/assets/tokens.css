@@ -112,11 +112,24 @@
 
   /* --- A parameter card's notice strip --------------------------------------
      A band across the full width of a parameter card's bottom edge, tinted to
-     the card's STATE: amber when attention is needed, red when the tank is
-     outside the keeper's range, and a quiet grey on a card that reports no
-     state at all. A logged-only parameter has no state, and its strip says so
-     by being colourless rather than by being absent — the band is a constant
-     of the card, and only its colour carries meaning.
+     the card's STATE — and "state" here means the class the ENGINE put on its
+     answer, not a comparison this file makes:
+
+       red     a safety return. An outer-bound breach with a plan to come back.
+       amber   an answer this build has no card for, which is a state of the APP
+               and worth flagging.
+       quiet   everything else, including an ordinary answer about a tank
+               sitting outside the keeper's preferred band. Being outside a
+               band he chose is not an alarm, and `AUDIT-008` keeps the
+               preferred band and the outer bounds firmly apart.
+
+     A logged-only parameter has no engine and therefore no state, and its strip
+     says so by being colourless rather than by being absent — the band is a
+     constant of the card, and only its colour carries meaning.
+
+     The strip is not the only place state is signalled: the recommendation
+     block and the outer-bound dimension carry it too. It is the card-level
+     summary of what those already say, and it invents nothing of its own.
 
      No parameter colour appears here. A parameter's colour is identity and is
      never a state, so a card's identity is carried by its mark, its trace and

@@ -29,7 +29,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { suite, eq, ok } from "./harness.mjs";
+import { suite, eq, ok, deepEq } from "./harness.mjs";
 import { sparkDomain } from "../../app/src/ui/chart.js";
 
 const s = suite("appearance tokens");
@@ -53,10 +53,65 @@ function scriptsOnDisk(dir = path.join(ROOT, "app/src"), prefix = "app/src") {
   return out.sort();
 }
 
-/* A hex colour, an `rgb()`/`rgba()` or an `hsl()`/`hsla()`. Deliberately not
-   named colours: `white` and `black` do not appear and a word-boundary match on
-   colour names produces false positives on ordinary prose. */
+/* A hex colour, an `rgb()`/`rgba()`, an `hsl()`/`hsla()`. */
 const COLOUR = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g;
+
+/* AND A NAMED ONE.
+
+   These used to be excluded, on the stated grounds that a word-boundary match
+   on colour names produces false positives in ordinary prose. That is true of a
+   whole-file scan and it was the wrong conclusion: `background: white` sat in a
+   stylesheet and in an inline style and passed both checks. The fix is to stop
+   scanning prose — a declaration VALUE is where a colour can do damage, and
+   comments and identifiers are not declaration values.
+
+   The list is the ones a person actually reaches for. Exhaustiveness is not the
+   point; the point is that the commonest way to write a colour without writing
+   a hex code is no longer invisible. */
+const NAMED = new Set([
+  "white", "black", "red", "green", "blue", "yellow", "orange", "purple", "pink",
+  "grey", "gray", "brown", "cyan", "magenta", "silver", "gold", "teal", "navy",
+  "olive", "lime", "maroon", "aqua", "fuchsia", "beige", "ivory", "khaki",
+  "coral", "salmon", "crimson", "indigo", "violet", "turquoise", "tan",
+  "lightgrey", "lightgray", "darkgrey", "darkgray", "whitesmoke", "gainsboro",
+]);
+
+/* Allowed in a colour position and not a colour: they name where the value
+   comes from rather than what it is. */
+const NOT_A_COLOUR = new Set(["transparent", "inherit", "initial", "unset", "currentcolor", "none", "revert"]);
+
+/* Every CSS declaration value in a stylesheet, with the line it sits on. */
+function cssValues(text) {
+  const out = [];
+  /* Comments stripped first, or a colour word in a comment reads as a value. */
+  const stripped = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+  for (const m of stripped.matchAll(/:\s*([^;{}]+);/g)) {
+    out.push({ value: m[1], line: stripped.slice(0, m.index).split("\n").length });
+  }
+  return out;
+}
+
+/* Every value inside an inline `style: { ... }` object in application code. */
+function jsStyleValues(text) {
+  const out = [];
+  for (const m of text.matchAll(/style:\s*\{([^}]*)\}/g)) {
+    for (const v of m[1].matchAll(/:\s*(`[^`]*`|"[^"]*"|'[^']*')/g)) {
+      out.push({ value: v[1].slice(1, -1), line: text.slice(0, m.index).split("\n").length });
+    }
+  }
+  return out;
+}
+
+function namedColoursIn(values) {
+  const out = [];
+  for (const { value, line } of values) {
+    for (const word of value.toLowerCase().match(/[a-z]+/g) || []) {
+      if (NOT_A_COLOUR.has(word)) continue;
+      if (NAMED.has(word)) out.push({ line, word });
+    }
+  }
+  return out;
+}
 
 /* --- rule 1: no appearance value lives outside the token file ------------ */
 
@@ -71,6 +126,15 @@ s.test("TOK-01", "no colour is written anywhere but the token file", () => {
       offenders.push(`${name}:${line} ${m[0]}`);
     }
   }
+  /* And the same again for a colour spelled as a word, matched in declaration
+     values so ordinary prose is not scanned. */
+  for (const [name, text] of [
+    ["app/assets/app.css", APP],
+    ["app/assets/shell.css", SHELL],
+  ]) {
+    for (const hit of namedColoursIn(cssValues(text))) offenders.push(`${name}:${hit.line} ${hit.word}`);
+  }
+
   eq(
     offenders.length,
     0,
@@ -89,6 +153,12 @@ s.test("TOK-02", "no screen hard-codes a colour either — every one asks for a 
       offenders.push(`${f}:${line} ${m[0]}`);
     }
   }
+  /* An inline style is where a screen would write one, so that is where the
+     named-colour scan looks. */
+  for (const f of scriptsOnDisk()) {
+    for (const hit of namedColoursIn(jsStyleValues(read(f)))) offenders.push(`${f}:${hit.line} ${hit.word}`);
+  }
+
   ok(scriptsOnDisk().length > 20, `there are modules to check: ${scriptsOnDisk().length}`);
   eq(
     offenders.length,
@@ -143,6 +213,9 @@ s.test("TOK-05", "the stylesheets name a role and never an ink directly", () => 
   for (const [name, text] of [
     ["app/assets/app.css", APP],
     ["app/assets/shell.css", SHELL],
+    /* The screens too — an inline style can reach past a role exactly as a rule
+       can, and this used to scan only the stylesheets. */
+    ...scriptsOnDisk().map((f) => [f, read(f)]),
   ]) {
     for (const m of text.matchAll(/var\(--(ink|grey|faint)\)/g)) {
       const line = text.slice(0, m.index).split("\n").length;
@@ -167,7 +240,6 @@ const SENTENCES = Object.freeze([
   [".reco .detail", /^\.reco \.detail \{[^}]*color: var\(--text\);/m],
   [".refusal p", /^\.refusal p \{[^}]*color: var\(--text\);/m],
   [".notice .say", /^\.notice \.say \{[^}]*color: var\(--text\);/m],
-  [".field .hint", /^\.field \.hint \{[^}]*color: var\(--text\);/m],
   [".inline-log .note", /^\.inline-log \.note \{[^}]*color: var\(--text\);/m],
   [".suggested .d", /^\.suggested \.d \{[^}]*color: var\(--text\);/m],
   [".mbody .line", /^\.mbody \.line \{[^}]*color: var\(--text\);/m],
@@ -187,7 +259,7 @@ s.test("TOK-06", "every sentence the keeper is expected to read is drawn in body
    the lightest ink was carrying whole sentences. It is for dates, axis labels
    and unit suffixes. */
 s.test("TOK-07", "the lightest ink carries no sentence", () => {
-  const prose = [".inert-note", ".charthint", ".sheet .who"];
+  const prose = [".inert-note", ".charthint", ".sheet .who", ".field .hint"];
   const wrong = prose.filter((sel) => {
     const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(`^${esc} \\{[^}]*color: var\\(--text-meta\\)`, "m");
@@ -242,7 +314,7 @@ s.test("TOK-09", "a parameter's own colour never signals a state", () => {
 /* --- the parameter card's notice strip ----------------------------------- */
 
 s.test("TOK-10", "the strip is a constant of a parameter card and only its colour carries meaning", () => {
-  ok(/--strip-h:\s*\d+px;/.test(TOKENS), "the strip has a height, stated once");
+  ok(/--strip-h:\s*[1-9]\d*px;/.test(TOKENS), "the strip has a height, and it is not zero");
   ok(/--strip-quiet:\s*var\(--inset-deep\);/.test(TOKENS), "a card reporting no state has a colourless strip");
   ok(/--strip-attention:\s*var\(--attention\);/.test(TOKENS), "attention is amber");
   ok(/--strip-safety:\s*var\(--safety\);/.test(TOKENS), "outside range is red");
@@ -279,19 +351,49 @@ s.test("TOK-11", "every card that stands for one parameter carries a strip", () 
   ok(tileStrip && !/attention|safety/.test(tileStrip[1]), "and it is never anything else");
 });
 
-s.test("TOK-12", "the strip's colour is chosen by the engine's answer and by nothing else", () => {
-  const src = read("app/src/screens/assessment.js");
-  /* `CARD_TONE` maps an engine output class to a strip colour. If a screen ever
-     starts deciding the tone from a reading, this is where it would appear. */
-  const map = /const CARD_TONE = Object\.freeze\(\{([^}]*)\}\)/.exec(src);
-  ok(map, "there is one map from the engine's answer to a card tone");
-  const values = [...map[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
-  const allowed = new Set(["", "is-attention", "is-safety"]);
-  const bad = values.filter((v) => !allowed.has(v));
-  eq(bad.length, 0, bad.length ? `these are not states: ${bad.join(", ")}` : "amber, red, or nothing");
+s.test("TOK-12", "the strip's colour is chosen by the engine's answer and by nothing else", async () => {
+  /* THIS USED TO CHECK THE WRONG HALF.
+
+     It asserted that every value in `CARD_TONE` was one of "", "is-attention"
+     or "is-safety" — which six of the eight entries satisfy by being "". The
+     two that carry meaning were exactly the two it could not see, so a safety
+     breach mapped to amber passed. A red state rendered amber is a wrong signal
+     on the one card that exists to say stop.
+
+     The map is data, so it is compared as data. */
+  const { CARD_TONE } = await import("../../app/src/screens/assessment.js");
+
+  /* Sorted on both sides: this is a mapping, not a sequence, and the order the
+     entries happen to be declared in is not part of the claim. */
+  const sorted = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
+
+  deepEq(
+    sorted(CARD_TONE),
+    sorted({
+      /* Red, and only here: an outer-bound breach with a return plan. */
+      SAFETY_RETURN: "is-safety",
+      /* Amber, and only here: the engine produced a class this build has no
+         card for, which is a state of the APP worth flagging. */
+      UNCLASSIFIED: "is-attention",
+      /* Everything else is an ordinary answer and wears the quiet strip. A
+         refusal is rendered with structure and neutral ink, not with alarm —
+         `tokens.css` says so and this is where that is held. */
+      CAPABILITY_REFUSAL: "",
+      INSUFFICIENT: "",
+      NOT_ATTRIBUTABLE_SMALL_SIGNAL: "",
+      UNCERTAINTY_LIMITED: "",
+      DOSE_CHANGE: "",
+      HOLD: "",
+    }),
+    "each engine output class maps to the tone it should"
+  );
+
+  /* And the card takes its tone from that map alone. */
   ok(
-    /box\.classList\.add\(\.\.\.\(CARD_TONE\[card\] \? \[CARD_TONE\[card\]\] : \[\]\)\);/.test(src),
-    "and the card takes its tone from that map alone"
+    /box\.classList\.add\(\.\.\.\(CARD_TONE\[card\] \? \[CARD_TONE\[card\]\] : \[\]\)\);/.test(
+      read("app/src/screens/assessment.js")
+    ),
+    "and nothing else puts a tone on it"
   );
 });
 
@@ -341,23 +443,39 @@ s.test("TOK-15", "a sparkline's scale contains the keeper's band, so a band the 
      "the tile's chart uses it");
 });
 
-s.test("TOK-16", "which range is the keeper's has one owner", () => {
-  /* It had two, briefly, and they would have disagreed the moment his own
-     imported ranges arrived: `MASTER RULE 1`. */
-  const cfg = read("app/src/store/config.js");
-  ok(/export function keeperRange\(def, config\)/.test(cfg), "the configuration module owns it");
-  for (const f of ["app/src/screens/history.js", "app/src/screens/today.js"]) {
-    ok(new RegExp(`import \\{ keeperRange \\} from "\\.\\./store/config\\.js";`).test(read(f)), `${f} asks it`);
-  }
-  /* The test is not "who mentions the fields" — setup writes them and the
-     import maps V1's into them. It is who reads a CONFIGURATION to choose which
-     range is his, which is the branch that drifted: `main.js` knew only about
-     alkalinity's, so a calcium reading arrived on a chart with no band while
-     History drew one from the very same configuration. */
+s.test("TOK-16", "which range is the keeper's has one owner, and the owner answers correctly", async () => {
+  /* It had four implementations — History, Today's assessment trace, that
+     chart's aria label, and `main.js`, which knew only about alkalinity's, so a
+     calcium reading arrived on a moment chart with no band while History drew
+     one from the very same configuration. `MASTER RULE 1`. */
+  const { keeperRange } = await import("../../app/src/store/config.js");
+  const { parameterDef } = await import("../../app/src/store/ledger.js");
+
+  const config = {
+    targetRangeMinDkh: 8.2,
+    targetRangeMaxDkh: 8.8,
+    parameterRanges: { CA: { min: 400, max: 450 }, MG: { min: "x", max: 1400 } },
+  };
+
+  /* The assessed parameter's range is the two fields the ENGINE reads, because
+     the engine reads them. */
+  deepEq(keeperRange(parameterDef("ALK"), config), { min: 8.2, max: 8.8 }, "alkalinity's is the engine's pair");
+  eq(
+    keeperRange(parameterDef("ALK"), { parameterRanges: { ALK: { min: 1, max: 2 } } }),
+    null,
+    "and it is not taken from the display map, even when one is there"
+  );
+
+  /* Everything else comes from the keeper's own map, which the configuration
+     store strips before the engine sees it. */
+  deepEq(keeperRange(parameterDef("CA"), config), { min: 400, max: 450 }, "calcium's is his own");
+  eq(keeperRange(parameterDef("MG"), config), null, "a half-written range is no range");
+  eq(keeperRange(parameterDef("NO3"), config), null, "a parameter he set none for has none");
+  eq(keeperRange(parameterDef("CA"), null), null, "and no configuration is no range");
+
+  /* And nobody else decides it. */
   const others = scriptsOnDisk().filter(
-    (f) =>
-      f !== "app/src/store/config.js" &&
-      /\bconfig\??\.(parameterRanges|targetRangeM(in|ax)Dkh)/.test(read(f))
+    (f) => f !== "app/src/store/config.js" && /\bconfig\??\.(parameterRanges|targetRangeM(in|ax)Dkh)/.test(read(f))
   );
   eq(others.length, 0, others.length ? `these choose a range themselves: ${others.join(", ")}` : "nobody else chooses");
 });

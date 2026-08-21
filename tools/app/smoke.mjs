@@ -523,11 +523,6 @@ if (fs.existsSync(BACKUP)) {
     await page.waitForSelector("h1:has-text('Settings')");
     await page.click("text=Import your history");
     await page.waitForSelector("h1:has-text('Import your history')");
-    /* The keeper's stated timezone, which is what turns his 28 timed readings
-       from unusable clock readings into an analysable window. Defaulted to the
-       device's zone; set explicitly here so the run is the same wherever it
-       is driven from. */
-    await page.fill('.card .field .input[aria-label*="timezone"]', "Australia/Sydney");
     await page.setInputFiles('input[type="file"]', BACKUP);
     await page.waitForSelector("text=What would come across", { timeout: 20000 });
 
@@ -593,6 +588,12 @@ if (fs.existsSync(BACKUP)) {
         reconstructedWithoutProof: imported.filter(
           (e) => e.time.timeProvenance === "RECONSTRUCTED_WITH_PROVENANCE" && !e.time.reconstruction
         ).length,
+        /* The one thing about this design that must not slip: what was assumed
+           is recorded AS an assumption, and never as something he said. */
+        claimedAsKeeperStatement: imported.filter(
+          (e) => e.time.reconstruction && (e.time.reconstruction.assumed !== true || e.time.reconstruction.statedByKeeper !== false)
+        ).length,
+        offsets: [...new Set(imported.filter((e) => e.time.localTime).map((e) => e.time.offsetMinutes))],
       };
     });
     if (seen.total < 380) throw new Error(`too few imported records to check: ${seen.total}`);
@@ -604,7 +605,13 @@ if (fs.existsSync(BACKUP)) {
       throw new Error(`${seen.dateOnlyWithClock} date-only records gained a clock`);
     }
     if (seen.reconstructedWithoutProof !== 0) {
-      throw new Error(`${seen.reconstructedWithoutProof} reconstructed records carry no proof`);
+      throw new Error(`${seen.reconstructedWithoutProof} worked-out records carry no record of what was assumed`);
+    }
+    if (seen.claimedAsKeeperStatement !== 0) {
+      throw new Error(`${seen.claimedAsKeeperStatement} records claim the keeper stated something he did not`);
+    }
+    if (seen.offsets.length !== 1) {
+      throw new Error(`the timed records got ${seen.offsets.length} different offsets: ${seen.offsets.join("/")}`);
     }
   });
 
@@ -639,7 +646,7 @@ if (fs.existsSync(BACKUP)) {
     }
     const marks = await page.$$(".chart .boundary");
     if (!marks.length) throw new Error("no boundary marker is drawn");
-    const excluded = /no time of day|timezone/.test(txt);
+    const excluded = /no time of day/.test(txt);
     if (!excluded) throw new Error("History does not say WHY a reading is excluded");
   });
 }

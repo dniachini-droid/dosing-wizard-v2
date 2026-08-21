@@ -397,10 +397,56 @@ function isAlkalinityDose(e) {
   return e.parameter == null || e.parameter === "ALK";
 }
 
-export function toEngineEvents(projected) {
+/* HAD THIS HAPPENED YET?
+
+   An event with an instant is compared as an instant. An event with only a
+   calendar day is compared as a calendar day, against the day `asOf` falls on
+   in its own offset — because a date-only record says nothing finer than the
+   day, and treating it as midnight would be reading a time into a record that
+   has none.
+
+   The comparison is inclusive: a reading taken at the assessment instant, or on
+   the day of it, had happened. */
+export function happenedBy(time, asOf) {
+  if (!asOf) return true;
+  const at = time.absoluteInstant || null;
+  if (at) {
+    const a = Date.parse(at), b = Date.parse(asOf);
+    return Number.isFinite(a) && Number.isFinite(b) ? a <= b : true;
+  }
+  return String(time.localDate || "") <= String(asOf).slice(0, 10);
+}
+
+/* THE LEDGER AS IT STOOD AT THE ASSESSMENT INSTANT.
+
+   `asOf` is required for anything that will be shown as an answer. Without it
+   the engine is handed the whole ledger, including records dated AFTER the
+   instant it was asked about — and it does not filter readings itself
+   (`observation.episodes` takes no horizon, and `observation.position` takes
+   the maximum over everything it is given). The consequence was measured, not
+   assumed: seeded with a fortnight of a falling tank and asked about the first
+   day of it, the engine returned the FOURTEENTH day's reading as the latest
+   value, with a slope and a dose recommendation computed over readings that had
+   not been taken yet.
+
+   That is wrong in normal operation — a reading the keeper dates a week ahead
+   enters today's answer — and it is fatal in test mode, whose whole claim is
+   that stepping to a date shows what the app would have said on that date. The
+   claim is only true if the engine is handed the ledger that existed then.
+
+   This is not a chemistry rule and it does not duplicate one. It is a statement
+   about which records EXISTED, which is the store's own business; what may then
+   be READ from them stays entirely the engine's, including its own `asOf`
+   handling for dose changes and boundary events, which is untouched.
+
+   Canon §64 makes replay a function of the event ledger, the configuration
+   versions and the engine version. This is what makes "the event ledger" mean
+   the same thing on a replay as it did on the day. */
+export function toEngineEvents(projected, asOf = null) {
   const out = [];
   for (const row of projected) {
     if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;
+    if (!happenedBy(row.event.time, asOf)) continue;
     const e = row.event;
     const at = e.time.absoluteInstant || null;
     const eff = (e.effectiveTime && e.effectiveTime.absoluteInstant) || at;

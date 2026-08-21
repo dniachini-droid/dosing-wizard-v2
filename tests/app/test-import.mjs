@@ -30,7 +30,7 @@ import { createMemoryStore } from "../../app/src/store/index.js";
 import { KIND, toEngineEvents, PARAMETERS } from "../../app/src/store/ledger.js";
 import { PROVENANCE } from "../../app/src/store/time.js";
 import { PARAMETERS as ALL_PARAMETERS } from "../../app/src/store/ledger.js";
-import { reconstructedInstant, resolveLocalInZone } from "../../app/src/store/time.js";
+import { assumedLocalInstant, ASSUMPTION } from "../../app/src/store/time.js";
 import {
   ORIGIN,
   applyImport,
@@ -42,6 +42,7 @@ import {
   parseBackup,
   planImport,
   timeFor,
+  firstDoseDate,
 } from "../../app/src/store/import-v1.js";
 
 const s = suite("importing V1 history");
@@ -114,16 +115,28 @@ function backup(overrides = {}) {
   };
 }
 
+/* THE ASSUMPTION EVERY IMPORT NOW CARRIES.
+
+   The device's offset, applied to every timed row. Fixed here rather than read
+   from the machine, so these checks say the same thing under every TZ. */
+const ASSUMED = Object.freeze({
+  basis: ASSUMPTION.DEVICE_ZONE,
+  zoneId: "Australia/Sydney",
+  offsetMinutes: 600,
+  appliedAt: "2026-08-21T10:00:00Z",
+});
+
 async function importInto(store, doc, opts = {}) {
   const planned = planImport(doc, {
     existing: await store.ledger.projection(),
     existingCompletions: await store.tasks.completions(),
     config: await store.config.current(),
-    reconstruction: opts.reconstruction || null,
+    assumption: opts.assumption === undefined ? ASSUMED : opts.assumption,
   });
   const written = await applyImport(store, planned, {
     asOf: "2026-08-21T10:00:00Z",
     correctedPotencyDkhPerMl: 0.0693,
+    assumption: opts.assumption === undefined ? ASSUMED : opts.assumption,
     ...opts,
   });
   return { planned, written };
@@ -144,20 +157,28 @@ s.test("IMP-01", "a reading with no time in the file gets a record with no time 
   eq("localTime" in dateOnly.time, false, "and no time of day either");
 });
 
-s.test("IMP-02", "a reading with a time keeps the time and does not gain a timezone", async () => {
+s.test("IMP-02", "a reading with a time keeps it, gets one assumed offset, and says the offset was assumed", async () => {
   const store = createMemoryStore();
   await importInto(store, backup());
   const events = await store.ledger.allEvents();
 
   const timed = events.find((e) => e.kind === KIND.READING && e.time.localDate === "2026-08-10");
-  eq(timed.time.timeProvenance, PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN, "the clock reading is kept for what it is");
-  eq(timed.time.localTime, "18:00", "at the time the file gave");
-  eq("absoluteInstant" in timed.time, false, "and it is NOT turned into an absolute instant");
-  eq("offsetMinutes" in timed.time, false, "no offset was supplied on its behalf");
-  eq("displayTimeZoneId" in timed.time, false, "and no timezone was assumed for it");
+  eq(timed.time.localTime, "18:00", "the clock reading the file gave is kept exactly");
+  eq(timed.time.offsetMinutes, 600, "with the one assumed offset applied");
+  eq(timed.time.absoluteInstant, "2026-08-10T18:00:00+10:00", "and an instant built from the two");
+  eq(timed.time.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE, "declared as worked out, not measured");
+
+  /* The half that matters most, and the one jake's review turned on: the record
+     says the offset was ASSUMED, and says nobody stated it. A default the
+     keeper never typed must never be stored as something he said. */
+  ok(timed.time.reconstruction, "the assumption travels on the record");
+  eq(timed.time.reconstruction.assumed, true, "marked as an assumption");
+  eq(timed.time.reconstruction.statedByKeeper, false, "and explicitly not as the keeper's statement");
+  eq(timed.time.reconstruction.offsetMinutes, 600, "naming the offset that was assumed");
+  eq(timed.time.reconstruction.basis, ASSUMPTION.DEVICE_ZONE, "and where it came from");
 });
 
-s.test("IMP-03", "NOTHING the import writes carries an absolute instant", async () => {
+s.test("IMP-03", "no DATE-ONLY record gains a time, and every timed one is built the same way", async () => {
   /* The blanket form of IMP-01 and IMP-02, over every record of every kind.
      Written as a sweep rather than as three separate checks because the
      failure this guards against is a NEW kind of record acquiring one — a
@@ -168,32 +189,25 @@ s.test("IMP-03", "NOTHING the import writes carries an absolute instant", async 
   const events = await store.ledger.allEvents();
   ok(events.length >= 9, `there is something to check: ${events.length}`);
 
-  const withInstant = events.filter((e) => e.time.absoluteInstant || (e.effectiveTime && e.effectiveTime.absoluteInstant));
-  eq(
-    withInstant.length,
-    0,
-    withInstant.length
-      ? `these gained an instant nobody recorded: ${withInstant.map((e) => `${e.kind} ${e.time.localDate}`).join(", ")}`
-      : "no imported record carries an instant"
-  );
-
-  /* And every one of them declares which of the two it is. A record with no
-     provenance at all is worse than a wrong one: nothing downstream can even
-     ask. */
   for (const e of events) {
     ok(
       e.time.timeProvenance === PROVENANCE.DATE_ONLY ||
-        e.time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN,
-      `${e.kind} on ${e.time.localDate} declares a legacy provenance, not ${e.time.timeProvenance}`
+        e.time.timeProvenance === PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE,
+      `${e.kind} on ${e.time.localDate} declares a provenance, not ${e.time.timeProvenance}`
     );
-    /* A date-only record has NO time of day on it. Checking only for an
-       absolute instant is not enough: `00:00` stored as a local clock reading
-       is still a time nobody recorded, still indistinguishable from a real one
-       afterwards, and still the thing the contract forbids. */
     if (e.time.timeProvenance === PROVENANCE.DATE_ONLY) {
+      /* A date-only record has NO time of day on it. Checking only for an
+         absolute instant is not enough: `00:00` stored as a local clock reading
+         is still a time nobody recorded, still indistinguishable from a real
+         one afterwards, and still the thing the contract forbids. */
       eq(e.time.localTime, undefined, `${e.kind} on ${e.time.localDate} has no time of day at all`);
+      eq(e.time.absoluteInstant, undefined, `${e.kind} on ${e.time.localDate} has no instant either`);
+      eq(e.time.reconstruction, undefined, `${e.kind} on ${e.time.localDate} had nothing assumed for it`);
     } else {
       ok(e.time.localTime, `${e.kind} on ${e.time.localDate} kept the time the file gave it`);
+      eq(e.time.offsetMinutes, 600, `${e.kind} on ${e.time.localDate} got the SAME offset as every other`);
+      eq(e.time.reconstruction.assumed, true, `${e.kind} on ${e.time.localDate} says its offset was assumed`);
+      eq(e.time.reconstruction.statedByKeeper, false, `and that nobody stated it`);
     }
   }
 
@@ -202,20 +216,21 @@ s.test("IMP-03", "NOTHING the import writes carries an absolute instant", async 
   const doc = backup();
   const rowsWithTime =
     doc.data.readings.filter((r) => r.time).length + doc.data["dose-log"].filter((r) => r.time).length;
-  const recordsWithTime = events.filter((e) => e.time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN).length;
+  const recordsWithTime = events.filter((e) => e.time.localTime).length;
   eq(recordsWithTime, rowsWithTime, "no record gained a time the file did not give it");
 });
 
 s.test("IMP-04", "the two constructors are the only way a time is built", () => {
   /* `timeFor` is the one place. A row with a time and a row without take
      different branches and neither can produce the other's answer. */
-  const withoutTime = timeFor({ date: "2026-05-04", time: null });
+  const withoutTime = timeFor({ date: "2026-05-04", time: null }, ASSUMED);
   eq(withoutTime.timeProvenance, PROVENANCE.DATE_ONLY, "no time in, no time out");
   eq(withoutTime.absoluteInstant, undefined, "and no instant");
+  eq(withoutTime.localTime, undefined, "and no time of day, whatever was assumed");
 
-  const withTime = timeFor({ date: "2026-08-10", time: "18:00" });
-  eq(withTime.timeProvenance, PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN, "a time in, a local time out");
-  eq(withTime.absoluteInstant, undefined, "and still no instant");
+  const withTime = timeFor({ date: "2026-08-10", time: "18:00" }, ASSUMED);
+  eq(withTime.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE, "a time in, a worked-out instant out");
+  eq(withTime.absoluteInstant, "2026-08-10T18:00:00+10:00", "built from the time and the assumed offset");
 
   /* Frozen, so a later line cannot add the instant the constructor refused to
      invent. */
@@ -624,13 +639,19 @@ s.test("IMP-20", "every imported reading is offered to the engine with its true 
     "the date-only one is sent, with its provenance"
   );
   ok(
-    readings.some((r) => r.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN),
-    "and so is the local-time one, with its own"
+    readings.some((r) => r.timeProvenance === PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE),
+    "and so is the timed one, with its own"
   );
-  /* Its `measuredAt` is the calendar day, because there is no instant to send
-     and inventing one is the whole thing this module refuses to do. */
+  /* A date-only reading's `measuredAt` is the calendar day and carries no
+     offset, because there is no instant to send and inventing one is the whole
+     thing this module refuses to do. A timed one carries the offset that was
+     assumed, so the engine can compute an elapsed interval from it. */
   for (const r of readings) {
-    ok(!/[+Z]/.test(String(r.measuredAt)), `no offset was invented for ${r.measuredAt}`);
+    if (r.timeProvenance === PROVENANCE.DATE_ONLY) {
+      ok(!/[+Z]/.test(String(r.measuredAt)), `no offset was invented for ${r.measuredAt}`);
+    } else {
+      ok(/[+-]\d\d:\d\d$/.test(String(r.measuredAt)), `${r.measuredAt} carries the offset it was given`);
+    }
   }
 });
 
@@ -644,7 +665,7 @@ s.test("IMP-21", "the report the keeper reads counts exactly what the import wri
      a change made on the way in. */
   const store = createMemoryStore();
   const { planned, written } = await importInto(store, backup());
-  const described = describePlan(planned);
+  const described = describePlan(planned, ASSUMED);
   const events = await store.ledger.allEvents();
 
   eq(written.readings, described.total, "as many readings written as the report promised");
@@ -656,148 +677,181 @@ s.test("IMP-21", "the report the keeper reads counts exactly what the import wri
     "and exactly as many of them are date-only as it said"
   );
   eq(
-    stored.filter((e) => e.time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN).length,
+    stored.filter((e) => e.time.localTime).length,
     described.withTime,
     "and exactly as many carry a time"
   );
+  /* The report counts readings AND doses, so the comparison is against all
+     the events, not just the readings picked out above. */
   eq(
-    stored.filter((e) => e.time.absoluteInstant).length,
+    events.filter((e) => e.time.absoluteInstant && (e.kind === KIND.READING || e.kind === KIND.DOSE_STATE || e.kind === KIND.DOSE_CHANGE)).length,
     described.exactElapsedAvailable,
-    "and the report's count of provable instants is the record's, which is none"
+    "and the report's count of instants is the record's"
   );
 });
 
 /* -------------------------------------------------------------------------
-   8. Reconstruction — the ONE governed way provenance may improve.
+   8. ONE assumed offset, applied to everything, recorded as an assumption.
+
+   OWNER DECISION, 2026-08-21, replacing an earlier build that asked the keeper
+   which timezone his clock readings were in. The tank does not travel, so one
+   offset applied to every row leaves every elapsed interval between them exact
+   — and elapsed interval is the only thing computed from these times.
+
+   What these checks hold is the part that can still go wrong: that the SAME
+   offset reaches every row, that the date-only readings are untouched by any of
+   it, and that what was assumed is recorded AS an assumption and never as
+   something the keeper said.
    ---------------------------------------------------------------------- */
 
-const SYDNEY = { zoneId: "Australia/Sydney", basis: "KEEPER_STATEMENT", statedAt: "2026-08-21T10:00:00Z" };
-
-s.test("IMP-22", "a stated timezone reconstructs a timed reading, and records that it did", async () => {
-  /* Canon `SHARED-LEGACY-TIME-001`: `RECONSTRUCTED_WITH_PROVENANCE` may
-     participate normally "only when the historical timezone/offset is
-     independently proven AND the reconstruction is recorded". Both halves, or
-     neither. */
-  const store = createMemoryStore();
-  await importInto(store, backup(), { reconstruction: SYDNEY });
-  const timed = (await store.ledger.allEvents()).find(
-    (e) => e.kind === KIND.READING && e.time.localDate === "2026-08-10" && e.parameter === "ALK"
+s.test("IMP-22", "one offset reaches every timed row, so the elapsed time between them is exact", async () => {
+  /* The whole justification for assuming an offset at all. If two rows got
+     different offsets the interval between them would be wrong by the
+     difference, and the engine's rate arithmetic would be wrong with it. */
+  const doc = backup();
+  doc.data.readings.push(
+    { id: "s1", param: "alkalinity", value: 9.1, date: "2026-02-13", time: "09:00" },
+    { id: "s2", param: "alkalinity", value: 9.0, date: "2026-08-10", time: "09:00" }
   );
+  doc.counts.readings = doc.data.readings.length;
 
-  eq(timed.time.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE, "the provenance is the reconstructed one");
-  eq(timed.time.localTime, "18:00", "the clock reading is untouched");
-  eq(timed.time.absoluteInstant, "2026-08-10T18:00:00+10:00", "and it now names an instant, with its offset");
-  eq(timed.time.offsetMinutes, 600, "the offset in force in that zone on that date");
-
-  /* The proof, on the record. A record carrying the stronger provenance and
-     not the reason for it is what the canon's condition exists to prevent. */
-  ok(timed.time.reconstruction, "the reconstruction is recorded on the record");
-  eq(timed.time.reconstruction.zoneId, "Australia/Sydney", "naming the zone");
-  eq(timed.time.reconstruction.basis, "KEEPER_STATEMENT", "naming where the zone came from");
-  eq(timed.time.reconstruction.statedAt, SYDNEY.statedAt, "and when it was stated");
-});
-
-s.test("IMP-23", "a date-only reading gains NOTHING from a reconstruction", async () => {
-  /* The whole point. 325 of the keeper's 353 readings have no time of day, and
-     a stated timezone gives them none: there is no clock reading to
-     reconstruct, and supplying one would be the fabrication this module exists
-     to refuse. */
   const store = createMemoryStore();
-  await importInto(store, backup(), { reconstruction: SYDNEY });
+  await importInto(store, doc);
   const events = await store.ledger.allEvents();
 
-  const dateOnly = events.filter((e) => e.time.timeProvenance === PROVENANCE.DATE_ONLY);
-  ok(dateOnly.length >= 7, `there are date-only records to check: ${dateOnly.length}`);
-  for (const e of dateOnly) {
-    eq(e.time.absoluteInstant, undefined, `${e.kind} on ${e.time.localDate} still has no instant`);
-    eq(e.time.localTime, undefined, "and no time of day");
-    eq(e.time.reconstruction, undefined, "and nothing was reconstructed for it");
-    deepEq(Object.keys(e.time), ["timeProvenance", "localDate"], "the record has exactly two fields");
-  }
+  const offsets = new Set(events.filter((e) => e.time.localTime).map((e) => e.time.offsetMinutes));
+  eq(offsets.size, 1, `every timed record got the same offset, not ${[...offsets].join("/")}`);
 
-  /* And the count is the same as it was without a zone: reconstruction moves
-     records between the OTHER two provenances and never out of date-only. */
-  const without = createMemoryStore();
-  await importInto(without, backup());
-  const beforeCount = (await without.ledger.allEvents()).filter(
-    (e) => e.time.timeProvenance === PROVENANCE.DATE_ONLY
-  ).length;
-  eq(dateOnly.length, beforeCount, "a stated zone changes how many records are date-only by nothing at all");
+  /* February to August spans a daylight-saving change in the zone the device is
+     in, and it makes no difference: both get the same offset, so the six-month
+     interval between them is exactly six months of wall clock. That is the
+     owner's ruling — one hour twice a year is not distinguishable from
+     measurement noise against intervals measured in days. */
+  const feb = events.find((e) => e.time.localDate === "2026-02-13" && e.time.localTime === "09:00");
+  const aug = events.find((e) => e.time.localDate === "2026-08-10" && e.time.localTime === "09:00");
+  const hours = (Date.parse(aug.time.absoluteInstant) - Date.parse(feb.time.absoluteInstant)) / 3600000;
+  eq(hours, 24 * 178, "and the interval is the wall-clock one, with no daylight-saving step in it");
 });
 
-s.test("IMP-24", "the offset is resolved per record, across a daylight-saving change", async () => {
-  /* Sydney is +11:00 until early April and +10:00 until October, and the
-     keeper's history spans February to August. One offset applied to the whole
-     run would be wrong for roughly half of it. */
-  const feb = reconstructedInstant("2026-02-13", "09:00", "Australia/Sydney", SYDNEY);
-  const aug = reconstructedInstant("2026-08-10", "18:00", "Australia/Sydney", SYDNEY);
-  eq(feb.offsetMinutes, 660, "February is on summer time");
-  eq(aug.offsetMinutes, 600, "August is not");
-  eq(feb.absoluteInstant, "2026-02-13T09:00:00+11:00", "and each carries its own offset");
-  eq(aug.absoluteInstant, "2026-08-10T18:00:00+10:00", "its own, not the other's");
-
-  /* Either side of the change itself. */
-  eq(reconstructedInstant("2026-04-04", "09:00", "Australia/Sydney", SYDNEY).offsetMinutes, 660, "the day before");
-  eq(reconstructedInstant("2026-04-06", "09:00", "Australia/Sydney", SYDNEY).offsetMinutes, 600, "the day after");
-});
-
-s.test("IMP-25", "an hour that daylight saving skipped or repeated is NOT reconstructed", async () => {
-  /* An hour the clocks skipped never happened; an hour they repeated happened
-     twice. Neither has one answer, and picking one would be the fabrication
-     with extra steps. The record stays as it arrived. */
-  eq(resolveLocalInZone("2026-10-04", "02:30", "Australia/Sydney"), null, "an hour that never happened");
-  eq(resolveLocalInZone("2026-04-05", "02:30", "Australia/Sydney"), null, "an hour that happened twice");
-  eq(reconstructedInstant("2026-10-04", "02:30", "Australia/Sydney", SYDNEY), null, "neither is reconstructed");
-
-  /* And an ordinary hour on the same days is. */
-  ok(resolveLocalInZone("2026-04-05", "01:30", "Australia/Sydney"), "an unambiguous hour still resolves");
-
-  /* Through the importer: such a row keeps the weaker provenance rather than
-     falling through to something stronger. */
-  const doc = backup();
-  doc.data.readings.push({ id: "amb", param: "alkalinity", value: 9.1, date: "2026-04-05", time: "02:30" });
-  doc.counts.readings = 11;
-  const store = createMemoryStore();
-  await importInto(store, doc, { reconstruction: SYDNEY });
-  const row = (await store.ledger.allEvents()).find((e) => e.time.localDate === "2026-04-05");
-  eq(row.time.timeProvenance, PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN, "it keeps the provenance it arrived with");
-  eq(row.time.absoluteInstant, undefined, "and gains no instant");
-  eq(row.time.localTime, "02:30", "while keeping the clock reading it does have");
-
-  /* And the report counts it as one it could not resolve, so the keeper learns
-     that before the import runs rather than after. */
-  const described = describePlan(planImport(doc, { reconstruction: SYDNEY }), SYDNEY);
-  eq(described.unreconstructable, 1, "the report says one could not be resolved");
-});
-
-s.test("IMP-26", "the stronger provenance cannot be built without its proof", async () => {
-  await throws(
-    () => reconstructedInstant("2026-08-10", "18:00", "Australia/Sydney", null),
-    "reconstructed",
-    "a reconstruction with no record of itself is refused"
-  );
-  await throws(
-    () => reconstructedInstant("2026-08-10", "18:00", "Australia/Sydney", { basis: "X" }),
-    "reconstructed",
-    "and so is one with no statement date"
-  );
-  await throws(
-    () => reconstructedInstant("2026-08-10", "18:00", "", SYDNEY),
-    "timezone",
-    "and one with no zone"
-  );
-});
-
-s.test("IMP-27", "with no timezone stated, nothing is reconstructed at all", async () => {
+s.test("IMP-23", "a date-only reading gains NOTHING from the assumption", async () => {
+  /* The rule that survives every change of approach: 325 of the keeper's 353
+     readings have no time, and no assumption gives them one. There is no clock
+     reading to work from, and supplying one would be the fabrication this
+     module exists to refuse. */
   const store = createMemoryStore();
   await importInto(store, backup());
   const events = await store.ledger.allEvents();
-  eq(events.filter((e) => e.time.absoluteInstant).length, 0, "no record carries an instant");
-  ok(
-    events.some((e) => e.time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN),
-    "the timed ones keep their clock readings, as the weaker provenance"
+
+  const dateOnly = events.filter((e) => e.time.timeProvenance === PROVENANCE.DATE_ONLY);
+  ok(dateOnly.length > 0, `there are date-only records: ${dateOnly.length}`);
+  for (const e of dateOnly) {
+    eq(e.time.localTime, undefined, "no time of day");
+    eq(e.time.absoluteInstant, undefined, "no instant");
+    eq(e.time.offsetMinutes, undefined, "no offset");
+    eq(e.time.reconstruction, undefined, "and nothing assumed on its behalf");
+  }
+
+  /* And the count is unchanged by the assumption existing: it moves timed rows
+     and only timed rows. */
+  const withoutAssumption = createMemoryStore();
+  await importInto(withoutAssumption, backup(), { assumption: ASSUMED });
+  eq(
+    (await withoutAssumption.ledger.allEvents()).filter((e) => e.time.timeProvenance === PROVENANCE.DATE_ONLY).length,
+    dateOnly.length,
+    "the same records are date-only either way"
   );
-  eq(describePlan(planImport(backup())).exactElapsedAvailable, 0, "and the report says none is provable");
+});
+
+s.test("IMP-24", "an hour daylight saving skipped or repeated is imported like any other", async () => {
+  /* Deliberately NOT refused, and this check exists so nobody restores the
+     refusal. The owner ruled that a one-hour discrepancy twice a year is
+     irrelevant against measurement uncertainty and biological variation
+     measured in days — so 02:30 on a day the clocks moved is read as 02:30,
+     with the same offset every other row gets. */
+  const doc = backup();
+  doc.data.readings.push(
+    { id: "skip", param: "alkalinity", value: 9.1, date: "2026-10-04", time: "02:30" },
+    { id: "rep", param: "alkalinity", value: 9.0, date: "2026-04-05", time: "02:30" }
+  );
+  doc.counts.readings = doc.data.readings.length;
+
+  const store = createMemoryStore();
+  await importInto(store, doc);
+  const events = await store.ledger.allEvents();
+
+  for (const date of ["2026-10-04", "2026-04-05"]) {
+    const row = events.find((e) => e.time.localDate === date);
+    ok(row, `${date} imported`);
+    eq(row.time.localTime, "02:30", `${date} kept its clock reading`);
+    eq(row.time.offsetMinutes, 600, `${date} got the same offset as every other row`);
+    ok(row.time.absoluteInstant, `${date} has an instant like every other row`);
+  }
+
+  /* And the report counts them, because they are not a special case. */
+  const described = describePlan(planImport(doc, { assumption: ASSUMED }), ASSUMED);
+  eq(
+    described.exactElapsedAvailable,
+    described.withTime + doc.data["dose-log"].filter((r) => r.time).length,
+    "every timed row is counted as having an instant, none set aside"
+  );
+});
+
+s.test("IMP-25", "an assumed instant cannot be built without the assumption attached", async () => {
+  /* The half of the canon condition that survives the simplification: a record
+     may carry the stronger provenance only if what produced it travels with it.
+     A record claiming the precision without saying what was assumed is exactly
+     what the rule exists to prevent, and it cannot be built. */
+  await throws(
+    () => assumedLocalInstant("2026-08-10", "18:00", 600, null),
+    "assum",
+    "an assumed instant with no record of the assumption is refused"
+  );
+  await throws(
+    () => assumedLocalInstant("2026-08-10", "18:00", 600, { basis: "X" }),
+    "assum",
+    "and so is one that does not say when it was applied"
+  );
+  await throws(
+    () => assumedLocalInstant("2026-08-10", "18:00", undefined, ASSUMED),
+    "offset",
+    "and one with no offset to apply"
+  );
+
+  /* And the two marks are written HERE, not taken from the caller — so no
+     caller can build one of these that reads as a fact. */
+  const built = assumedLocalInstant("2026-08-10", "18:00", 600, {
+    ...ASSUMED,
+    assumed: false,
+    statedByKeeper: true,
+  });
+  eq(built.reconstruction.assumed, true, "it is an assumption whatever the caller claimed");
+  eq(built.reconstruction.statedByKeeper, false, "and the keeper did not state it, whatever the caller claimed");
+});
+
+s.test("IMP-26", "the import screen is told what was assumed, before anything is written", async () => {
+  /* Not silent is the whole defence. The keeper is not asked anything, so he
+     has to be TOLD — and the report carries the offset and the zone so the
+     screen can say it. */
+  const described = describePlan(planImport(backup(), { assumption: ASSUMED }), ASSUMED);
+  eq(described.assumedOffsetMinutes, 600, "the report names the offset that will be applied");
+  eq(described.assumedZoneId, "Australia/Sydney", "and the zone it came from");
+  ok(described.exactElapsedAvailable > 0, "and how many records it applies to");
+  ok(described.dateOnly > 0, "and how many it does not touch");
+});
+
+s.test("IMP-27", "the report's counts are derived the way the write derives them", async () => {
+  /* The report and the record cannot disagree, because they are built by the
+     same function. This was a literal zero once and became a second owner of
+     the same question the moment anything could produce an instant. */
+  const store = createMemoryStore();
+  const { planned } = await importInto(store, backup());
+  const described = describePlan(planned, ASSUMED);
+  const events = await store.ledger.allEvents();
+  eq(
+    events.filter((e) => e.time.absoluteInstant).length,
+    described.exactElapsedAvailable,
+    "as many instants in the record as the report promised"
+  );
 });
 
 s.test("IMP-28", "a dose says how sure it is of when it took effect, and never asserts more", async () => {
@@ -807,9 +861,9 @@ s.test("IMP-28", "a dose says how sure it is of when it took effect, and never a
      refused. Derived from the record, three ways, each true of the row. */
   const exact = effectiveConfidence(
     { date: "2026-08-17", time: "10:17" },
-    reconstructedInstant("2026-08-17", "10:17", "Australia/Sydney", SYDNEY)
+    assumedLocalInstant("2026-08-17", "10:17", 600, ASSUMED)
   );
-  eq(exact.level, "EXACT", "a resolved instant is exact");
+  eq(exact.level, "EXACT", "a row with an instant behind it is exact");
 
   const local = effectiveConfidence({ date: "2026-08-17", time: "10:17" }, { localDate: "2026-08-17" });
   eq(local.level, "UNCERTAIN", "a clock reading with no proven offset is not");
@@ -828,21 +882,36 @@ s.test("IMP-28", "a dose says how sure it is of when it took effect, and never a
     "and bounded more widely, because less is known"
   );
 
-  /* Through the importer, on a file with no zone: the dose rows carry clock
-     readings and no proven offset, so they are uncertain and say so. */
+  /* Through the importer. A dose row that carries a clock time gets the same
+     assumed offset every reading gets, so where it falls RELATIVE to the
+     readings either side of it is exactly what the file recorded — and
+     `EXACT` is a claim about that relative position, which is what `M-5`'s
+     straddling test reads. What the assumption cannot fix is where the whole
+     run sits on a world clock, and no engine rule depends on that.
+
+     A dose row with no clock time at all gets no instant, and is uncertain and
+     says so, with the bounds that requires. */
   const store = createMemoryStore();
   await importInto(store, backup());
-  for (const e of (await store.ledger.allEvents()).filter((x) => x.kind.startsWith("DOSE"))) {
-    eq(e.detail.effectiveAtConfidence, "UNCERTAIN", `${e.time.localDate} does not claim to be exact`);
-    ok(e.detail.effectiveAtEarliest && e.detail.effectiveAtLatest, "and carries the bounds that requires");
+  const doses = (await store.ledger.allEvents()).filter((x) => x.kind.startsWith("DOSE"));
+  ok(doses.length > 0, `there are dose rows: ${doses.length}`);
+  for (const e of doses) {
+    if (e.time.absoluteInstant) {
+      eq(e.detail.effectiveAtConfidence, "EXACT", `${e.time.localDate} sits exactly where the file put it`);
+    } else {
+      eq(e.detail.effectiveAtConfidence, "UNCERTAIN", `${e.time.localDate} does not claim to be exact`);
+      ok(e.detail.effectiveAtEarliest && e.detail.effectiveAtLatest, "and carries the bounds that requires");
+    }
   }
 
-  /* And with the zone stated, the same rows become exact — because now they
-     genuinely are. */
-  const zoned = createMemoryStore();
-  await importInto(zoned, backup(), { reconstruction: SYDNEY });
-  for (const e of (await zoned.ledger.allEvents()).filter((x) => x.kind.startsWith("DOSE"))) {
-    eq(e.detail.effectiveAtConfidence, "EXACT", `${e.time.localDate} is exact once the offset is known`);
+  /* A dose with no time of day is uncertain however the import is run: an
+     assumption about a timezone cannot supply an hour nobody wrote down. */
+  const doc = backup();
+  doc.data["dose-log"] = doc.data["dose-log"].map((r) => ({ ...r, time: null }));
+  const untimed = createMemoryStore();
+  await importInto(untimed, doc);
+  for (const e of (await untimed.ledger.allEvents()).filter((x) => x.kind.startsWith("DOSE"))) {
+    eq(e.detail.effectiveAtConfidence, "UNCERTAIN", `${e.time.localDate} has no hour to be exact about`);
   }
 });
 
@@ -949,7 +1018,7 @@ s.test("IMP-31", "a record keys the same way however it was written", async () =
     kind: KIND.WATER_CHANGE,
     time: { timeProvenance: PROVENANCE.DATE_ONLY, localDate: "2026-08-03" },
     recordedAt: "2026-08-03T09:00:00Z",
-    detail: { changedFraction: 10 / 77 },
+    detail: { volumeL: 10, changedFraction: 10 / 77 },
   });
 
   const { written } = await importInto(store, backup());
@@ -1108,6 +1177,222 @@ s.test("IMP-36", "what the engine reads survives the import", async () => {
   const empty = backup();
   empty.data["icp-tests"] = [{ id: "icp-e", date: "2026-07-27", lab: "Triton", ref: "B-9", elements: {} }];
   ok(planImport(empty).problems.length > 0, "an ICP panel with no results is reported");
+});
+
+/* -------------------------------------------------------------------------
+   10. What the review found after the import was built.
+   ---------------------------------------------------------------------- */
+
+s.test("IMP-37", "correcting the tank's volume does not make every water change import again", () => {
+  /* JAKE'S N-1, and the ordinary thing that triggers it: an experienced keeper
+     imports at the volume he first guessed, then corrects net volume once he
+     has accounted for rock and sand, then re-imports at cutover — which the
+     module's own comments call the documented path.
+
+     Keyed on the DERIVED fraction, every key changed and all twenty-five water
+     changes were written a second time, with the engine seeing two breaks on
+     each date. Keyed on the litres the file actually records, the volume is
+     irrelevant to identity. */
+  const row = (volumeL) =>
+    naturalKeyOfEvent({
+      kind: KIND.WATER_CHANGE,
+      time: { localDate: "2026-06-02" },
+      detail: { volumeL: 10, changedFraction: 10 / volumeL },
+    });
+
+  eq(row(77), row(70), "the same water change keys the same after the volume is corrected");
+  ok(row(77), "and it does key");
+
+  /* Two different water changes on one day are still two. */
+  const ten = naturalKeyOfEvent({
+    kind: KIND.WATER_CHANGE,
+    time: { localDate: "2026-06-02" },
+    detail: { volumeL: 10 },
+  });
+  const twenty = naturalKeyOfEvent({
+    kind: KIND.WATER_CHANGE,
+    time: { localDate: "2026-06-02" },
+    detail: { volumeL: 20 },
+  });
+  ok(ten !== twenty, "ten litres and twenty litres are not the same change");
+});
+
+s.test("IMP-38", "a re-import after the volume is corrected writes nothing twice", async () => {
+  /* The same finding, end to end, because a key check alone would not catch a
+     second implementation on the import side. */
+  const store = createMemoryStore();
+  await store.config.append(
+    { netVolumeL: 77, selectedPotencyDkhPerMl: 0.0693, targetRangeMinDkh: 8.6, targetRangeMaxDkh: 9.2, recommendationPrecisionMlPerDay: 0.1 },
+    "2026-01-01T00:00:00Z"
+  );
+  const first = await importInto(store, backup());
+  ok(first.written.waterChanges > 0, `water changes came across: ${first.written.waterChanges}`);
+
+  /* He corrects the tank's net volume, the way he would in Settings. */
+  await store.config.append(
+    { netVolumeL: 70, selectedPotencyDkhPerMl: 0.0693, targetRangeMinDkh: 8.6, targetRangeMaxDkh: 9.2, recommendationPrecisionMlPerDay: 0.1 },
+    "2026-08-22T00:00:00Z"
+  );
+  const second = await importInto(store, backup());
+  eq(second.written.waterChanges, 0, "not one water change is written a second time");
+});
+
+s.test("IMP-39", "a value this app derived is marked as derived, and one the file recorded is not", async () => {
+  /* JAKE'S F-1 and F-2. Both are inferences about history, and inferred history
+     stored without a mark is inferred history presented as fact. Whether either
+     should be derived AT ALL is the owner's, and is recorded open; that they say
+     which they are is not optional. */
+  const store = createMemoryStore();
+  await store.config.append(
+    { netVolumeL: 77, selectedPotencyDkhPerMl: 0.0693, targetRangeMinDkh: 8.6, targetRangeMaxDkh: 9.2, recommendationPrecisionMlPerDay: 0.1 },
+    "2026-01-01T00:00:00Z"
+  );
+  await importInto(store, backup());
+  const events = await store.ledger.allEvents();
+
+  /* V1 records each dose change as one number — the new rate. The "from" is
+     this importer reading the previous recorded change. */
+  const changes = events.filter((e) => e.kind === KIND.DOSE_CHANGE);
+  ok(changes.length > 0, `there are dose changes: ${changes.length}`);
+  for (const e of changes) {
+    eq(e.detail.fromMlPerDayDerived, true, `${e.time.localDate}'s "from" says it was derived`);
+    eq(e.detail.toMlPerDayDerived, undefined, "and the value the file recorded claims nothing of the kind");
+  }
+
+  /* The file records litres and no tank volume, so the fraction comes from the
+     volume as configured NOW — which may not be the volume the tank had in
+     February. The mark says which number was used. */
+  const water = events.filter((e) => e.kind === KIND.WATER_CHANGE);
+  ok(water.length > 0, `there are water changes: ${water.length}`);
+  for (const e of water) {
+    eq(e.detail.changedFractionDerived, true, `${e.time.localDate}'s fraction says it was derived`);
+    eq(e.detail.changedFractionFromVolumeL, 77, "naming the volume it was derived from");
+    eq(e.detail.volumeL, 10, "beside the litres the file actually recorded");
+  }
+});
+
+s.test("IMP-40", "the reminders are counted too, and a count the file does not state is not invented", () => {
+  /* JAKE'S N-4: six collections were checked against the file's own counts and
+     `reminders` was not, so a truncated reminders block passed the
+     self-consistency gate in silence.
+
+     It is counted now. Format v1 states no count for it, so it is reported as
+     UNVERIFIED rather than as a disagreement — calling it a disagreement would
+     raise an alarm on every genuine file, and an alarm that fires always is an
+     alarm nobody reads. */
+  const counted = checkCounts(backup());
+  eq(counted.actual.reminders, backup().data.reminders.length, "the reminders are counted");
+  eq(counted.disagreements.length, 0, "and a file that states no count for them is not in disagreement");
+  ok(
+    counted.unverified.some((u) => u.key === "reminders"),
+    "it is reported as unverified instead, so the number is on screen with its status"
+  );
+
+  /* And where the file DOES state one, it is checked like every other. */
+  const stated = backup();
+  stated.counts.reminders = 99;
+  const wrong = checkCounts(stated);
+  ok(
+    wrong.disagreements.some((d) => d.key === "reminders"),
+    "a stated reminders count that does not match is a disagreement"
+  );
+});
+
+s.test("IMP-41", "an uncertain dose bound spans every offset the world has, not a convenient one", () => {
+  /* These bounds are what the engine reads for `M-5`'s straddling-interval
+     confounding: too narrow a bound tells it a dose was unambiguously inside an
+     interval when it was not, and it then attributes a response it should have
+     refused.
+
+     The old check asserted only that the bound CONTAINED the wall time read as
+     UTC — which a one-hour bound also does, so the constant could be cut from
+     14 hours to 1 and stay green. The claim is about width and both edges. */
+  const W = "2026-08-17T10:17:00Z";
+  const c = effectiveConfidence({ date: "2026-08-17", time: "10:17" }, { localDate: "2026-08-17" });
+  eq(c.level, "UNCERTAIN", "a row with no instant behind it is uncertain");
+
+  /* +14:00 is the furthest east anybody lives and -12:00 the furthest west, so
+     the earliest the moment can be is W-14h and the latest is W+12h. */
+  eq(Date.parse(c.bounds.effectiveAtEarliest), Date.parse(W) - 14 * 3600000, "the eastern edge is 14 hours");
+  eq(Date.parse(c.bounds.effectiveAtLatest), Date.parse(W) + 12 * 3600000, "the western edge is 12 hours");
+  eq(
+    (Date.parse(c.bounds.effectiveAtLatest) - Date.parse(c.bounds.effectiveAtEarliest)) / 3600000,
+    26,
+    "and the whole inhabited range is 26 hours wide"
+  );
+
+  /* A row with no time of day at all is the same range around a whole DAY, so
+     it is 24 hours wider. */
+  const day = effectiveConfidence({ date: "2026-08-17", time: null }, { localDate: "2026-08-17" });
+  eq(
+    Math.round((Date.parse(day.bounds.effectiveAtLatest) - Date.parse(day.bounds.effectiveAtEarliest)) / 60000),
+    26 * 60 + 23 * 60 + 59,
+    "a whole day of unknown hour, plus the same 26 hours of unknown offset"
+  );
+});
+
+s.test("IMP-42", "where dose history begins is alkalinity's own, and reads the record it is given", async () => {
+  /* `IMP-35` proves History does not carry a SECOND copy of this rule. Nothing
+     proved the one copy was right: the parameter filter could be deleted and
+     the fixture would not notice, because its calcium dose happens to be later
+     than its alkalinity one. A keeper whose calcium dosing predates his
+     alkalinity dosing — ordinary, since calcium and alkalinity are often
+     started at different times — would get the boundary drawn on a date no
+     alkalinity dose record supports. */
+  const projected = [
+    { state: "CURRENT", event: { kind: KIND.DOSE_CHANGE, parameter: "CA", time: { localDate: "2026-05-01" } } },
+    { state: "CURRENT", event: { kind: KIND.DOSE_STATE, parameter: "ALK", time: { localDate: "2026-08-11" } } },
+    { state: "CURRENT", event: { kind: KIND.DOSE_CHANGE, parameter: "ALK", time: { localDate: "2026-08-19" } } },
+  ];
+  eq(firstDoseDate(projected), "2026-08-11", "the calcium dose four months earlier is not the boundary");
+
+  /* An unmarked dose is alkalinity's — that is what every dose this app has
+     ever written means. */
+  eq(
+    firstDoseDate([{ state: "CURRENT", event: { kind: KIND.DOSE_STATE, time: { localDate: "2026-04-02" } } }]),
+    "2026-04-02",
+    "a dose that names no parameter is alkalinity's"
+  );
+
+  /* A superseded or disowned record does not set it. */
+  eq(
+    firstDoseDate([
+      { state: "SUPERSEDED", event: { kind: KIND.DOSE_STATE, parameter: "ALK", time: { localDate: "2026-01-01" } } },
+      { state: "CURRENT", event: { kind: KIND.DOSE_STATE, parameter: "ALK", time: { localDate: "2026-08-11" } } },
+    ]),
+    "2026-08-11",
+    "a corrected record does not draw the boundary"
+  );
+
+  eq(firstDoseDate([]), null, "and a ledger with no dose history has no boundary at all");
+});
+
+s.test("IMP-43", "a reminder the keeper turned off stays off, and his own notes survive", async () => {
+  /* Two separate silent losses, both invisible to the fixture because every
+     reminder in it was enabled and every note in it was empty. Uniform input,
+     uniform output — the classic shape of a check that cannot fail. */
+  const doc = backup();
+  doc.data.reminders = [
+    { id: "r-on", label: "Test alkalinity", paramKey: "alkalinity", kind: "test", intervalDays: 2, startDate: "2026-08-10", enabled: true },
+    { id: "r-off", label: "Test magnesium", paramKey: "magnesium", kind: "test", intervalDays: 30, startDate: "2026-08-10", enabled: false },
+  ];
+  doc.data.readings = doc.data.readings.map((r, i) =>
+    i === 0 ? { ...r, note: "after the water change" } : r
+  );
+
+  const store = createMemoryStore();
+  await importInto(store, doc);
+
+  const tasks = await store.tasks.tasks();
+  const on = tasks.find((r) => /alkalinity/i.test(r.label || ""));
+  const off = tasks.find((r) => /magnesium/i.test(r.label || ""));
+  ok(on && off, `both reminders came across: ${tasks.map((r) => r.label).join(", ")}`);
+  eq(on.enabled, true, "the one he left on is on");
+  eq(off.enabled, false, "and the one he turned off is STILL off");
+
+  const noted = (await store.ledger.allEvents()).find((e) => e.detail && e.detail.note);
+  ok(noted, "the note he typed came across with its reading");
+  eq(noted.detail.note, "after the water change", "word for word");
 });
 
 export default s;

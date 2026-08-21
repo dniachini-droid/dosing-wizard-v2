@@ -846,12 +846,12 @@ export const STRINGS = Object.freeze({
     `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
   "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
 
-  "err.reconstructionNeedsZone":
-    "A reconstructed time needs the timezone it was recorded in. Without one there is nothing to reconstruct " +
-    "it from.",
-  "err.reconstructionNeedsRecord":
-    "A reconstructed time has to carry the reason it was reconstructed. A record that claims the stronger " +
-    "precision without saying where it came from is the thing this rule exists to prevent.",
+  "err.assumedNeedsOffset":
+    "A time built from an assumption needs the offset that was assumed. Without one there is nothing to " +
+    "build it from.",
+  "err.assumptionNeedsRecord":
+    "A time built from an assumption has to carry the assumption. A record that claims the stronger " +
+    "precision without saying what was assumed is the thing this rule exists to prevent.",
 
   "err.chartNeedsLabel":
     "A chart must be told which parameter it is drawing. This one was not, which is the defect carried over " +
@@ -1159,34 +1159,25 @@ export const STRINGS = Object.freeze({
   "import.chooseFile": "The export file",
   "import.reading": "Reading it…",
 
-  "import.zone.label": "Which timezone were these readings taken in?",
-  "import.zone.hint":
-    "Your old app recorded the time of day and not the timezone, and without one a clock reading cannot be " +
-    "turned into a moment. Saying which zone you were in is what makes those readings usable. It is recorded " +
-    "as YOUR statement, with the date you made it, and it travels with every reading it touched — so it can " +
-    "be seen, and disbelieved, later. Leave it empty and nothing is reconstructed.",
-
-  "import.zone.title": "The times, and what your answer does to them",
-  "import.zone.stated": "Timezone you gave",
-  "import.zone.reconstructed": "Readings that become usable",
-  "import.zone.unresolved": "Readings it cannot resolve",
-  "import.zone.none": "not given",
-  "import.zone.body": ({ zone, n }) =>
-    `${n} readings carry a clock reading, and saying you were in ${zone} turns each of them into a moment — ` +
-    `working out for itself which side of a daylight-saving change each date falls on, so a reading in ` +
-    `February and one in August do not get the same offset.`,
-  "import.zone.dateOnlyUntouched": ({ n }) =>
-    `The other ${n} have no time of day at all. They gain nothing from this and are not touched: there is no ` +
-    `clock reading to work from, and inventing one is the thing this app will not do.`,
-  "import.zone.unresolvedBody": ({ n }) =>
-    n === 1
-      ? "One reading falls in an hour that daylight saving skipped or repeated. It has no single answer, so it " +
-        "is left exactly as it arrived."
-      : `${n} readings fall in hours that daylight saving skipped or repeated. Those have no single answer, so ` +
-        `they are left exactly as they arrived.`,
-  "import.zone.notStated":
-    "No timezone given, so nothing is reconstructed and the readings that carry a time keep it as a clock " +
-    "reading. Everything still imports; the engine will decline to measure rates across them.",
+  "import.assumed.title": "The recorded times, and what is assumed about them",
+  "import.assumed.offset": "Offset applied",
+  "import.assumed.offsetWith": ({ offset, zone }) => `${offset} (${zone})`,
+  "import.assumed.noOffset": "none — this device does not know its own",
+  "import.assumed.applies": "Readings it applies to",
+  "import.assumed.untouched": "Readings it does not touch",
+  "import.assumed.body": ({ n }) =>
+    `${n} of your readings carry a time of day. Your old app did not record which timezone that clock was in, ` +
+    `so this one applies the offset your device is on now — the same offset to every reading.`,
+  "import.assumed.elapsed":
+    "That is safe for the thing it is used for. Your tank does not travel, so the same offset applies to all " +
+    "of them, and the time BETWEEN any two readings comes out exactly right — which is the only thing worked " +
+    "out from these times. What it cannot tell you is where those readings sit on a world clock.",
+  "import.assumed.recorded":
+    "It is written down as an assumption, on every reading it touched: what was assumed, and that nobody told " +
+    "us it. It is not recorded as something you said.",
+  "import.assumed.note":
+    "Readings with no time of day gain nothing from this and are not touched. There is no clock reading to " +
+    "work from, and inventing one is the thing this app will not do.",
 
   "import.potency.label": "Solution strength (dKH per mL, in your tank)",
   "import.potency.hint":
@@ -1262,9 +1253,8 @@ export const STRINGS = Object.freeze({
     "A reading with no time of day is stored with no time of day. Not midnight, not midday, not the time you " +
     "usually test — nothing. That cannot be undone later, so it is not done at all.",
   "import.time.local":
-    "The readings that do carry a time carry a clock reading and no timezone. The clock reading is kept and " +
-    "shown; it is not turned into an exact moment, because which timezone it was in was never written down " +
-    "and assuming one would be inventing it.",
+    "The readings that do carry a time are read as local times and given this device's offset, so the time " +
+    "between any two of them is exact. Which offset was assumed is recorded on each one.",
   "import.time.note":
     "This is the one thing about an import that cannot be corrected afterwards: a made-up time is " +
     "indistinguishable from a real one the moment it is stored.",
@@ -1286,17 +1276,13 @@ export const STRINGS = Object.freeze({
     "to be worth analysing.",
   "import.eligibility.noDoseHistory":
     "Nothing in the file says what was being dosed at any point, so none of the period has delivery context.",
-  "import.eligibility.timezoneHead":
+  "import.eligibility.noInstantHead":
     "Even the part with dose records cannot be analysed, and it is worth knowing why now.",
-  "import.eligibility.timezoneBody": ({ date }) =>
-    `The readings from ${date} onwards do carry a time of day, but nothing anywhere in the file records which ` +
-    `timezone that clock was in. Working out how fast the tank is using something means dividing by how much ` +
-    `time passed between two readings, and that cannot be done from a clock reading whose offset is unknown — ` +
-    `so the engine will decline rather than estimate.`,
-  "import.eligibility.timezoneWhat":
-    "The one thing that would change it is you: if you can say which timezone you were in for those readings, " +
-    "and that is recorded as the reason, they become usable. Nobody else can supply it, and the app will not " +
-    "assume it. Nothing is lost by importing now — the readings are kept either way.",
+  "import.eligibility.noInstantBody": ({ date }) =>
+    `None of the readings from ${date} onwards carries a time of day. Working out how fast the tank is using ` +
+    `something means dividing by how much time passed between two readings, and a date on its own does not ` +
+    `say — so the engine will decline rather than estimate. Nothing is lost by importing: the readings are ` +
+    `kept either way, and one more test with a time on it starts the clock.`,
 
   "import.eligibility.note":
     "This app does not decide which readings are usable. They are stored with what is true about them, and " +

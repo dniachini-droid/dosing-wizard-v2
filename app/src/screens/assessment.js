@@ -47,7 +47,7 @@ import { t } from "../strings.js";
 
 /* Card class → the headline register. Data, keyed on what `cards.js` selected;
    this table adds no condition of its own. */
-const CARD_TONE = Object.freeze({
+export const CARD_TONE = Object.freeze({
   SAFETY_RETURN: "is-safety",
   CAPABILITY_REFUSAL: "",
   INSUFFICIENT: "",

@@ -28,7 +28,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok, deepEq, throws } from "./harness.mjs";
-import { niceAxis } from "../../app/src/ui/chart.js";
+import { attachGestures, niceAxis } from "../../app/src/ui/chart.js";
 
 const s = suite("the ported chart");
 
@@ -44,6 +44,23 @@ s.test("CH-01", "the axis snaps to 1, 2, 5 or 10 and never prints a floating-poi
      8.591999999999999, and a numeric domain is printed verbatim by the chart
      library — which is where the long strings of 9s on the y-axis came
      from." */
+  /* V1'S OWN DEFECT, WITH AN INPUT THAT PRODUCES IT.
+
+     The comment above was here and the cases below it were not: `[8.6, 9.2]`,
+     `[400, 450]` and the rest all come out clean whether the trimming happens
+     or not, so the named defect was documented and never reproduced. A real
+     phosphate span does produce it — 0.14 to 0.235 pads and snaps to a high
+     bound of 0.30000000000000004 before it is trimmed. */
+  const po4 = niceAxis(0.14, 0.235);
+  for (const bound of po4.domain) {
+    eq(
+      String(bound).length <= 6,
+      true,
+      `the domain bound ${bound} carries no floating-point tail`
+    );
+  }
+  eq(po4.domain[1], 0.3, "and it is the number it should be, not a near miss");
+
   const a = niceAxis(8.6, 9.2);
   for (const tick of a.ticks) {
     const printed = a.format(tick);
@@ -197,18 +214,62 @@ s.test("CH-07", "zooming never leaves the series, and never zooms past the floor
   /* V1's `clampRange`, and its 0.04 minimum span. A window that ran off either
      end would show empty space where the keeper expects readings; a span with
      no floor would let a pinch divide by nearly nothing. */
-  const clamp = (start, end) => {
-    if (start < 0) { end -= start; start = 0; }
-    if (end > 1) { start -= (end - 1); end = 1; }
-    return { start: Math.max(0, start), end: Math.min(1, end) };
+  /* DRIVEN, NOT COPIED.
+
+     This used to re-implement `clampRange` in the test and assert that the
+     copy clamped — which proved a property of the test. `attachGestures` needs
+     no DOM beyond four methods, so the real one is driven instead, and the
+     defect the copy could not see shows up immediately: without the upper
+     clamp, panning to the end of the series silently SHRINKS the keeper's
+     window instead of stopping at the edge. */
+  const drive = () => {
+    const on = {};
+    let range = { start: 0, end: 1 };
+    const el = {
+      addEventListener: (k, f) => { on[k] = f; },
+      removeEventListener: () => {},
+      getBoundingClientRect: () => ({ width: 320, left: 0, top: 0, height: 200 }),
+    };
+    attachGestures(el, { onChange: (r) => { range = r; }, getRange: () => range });
+    const fire = (k, e) => on[k]({ preventDefault() {}, stopPropagation() {}, ...e });
+    return { fire, get: () => range, set: (r) => { range = r; } };
   };
 
-  for (const [a, b] of [[-0.5, 0.5], [0.8, 1.6], [-2, 3], [0.4, 0.6]]) {
-    const r = clamp(a, b);
-    ok(r.start >= 0, `start stays at or above 0: ${r.start}`);
-    ok(r.end <= 1, `end stays at or below 1: ${r.end}`);
-    ok(r.end > r.start, "and the window has width");
+  /* Pan left from a half-width window: it stops at the end and KEEPS its
+     width. */
+  const pan = drive();
+  pan.set({ start: 0.4, end: 0.9 });
+  pan.fire("touchstart", { touches: [{ clientX: 300, clientY: 0 }] });
+  pan.fire("touchmove", { touches: [{ clientX: 0, clientY: 0 }] });
+  const panned = pan.get();
+  ok(panned.end <= 1 + 1e-9, `the window does not run off the end: ${panned.end}`);
+  ok(panned.start >= -1e-9, `nor off the start: ${panned.start}`);
+  ok(
+    Math.abs(panned.end - panned.start - 0.5) < 1e-9,
+    `and it keeps the width it had: ${(panned.end - panned.start).toFixed(4)}`
+  );
+
+  /* Pan right the same way, against the other edge. */
+  const back = drive();
+  back.set({ start: 0.1, end: 0.6 });
+  back.fire("touchstart", { touches: [{ clientX: 0, clientY: 0 }] });
+  back.fire("touchmove", { touches: [{ clientX: 300, clientY: 0 }] });
+  const b2 = back.get();
+  ok(b2.start >= -1e-9 && b2.end <= 1 + 1e-9, `stays inside: ${b2.start}..${b2.end}`);
+  ok(Math.abs(b2.end - b2.start - 0.5) < 1e-9, `and keeps its width: ${(b2.end - b2.start).toFixed(4)}`);
+
+  /* And a pinch cannot go below the floor, however hard it is pinched. */
+  const pinch = drive();
+  pinch.fire("touchstart", { touches: [{ clientX: 0, clientY: 0 }, { clientX: 300, clientY: 0 }] });
+  for (let i = 0; i < 12; i++) {
+    pinch.fire("touchmove", { touches: [{ clientX: 148, clientY: 0 }, { clientX: 152, clientY: 0 }] });
+    pinch.fire("touchstart", { touches: [{ clientX: 0, clientY: 0 }, { clientX: 300, clientY: 0 }] });
   }
+  const zoomed = pinch.get();
+  ok(
+    zoomed.end - zoomed.start >= 0.04 - 1e-9,
+    `V1's 0.04 floor holds however hard it is pinched: ${(zoomed.end - zoomed.start).toFixed(4)}`
+  );
 
   /* On EVERY path that zooms, not just one of them. There are two — a pinch
      and a wheel — and a floor on one of them is a floor a keeper can get past
@@ -219,7 +280,7 @@ s.test("CH-07", "zooming never leaves the series, and never zooms past the floor
   ok(zooms.length >= 2, `and there is more than one zoom path to check: ${zooms.length}`);
   ok(/now - lastTapRef\.current < 300/.test(CHART), "the 300ms double-tap window is V1's");
   ok(/e\.deltaY < 0 \? 1\.15 : 0\.87/.test(CHART), "and so are the wheel factors");
-  ok(/onChange\(\{ start: 0, end: 1 \}\)/.test(CHART), "a double-tap resets to the whole series");
+  ok(/onChange\(\{ start: 0, end: 1 \}, \{ reset: true \}\)/.test(CHART), "a double-tap resets to the whole series, and says so");
 });
 
 s.test("CH-08", "the gesture arithmetic has ONE owner, and the moment chart uses it", () => {
@@ -401,6 +462,57 @@ s.test("CH-12", "the ported chart is what every chart surface draws", () => {
   ok(/an all-zero trace element was drawing a -0\.10 gridline/.test(CHART), "and the negative-gridline one");
   ok(/displayed a reading of 9\.3 as\s+9\.5/.test(CHART), "and the snapped-value one");
   ok(/9276a2ca254e88d19e0f02dced42a1b896499780/.test(CHART), "and the V1 commit it came from is named");
+});
+
+s.test("CH-14", "a double-tap resets the zoom and does NOT open a reading", () => {
+  /* The hint under every chart says "double-tap to reset". On a touch screen a
+     double-tap also produces a `click`, and the tap surface reads a click on an
+     already-selected point as "open this entry" — so the keeper following the
+     app's own instruction got an entry sheet every time he reset the zoom.
+
+     `attachGestures` reports the reset; the chart ignores the click that
+     belongs to it. Driven through the real gesture code. */
+  const on = {};
+  const seen = [];
+  let range = { start: 0.3, end: 0.6 };
+  const el = {
+    addEventListener: (k, f) => { on[k] = f; },
+    removeEventListener: () => {},
+    getBoundingClientRect: () => ({ width: 320, left: 0, top: 0, height: 200 }),
+  };
+  attachGestures(el, {
+    onChange: (r, meta) => { range = r; seen.push(meta || null); },
+    getRange: () => range,
+  });
+  const fire = (k, e) => on[k]({ preventDefault() {}, stopPropagation() {}, ...e });
+
+  /* Two taps inside V1's 300 ms window. */
+  fire("touchstart", { touches: [{ clientX: 160, clientY: 100 }] });
+  fire("touchend", { touches: [] });
+  fire("touchstart", { touches: [{ clientX: 160, clientY: 100 }] });
+
+  deepEq(range, { start: 0, end: 1 }, "the whole series is back");
+  eq(seen[seen.length - 1] && seen[seen.length - 1].reset, true, "and the change says it was a reset");
+
+  /* A single tap is not a reset, so an ordinary tap still reaches the caller
+     as an ordinary change. */
+  const second = [];
+  let r2 = { start: 0.3, end: 0.6 };
+  const el2 = {
+    addEventListener: (k, f) => { on[k] = f; },
+    removeEventListener: () => {},
+    getBoundingClientRect: () => ({ width: 320, left: 0, top: 0, height: 200 }),
+  };
+  attachGestures(el2, { onChange: (r, m) => { r2 = r; second.push(m || null); }, getRange: () => r2 });
+  fire("touchstart", { touches: [{ clientX: 160, clientY: 100 }] });
+  fire("touchmove", { touches: [{ clientX: 120, clientY: 100 }] });
+  ok(second.length > 0, "a pan reports a change");
+  ok(!second.some((m) => m && m.reset), "and none of them claims to be a reset");
+
+  /* And the chart acts on it: the tap surface refuses the click that belongs to
+     a reset, which is what stops the sheet opening. */
+  ok(/if \(Date\.now\(\) - lastResetAt < 400\) return;/.test(CHART), "the reset's own click is ignored");
+  ok(/if \(meta && meta\.reset\) lastResetAt = Date\.now\(\);/.test(CHART), "and it is the gesture that says so");
 });
 
 export default s;

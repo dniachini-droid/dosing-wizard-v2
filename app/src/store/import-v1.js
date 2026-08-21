@@ -21,11 +21,16 @@
    to detect or undo it later.
 
    So this module has exactly two ways to build a time, both of them `time.js`'s
-   own constructors, and neither of them reads a clock. A row with no `time`
-   field gets `dateOnly()`. A row with one gets `localTimeZoneUnknown()` —
-   because the export records a wall-clock time and NO timezone, and treating a
-   local `HH:MM` as an absolute instant is the fabrication named above. There is
-   no third branch and no default.
+   own constructors. A row with no `time` field gets `dateOnly()` and nothing
+   else — no instant, no hour, no default. A row with one gets
+   `assumedLocalInstant()`: its wall-clock time with ONE offset applied, the
+   device's, recorded on the record as an assumption nobody made. There is no
+   third branch.
+
+   What that costs is knowing where the run sits on the world clock. What it
+   preserves is every elapsed interval between the readings, which is the only
+   thing computed from them, because the same offset applies to all of them and
+   the tank does not travel.
 
    WHAT IS ELIGIBLE FOR WHAT
    -------------------------
@@ -60,7 +65,7 @@
    ========================================================================= */
 
 import { KIND, SOURCE, PARAMETERS } from "./ledger.js";
-import { dateOnly, localTimeZoneUnknown, reconstructedInstant, resolveLocalInZone } from "./time.js";
+import { dateOnly, assumedLocalInstant } from "./time.js";
 import { makeTask, TASK_KIND } from "./schedule.js";
 import { t } from "../strings.js";
 
@@ -162,6 +167,11 @@ export function parseBackup(text) {
   return { ok: true, doc };
 }
 
+/* The collections format v1's `counts` block is expected to state. A file that
+   omits one of these has been altered or truncated; a file that omits anything
+   else has simply never counted it. */
+const STATED_COLLECTIONS = new Set(["readings", "icps", "waterChanges", "doseChanges", "taskLog", "lighting"]);
+
 /* --- what the file says about itself, against what it contains -------------
 
    The export states its own counts. If they disagree with what is actually in
@@ -178,20 +188,33 @@ export function checkCounts(doc) {
     doseChanges: len(d["dose-log"]),
     taskLog: len(d["task-log"]),
     lighting: len(d["lighting-log"]),
+    /* THE SEVENTH COLLECTION, WHICH THE CHECK USED NOT TO SEE AT ALL.
+
+       Six collections were counted and `reminders` was not, so a truncated
+       reminders block passed the self-consistency gate in silence. It is
+       counted now — but format v1 states no count for it, so there is nothing
+       to compare it against and calling that a disagreement would raise an
+       alarm on every genuine file. It is reported as UNVERIFIED instead: the
+       number is on the screen, and so is the fact that the file does not
+       corroborate it. */
+    reminders: len(d.reminders),
   };
   const disagreements = [];
+  const unverified = [];
   for (const [key, n] of Object.entries(actual)) {
     if (stated[key] === undefined) {
-      /* A file that makes no claim about its own size has not been checked
-         against anything. Reported as its own state rather than passing
-         silently: a truncated export with its counts block removed used to
-         import as though it were whole. */
-      disagreements.push({ key, stated: null, actual: n, unstated: true });
+      /* A file that makes no claim about a collection has not been checked
+         against anything for it. Where the format is expected to state a
+         count, that is a disagreement — a truncated export with its counts
+         block removed used to import as though it were whole. Where the format
+         states none for anybody, it is simply unverifiable. */
+      if (STATED_COLLECTIONS.has(key)) disagreements.push({ key, stated: null, actual: n, unstated: true });
+      else unverified.push({ key, actual: n });
       continue;
     }
     if (stated[key] !== n) disagreements.push({ key, stated: stated[key], actual: n });
   }
-  return { actual, stated, disagreements };
+  return { actual, stated, disagreements, unverified };
 }
 
 function len(v) {
@@ -202,7 +225,7 @@ function len(v) {
 
    Everything the import would do, worked out before anything is written, so
    the keeper reads it and chooses. Pure: it reads no store and no clock. */
-export function planImport(doc, { existing = [], existingCompletions = [], reconstruction = null, config = null } = {}) {
+export function planImport(doc, { existing = [], existingCompletions = [], assumption = null, config = null } = {}) {
   const d = doc.data || {};
   const problems = [];
   /* The volume the ledger's own water changes were recorded against, so the
@@ -335,15 +358,9 @@ export function planImport(doc, { existing = [], existingCompletions = [], recon
       continue;
     }
     const row = { litres, date: w.date, note: r.note || null };
-    /* Keyed the way the ledger keys it, so a water change the keeper typed
-       here and the same one arriving from the export are one record. */
-    const key = naturalKey(
-      KIND.WATER_CHANGE,
-      null,
-      row.date,
-      null,
-      volumeL > 0 ? round6(litres / volumeL) : `L${litres}`
-    );
+    /* Keyed the way the ledger keys it — on the litres the file records, never
+       on the fraction derived from today's tank volume. */
+    const key = naturalKey(KIND.WATER_CHANGE, null, row.date, "", `L${round6(litres)}`);
     if (claim(key)) waterChanges.push(row);
     else skippedWater.push(row);
   }
@@ -465,7 +482,7 @@ export function planImport(doc, { existing = [], existingCompletions = [], recon
    `V1-DATA-PROVENANCE.md` §1: "true measurements with no delivery history
    attached. That is the whole of the limitation. It is not a doubt about the
    numbers." */
-export function describePlan(planned, reconstruction = null) {
+export function describePlan(planned, assumption = null) {
   const byParameter = new Map();
   let withTime = 0;
   for (const r of planned.readings) {
@@ -497,17 +514,16 @@ export function describePlan(planned, reconstruction = null) {
   const alk = planned.readings.filter((r) => r.parameter === "ALK");
   const afterBoundary = doseHistoryFrom ? alk.filter((r) => r.date >= doseHistoryFrom).length : 0;
 
-  /* How many timed rows the keeper's stated zone can actually resolve, and how
-     many it cannot. An hour daylight saving skipped never happened and an hour
-     it repeated happened twice; neither is reconstructed, and the count says
-     so rather than the keeper discovering it afterwards. */
-  let reconstructed = 0;
-  let unreconstructable = 0;
-  for (const r of [...planned.readings, ...planned.doses]) {
-    if (!r.time) continue;
-    const built = timeFor(r, reconstruction);
-    if (built.absoluteInstant) reconstructed += 1;
-    else if (reconstruction) unreconstructable += 1;
+  /* How many records come out with an instant behind them. Every timed row
+     does, now that one assumed offset is applied to all of them — but the count
+     is DERIVED by building each row's time the same way the write builds it,
+     rather than asserted, so the report and the record cannot come apart. */
+  let withInstant = 0;
+  if (assumption) {
+    for (const r of [...planned.readings, ...planned.doses]) {
+      if (!r.time) continue;
+      if (timeFor(r, assumption).absoluteInstant) withInstant += 1;
+    }
   }
 
   return {
@@ -519,16 +535,12 @@ export function describePlan(planned, reconstruction = null) {
     alkTotal: alk.length,
     alkAfterBoundary: afterBoundary,
     alkBeforeBoundary: alk.length - afterBoundary,
-    /* DERIVED, NOT ASSERTED.
-
-       This was a literal zero, which was true while nothing could reconstruct
-       an instant and became a second owner of "how many records have a provable
-       instant" the moment something could. It is now counted the same way the
-       write counts it — by building each row's time through `timeFor` and
-       asking what came back. The report and the record cannot disagree. */
-    exactElapsedAvailable: reconstructed,
-    unreconstructable,
-    reconstructedZone: reconstruction ? reconstruction.zoneId : null,
+    /* DERIVED, NOT ASSERTED. Counted the way the write counts it. */
+    exactElapsedAvailable: withInstant,
+    /* What was assumed to get there, so the screen can say it before the
+       keeper presses anything. */
+    assumedOffsetMinutes: assumption ? assumption.offsetMinutes : null,
+    assumedZoneId: assumption ? assumption.zoneId || null : null,
   };
 }
 
@@ -578,14 +590,23 @@ export function naturalKeyOfEvent(e) {
   }
 
   if (e.kind === KIND.WATER_CHANGE) {
-    /* Keyed on the fraction, because that is the field every water change
-       has however it was written — the importer computes one where the tank's
-       volume is known, and the app's form asks for one directly. Litres are
-       kept alongside and are not the identity. */
-    const fraction = detail.changedFraction;
-    if (fraction != null) return naturalKey(KIND.WATER_CHANGE, null, date, "", round6(fraction));
+    /* KEYED ON WHAT WAS RECORDED, NOT ON WHAT WAS DERIVED.
+
+       This used to key on `changedFraction`, which the importer DERIVES from
+       the tank's volume as configured at the moment of import. So a keeper who
+       imported at 77 L, then corrected his net volume to 70 L once he had
+       accounted for rock and sand — the ordinary thing an experienced keeper
+       does once — and then re-imported at cutover would find every key changed
+       and all twenty-five water changes written a second time, with the engine
+       seeing two breaks on each date.
+
+       Litres are what the file actually records and what the form actually
+       asks for, so litres are the identity. The fraction is a derived number
+       and derived numbers do not make good keys. */
     const litres = detail.volumeL;
-    return litres == null ? null : naturalKey(KIND.WATER_CHANGE, null, date, "", `L${litres}`);
+    if (litres != null) return naturalKey(KIND.WATER_CHANGE, null, date, "", `L${round6(litres)}`);
+    const fraction = detail.changedFraction;
+    return fraction == null ? null : naturalKey(KIND.WATER_CHANGE, null, date, "", round6(fraction));
   }
 
   if (e.kind === KIND.ICP_PANEL) {
@@ -663,7 +684,7 @@ function planConfiguration(d, problems) {
 
    Sequential, because the ledger's ordinal is the count of what is already
    there. Every record carries where it came from. */
-export async function applyImport(store, planned, { asOf, correctedPotencyDkhPerMl, reconstruction = null } = {}) {
+export async function applyImport(store, planned, { asOf, correctedPotencyDkhPerMl, assumption = null } = {}) {
   const written = { readings: 0, doses: 0, waterChanges: 0, icps: 0, lighting: 0, tasks: 0, completions: 0 };
   const recordedAt = new Date().toISOString();
 
@@ -675,7 +696,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
       rawValue: r.rawValue,
       normalizedValue: r.value,
       unit: def ? def.unit : null,
-      time: timeFor(r, reconstruction),
+      time: timeFor(r, assumption),
       recordedAt,
       source: SOURCE.KEEPER_ENTRY,
       detail: { origin: ORIGIN.KEEPER, ...(r.note ? { note: r.note } : {}) },
@@ -696,7 +717,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
 
   for (const r of [...planned.doses].sort(byWhen)) {
     const prior = running.get(r.parameter);
-    const time = timeFor(r, reconstruction);
+    const time = timeFor(r, assumption);
 
     /* HOW SURE THE RECORD IS OF WHEN THE DOSE TOOK EFFECT.
 
@@ -735,8 +756,14 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
         /* `fromMlPerDay` is the value the RECORD establishes was running, not
            an assertion that nothing else happened in between. What is unknown
            about the gaps is stated on the import report and drawn as a period
-           boundary on the chart; it is not asserted away here. */
-        detail: { ...detail, fromMlPerDay: prior, toMlPerDay: r.mlPerDay },
+           boundary on the chart; it is not asserted away here.
+
+           And it is marked as derived, because the file does not contain it.
+           V1 recorded each dose change as one number — the new rate — so the
+           "from" is this importer reading the previous recorded change, not
+           something the keeper wrote down. `toMlPerDay` is his; `fromMlPerDay`
+           is ours. A reader can now tell which is which. */
+        detail: { ...detail, fromMlPerDay: prior, fromMlPerDayDerived: true, toMlPerDay: r.mlPerDay },
       });
     }
     running.set(r.parameter, r.mlPerDay);
@@ -752,8 +779,24 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
          divided by the tank's. Where no volume is on record the litres are
          kept and no fraction is invented — the engine then has no water change
          it can read, which is the correct answer to "we do not know how big
-         the tank was". */
-      ...(volumeL > 0 ? { changedFraction: r.litres / volumeL } : {}),
+         the tank was".
+
+         DERIVED, AND SAID TO BE.
+
+         The file records litres and no tank volume, so this fraction is
+         computed from the volume as configured NOW — which may not be the
+         volume the tank had in February. That is inferred history, and inferred
+         history stored without a mark is inferred history presented as fact.
+         The mark says which number was assumed and what it was: a later reader
+         can recompute or disbelieve it. Whether a fraction should be derived at
+         all is the owner's, and is recorded open. */
+      ...(volumeL > 0
+        ? {
+            changedFraction: r.litres / volumeL,
+            changedFractionDerived: true,
+            changedFractionFromVolumeL: volumeL,
+          }
+        : {}),
       /* `V1-DATA-PROVENANCE.md` §5: the salvage reconnaissance found these
          byte-identical to a named V1 source constant, and the owner's
          confirmation of his readings has not been extended to them. Both
@@ -763,7 +806,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
     };
     await store.ledger.append({
       kind: KIND.WATER_CHANGE,
-      time: timeFor(r, reconstruction),
+      time: timeFor(r, assumption),
       recordedAt,
       detail,
     });
@@ -773,7 +816,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
   for (const r of planned.icps) {
     await store.ledger.append({
       kind: KIND.ICP_PANEL,
-      time: timeFor(r, reconstruction),
+      time: timeFor(r, assumption),
       recordedAt,
       detail: { lab: r.lab, ref: r.ref, elements: r.elements, origin: ORIGIN.UNCONFIRMED },
     });
@@ -783,7 +826,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
   for (const r of planned.lighting) {
     await store.ledger.append({
       kind: KIND.HUSBANDRY,
-      time: timeFor(r, reconstruction),
+      time: timeFor(r, assumption),
       recordedAt,
       detail: { note: r.note, origin: ORIGIN.UNCONFIRMED },
     });
@@ -951,31 +994,31 @@ function byWhen(a, b) {
 
    A row with no `time` field has no time, and gets a record with no instant in
    it — always, and whatever else is going on. The 325 date-only readings gain
-   NOTHING from a reconstruction: there is no wall-clock time to reconstruct,
-   and supplying one would be the fabrication this whole module exists to
-   refuse.
+   NOTHING here: there is no wall-clock time to work from, and supplying one
+   would be the fabrication this whole module exists to refuse. Not noon, not
+   midnight, not the device's zone, not an inference from the keeper's testing
+   routine or from the order rows appear in the file.
 
-   A row WITH a time has a local wall-clock reading and the export records no
-   timezone anywhere, so on its own it can only be `LOCAL_TIME_ZONE_UNKNOWN`.
+   A row WITH a time has a local wall-clock reading, and the export records no
+   timezone anywhere. It is read as a local time and given ONE offset — the
+   device's — because the tank does not travel, so the same offset applies to
+   every row and every elapsed interval between them comes out exactly right.
+   Elapsed interval is the only thing the engine computes from these times.
 
-   The third branch exists only when the keeper has stated which zone those
-   clock readings were in. Canon `SHARED-LEGACY-TIME-001` allows
-   `RECONSTRUCTED_WITH_PROVENANCE` "only when the historical timezone/offset is
-   independently proven and the reconstruction is recorded", and what it
-   forbids is the SILENT version. His statement is neither silent nor inferred:
-   he says it, it is recorded with its reasoning, and it travels on every
-   record it touched.
+   That offset was assumed and not told to us, and the record says so:
+   `assumedLocalInstant` writes `assumed: true` and `statedByKeeper: false` onto
+   every record it builds, along with the offset it used. See `time.js` for how
+   this sits against canon `SHARED-LEGACY-TIME-001`, and
+   `docs/implementation/app/OPEN-ITEMS.md` for the conflict, which is recorded
+   rather than argued away.
 
-   Even then it can fail, and where it fails it does not fall through to
-   something stronger. An hour daylight saving skipped never happened; an hour
-   it repeated happened twice. `reconstructedInstant` returns null for both, and
-   the row stays `LOCAL_TIME_ZONE_UNKNOWN` — the truth about a record whose
-   instant cannot be established. */
-export function timeFor(row, reconstruction = null) {
+   There is no fourth branch. There is no daylight-saving resolution and no
+   refusal of an ambiguous hour: an hour skipped or repeated is read like any
+   other, because one hour twice a year is not distinguishable from measurement
+   noise against intervals measured in days. That is the owner's ruling and it
+   is written here so the next reader does not restore the machinery. */
+export function timeFor(row, assumption = null) {
   if (!row.time) return dateOnly(row.date);
-  if (reconstruction && reconstruction.zoneId) {
-    const built = reconstructedInstant(row.date, row.time, reconstruction.zoneId, reconstruction);
-    if (built) return built;
-  }
-  return localTimeZoneUnknown(row.date, row.time);
+  if (!assumption) throw new Error(t("err.assumptionNeedsRecord"));
+  return assumedLocalInstant(row.date, row.time, assumption.offsetMinutes, assumption);
 }
