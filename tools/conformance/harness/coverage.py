@@ -35,6 +35,20 @@ WHAT IS DELIBERATELY NOT HIDDEN
     3. A `PROPERTY` body is counted apart from worked examples. It is a
        different kind of check, not an unconverted one, and rolling it into a
        conversion backlog would overstate the work outstanding.
+
+NOT CONVERSION WORK
+    For the same reason, a coverage alias (`CROSS_REFERENCE`) and a body that
+    is not a fixture yet (`NO_INPUT`) are counted apart as `non_conversion`.
+    `EXECUTABLE-FIXTURE-FORMAT.md` §7 says of an alias that it is "never
+    executable and must never be counted as an unconverted fixture awaiting
+    work", and §9 says the no-input bodies "are not fixtures yet".
+
+    Counting them as outstanding conversion work put eleven of the seventeen
+    paths in a state they could never leave: POTENCY, MAINTENANCE, RESPONSE,
+    RETURN, TREND and six others carry an alias or a no-input body, so no
+    amount of real conversion could ever have cleared them. They are still
+    named individually in the NOT COVERED section -- they are moved out of the
+    denominator, not out of the report.
 """
 
 from __future__ import annotations
@@ -65,10 +79,20 @@ class PathCoverage:
     #: Property/simulation/structural/contract bodies, which are a different
     #: kind of check and are never "unconverted worked examples".
     properties: List[str] = field(default_factory=list)
+    #: Coverage aliases (`CROSS_REFERENCE`) and bodies that are not fixtures yet
+    #: (`NO_INPUT`). Neither is an unconverted worked example, and counting them
+    #: as outstanding work made `complete` unreachable on most paths -- see
+    #: `NOT CONVERSION WORK` in the module docstring.
+    non_conversion: List[str] = field(default_factory=list)
 
     @property
     def total(self) -> int:
-        return len(self.executable) + len(self.not_executable) + len(self.properties)
+        return (
+            len(self.executable)
+            + len(self.not_executable)
+            + len(self.properties)
+            + len(self.non_conversion)
+        )
 
     @property
     def convertible_total(self) -> int:
@@ -76,15 +100,36 @@ class PathCoverage:
         return len(self.executable) + len(self.not_executable)
 
     @property
-    def complete(self) -> bool:
-        """Every worked-example fixture on this path executes.
+    def converted(self) -> bool:
+        """Every worked-example fixture on this path is classified EXECUTABLE.
 
-        The standing rule this supports: *an engine path is not complete until
-        its fixtures execute and its mutations turn them red.* A path with no
-        worked-example fixtures at all is not complete; it is empty, and
-        `convertible_total` being zero is reported rather than rounded to 100%.
+        This is a statement about fixture *shape* and nothing more. It is not
+        `complete`: it does not know whether those fixtures pass, and it cannot
+        know whether a mutation turns them red. Kept separate from `complete`
+        deliberately -- an earlier version of this module called this state
+        "COMPLETE" while the same run reported every one of those fixtures
+        failing, which is a label promising more than it checked.
+
+        A path with no worked-example fixtures at all is not converted; it is
+        empty, and `convertible_total` being zero is reported rather than
+        rounded up to 100%.
         """
         return self.convertible_total > 0 and not self.not_executable
+
+    def complete(self, passed: Set[str]) -> bool:
+        """`converted`, and every one of those fixtures actually passed.
+
+        `passed` is the set of fixture ids the run observed passing. With no
+        engine it is empty, so no path reports complete -- which is the point.
+
+        **This still checks only two of the standing rule's three clauses.**
+        *An engine path is not complete until its fixtures execute and its
+        mutations turn them red* -- and the mutation arm runs in a separate
+        process (`run-mutations.py`) against a reference oracle, so this report
+        cannot see it. The renderer says so rather than letting COMPLETE be
+        read as the whole rule.
+        """
+        return self.converted and all(f in passed for f in self.executable)
 
 
 @dataclass
@@ -105,7 +150,12 @@ class CoverageReport:
     def fixtures_seen(self) -> Set[str]:
         out: Set[str] = set()
         for p in self.paths:
-            out |= set(p.executable) | set(p.not_executable) | set(p.properties)
+            out |= (
+                set(p.executable)
+                | set(p.not_executable)
+                | set(p.properties)
+                | set(p.non_conversion)
+            )
         return out
 
 
@@ -122,6 +172,15 @@ def _rule_owners(trace: Dict[str, Any]) -> Dict[str, str]:
 
 def _is_property_body(f: corpus_mod.Fixture) -> bool:
     return f.klass == corpus_mod.PROPERTY_FIXTURE
+
+
+#: Classes that are not worked examples awaiting conversion, and so belong in
+#: neither side of the conversion ratio. See `NOT CONVERSION WORK` above.
+_NON_CONVERSION_CLASSES = (corpus_mod.CROSS_REFERENCE, corpus_mod.NO_INPUT)
+
+
+def _is_non_conversion_body(f: corpus_mod.Fixture) -> bool:
+    return f.klass in _NON_CONVERSION_CLASSES
 
 
 def build(c: corpus_mod.Corpus, trace: Dict[str, Any]) -> CoverageReport:
@@ -155,6 +214,8 @@ def build(c: corpus_mod.Corpus, trace: Dict[str, Any]) -> CoverageReport:
             b = bucket(p)
             if _is_property_body(f):
                 b.properties.append(f.fixture_id)
+            elif _is_non_conversion_body(f):
+                b.non_conversion.append(f.fixture_id)
             elif f.klass == corpus_mod.EXECUTABLE:
                 b.executable.append(f.fixture_id)
             else:

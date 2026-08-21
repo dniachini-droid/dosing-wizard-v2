@@ -154,7 +154,7 @@ and following) — this format adds none.
 | `kind` | Required fields | Notes |
 |---|---|---|
 | `READING` | `measuredAt`, `rawValueDkh` | `timeProvenance` defaults to `EXACT_ABSOLUTE` |
-| `READING_SERIES` | `startAt`, `everyHours`, `count`, `valuesDkh` | shorthand for a regular series; `len(valuesDkh) == count` |
+| `READING_SERIES` | `startAt`, `everyHours`, `count`, `valuesDkh` | shorthand for a regular series; `len(valuesDkh) == count`. **Expansion is unowned — see below.** |
 | `DOSE_STATE` | `programmedDoseMlPerDay`, `effectiveAt` | `effectiveAtConfidence` defaults to `EXACT` |
 | `DOSE_CHANGE` | `effectiveAt`, `from`, `to` | `effectiveAtConfidence` is `EXACT` or `UNCERTAIN`; when `UNCERTAIN`, `effectiveAtEarliest` / `effectiveAtLatest` are required |
 | `MANUAL_CORRECTION` | `occurredAt` | plus `amountMl` / `expectedContributionDkh` when known |
@@ -166,6 +166,19 @@ Events are written in chronological order for a human reader. The engine must
 not depend on that order — `INV-A1` requires the sort key
 `(absoluteInstant, eventOrdinal, eventId)`, and mutation `M-1` is its negative
 control.
+
+**`READING_SERIES` expansion has no owner, and that is a defect this format
+inherits rather than one it introduces.** The harness passes the event to the
+engine verbatim, so every engine must implement the shorthand — an input form
+the data contract does not declare. Two expanders already exist and neither is
+authoritative for engines: `recompute-goldens.py` and `validate-freeze-5.py`
+each expand it for their own purposes. A third, written by the first engine
+author from a one-line table row, would make three implementations of one
+inference, which `MASTER RULE 1` calls a defect rather than a coincidence.
+
+`WG-ALK-003` uses it and is among the fixtures that already execute, so this
+lands on the first day of engine work. Recorded as `OD-014`; **do not** resolve
+it by writing a fourth expander.
 
 ### 4.2 Configuration history
 
@@ -190,6 +203,20 @@ Prefer `configurationHistory` over the older top-level `config` whenever the
 fixture depends on a configuration *change*. `config` remains valid for a
 single-version override and is merged over `CANON_DEFAULT`.
 
+Each history entry is merged over `CANON_DEFAULT` the same way `config` is, so
+an entry states only what it changes. The harness sends the list as the
+interface's second argument and sets `configuration` to the fixture's **last**
+entry; it does not re-derive which entry is effective at `asOf`, because canon
+§518 makes that the engine's rule to apply and the harness computes no
+chemistry.
+
+(This field was documented and *preferred* for a while before the runner read
+it — it built a single flattened snapshot regardless. A fixture whose whole
+point was a configuration change would have run against one version, silently,
+and most likely passed, then stood as evidence that effective-dated
+configuration worked. If you find another input this format describes and
+nothing consumes, treat it the same way: as a defect, not a to-do.)
+
 ### 4.3 Expectations: a named field and a comparable value
 
 **One rule.** An expectation is a field whose *name* is the engine field being
@@ -203,7 +230,9 @@ what binds.
 
 Consequences, all of them enforced by existing harness behaviour:
 
-- `selectedApproxHours: 40.0` is an expectation.
+- `selectedApproxHours: 40.0` is an expectation. **It is also, as it happens, a
+  field the data contract does not declare** — see the warning below before
+  copying this shape.
 - `reason: "span 3.0 d < 4 d"` is **not** — it is working, in a field named
   after a justification rather than a quantity. It compares against nothing.
 - Four keys are read as documentation and never compared: `note`, `$comment`,
@@ -213,12 +242,70 @@ Consequences, all of them enforced by existing harness behaviour:
   whatever its case: `FALLING`, `decrease`, `blocked` and `non-zero` all
   compare.
 
+> **A named field is not automatically a *declared* field.** Resolution by name
+> checks that the engine emitted something called that. It does not check that
+> the data contract says the engine ever should.
+>
+> The five converted retest fixtures assert `selectedApproxHours`,
+> `selectedReasonCode`, `selectedAction`, `observationCeilingHours`,
+> `observationFloorApplied` and the per-candidate `rawHours` / `flooredHours` /
+> `clampedHours` / `approxHours` / `boundSide`. **None of these is in
+> `ALK-V2-DATA-CONTRACT.md`'s `RetestDecision`**, which states the decision in
+> instants (`recommendedAt`, `at`) rather than hours. Against a
+> contract-conformant engine, every one of them resolves to *"no field of that
+> name"* and all five fixtures fail.
+>
+> They pass today only because the echo oracle replays each fixture's own
+> expectations back at it, so the vocabulary never has to exist. This is the
+> clearest thing the oracle cannot do for us, and it is worth knowing before
+> trusting a green run.
+>
+> The disagreement is `OD-012` and no session may settle it: the fixture side is
+> frozen content this format forbids a conversion to touch, and the contract
+> side is the alk-v2 package. **When converting, do not silently invent a
+> vocabulary to bridge it** — assert what the fixture asserts, and if that name
+> is undeclared, say so in `conversion.questionsRaised`.
+
 **Demotion rule.** A conversion may move a prose expectation into `derivation`
-**only when the value it states is already asserted by a named field in the
-same fixture**, and the conversion must name that field. Otherwise the prose
-stays where it is, keeps being reported as non-comparable, and the missing
-named field is recorded as a question. This is what stops "make the prose count
-go down" from becoming its own goal.
+**only when the whole of what the sentence asserts is already asserted by named
+fields in the same fixture**, and the conversion must name those fields.
+Otherwise the prose stays where it is, keeps being reported as non-comparable,
+and the missing named field is recorded as a question. This is what stops "make
+the prose count go down" from becoming its own goal.
+
+**The claim, not just the number.** An earlier wording of this rule asked only
+that *the value the sentence states* be asserted elsewhere, which is too weak: a
+sentence like `"not binding: raw T_signal is 162.765 h"` makes two assertions —
+a number and a relation — and a later session could satisfy the letter of the
+rule by pointing at the number while the relation quietly stopped being checked
+anywhere.
+
+A relational half is carried in one of two ways, and the conversion must say
+which:
+
+- **asserted** — some named field takes a different value if the relation is
+  false. Preferred, because it is falsifiable on its own.
+- **entailed** — the relation follows from an asserted field together with the
+  canon rule the fixture exercises, so no engine can assert that field and
+  violate the relation. Acceptable, but only when the entailment is stated. It
+  is not a licence to demote anything that merely *sounds* implied.
+
+If a sentence's relational half is neither, that half is not demoted. Record it
+as a question instead.
+
+Both demotions in this repository were re-examined when this wording was
+tightened, and each is one of the two cases:
+
+| Fixture | Number | Relation | Carried how |
+|---|---|---|---|
+| `AD-RET-001` | 24 h floor → `candidateTimes[SIGNAL_ACCUMULATION].flooredHours` | "on the signal candidate **only**" | **asserted** — the other two candidates assert unfloored values (`48.0`, `472.0`). An engine applying the floor beyond the signal candidate produces `24.0` there and goes red. |
+| `AD-RET-002` | raw `T_signal` → `candidateTimes[SIGNAL_ACCUMULATION].rawHours` | "**not binding**" | **entailed** — the floor is `max(1 day, ·)`, which cannot reduce a value already above 1 day. Given the asserted `162.76520721 h`, no engine can assert that raw value *and* have the floor bind. |
+
+`AD-RET-001`'s number is additionally proven: `M-24` copies the candidate's own
+`rawHours` over its `flooredHours` and turns the fixture red at exactly that
+field. Trading a prose expectation for a comparable one is only a fair trade if
+the comparable one is proven, which by this repository's standing rule means
+shown red.
 
 Worked instance, from `AD-RET-002`:
 

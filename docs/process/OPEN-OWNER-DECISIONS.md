@@ -285,6 +285,152 @@ is one field on one fixture. It would be wrong only if many fixtures turn out to
 on this style of cross-reference, in which case the cost of option 1 is no longer one
 field.
 
+## OD-012 — Which vocabulary owns the retest decision: the data contract's, or the fixtures'?
+
+- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** OPEN
+- **Blocks:** whether `AD-RET-001..005` can pass against a real engine. Nothing today.
+
+**The question, in plain language**
+
+The five converted retest fixtures and the data contract describe the same decision in
+two different vocabularies, and they do not overlap.
+
+`ALK-V2-DATA-CONTRACT.md` §`RetestDecision` declares `action`, `earliestUsefulAt`,
+`recommendedAt`, `latestSafeAt`, `reasonCode`, `tiedReasonCodes[]`, `candidateTimes[]
+{candidateClass, at, included|excluded, reason}`, `candidatesNotRun[]`, `clampsApplied[]`
+and `assumptions[]`.
+
+The fixtures assert `selectedApproxHours`, `selectedReasonCode`, `selectedAction`,
+`observationCeilingHours`, `observationFloorApplied`, and per-candidate `approxHours`,
+`rawHours`, `flooredHours`, `clampedHours` and `boundSide`. **None of those names is in
+the contract.** The contract states retest times as `Instant`; the fixtures state them in
+hours.
+
+**Why this is only now visible**
+
+It was inert while the fixtures could not execute — an expectation nothing compares can
+disagree with anything. Converting them made it binding: against an engine that
+implements the contract as written, every one of those assertions resolves to *"no field
+of that name in the engine result"*, and all five fixtures fail.
+
+They pass today only because the echo oracle replays each fixture's own expectations
+back, so the vocabulary never has to exist. An echo oracle is structurally incapable of
+detecting this class of defect, which is worth stating plainly: this is the first
+finding that shows what the oracle cannot do for us.
+
+`Hours` is also not among the ten dimension suffixes the contract declares, so
+`CHK-DIMENSION-SAFETY` cannot flag the units mismatch either.
+
+**Why no session can settle it**
+
+The fixture assertions are `ALK_V2_FREEZE_5` content. `EXECUTABLE-FIXTURE-FORMAT.md` §5
+forbids a conversion from changing what a fixture asserts — *a conversion that changes
+what a fixture asserts is not a conversion; it is a canon edit wearing a disguise*. So
+the fixture side cannot move. The contract side is the alk-v2 implementation package,
+which this work was scoped out of.
+
+**Options**
+
+1. **The contract gains the audit fields.** `RetestDecision` grows the per-candidate
+   interval fields the fixtures assert. Largest change, and it makes the contract carry
+   presentation-shaped values (hours) alongside instants.
+2. **The fixtures are restated in the contract's names.** Requires a governed reissue,
+   because it edits frozen expectations.
+3. **A declared mapping.** A named, checked translation from the fixtures' vocabulary to
+   the contract's, owned by one document. Adds a third artefact, and a mapping is exactly
+   the kind of thing `MASTER RULE 1` warns about if it is ever implemented twice.
+
+**Recommendation, and what would make it wrong**
+
+No recommendation. Which vocabulary is right is a question about what the engine's output
+should look like, and that is the owner's, not a reviewing session's. What this run can
+say is that the disagreement is real, mechanical, and will surface as five red fixtures
+on the first day of retest implementation — so it is better answered before that day
+than during it.
+
+**Until it is answered**
+
+`PROJECT-STATE.md` and the format document both record that these five fixtures execute
+and pass **against the echo oracle**, and that no contract-conformant engine can satisfy
+them as written. The claim is not withdrawn; it is qualified.
+
+## OD-013 — Should the prose census descend into nested values?
+
+- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** OPEN
+- **Blocks:** nothing. A reporting-accuracy question.
+
+**The question, in plain language**
+
+The harness counts prose expectations two different ways and gets two different answers:
+57 from the static census over the corpus, 58 from a run with an engine attached.
+
+Neither is wrong. `corpus._unreadable_expectations` walks the top-level keys of each
+expectation block; `compare_by_name` descends into lists and sub-objects when a fixture
+actually executes, and finds prose the census cannot reach — currently
+`AD-RET-005`'s `candidateTimes[…].reason`.
+
+The consequence is that **the census undercounts every non-executable fixture**, and the
+gap widens with each conversion, because nested prose becomes visible only when a fixture
+runs.
+
+**Options**
+
+1. **Make the census recurse.** One number, and the published count stops moving when a
+   fixture is converted. Cost: the census then walks arbitrary nested structure and has
+   to decide what counts as an expectation, which is a judgement the top-level walk
+   currently avoids.
+2. **Publish neither, and report both from the run.** What this change did as an interim:
+   `CONFORMANCE-HARNESS.md` now states both numbers and says which is which.
+
+**Recommendation, and what would make it wrong**
+
+Option 1, but it is not urgent. It would be wrong if descending turns out to require a
+rule about which nested keys are assertions and which are documentation — that rule is
+the same class as the prose predicate itself, which this repository has already had to
+give a single owner once after two implementations disagreed on 17 entries.
+
+## OD-014 — Who owns the expansion of `READING_SERIES`?
+
+- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** OPEN
+- **Blocks:** nothing today; lands on the first day of engine work.
+
+**The question, in plain language**
+
+`READING_SERIES` is a shorthand event — `startAt`, `everyHours`, `count`,
+`valuesDkh` — standing in for a regular run of readings. The harness passes it to the
+engine verbatim, so **every engine must implement the expansion**, but the data contract
+does not declare the event and no document states its semantics beyond "shorthand for a
+regular series".
+
+Two expanders already exist, for their own local purposes:
+`docs/implementation/alk-v2/recompute-goldens.py` and `validate-freeze-5.py`. Neither is
+authoritative for an engine.
+
+**Why it matters sooner than it looks**
+
+`WG-ALK-003` uses it, and `WG-ALK-003` is one of the fixtures that already execute. So
+the first engine written against this corpus has to expand `READING_SERIES` on day one,
+from a one-line table row — and will produce a third implementation of one inference.
+`MASTER RULE 1` calls two implementations that agree today a defect rather than a
+coincidence; three is worse.
+
+**Options**
+
+1. **The data contract declares it.** It becomes an ordinary declared input with one
+   owner, and the existing two expanders become consumers of that declaration.
+2. **The format document states the semantics fully**, and the contract references it.
+3. **Retire the shorthand.** Expand `WG-ALK-003`'s series into ordinary `READING` events
+   in the fixture itself. Removes the concept entirely; costs a longer fixture body, and
+   is a fixture edit, so it needs whoever owns frozen fixture content.
+
+**Recommendation, and what would make it wrong**
+
+Option 1 or 3. Option 3 is tempting because the corpus uses the shorthand exactly once —
+if that stays true, deleting the concept is cheaper than specifying it. It would be wrong
+if conversion work turns out to need the shorthand often, which is plausible: several
+`ABSTRACT_INPUT` fixtures describe regular series in prose (`readings: 4`, `every 48 h`),
+and those are the ones a future conversion would most naturally express this way.
+
 ## OD-001 — Should `main` be branch-protected on GitHub?
 
 - **Raised:** 2026-08-19 · **By:** workforce founding, adversarial review · **Status:** OPEN

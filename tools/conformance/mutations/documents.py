@@ -586,6 +586,28 @@ def _d26_abort_must_not_green_the_rest(pkg: str, canon: str) -> None:
     )
 
 
+def _d27_conversion_that_nearly_worked(pkg: str, canon: str) -> None:
+    """Break a converted fixture's ledger while it still declares what it is.
+
+    The shape this guards is a conversion that *nearly* worked. Classification
+    is inferred from the shape of `input`, so a `WORKED_EXAMPLE` with a
+    misspelled event key does not announce itself -- it silently classifies as
+    `ABSTRACT_INPUT` and joins the backlog, indistinguishable from a fixture
+    nobody has attempted. The declaration is the only thing that knows the
+    difference, and until `corpus.check_declared_document_type` nothing read it.
+
+    The sabotage renames `events` to `evnts` on `AD-RET-001` and leaves
+    `documentType: "WORKED_EXAMPLE"` in place, which is exactly what a typo in
+    a hand conversion looks like.
+    """
+    path, doc, body = _find_fixture(pkg, "AD-RET-001")
+    inp = body.get("input") or {}
+    if "events" not in inp:
+        raise RuntimeError("AD-RET-001 carries no `events` to rename")
+    inp["evnts"] = inp.pop("events")
+    _write_json(path, doc)
+
+
 DOCUMENT_MUTATIONS: List[DocumentMutation] = [
     DocumentMutation(
         mid="D-1",
@@ -970,6 +992,26 @@ DOCUMENT_MUTATIONS: List[DocumentMutation] = [
         expect_check="CHK-LIVE-TEXT-ABSENCE",
         expect_mechanism="NOT EVALUATED",
         apply=_d26_abort_must_not_green_the_rest,
+    ),
+    DocumentMutation(
+        mid="D-27",
+        title="A conversion that nearly worked keeps its declaration",
+        sabotage=(
+            "`AD-RET-001`'s `input.events` is renamed to `evnts` while it still "
+            "declares `documentType: WORKED_EXAMPLE`"
+        ),
+        guards=(
+            "the check that a fixture declaring what it is must classify as what "
+            "it declares. Classification reads the shape of `input` and nothing "
+            "read the declaration, so a conversion broken by one typo silently "
+            "rejoined the unconverted backlog -- a fixture that nearly converted "
+            "and one nobody attempted looked identical. This is the harness's "
+            "own '0 of the things I know how to look at' failure arriving "
+            "through the door the classifier did not watch."
+        ),
+        expect_check="corpus-problem",
+        expect_mechanism="must classify as what it declares",
+        apply=_d27_conversion_that_nearly_worked,
     ),
 ]
 

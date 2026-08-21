@@ -109,6 +109,14 @@ Stopping there is a successful outcome.
 Check the coverage section for your path before and after. If the path is not
 `COMPLETE`, say in the run record which fixtures remain and why.
 
+Read that label precisely. `CONVERTED` means the path's fixtures execute —
+shape only, and no claim that any passed. `COMPLETE` means they also passed in
+that run. **Neither checks the mutation clause**, which runs in a separate
+process, so a `COMPLETE` path is two clauses of three and you still owe the
+`run-mutations.py` evidence from step 3. A path annotated with an open question
+is not settled either, however green its row: what its fixtures verify rests on
+a reading somebody flagged rather than answered.
+
 ## 4 — `canon-conformance-auditor`, in fresh context
 
 Does this match the canon as written? Does every rule it touches trace to one
@@ -160,6 +168,8 @@ carried in, no test weakened.
 
 Also confirm, explicitly, that the path you built is `COMPLETE` in the
 harness's per-path coverage section, or state which of its fixtures remain
-unconverted and which open decision blocks each (`DEC-019`).
+unconverted and which open decision blocks each (`DEC-019`). `COMPLETE` there
+covers two of the rule's three clauses; name the mutations that turned the
+path's fixtures red as well, since the coverage table cannot see them.
 
 Write the run record. Open the PR. **Stop.** Merging is the owner's.

@@ -305,6 +305,100 @@ def _m23_floor_the_forecast_candidate(payload, block, field, body, request):
     return out
 
 
+def _m24_publish_the_unfloored_signal_time(payload, block, field, body, request):
+    """Publish the signal candidate's raw interval as if the floor never applied.
+
+    `M-22` truncates `candidateTimes` and so fails on the list's *length* --
+    `compare._compare_value` returns as soon as the lengths differ, and the
+    element-wise comparison below it is never reached. `M-5`, `M-17` and `M-18`
+    iterate top-level `payload.items()` only. The consequence is that no
+    mutation in this suite has ever perturbed a value *inside* a candidate
+    object, so `rawHours`, `flooredHours`, `clampedHours`, `approxHours` and
+    `boundSide` -- the substance of the scheduler -- are compared on every run
+    and have never been shown to fail.
+
+    That gap is sharpest for `AD-RET-001`, whose prose expectation was demoted
+    to a derivation note on the grounds that the 24 h floor is already asserted
+    comparably as `candidateTimes[1].flooredHours`. Trading a prose expectation
+    for a comparable field is only sound if the field is proven, and by this
+    change's own standing rule proven means shown red.
+
+    The sabotage copies the candidate's own `rawHours` over its `flooredHours`,
+    which is exactly what an engine that computed the interval and forgot to
+    apply `max(1 day, ...)` would emit. Both values come from the fixture being
+    echoed; nothing is transcribed. `AD-RET-001`'s raw value is 22.912751887 h,
+    just below the 24 h floor, so the mutation lands on the boundary the rule
+    exists to hold rather than somewhere comfortably distant from it.
+    """
+    if block != "expectedRetest":
+        return payload
+    candidates = payload.get("candidateTimes")
+    if not isinstance(candidates, list):
+        return payload
+    out_candidates = []
+    changed = False
+    for entry in candidates:
+        if (
+            isinstance(entry, dict)
+            and isinstance(entry.get("rawHours"), (int, float))
+            and isinstance(entry.get("flooredHours"), (int, float))
+            and entry["rawHours"] != entry["flooredHours"]
+        ):
+            e = dict(entry)
+            e["flooredHours"] = entry["rawHours"]
+            out_candidates.append(e)
+            changed = True
+        else:
+            out_candidates.append(entry)
+    if not changed:
+        return payload
+    out = dict(payload)
+    out["candidateTimes"] = out_candidates
+    return out
+
+
+def _m25_publish_the_unclamped_signal_time(payload, block, field, body, request):
+    """Publish a candidate's raw interval as if the observation ceiling never applied.
+
+    The ceiling counterpart to `M-24`. Where the floor stops the scheduler
+    asking for a retest sooner than a change could be detected, the ceiling
+    stops it drifting past the window in which ordinary observation is still
+    ordinary. `AD-RET-002` is the case: raw `T_signal` is 162.765 h against a
+    96.0 h ceiling.
+
+    The sabotage copies the candidate's own `rawHours` over its `clampedHours`,
+    which is what an engine that computed the ceiling and forgot to apply it
+    would emit. Both values come from the fixture being echoed.
+    """
+    if block != "expectedRetest":
+        return payload
+    candidates = payload.get("candidateTimes")
+    if not isinstance(candidates, list):
+        return payload
+    out_candidates = []
+    changed = False
+    for entry in candidates:
+        if (
+            isinstance(entry, dict)
+            and isinstance(entry.get("rawHours"), (int, float))
+            and isinstance(entry.get("clampedHours"), (int, float))
+            and entry["rawHours"] != entry["clampedHours"]
+        ):
+            e = dict(entry)
+            e["clampedHours"] = entry["rawHours"]
+            out_candidates.append(e)
+            changed = True
+        else:
+            out_candidates.append(entry)
+    if not changed:
+        return payload
+    out = dict(payload)
+    out["candidateTimes"] = out_candidates
+    return out
+
+
+
+
 # ---------------------------------------------------------------------------
 # the registry
 # ---------------------------------------------------------------------------
@@ -773,6 +867,98 @@ MUTATIONS.append(
         expect_red=["fixture:AD-RET-004"],
         expect_mechanism="observationFloorApplied",
         hooks={"block": _m23_floor_the_forecast_candidate},
+    )
+)
+
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-24",
+        title="Publish the signal candidate's raw interval as if the floor never applied",
+        defect_class="retest scheduling / minimum useful interval",
+        status=EXECUTABLE,
+        sabotage=(
+            "a candidate's own `rawHours` is copied over its `flooredHours`, so "
+            "the `max(1 day, ...)` floor is computed and then discarded"
+        ),
+        guards=(
+            "ALK_V2_FREEZE_5 F5-15's minimum-useful-interval floor on the signal "
+            "candidate. This is also the first mutation in the suite to perturb a "
+            "value INSIDE a candidate object: M-22 truncates the list and so "
+            "fails on length, and the comparator returns before reaching the "
+            "elements. AD-RET-001's prose expectation was demoted on the grounds "
+            "that the floor is asserted comparably as "
+            "`candidateTimes[1].flooredHours`; until this mutation existed, that "
+            "field was compared but had never been shown red, so the trade was "
+            "unproven by this repository's own standing rule."
+        ),
+        expect_red=["fixture:AD-RET-001"],
+        expect_mechanism="flooredHours",
+        hooks={"block": _m24_publish_the_unfloored_signal_time},
+    )
+)
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-26",
+        title="Let a fixture's own constant overwrite a value the oracle computed",
+        defect_class="negative-control integrity / derived field lift",
+        status=BLOCKED,
+        sabotage=(
+            "the `_COMPUTED_FIELDS` exclusion is lifted, so a fixture asserting "
+            "`latestValidValueDkh`, `latestValidClusterId`, `assessmentAsOf` or "
+            "`recommendationConfidence` in an expectation block has its own "
+            "constant echoed back over the value the oracle computed"
+        ),
+        guards=(
+            "the integrity of M-1, M-2 and M-5. The oracle derives its liftable "
+            "field set from the data contract, which names every declared field "
+            "-- including the four it actually computes. Those four are the only "
+            "values those three controls have to bite on. Lift a fixture's "
+            "constant over one of them and the control passes while checking "
+            "nothing, which is the precise failure this suite exists to prevent."
+        ),
+        unblocks_when=(
+            "at least one EXECUTABLE fixture asserts one of the four computed "
+            "fields inside an expectation block. Today none does: the only "
+            "fixture in the corpus asserting any of them is AD-OUT-001 "
+            "(`recommendationConfidence`, in `expectedAction`), and it is in the "
+            "ABSTRACT_INPUT class, so the lift has nothing to reach. The hazard "
+            "is real but latent -- it arrives with the next conversion that "
+            "asserts one of these fields, which is an entirely ordinary thing "
+            "for a fixture to assert. Registering it BLOCKED rather than "
+            "omitting it means the exclusion in `echo_oracle._COMPUTED_FIELDS` "
+            "carries its control on the record from the day it was written, and "
+            "the run names the condition on every pass. Manufacturing an "
+            "executable fixture here to unblock it would mean inventing an "
+            "input, which is the thing the conversion work refused to do."
+        ),
+    )
+)
+
+
+MUTATIONS.append(
+    Mutation(
+        mid="M-25",
+        title="The observation ceiling is computed and then not applied",
+        defect_class="retest scheduling / observation ceiling",
+        status=EXECUTABLE,
+        sabotage=(
+            "a candidate's own `rawHours` is copied over its `clampedHours`, so "
+            "an interval beyond the observation ceiling is published unclamped"
+        ),
+        guards=(
+            "the observation ceiling that bounds ordinary signal accumulation. "
+            "AD-RET-002 is the case: raw T_signal is 162.765 h against a 96.0 h "
+            "ceiling, and its own forbidden note states the defect -- treating "
+            "T_signal as the answer would schedule a test almost seven days out "
+            "for a tank that is moving. Pairs with M-24: that one attacks the "
+            "floor, this one the ceiling, and between them the two clamps either "
+            "side of the signal candidate are both proven."
+        ),
+        expect_red=["fixture:AD-RET-002"],
+        expect_mechanism="clampedHours",
+        hooks={"block": _m25_publish_the_unclamped_signal_time},
     )
 )
 

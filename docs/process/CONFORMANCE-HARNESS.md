@@ -100,11 +100,28 @@ machine-checkable. The full analysis, including the eleven distinct shapes the
 corpus actually takes, is in
 `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`.
 
-Separately, **57 fixtures carry at least one expected value that is prose**
-rather than a value an engine field can equal — `"known from the single valid
-reading"`, `"0.064 < R_obs < 0.1439"`. Those entries are named individually and
-excluded from comparison. Comparing them would require the harness to interpret
-a sentence.
+Separately, **a number of fixtures carry at least one expected value that is
+prose** rather than a value an engine field can equal — `"known from the single
+valid reading"`, `"0.064 < R_obs < 0.1439"`. Those entries are named
+individually and excluded from comparison. Comparing them would require the
+harness to interpret a sentence.
+
+The count is deliberately not printed here. It is **not one number**, and a
+document that published one would be transcribing a value the run computes —
+which is the drift this harness otherwise refuses to allow itself:
+
+- the **static census** over the corpus reports 57. It walks the top-level keys
+  of each expectation block;
+- a **run with an engine attached** reports 58, because `compare_by_name`
+  descends into lists and sub-objects and finds prose the census cannot reach
+  (`AD-RET-005`'s `candidateTimes[…].reason` is the current example).
+
+The census therefore **undercounts every non-executable fixture**, and will
+undercount more as conversion continues, because nested prose only becomes
+visible when a fixture executes. That is a real limit of the census rather than
+a discrepancy to be reconciled by choosing a favourite; making
+`_unreadable_expectations` recurse is recorded as an open question (`OD-013`).
+Read the number off the run, which states which of the two it is.
 
 A single token is never treated as prose, whatever its case: `FALLING`,
 `decrease`, `blocked` and `non-zero` are all compared. Only internal whitespace
@@ -142,14 +159,34 @@ So the run also reports, for each distinct area of engine behaviour, how many of
 its fixtures execute and how many do not:
 
 ```
-ENGINE PATH       EXEC / WORKED  COVERAGE              PROP
+ENGINE PATH       EXEC / WORKED  COVERAGE              PROP ALIAS
 ------------------------------------------------------------------------------
-POTENCY              0 /     20  ....................     -
-SEGMENTATION         1 /     35  #...................     -
-MAINTENANCE          6 /     51  ##..................     -
-RETEST               5 /     12  ########............     -
-UNATTRIBUTED         0 /      7  ....................    18
+POTENCY              0 /     15  ....................     -     5
+SEGMENTATION         1 /     32  #...................     -     3
+MAINTENANCE          6 /     44  ###.................     -     7
+RETEST               5 /     12  ########............     -     -  (1 open question)
+UNATTRIBUTED         0 /      6  ....................    18     1
 ```
+
+**What `COMPLETE` means, and what it does not.** The standing rule has three
+clauses — a path is not complete until its fixtures execute **and** they pass
+**and** its mutations turn them red. The table distinguishes:
+
+- `CONVERTED` — every worked-example fixture on the path executes. A statement
+  about fixture *shape* only. It does not mean any of them passed.
+- `COMPLETE` — `CONVERTED`, and every one of them passed in this run.
+
+**The third clause is not checked here**, because the mutation arm runs in a
+separate process against a reference oracle. `COMPLETE` is therefore two
+clauses of three, and the renderer says so. An earlier version of this table
+printed `COMPLETE` from classification alone, which meant a run with no engine
+at all could show a path complete while the same report listed every one of its
+fixtures failing. A label that promises more than it checks is worse than no
+label.
+
+A path carrying a fixture with an unresolved question about its own input is
+annotated, as `RETEST` is above: its result is real, but what it verifies rests
+on a reading its converter flagged rather than settled.
 
 **The paths are not invented here.** `traceability/alk-v2-traceability.json`
 already assigns every rule exactly one `owner`, from a closed set of sixteen,
@@ -170,6 +207,12 @@ Three things are deliberately not hidden:
   column). `INV-REPLAY-001` is a different kind of check, not an unconverted
   worked example, and rolling it into a conversion backlog would overstate the
   work outstanding.
+- **A coverage alias, and a body that is not a fixture yet, are counted apart
+  too** (the `ALIAS` column). Neither is work awaiting conversion. Counting
+  them as outstanding put eleven of the seventeen paths in a state they could
+  never leave — no amount of real conversion could clear a path whose remainder
+  is an alias. Both are still named individually in `NOT COVERED`; they are out
+  of the denominator, not out of the report.
 
 A fixture exercises several rules and so appears on every path those rules are
 owned by, which means the columns sum to more than 204. That is deliberate:
@@ -282,14 +325,60 @@ drops the losing candidates from the scheduler's audit list and `M-23` applies
 the signal candidate's floor to the outer-bound forecast candidate, which is
 what `ALK_V2_FREEZE_5` F5-15 forbids.
 
-**Two are blocked.** `M-8` (repeat-window clustering) cannot run: no executable
+`M-24` and `M-25` are the two that reach *inside* a candidate. `M-24` copies a candidate's own
+`rawHours` over its `flooredHours`, so the minimum-useful-interval floor is
+computed and then discarded. It exists because `M-22` fails on the list's
+**length** — the comparator returns as soon as lengths differ — and `M-5`,
+`M-17` and `M-18` iterate top-level keys only. Until `M-24`, no mutation had
+ever perturbed a value inside a candidate object, so `rawHours`, `flooredHours`,
+`clampedHours`, `approxHours` and `boundSide` were compared on every run and had
+never been shown to fail. That mattered specifically: `AD-RET-001`'s prose
+expectation was demoted in exchange for `flooredHours`, and an unproven field is
+not a fair trade for a prose one. `M-25` is its ceiling counterpart, copying
+`rawHours` over `clampedHours` so an interval beyond the observation ceiling is
+published unclamped; between them the two clamps either side of the signal
+candidate are both proven.
+
+`D-27` guards the check that a fixture declaring `documentType: WORKED_EXAMPLE`
+must actually classify as executable — the shape of a conversion that *nearly*
+worked, which otherwise rejoins the backlog looking exactly like a fixture
+nobody attempted.
+
+**Two are blocked.**
+
+- `M-8` (repeat-window clustering) cannot run: no executable fixture contains
+  two readings inside the 30-minute window, and supplying the clustering
+  behaviour in the oracle would mean implementing a canon rule.
+- `M-26` (derived-field lift) cannot run: it is the control for
+  `echo_oracle._COMPUTED_FIELDS`, the exclusion that stops a fixture's own
+  constant being echoed over a value the oracle computes. Without that
+  exclusion, `M-1`, `M-2` and `M-5` would have nothing left to disturb and would
+  pass while checking nothing. No executable fixture asserts one of the four
+  computed fields today, so the hazard is real but latent — it arrives with the
+  next conversion that asserts one, which is an ordinary thing for a fixture to
+  do. It is registered `BLOCKED` rather than omitted so the exclusion carries
+  its control from the day it was written.
+
+Each unblocking condition is stated in full in `mutations/__init__.py` and
+reprinted on every run.
+**Three are blocked.** `M-8` (repeat-window clustering) cannot run: no executable
 fixture contains two readings inside the 30-minute window, and supplying the
 clustering behaviour in the oracle would mean implementing a canon rule.
 `D-13` (a constant that did not pre-exist) cannot run either: its check's
 subject is the canon as it stood at a pinned git commit, which no mutation of
 the working tree can reach, so `CHK-CANON-CONSTANTS` carries an inline probe
 instead. Both unblocking conditions are stated in full in the mutation set and
-reprinted on every run. Neither is counted as caught.
+reprinted on every run. None is counted as caught.
+
+`M-26` (derived-field lift) cannot run either: it is the control for
+`echo_oracle._COMPUTED_FIELDS`, the exclusion that stops a fixture's own
+constant being echoed over a value the oracle computes. Without that
+exclusion, `M-1`, `M-2` and `M-5` would have nothing left to disturb and
+would pass while checking nothing. No executable fixture asserts one of the
+four computed fields today, so the hazard is real but latent — it arrives
+with the next conversion that asserts one. It is registered `BLOCKED` rather
+than omitted so the exclusion carries its control from the day it was
+written.
 
 A mutation counts as caught only when the subject it named goes red **and** the
 failure text names the mechanism it claims to guard. Both halves matter: the

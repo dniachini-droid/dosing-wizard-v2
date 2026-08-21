@@ -82,6 +82,20 @@ BLOCK_TO_FIELD = {
 #: is a first-class value in the data contract, not a placeholder.
 _NOT_RUN = "NOT_RUN"
 
+#: The declared fields this oracle computes rather than echoes, and which are
+#: therefore withheld from the derived lift below. Each is the subject of at
+#: least one negative control: lifting a fixture's own constant over the
+#: computed value would disable that control silently. `M-26` is the control
+#: for this exclusion itself.
+_COMPUTED_FIELDS = frozenset(
+    {
+        "assessmentAsOf",
+        "latestValidValueDkh",
+        "latestValidClusterId",
+        "recommendationConfidence",
+    }
+)
+
 
 class _Cache:
     corpus: Optional[corpus_mod.Corpus] = None
@@ -257,7 +271,21 @@ class EchoOracle:
         # that has to be extended every time a fixture is converted is a second
         # owner of the contract's field set; deriving it is the fix, not adding
         # a fourth entry.
-        declared = set(contract.engine_result_fields)
+        # Deriving the set opened a hazard the hand-written list could not have:
+        # it names EVERY declared field, including the four this oracle actually
+        # computes. Those four are the only thing the negative controls have to
+        # bite on -- `M-1` shuffles the event order to move `latestValidValueDkh`
+        # and `latestValidClusterId`, `M-2` moves `assessmentAsOf`, `M-5` rounds
+        # before classifying. If a fixture asserted one of them in a block, the
+        # lift would overwrite the computed value with the fixture's own
+        # constant, the mutation would have nothing left to disturb, and the
+        # control would pass while checking nothing.
+        #
+        # `AD-OUT-001` already asserts `recommendationConfidence` in a block and
+        # is harmless only because that assignment happens to sit below the
+        # lift. Safety by line ordering is not safety, so the exclusion is
+        # explicit and `M-26` fails if it is removed.
+        declared = set(contract.engine_result_fields) - _COMPUTED_FIELDS
         for name in sorted(asserted_names & declared):
             for block in BLOCK_TO_FIELD:
                 src = body.get(block)

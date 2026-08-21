@@ -88,6 +88,16 @@ Phase 0 — Preserve and found V2
   fixtures execute and its mutations turn them red.
   The remaining 193 are blocked, and mostly on one thing — **`OD-008`, what the
   assessment instant of a worked golden is.** Only one unconverted fixture states one.
+  - Those five execute and pass **against the echo oracle**. They assert a retest
+    vocabulary (`selectedApproxHours`, per-candidate `flooredHours` and others) that
+    `ALK-V2-DATA-CONTRACT.md` does not declare, so **no contract-conformant engine can
+    satisfy them as written** — they pass only because the oracle replays their own
+    expectations back. The disagreement is `OD-012` and no session may settle it: the
+    fixture side is frozen, the contract side is out of scope. It will surface as five
+    red fixtures on the first day of retest implementation.
+  - `AD-RET-001` additionally carries an unresolved question about its own input
+    (`OD-011`); the harness now names it on the fixture's line and in the coverage table
+    rather than showing an unqualified pass.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 

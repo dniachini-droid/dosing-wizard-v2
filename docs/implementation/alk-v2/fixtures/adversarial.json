@@ -2067,7 +2067,7 @@
         "assertionsUnchanged": true,
         "suppliedByConversion": [],
         "prosePromoted": [
-          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation; the value it states (24 h on the signal candidate) is already asserted comparably as expectedRetest.candidateTimes[1].flooredHours = 24.0"
+          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation. Number: the 24 h floor is asserted comparably as candidateTimes[candidateClass=SIGNAL_ACCUMULATION].flooredHours = 24.0, and M-24 turns this fixture red at that field. Relation ('on the signal candidate only'): ASSERTED - ROUTINE_CADENCE asserts approxHours 48.0 and FORECAST_BOUNDARY_RISK asserts 472.0, both unfloored, so an engine applying the floor beyond the signal candidate goes red on those."
         ],
         "questionsRaised": [
           "OD-011: this fixture states no currentDoseMlPerDay, so the converted ledger carries NO DOSE_STATE event. Its provenance note says 'Same state as AD-MNT-006', which states 9.0 mL/day - but a note is not an input, and importing it would decide what this fixture meant. The ledger is therefore submitted without a programmed dose. If the RETEST path turns out to need one to reach these expectations, that is a real finding about this fixture, not about the engine."
@@ -3032,7 +3032,7 @@
           "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by all six previously executable fixtures. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
         ],
         "prosePromoted": [
-          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation; the value it states (raw T_signal 162.765 h) is already asserted comparably as expectedIntermediateEvidence.tSignalRawHours = 162.76520721"
+          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation. Number: raw T_signal is asserted comparably as expectedIntermediateEvidence.tSignalRawHours = 162.76520721 and as candidateTimes[candidateClass=SIGNAL_ACCUMULATION].rawHours. Relation ('not binding'): ENTAILED, not asserted - the floor is max(1 day, .), which cannot reduce a value already above 1 day, so no engine can assert this raw value and have the floor bind. No separate field carries it and none is needed."
         ],
         "questionsRaised": []
       },

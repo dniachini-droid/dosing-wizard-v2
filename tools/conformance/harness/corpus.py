@@ -223,6 +223,53 @@ def _unreadable_expectations(body: Dict[str, Any]) -> List[str]:
     return out
 
 
+#: What each declared `documentType` must classify as, per
+#: `EXECUTABLE-FIXTURE-FORMAT.md` §3. `PROPERTY` and `CASE_SET` are deliberately
+#: absent: no body declares either yet, and inventing an expected classification
+#: for a shape with no instance would be asserting behaviour nothing exercises.
+_DOCUMENT_TYPE_EXPECTS = {
+    "WORKED_EXAMPLE": (EXECUTABLE,),
+    "COVERAGE_ALIAS": (CROSS_REFERENCE,),
+}
+
+_DOCUMENT_TYPES = ("WORKED_EXAMPLE", "CASE_SET", "PROPERTY", "COVERAGE_ALIAS")
+
+
+def check_declared_document_type(f: "Fixture") -> List[str]:
+    """A fixture that declares what it is must classify as what it declares.
+
+    Classification is inferred from the *shape* of `input`, and nothing read
+    `documentType` at all. So a body declaring `WORKED_EXAMPLE` with a
+    misspelled key in `events` -- or no `asOf` -- silently fell through to
+    `ABSTRACT_INPUT` or `NO_ASOF` and disappeared into the backlog with the
+    other unconverted fixtures. No problem was reported.
+
+    That is the "0 of the things I know how to look at" failure this module's
+    classification exists to prevent, arriving through the one door the
+    classifier did not watch: a conversion that *nearly* worked reads exactly
+    like a fixture nobody has converted yet.
+
+    Reported as a corpus problem, which is red.
+    """
+    declared = f.body.get("documentType")
+    if declared is None:
+        return []
+    if declared not in _DOCUMENT_TYPES:
+        return [
+            f"{f.fixture_id}: declares documentType `{declared}`, which is not one "
+            f"of {', '.join(_DOCUMENT_TYPES)} (EXECUTABLE-FIXTURE-FORMAT.md §3)"
+        ]
+    expected = _DOCUMENT_TYPE_EXPECTS.get(declared)
+    if expected and f.klass not in expected:
+        return [
+            f"{f.fixture_id}: declares documentType `{declared}` but classifies as "
+            f"`{f.klass}` -- {f.reason}. A fixture that declares what it is must "
+            f"classify as what it declares; otherwise a conversion that nearly "
+            f"worked is indistinguishable from one nobody has attempted."
+        ]
+    return []
+
+
 def _classify(body: Dict[str, Any], source_file: str) -> tuple:
     if source_file.endswith("invariants-and-governance.json") and "kind" in body:
         if body.get("kind") != "GOLDEN":
@@ -317,5 +364,9 @@ def load(fixtures_dir: Optional[str] = None) -> Corpus:
             f"{extra} exists in fixtures/ but is not listed in index.json; "
             f"its fixtures are invisible to the corpus"
         )
+
+    # A fixture that declares what it is must classify as what it declares.
+    for f in c.fixtures:
+        c.load_problems.extend(check_declared_document_type(f))
 
     return c
