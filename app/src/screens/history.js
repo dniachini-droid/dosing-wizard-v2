@@ -1,15 +1,29 @@
 /* ============================================================================
    HISTORY
    ----------------------------------------------------------------------------
-   One chart per parameter. Target range shaded where there is one. Every event
-   family marked. Repeats shown as one observation. Points the engine cannot
-   use drawn so they are visibly excluded rather than silently missing. Tapping
-   a point opens its entry.
+   One chart per parameter. The keeper's own range shaded behind the trace where
+   he has set one. Every event family marked. Repeats shown as one observation.
+   Points the engine cannot use drawn so they are visibly excluded rather than
+   silently missing, WITH THE REASON. Tapping a point opens its entry.
 
-   Alkalinity's target range is shaded because the keeper configured one and the
-   engine uses it. No other parameter gets a band, because no other parameter
-   has one in the canon and drawing a band the app invented would be asserting
-   a chemistry rule on a chart.
+   WHOSE RANGE IS SHADED
+   ---------------------
+
+   The keeper's, and only ever the keeper's. Alkalinity's is the range the
+   engine reads from his configuration; every other parameter's is a range he
+   set himself and which this app carried across from his own settings. Neither
+   is a canon band edge, neither governs any behaviour, and the legend says
+   whose numbers they are. A band the APP chose would be asserting a chemistry
+   rule on a chart, and there is none here.
+
+   WHY A READING IS EXCLUDED, SAID OUT LOUD
+   ----------------------------------------
+
+   A point drawn hollow is a point the engine cannot use for trend arithmetic,
+   and the keeper is owed the reason rather than a shape. Both reasons are
+   facts about the RECORD, not judgements about the reading: it has no time of
+   day, or it has a time with no timezone behind it. `time.js` owns the test;
+   this screen renders what it says.
 
    REPEATS
    -------
@@ -88,8 +102,24 @@ export async function renderHistory(ctx) {
   const params = only ? parameterDefs().filter((p) => p.key === only) : parameterDefs();
   const events = projected.filter((r) => r.state !== "INVALID" && EVENT_MARKS[r.event.kind]);
 
+  /* WHERE DOSE HISTORY BEGINS.
+
+     One boundary, derived from the record rather than chosen: the first moment
+     anything says what the pump was set to. Before it the readings are
+     measurements with no delivery context — true, and not interpretable as
+     evidence about consumption, because what was going into the tank between
+     them is not written down anywhere.
+
+     The owner's decision, already taken: the readings before it are drawn at
+     FULL COLOUR like every other, with one vertical marker and a short note.
+     The exclusion is a property of the PERIOD, not of each reading, so dimming
+     them individually would say something false about each one. */
+  const doseBoundary = firstDoseDate(projected);
+
   for (const def of params) {
-    screen.append(renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment));
+    screen.append(
+      renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment, doseBoundary)
+    );
   }
 
   if (only) {
@@ -100,7 +130,23 @@ export async function renderHistory(ctx) {
   return screen;
 }
 
-function renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment) {
+/* The earliest dose event the record holds for the assessed parameter. An
+   event with no parameter is alkalinity's, which is what every dose the app's
+   own forms write means. */
+function firstDoseDate(projected) {
+  let first = null;
+  for (const r of projected) {
+    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
+    const e = r.event;
+    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
+    if (e.parameter != null && e.parameter !== "ALK") continue;
+    const d = e.time.localDate;
+    if (!first || d < first) first = d;
+  }
+  return first;
+}
+
+function renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment, doseBoundary) {
   const card = h("section", { class: "card" });
   /* Counted back from the application's clock in whole calendar days, not from
      `Date.now()` in milliseconds. Two reasons, and both were real: 86400000 is
@@ -162,31 +208,58 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
     )
   );
 
-  const hasRange = def.assessed && config?.targetRangeMinDkh != null && config?.targetRangeMaxDkh != null;
-  card.append(chart(ctx, def, points, events, hasRange ? config : null, windowDays));
+  /* The band drawn behind the trace is the KEEPER's own range: alkalinity's
+     from the configuration the engine reads, and every other parameter's from
+     the ranges he set himself. Neither is a canon band edge and neither
+     governs anything — they are drawn because he asked to see where he likes
+     to keep the tank, and the legend says whose numbers they are. */
+  const range = rangeFor(def, config);
+  /* The boundary belongs on the assessed parameter's chart, because it is
+     about what can be analysed and only alkalinity is analysed in this
+     build. */
+  const boundary = def.assessed && doseBoundary && doseBoundary > points[0].date ? doseBoundary : null;
+  card.append(chart(ctx, def, points, events, range, windowDays, boundary));
+
+  if (boundary) {
+    card.append(h("p", { class: "meta" }, t("history.boundary.note", { date: fmtDayName(boundary) })));
+  }
 
   const legend = h("div", { class: "legend" });
-  if (hasRange) {
+  if (range) {
     legend.append(
       h(
         "span",
         null,
         h("span", { class: "swatch", style: { background: `var(--${def.tone}-bg)` } }),
-        t("assessment.legend.range", {
-          min: config.targetRangeMinDkh,
-          max: config.targetRangeMaxDkh,
-          unit: def.unit,
-        })
+        t("history.legend.yourRange", { min: range.min, max: range.max, unit: def.unit })
       )
     );
   }
-  if (points.some((p) => !p.eligible)) {
+  /* WHY, NOT JUST THAT.
+
+     A hollow point used to say only "excluded". The keeper is owed the reason,
+     and after an import there are two different ones in the same chart — a
+     reading with no time of day, and a reading whose time has no timezone
+     behind it. Both are facts about the record. Counted and named. */
+  const noTime = points.filter((p) => !p.eligible && !p.row.event.time.localTime).length;
+  const noZone = points.filter((p) => !p.eligible && p.row.event.time.localTime).length;
+  if (noTime) {
     legend.append(
       h(
         "span",
         null,
         h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--faint)" } }),
-        t("assessment.legend.excluded")
+        t("history.legend.noTime", { n: noTime })
+      )
+    );
+  }
+  if (noZone) {
+    legend.append(
+      h(
+        "span",
+        null,
+        h("span", { class: "swatch", style: { background: "var(--card-top)", border: "1px dashed var(--faint)" } }),
+        t("history.legend.noZone", { n: noZone })
       )
     );
   }
@@ -235,6 +308,23 @@ function renderParameterChart(ctx, def, projected, events, config, windowDays, l
   return card;
 }
 
+/* The band this parameter is drawn with, if the keeper set one.
+
+   Alkalinity's lives in the two fields the engine reads, because the engine
+   reads them. Every other parameter's lives in `parameterRanges`, which the
+   configuration store strips before the engine ever sees it — they are the
+   keeper's own preference, they are display, and they govern nothing. */
+function rangeFor(def, config) {
+  if (!config) return null;
+  if (def.assessed) {
+    return config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null
+      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
+      : null;
+  }
+  const r = config.parameterRanges && config.parameterRanges[def.key];
+  return r && Number.isFinite(r.min) && Number.isFinite(r.max) ? r : null;
+}
+
 function reportedRepeatWindow(latestAssessment) {
   const codes = latestAssessment?.engineResult?.reasonCodes || [];
   for (const c of codes) {
@@ -266,11 +356,11 @@ function groupRepeats(points, minutes) {
   return out;
 }
 
-function chart(ctx, def, points, events, config, windowDays) {
+function chart(ctx, def, points, events, range, windowDays, boundary) {
   const W = 296, H = 150, L = 26, R = 290, T = 14, B = 118;
   const vals = points.map((p) => p.value);
-  const lo = Math.min(...vals, config ? config.targetRangeMinDkh : Infinity);
-  const hi = Math.max(...vals, config ? config.targetRangeMaxDkh : -Infinity);
+  const lo = Math.min(...vals, range ? range.min : Infinity);
+  const hi = Math.max(...vals, range ? range.max : -Infinity);
   const span = hi - lo || 1;
   const pad = span * 0.2;
   const yMin = lo - pad, yMax = hi + pad;
@@ -288,14 +378,14 @@ function chart(ctx, def, points, events, config, windowDays) {
     "aria-label": t("history.chart.aria", { label: def.label, days: windowDays, n: points.length }),
   });
 
-  if (config) {
-    const yTop = y(config.targetRangeMaxDkh), yBot = y(config.targetRangeMinDkh);
+  if (range) {
+    const yTop = y(range.max), yBot = y(range.min);
     g.append(
       svg("rect", { class: "range-fill", x: L, y: Math.min(yTop, yBot), width: R - L, height: Math.abs(yBot - yTop) }),
       svg("line", { class: "range-edge", x1: L, y1: yTop, x2: R, y2: yTop }),
       svg("line", { class: "range-edge", x1: L, y1: yBot, x2: R, y2: yBot }),
-      svg("text", { class: "axis", x: 1, y: yTop + 3.5 }, String(config.targetRangeMaxDkh)),
-      svg("text", { class: "axis", x: 1, y: yBot + 3.5 }, String(config.targetRangeMinDkh))
+      svg("text", { class: "axis", x: 1, y: yTop + 3.5 }, String(range.max)),
+      svg("text", { class: "axis", x: 1, y: yBot + 3.5 }, String(range.min))
     );
   }
 
@@ -307,6 +397,17 @@ function chart(ctx, def, points, events, config, windowDays) {
     g.append(
       svg("line", { class: "evline " + EVENT_MARKS[e.event.kind].cls, x1: px, y1: T, x2: px, y2: B }),
       svg("polygon", { class: "evmark", points: `${px - 4},${T - 7} ${px + 4},${T - 7} ${px},${T - 1}` })
+    );
+  }
+
+  /* ONE MARKER, ONE NOTE. The readings on either side of it are drawn exactly
+     alike, because the difference between them is a property of the period and
+     not of any single reading. */
+  if (boundary) {
+    const bx = x(boundary);
+    g.append(
+      svg("line", { class: "boundary", x1: bx, y1: T - 6, x2: bx, y2: B }),
+      svg("text", { class: "boundary-label", x: bx + 3, y: T - 1 }, t("history.boundary.mark"))
     );
   }
 
@@ -376,7 +477,14 @@ function renderEntryList(ctx, points, def) {
                 fmtEventTime(e.time) +
                   (m.superseded ? t("history.entry.replaced") : "") +
                   (m.suspect ? t("history.entry.suspect") : "") +
-                  (!m.eligible ? t("history.entry.excluded") : "")
+                  /* The reason this one cannot enter a trend, on the row
+                     itself. "Excluded" alone told the keeper a fact about the
+                     app rather than a fact about his reading. */
+                  (!m.eligible
+                    ? e.time.localTime
+                      ? t("history.entry.noZone")
+                      : t("history.entry.noTime")
+                    : "")
               )
             )
           )

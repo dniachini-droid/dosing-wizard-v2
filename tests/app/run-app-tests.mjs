@@ -33,6 +33,7 @@ const SUITES = [
   "test-schedule.mjs",
   "test-suggestion.mjs",
   "test-testmode.mjs",
+  "test-import.mjs",
   "test-strings.mjs",
   "test-shell.mjs",
 ];

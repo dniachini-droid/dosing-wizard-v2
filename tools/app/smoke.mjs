@@ -505,6 +505,127 @@ await step("turning it off restores the real tank and the real date", async () =
   if (!/8\.7|8\.9/.test(txt)) throw new Error("the real readings did not come back");
 });
 
+/* --------------------------------------------------------------------------
+   THE IMPORT, AGAINST THE OWNER'S REAL EXPORT
+
+   The one thing `tests/app/` cannot do: drive the file chooser, and run the
+   whole 353-reading file through a real IndexedDB.
+   ----------------------------------------------------------------------- */
+
+const BACKUP = "/root/.claude/uploads/9485fbac-d9ce-558d-b38b-caaa2ae22ef7/23565005-danstankbackup20260821.json";
+if (fs.existsSync(BACKUP)) {
+  console.log("\nImporting the owner's history");
+
+  await step("the report is shown before anything is imported", async () => {
+    await page.click("#tabbar .tab:has-text('Today')");
+    await page.waitForTimeout(400);
+    await page.click(".gear");
+    await page.waitForSelector("h1:has-text('Settings')");
+    await page.click("text=Import your history");
+    await page.waitForSelector("h1:has-text('Import your history')");
+    await page.setInputFiles('input[type="file"]', BACKUP);
+    await page.waitForSelector("text=What would come across", { timeout: 20000 });
+
+    const before = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    if (before > 20) throw new Error(`something was imported before the button: ${before}`);
+  });
+
+  await step("the report's counts are the file's", async () => {
+    const txt = await page.innerText("#app");
+    for (const want of ["353", "325", "28", "104", "87", "43", "42", "41", "17", "13"]) {
+      if (!txt.includes(want)) throw new Error(`the report does not state ${want}`);
+    }
+    if (!/11 Aug/.test(txt)) throw new Error("the report does not name where dose history begins");
+  });
+
+  await step("it imports, and every count matches", async () => {
+    await page.click("text=Bring these across");
+    await page.waitForSelector("h2:has-text('Brought across')", { timeout: 60000 });
+    const counts = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      const s = createStore();
+      const events = await s.ledger.allEvents();
+      const by = {};
+      for (const e of events) by[e.kind] = (by[e.kind] || 0) + 1;
+      const prov = {};
+      for (const e of events) prov[e.time.timeProvenance] = (prov[e.time.timeProvenance] || 0) + 1;
+      return {
+        by,
+        prov,
+        withInstant: events.filter((e) => e.time.absoluteInstant).length,
+        tasks: (await s.tasks.tasks()).length,
+        completions: (await s.tasks.completions()).length,
+      };
+    });
+    /* The smoke run logs a handful of readings of its own before this point,
+       so the imported ones are counted as "at least". */
+    if (counts.by.READING < 353) throw new Error(`readings: ${counts.by.READING}`);
+    if (counts.by.WATER_CHANGE < 25) throw new Error(`water changes: ${counts.by.WATER_CHANGE}`);
+    if (counts.by.ICP_PANEL !== 2) throw new Error(`ICP panels: ${counts.by.ICP_PANEL}`);
+    if (counts.by.HUSBANDRY !== 1) throw new Error(`lighting notes: ${counts.by.HUSBANDRY}`);
+    if (counts.tasks !== 11) throw new Error(`reminders: ${counts.tasks}`);
+    if (counts.completions < 36) throw new Error(`completions: ${counts.completions}`);
+  });
+
+  await step("not one imported record gained a time it did not have", async () => {
+    const bad = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      const events = await createStore().ledger.allEvents();
+      /* Everything the import wrote carries an origin; the smoke run's own
+         earlier entries do not, and those legitimately have instants. */
+      const imported = events.filter((e) => e.detail && e.detail.origin);
+      return {
+        total: imported.length,
+        withInstant: imported.filter((e) => e.time.absoluteInstant).length,
+        dateOnlyWithClock: imported.filter(
+          (e) => e.time.timeProvenance === "DATE_ONLY" && e.time.localTime
+        ).length,
+      };
+    });
+    if (bad.total < 380) throw new Error(`too few imported records to check: ${bad.total}`);
+    if (bad.withInstant !== 0) throw new Error(`${bad.withInstant} imported records gained an instant`);
+    if (bad.dateOnlyWithClock !== 0) throw new Error(`${bad.dateOnlyWithClock} date-only records gained a clock`);
+  });
+
+  await step("running it again changes nothing", async () => {
+    const before = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    await page.click("#tabbar .tab:has-text('Today')");
+    await page.waitForTimeout(400);
+    await page.click(".gear");
+    await page.waitForSelector("h1:has-text('Settings')");
+    await page.click("text=Import again");
+    await page.waitForSelector("h1:has-text('Import your history')");
+    await page.setInputFiles('input[type="file"]', BACKUP);
+    await page.waitForSelector("text=already here", { timeout: 30000 });
+    const after = await page.evaluate(async () => {
+      const { createStore } = await import("/app/src/store/index.js");
+      return (await createStore().ledger.allEvents()).length;
+    });
+    if (after !== before) throw new Error(`the record changed on a second run: ${before} -> ${after}`);
+  });
+
+  await step("History draws the boundary where dose history begins", async () => {
+    await page.click("#tabbar .tab:has-text('History')");
+    await page.waitForSelector("h1:has-text('History')");
+    await page.click("text=A year");
+    await page.waitForTimeout(1200);
+    const txt = await page.innerText("#app");
+    if (!/Records of what was being dosed start on/.test(txt)) {
+      throw new Error("the boundary note is not on the History screen");
+    }
+    const marks = await page.$$(".chart .boundary");
+    if (!marks.length) throw new Error("no boundary marker is drawn");
+    const excluded = /no time of day|timezone/.test(txt);
+    if (!excluded) throw new Error("History does not say WHY a reading is excluded");
+  });
+}
+
 await browser.close();
 server.close();
 

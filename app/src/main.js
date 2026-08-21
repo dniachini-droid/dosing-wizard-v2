@@ -61,6 +61,7 @@ import { t } from "./strings.js";
 import { renderToday } from "./screens/today.js";
 import { renderTestLab } from "./screens/testlab.js";
 import { renderTestMode } from "./screens/testmode.js";
+import { renderImportV1 } from "./screens/importv1.js";
 import { renderTasks, openSuggestionSheet } from "./screens/tasks.js";
 import { renderHistory } from "./screens/history.js";
 import { renderSettings, renderSetup, renderTools } from "./screens/settings.js";
@@ -156,6 +157,14 @@ const ctx = {
 
   refresh() {
     reassess().then(render);
+  },
+
+  /* Recompute, THEN go. `refresh()` redraws whatever screen is showing, which
+     is right for a reading logged inline and wrong after an action whose whole
+     result is a new screen — the redraw arrives and wipes the outcome. */
+  async reassessAndGo(screen) {
+    await reassess();
+    ctx.go(screen);
   },
 
   openEntry(eventId) {
@@ -466,6 +475,7 @@ const SCREENS = {
   today: renderToday,
   testlab: renderTestLab,
   testmode: renderTestMode,
+  import: renderImportV1,
   tasks: renderTasks,
   history: renderHistory,
   tools: renderTools,

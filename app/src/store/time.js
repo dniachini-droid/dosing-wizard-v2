@@ -172,6 +172,29 @@ export function dateOnly(localDate) {
   });
 }
 
+/* The record carries a wall-clock time and no proof of what offset was in
+   force. Historical data, and nothing else: this is the provenance an importer
+   produces and a live entry never should.
+
+   It is a THIRD constructor rather than a flag on `exactInstant`, because the
+   difference between the two is the whole point. There is no `absoluteInstant`
+   here and there is no branch that computes one. Applying the keeper's current
+   timezone to an old local stamp is forbidden "absolutely" by
+   `ALK-V2-DATA-CONTRACT.md` §1 and by canon `SHARED-LEGACY-TIME-001`, and the
+   reason is that once applied it cannot be told from a real offset afterwards.
+   The local time is kept because it is true and worth showing; it is not
+   promoted into an instant, so nothing can compute an elapsed interval from
+   it. */
+export function localTimeZoneUnknown(localDate, localTime) {
+  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
+  return Object.freeze({
+    timeProvenance: PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN,
+    localDate: String(localDate).slice(0, 10),
+    localTime: String(localTime).slice(0, 5),
+    /* No absoluteInstant, for the same reason `dateOnly` has none. */
+  });
+}
+
 function shiftIso(utcIso, offsetMinutes) {
   const ms = Date.parse(utcIso + "Z") + offsetMinutes * 60000;
   return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "");

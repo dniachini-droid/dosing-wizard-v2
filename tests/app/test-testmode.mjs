@@ -715,6 +715,7 @@ s.test("TM-23", "nothing outside the listed places reads the wall clock", () => 
     "./store/suggestion.js", /* addedAt, and when an offer was accepted */
     "./store/seed.js",       /* seeded records: recordedAt is the REAL instant, per TM-22 */
     "./store/mode.js",       /* the date test mode OFFERS as a starting point, before it owns the clock */
+    "./store/import-v1.js",  /* imported records: recordedAt is when the app was told, per TM-22's rule */
     "./screens/entry.js",    /* reading and correction recordedAt */
     "./screens/entrydetail.js",
     "./screens/logentry.js",

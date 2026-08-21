@@ -32,6 +32,7 @@ import {
   dateOnly,
   exactInstant,
   localOffsetMinutes,
+  localTimeZoneUnknown,
   localZone,
   now,
   todayLocal,
@@ -201,7 +202,18 @@ export function timeControl({ initialDate, initialTime, initialProvenance, onCha
     /* The other two provenances are honest weaker answers. This build stores
        the wall-clock reading the keeper gave and labels it for what it is; it
        does NOT convert it into an absolute instant, because converting it
-       would be exactly the fabrication this control exists to prevent. */
+       would be exactly the fabrication this control exists to prevent.
+
+       `LOCAL_TIME_ZONE_UNKNOWN` goes through `time.js`'s constructor, so this
+       control and the importer build that record the same way and by the same
+       code. `RECONSTRUCTED_WITH_PROVENANCE` deliberately does not: the
+       contract's `RECONSTRUCTED` means the historical offset was independently
+       proven AND the proof recorded, and this control records no proof. It
+       stores the wall-clock reading and its label, which is the honest thing a
+       control with no proof can do. */
+    if (state.provenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN) {
+      return { ok: true, time: localTimeZoneUnknown(state.date, state.time) };
+    }
     return {
       ok: true,
       time: Object.freeze({

@@ -121,6 +121,8 @@ a { color: var(--alk); }
 .p-no3 { background: var(--no3-bg); color: var(--no3); }
 .p-po4 { background: var(--po4-bg); color: var(--po4); }
 .p-sal { background: var(--sal-bg); color: var(--sal); }
+.p-ph  { background: var(--ph-bg);  color: var(--ph);  }
+.p-k   { background: var(--k-bg);   color: var(--k);   }
 
 /* --- Section label ------------------------------------------------------- */
 
@@ -772,8 +774,12 @@ table.data tr.excluded td { color: var(--faint); }
 
 .chart { width: 100%; display: block; }
 .chart .grid { stroke: var(--hairline); stroke-width: 1; stroke-dasharray: var(--chart-grid-dash); }
+/* The shaded band takes the PARAMETER's own background tint, set per chart
+   below. It used to be alkalinity's on every chart, which was invisible while
+   alkalinity was the only parameter with a range and wrong the moment the
+   keeper's own ranges for calcium, magnesium, nitrate and phosphate arrived. */
 .chart .range-fill { fill: var(--alk-bg); opacity: var(--chart-range-alpha); }
-.chart .range-edge { stroke: var(--alk); stroke-width: 1; opacity: 0.25; }
+.chart .range-edge { stroke: var(--alk); stroke-width: 1; opacity: var(--chart-range-edge-alpha); }
 .chart .axis { fill: var(--faint); font-size: var(--t-axis); font-family: var(--font); font-weight: var(--w-bold); }
 .chart .trace { fill: none; stroke-width: var(--chart-trace-w); stroke-linecap: round; stroke-linejoin: round; }
 .chart .pt { fill: var(--card-top); stroke-width: 2; }
@@ -785,11 +791,21 @@ table.data tr.excluded td { color: var(--faint); }
 .chart .evline-safety { stroke: var(--safety); stroke-width: 1; stroke-dasharray: var(--chart-event-dash); }
 
 .c-alk .trace, .c-alk .pt { stroke: var(--alk); } .c-alk .pt-last { fill: var(--alk); stroke: var(--alk); } .c-alk .area { fill: url(#g-alk); }
+.c-alk .range-fill { fill: var(--alk-bg); } .c-alk .range-edge { stroke: var(--alk); }
 .c-ca  .trace, .c-ca  .pt { stroke: var(--ca);  } .c-ca  .pt-last { fill: var(--ca);  stroke: var(--ca);  } .c-ca  .area { fill: url(#g-ca);  }
+.c-ca .range-fill { fill: var(--ca-bg); } .c-ca .range-edge { stroke: var(--ca); }
 .c-mg  .trace, .c-mg  .pt { stroke: var(--mg);  } .c-mg  .pt-last { fill: var(--mg);  stroke: var(--mg);  } .c-mg  .area { fill: url(#g-mg);  }
+.c-mg .range-fill { fill: var(--mg-bg); } .c-mg .range-edge { stroke: var(--mg); }
 .c-no3 .trace, .c-no3 .pt { stroke: var(--no3); } .c-no3 .pt-last { fill: var(--no3); stroke: var(--no3); } .c-no3 .area { fill: url(#g-no3); }
+.c-no3 .range-fill { fill: var(--no3-bg); } .c-no3 .range-edge { stroke: var(--no3); }
 .c-po4 .trace, .c-po4 .pt { stroke: var(--po4); } .c-po4 .pt-last { fill: var(--po4); stroke: var(--po4); } .c-po4 .area { fill: url(#g-po4); }
+.c-po4 .range-fill { fill: var(--po4-bg); } .c-po4 .range-edge { stroke: var(--po4); }
 .c-sal .trace, .c-sal .pt { stroke: var(--sal); } .c-sal .pt-last { fill: var(--sal); stroke: var(--sal); } .c-sal .area { fill: url(#g-sal); }
+.c-sal .range-fill { fill: var(--sal-bg); } .c-sal .range-edge { stroke: var(--sal); }
+.c-ph  .trace, .c-ph  .pt { stroke: var(--ph);  } .c-ph  .pt-last { fill: var(--ph);  stroke: var(--ph);  } .c-ph  .area { fill: url(#g-ph);  }
+.c-ph .range-fill { fill: var(--ph-bg); } .c-ph .range-edge { stroke: var(--ph); }
+.c-k   .trace, .c-k   .pt { stroke: var(--k);   } .c-k   .pt-last { fill: var(--k);   stroke: var(--k);   } .c-k   .area { fill: url(#g-k);   }
+.c-k .range-fill { fill: var(--k-bg); } .c-k .range-edge { stroke: var(--k); }
 
 /* Left-to-right draw; markers appear as the line reaches them. */
 .chart .trace {

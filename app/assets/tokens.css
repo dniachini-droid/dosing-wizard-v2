@@ -60,6 +60,18 @@
   --sal:               #2A6CAE;
   --sal-bg:            #E4EFFA;
 
+  /* pH and potassium. Added when the keeper's own six-month history arrived
+     carrying 17 pH readings and 13 potassium ones: a parameter with no colour
+     is a parameter with no identity, and the alternative was leaving thirty of
+     his real measurements with nowhere to be shown. Chosen to sit clear of the
+     six above at the same lightness, and used exactly as they are — icon tint,
+     header tint, trace, range shading. Never a state. */
+  --ph:                #7A6A21;
+  --ph-bg:             #F3F0DF;
+
+  --k:                 #167F9B;
+  --k-bg:              #E0F0F5;
+
   /* --- State ---------------------------------------------------------------
      Pills, markers and notices only. Amber is attention; red is safety and
      outer-bound breach. There is no third state colour: a refusal is rendered
@@ -191,6 +203,7 @@
   --chart-grid-dash:   1 4;
   --chart-event-dash:  3 4;
   --chart-range-alpha: 0.55;
+  --chart-range-edge-alpha: 0.25;
 }
 
 /* ============================================================================

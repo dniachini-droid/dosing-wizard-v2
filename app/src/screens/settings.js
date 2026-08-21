@@ -327,6 +327,25 @@ export async function renderSettings(ctx) {
   );
   screen.append(dur);
 
+  /* Bringing the old records across. A one-time flow the keeper chooses to
+     run, not a migration that runs itself on first launch — a migration
+     nobody read the report of is a migration nobody agreed to. */
+  const imported = await ctx.store.kvGet("v1Import");
+  screen.append(
+    h(
+      "section",
+      { class: "card" },
+      h("div", { class: "card-head" }, h("h2", null, t("settings.import.title"))),
+      h("p", { class: "body" }, imported ? t("settings.import.done") : t("settings.import.body")),
+      h(
+        "button",
+        { class: imported ? "btn" : "btn btn-primary", type: "button", onclick: () => ctx.go("import") },
+        imported ? t("settings.import.again") : t("settings.import.action")
+      ),
+      h("p", { class: "inert-note" }, t("settings.import.note"))
+    )
+  );
+
   /* Test mode.
 
      Here rather than on the tab bar, because it is not part of keeping a tank

@@ -62,6 +62,12 @@ export function fmtEventTime(time) {
     const clock = time.localTime || fmtTimeOfDay(time.absoluteInstant);
     return clock ? `${date} ${clock}` : date;
   }
+  /* A record with a wall-clock time and no proven offset HAS a time, and this
+     used to call it "date only" — which is a different, weaker fact than the
+     one the record carries, and it told the keeper his imported reading was
+     less precise than it is. The time is shown, and what is unknown about it
+     is said rather than hidden. */
+  if (time.localTime) return t("time.fmt.localOnly", { date, time: time.localTime });
   return t("time.fmt.dateOnly", { date });
 }
 
