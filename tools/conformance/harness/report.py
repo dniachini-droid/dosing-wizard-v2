@@ -41,6 +41,10 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
     )
     w(f"reason-code set  : {r.meta.get('reasonCodeCount')} codes, closed")
     w(f"invariants       : {r.meta.get('invariantCount')} documented")
+    w(
+        f"package checks   : {r.package_assertions} assertions over the canon, the "
+        f"register and the corpus"
+    )
     w("")
 
     # ---- Mechanical checks -------------------------------------------------

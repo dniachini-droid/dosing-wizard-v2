@@ -14,6 +14,7 @@ from . import engine_adapter as ea
 from . import engine_checks as ec_mod
 from . import invariant_checks as ic_mod
 from . import invariants_doc as idoc_mod
+from . import package_checks as pkg_mod
 from . import paths
 from . import reason_codes as rc_mod
 from .results import (
@@ -154,6 +155,31 @@ def run(
     )
     report.corpus_problems.extend(trace_problems)
     report.checks.extend(doc_checks)
+
+    # The package-level checks absorbed from the retired freeze validator.
+    # They read the canon, the open-issues register and the algorithm
+    # contract, which nothing else in this harness opens, and they recompute
+    # the corpus's stated intermediates from the corpus's own declared inputs.
+    # `docs/process/GATE-CHECK-INVENTORY.md` records what moved and what did
+    # not.
+    pkg_checks, pkg_assertions = pkg_mod.run_package_checks()
+    report.checks.extend(pkg_checks)
+    report.package_assertions = pkg_assertions
+    # A floor on how much of itself the gate examined. Several absorbed checks
+    # are guarded on a fixture or a document section existing, so an edit can
+    # delete assertions instead of failing them -- and a gate that quietly
+    # examines less reports a smaller, cleaner pass. Reported here, with the
+    # unaccounted-invariant assertion, because both answer the same question:
+    # can this harness account for itself?
+    if pkg_assertions < pkg_mod.EXPECTED_ASSERTIONS:
+        report.corpus_problems.append(
+            f"the package checks made {pkg_assertions} assertions; "
+            f"{pkg_mod.EXPECTED_ASSERTIONS} were expected. "
+            f"{pkg_mod.EXPECTED_ASSERTIONS - pkg_assertions} assertion(s) did "
+            f"not run. A guarded check whose subject was renamed or removed "
+            f"disappears rather than failing, so this is a coverage loss even "
+            f"though nothing above went red."
+        )
 
     schema_tolerance = c.schema
     replies: List[Tuple[str, Dict[str, Any]]] = []
@@ -331,5 +357,6 @@ def run(
         "invariantCount": len(inv_doc.invariants),
         "engineResultFields": len(contract.engine_result_fields),
         "corpusSource": paths.rel(paths.FIXTURES),
+        "packageAssertions": pkg_assertions,
     }
     return report

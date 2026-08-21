@@ -570,3 +570,95 @@ reasonable one. It is raised as `OD-004` rather than answered here.
 - `/implement` step 5 and `/pr-gate` step 2 both list it, with its trigger.
 - Chemistry work reaches it only if the session runs `/implement` rather than
   `/implement-chemistry`, which is the gap `OD-004` names.
+
+---
+
+## DEC-019 — One executable gate; the freeze validator is retired
+
+- **ID:** DEC-019
+- **Date:** 2026-08-20
+- **Status:** ACTIVE
+
+**Decision**
+
+There is **one executable gate**: the conformance harness
+(`tools/conformance/run-conformance.py`, with `run-mutations.py` as its negative-control
+set). It owns everything mechanically checkable in this repository.
+
+`docs/implementation/alk-v2/validate-freeze-5.py` is **retired and deleted**. Its unique
+coverage was moved into `tools/conformance/harness/package_checks.py` first, and the
+retirement happened only after every absorbed check had been demonstrated red under a
+mutation in `run-mutations.py`.
+
+`docs/implementation/alk-v2/recompute-goldens.py` is **not** affected. It is a recorder,
+not a gate — it exits 0 whatever it finds — and it answers a different question. Nothing
+in this decision makes it authoritative.
+
+**Rationale**
+
+The owner took this decision; it is recorded here rather than settled here.
+
+The reason it was put is canon `MASTER RULE 1`: two implementations of one rule that
+agree today are a defect, not a coincidence, because one will drift and nothing will
+notice. Two gates were checking overlapping properties — the fixture index, reason-code
+closure, coverage of ACTIVE rules — and the conformance harness's own rebase report
+flagged the overlap and declined to duplicate what it could see the other gate already
+doing. Declining is the right instinct and the wrong resting place: it left three
+invariants (`INV-I8`, `INV-I9`, `INV-I10`) owned by a gate that nothing else ran, and
+left an open question standing where a decision belonged.
+
+**How it was done, because the sequence is the point**
+
+Retiring the validator before absorbing it would have silently dropped canon coverage.
+That is the failure this project has hit repeatedly, so the order was fixed and is on
+the record in `docs/process/GATE-CHECK-INVENTORY.md`:
+
+1. Inventory both gates and classify every check `DUPLICATE`, `UNIQUE_TO_FREEZE`,
+   `UNIQUE_TO_HARNESS` or `SUPERSEDED`, before moving anything.
+2. Move every `UNIQUE_TO_FREEZE` check, each arriving with a negative control in the
+   mutation set that names the mechanism its failure text must contain.
+3. Only then delete, and account for every check that existed before and does not exist
+   now.
+
+**Consequences**
+
+- The harness now reads the canon, the open-issues register and the algorithm contract.
+  It did not before, and `CHK-INDEX-INTEGRITY`'s docstring saying it does not read the
+  canon is now true only of that one check.
+- `INV-I8`, `INV-I9` and `INV-I10` are delegated to `CHK-DECISION-COVERAGE`,
+  `CHK-CANON-MANIFEST` and `CHK-FIXTURE-ARITHMETIC` and executed in full. The
+  `OWNED_BY_PACKAGE_GATE` accounting reason is gone, because nothing is owned by a
+  package gate any more.
+- Eight of the validator's 437 checks were deliberately not carried across: five were
+  duplicates the harness already had and three were weaker than the harness's
+  equivalent. Each is named, with what it dropped, in the inventory.
+- One absorbed check, `CHK-CANON-CONSTANTS`, has no document mutation. Its subject is
+  the canon at a pinned git commit, which no mutation of the working tree can reach. It
+  carries an inline negative control instead and `D-13` is recorded `BLOCKED` with its
+  unblocking condition, rather than a control being faked for it.
+- This decision is about which tool runs. It sets no chemistry behaviour: nothing here
+  changes what the engine must do, and no absorbed check is cited by a runtime.
+
+  **A claim made here in the first draft was false and is corrected rather than
+  deleted.** It said that "none of the absorbed checks introduces a threshold, rail or
+  equation of its own — every value they assert is read at run time from the canon or
+  the corpus." `test-engineer` measured roughly twenty transcribed numeric literals in
+  `package_checks.py`: `0.50` (the R_down rail), `1.28` (the slope-support k), `1.0`
+  (the advisory offset), `30` (the testing-episode window), and `11.2`, `10.8`, `0.0693`
+  inside one recomputation. Every one arrived verbatim with the absorbed logic; none was
+  introduced by this decision. The claim was still wrong.
+
+  Two classes are worth telling apart, and the first draft flattened them:
+  a gate that **asserts** a number canon owns goes stale at every reissue and must be
+  hand-edited — that is why the inventory dropped the `76` invariant-count pin. A gate
+  that **recomputes** a fixture's stated intermediates from the inputs that same fixture
+  declares is doing self-consistency arithmetic, and the constants in it are the
+  arithmetic, not an expectation. Most of the twenty are the second kind. That does not
+  make them harmless: they will still need editing if canon reissues the rail or the
+  window, and they are unmarked.
+
+  Whether "no transcribed number inside a gate" is a rule or a preference — and whether
+  `CLAUDE.md`'s chemistry clause reaches a gate assertion at all or only runtime
+  behaviour — is **not settled by this entry**. It is raised for the owner as `OD-005`
+  and the literals are left as they are, because de-literalising 400 absorbed assertions
+  by hand is precisely how coverage gets lost quietly.

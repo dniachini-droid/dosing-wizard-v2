@@ -175,6 +175,12 @@ def main(argv=None) -> int:
         print(f"{dm.mid}  {dm.title}")
         print(f"    sabotage     : {dm.sabotage}")
         print(f"    guards       : {dm.guards}")
+        if dm.blocked:
+            blocked.append(dm)
+            print("    result       : BLOCKED — not executable today")
+            print(f"    unblocks when: {dm.unblocks_when}")
+            print("")
+            continue
         try:
             outcome = doc_mutations.run_one(dm)
         except Exception as exc:  # noqa: BLE001

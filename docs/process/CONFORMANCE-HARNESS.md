@@ -25,10 +25,11 @@ Python 3 standard library.
 | Stage | Subject | Needs an engine? |
 |---|---|---|
 | Mechanical document checks | the reason-code catalogue, the fixture index, the rule-traceability table, the data contract, and every field name the corpus asserts | no |
+| Package checks (absorbed) | the canon, its rule coverage manifest, the open-issues register, the algorithm contract, and every owner decision recomputed from the fixtures' own declared inputs — 430 assertions in fifteen `CHK-*` buckets, absorbed from the retired `validate-freeze-5.py` under `DEC-019` | no |
 | Fixture corpus | every fixture that carries a replayable event ledger and an `asOf` | yes |
 | Engine-facing mechanical checks | output shape against `EngineResult`; emitted reason codes against the closed set, with their catalogued severity, owner and a non-empty payload; every withheld output — at any depth — named in the `affectedOutputs` of a `GATING` or `REFUSAL` code; engine and canon version declared and current | yes |
 | Executable invariants | `INV-A1` replay determinism, `INV-A2` no clock read, `INV-A3` no iteration-order dependence | yes |
-| Delegated invariants | `INV-B7`, `INV-I2`, `INV-I3` — the part executable without engine source | no |
+| Delegated invariants | `INV-B7`, `INV-I2`, `INV-I3` — the part executable without engine source; `INV-I8`, `INV-I9`, `INV-I10` — in full, absorbed from the retired validator | no |
 
 For every fixture it reports the id, the expected value, the actual value and
 pass/fail. For every invariant it reports the id, pass/fail, and what was
@@ -45,6 +46,14 @@ tolerance and every invariant is parsed at run time from:
 - `docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md`
 - `docs/implementation/alk-v2/ALK-V2-INVARIANTS.md`
 - `docs/implementation/alk-v2/traceability/alk-v2-traceability.json`
+- `docs/implementation/alk-v2/ALK-V2-OPEN-ISSUES.md`
+- `docs/implementation/alk-v2/ALK-V2-ALGORITHM-CONTRACT.md`
+- `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md`
+
+The canon is on that list only since the absorption. It is read, never written,
+and never as a source of expectations for an engine: the package checks hold
+the canon to its own manifest, to the fixtures and to the decisions it records,
+which is a self-consistency question, not a chemistry one.
 
 A copy of an expected value inside the harness would drift from canon and would
 be a defect. `CLAUDE.md` puts it more strongly: outside `docs/research/` and
@@ -102,12 +111,16 @@ number is 6 of 204. Turning an `ABSTRACT_INPUT` fixture into an executable one
 means writing its event ledger, which is fixture work governed by the canon —
 not something the harness may do on the fixture's behalf.
 
-**Of 76 invariants, 6 have an executable form** — three run against an engine,
-three are carried by document-level checks. The remaining 70 are listed with one
-of four reasons: needs engine behaviour, needs implementation source to scan,
-has no executable form, or is already owned by the alk-v2 package's own
-validator (`validate-freeze-5.py`), where implementing it here as well would
-give one rule two owners. The harness asserts that these two sets partition the
+**Of 76 invariants, 9 have an executable form** — three run against an engine,
+three are carried in part by document-level checks, and three (`INV-I8`,
+`INV-I9`, `INV-I10`) are carried in full by them, having arrived with the
+absorption. The remaining 67 are listed with one
+of three reasons: needs engine behaviour, needs implementation source to scan,
+or has no executable form. The fourth reason used to be "already owned by the
+alk-v2 package's own validator", which covered `INV-I8`, `INV-I9` and
+`INV-I10`. That validator is retired (`DEC-019`) and all three are now executed
+here in full, by `CHK-DECISION-COVERAGE`, `CHK-CANON-MANIFEST` and
+`CHK-FIXTURE-ARITHMETIC`. The harness asserts that these two sets partition the
 invariant document exactly, so an invariant added and forgotten becomes a
 harness failure rather than silently counting as covered.
 
@@ -163,17 +176,39 @@ exactly that.
 checker is not trusted as a gate until a deliberate mutation of the defect class
 it targets has been shown to fail it.
 
-Twenty-five named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
-**reference oracle** that is emphatically not an engine, and four (`D-1`..`D-4`)
-corrupt a throwaway copy of the alk-v2 documents, because a hook on an oracle
-can never reach a check whose subject is a document. The repository is never
-modified by either arm.
+Forty-seven named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
+**reference oracle** that is emphatically not an engine, and twenty-six
+(`D-1`..`D-26`) corrupt a throwaway copy of the alk-v2 documents **and of the
+canon**, because a hook on an oracle can never reach a check whose subject is a
+document. The repository is never modified by either arm.
 
-**One is blocked.** `M-8` (repeat-window clustering) cannot run: no executable
+Seventeen of the document mutations (`D-5`..`D-21`) arrived with the absorption
+and there is one for each absorbed check. Five more (`D-22`..`D-26`) arrived
+with the fix pass that independent review forced; `D-26` is the one to read
+first, because it pins the rule that a check which did not run does not report
+PASS. Two of them are the invariant
+document's own stated negative controls, ported: `INV-I8`'s "delete the
+`forbidden` block from `AD-MNT-006`" and `INV-I10`'s "change one `alkDkh` value
+without changing the expectations". Running `INV-I8`'s showed it had gone
+**stale** — `F5-05` is covered by three fixtures now and each carries its own
+control, so removing one leaves the decision correctly pinned. `D-11` removes
+all three and says so. That is what porting a control rather than copying its
+prose is for.
+
+The single most important of them is `D-17`, which reverts an owner decision by
+**adding** a contradicting sentence to live canon rather than removing an
+asserted one. Every presence check still passes under it. Only an absence
+scanner sees it, and four owner decisions were once reverted exactly this way
+while a 192-check gate stayed green.
+
+**Two are blocked.** `M-8` (repeat-window clustering) cannot run: no executable
 fixture contains two readings inside the 30-minute window, and supplying the
-clustering behaviour in the oracle would mean implementing a canon rule. Its
-unblocking condition is stated in full in `mutations/__init__.py` and reprinted
-on every run.
+clustering behaviour in the oracle would mean implementing a canon rule.
+`D-13` (a constant that did not pre-exist) cannot run either: its check's
+subject is the canon as it stood at a pinned git commit, which no mutation of
+the working tree can reach, so `CHK-CANON-CONSTANTS` carries an inline probe
+instead. Both unblocking conditions are stated in full in the mutation set and
+reprinted on every run. Neither is counted as caught.
 
 A mutation counts as caught only when the subject it named goes red **and** the
 failure text names the mechanism it claims to guard. Both halves matter: the
@@ -236,18 +271,34 @@ them on every run, which is the most durable form of recording available.
 None of these is fixed here. Fixing them means editing the alk-v2 package
 documents, which this work was scoped out of.
 
-## Two gates now exist
+## One gate
 
 `ALK_V2_FREEZE_5` brought `docs/implementation/alk-v2/validate-freeze-5.py`, a
-package-scoped mechanical validator, and `recompute-goldens.py`. Their document
-checks and this harness's document checks overlap.
+second package-scoped mechanical validator, and this document used to end this
+section by saying the overlap between it and this harness was "not resolved
+here, and it should be".
 
-That overlap is **not resolved here, and it should be**. Canon `MASTER RULE 1`:
-two implementations of one rule that agree today are a defect, not a
-coincidence. Where this harness can see that a property is already owned by the
-package validator — `INV-I8`, `INV-I9`, `INV-I10` — it declines to implement it
-and says so rather than quietly agreeing. Whether the two gates should merge,
-and which owns what, is an open question for the owner.
+It is resolved. The owner decided one gate; `DEC-019` records it. The validator
+is retired and deleted, and its unique coverage — 430 assertions — is in
+`tools/conformance/harness/package_checks.py`. `docs/process/GATE-CHECK-INVENTORY.md`
+is the inventory that was produced **before** anything moved, classifying every
+one of the validator's 437 checks as duplicate, unique, or superseded, and
+naming what each superseded check dropped.
+
+Eight were not carried across. Five were duplicates of `CHK-INDEX-INTEGRITY`
+and `CHK-RC-CATALOGUE`. Three were weaker than the harness's equivalent: one
+read a declared total instead of deriving it, one excluded from resolution
+exactly the ids that turn out to dangle, and one transcribed the literal `76`
+into the gate — a number in a checker that canon owns, which is the thing
+`CLAUDE.md` forbids.
+
+`recompute-goldens.py` is untouched by that decision and is still in the
+package. It is a recorder, not a gate: it exits 0 whatever it finds. Where this
+harness recomputes arithmetic it does so as a gate, and the two answer
+different questions.
+
+Where a property is genuinely owned elsewhere the harness still declines to
+duplicate it and says so. What it no longer does is leave the question standing.
 
 ## What the harness will not tell you
 

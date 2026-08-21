@@ -116,20 +116,73 @@ def check_reason_code_closure_documents(
     violations: List[str] = []
     examined = 0
 
+    sites = 0
     for f in c.fixtures:
-        for code in f.expected_reason_codes:
+        # Every shape, not just the top-level array. See
+        # `corpus.Fixture.all_expected_reason_codes` for why, and
+        # `docs/process/GATE-CHECK-INVENTORY.md` class 7 for where this came
+        # from: the retired freeze validator read four shapes and this check
+        # read one, leaving 60-odd assertions unvalidated against the closed
+        # set and, worse, against the retired set.
+        harvest = f.all_expected_reason_codes
+        for site, codes in sorted(harvest.items()):
+            sites += 1
+            for code in codes:
+                examined += 1
+                if code in cat.retired:
+                    # Reported separately from mere non-membership: a retired
+                    # code is a code that once existed and was deliberately
+                    # withdrawn, and a fixture still requiring it is pinning
+                    # behaviour the owner decided to remove.
+                    violations.append(
+                        f"{f.fixture_id} ({f.source_file}) requires `{code}` at "
+                        f"`{site}`, which is RETIRED; no module may emit it"
+                    )
+                    continue
+                if code not in cat.closed_set:
+                    extra = (
+                        " (listed in the catalogue appendix as canon vocabulary, not a "
+                        "reason code)"
+                        if code in cat.non_codes
+                        else ""
+                    )
+                    violations.append(
+                        f"{f.fixture_id} ({f.source_file}) requires `{code}` at "
+                        f"`{site}`, which is not in the closed set{extra}"
+                    )
+
+        # A fixture must not expect a code it also forbids. The two clauses of
+        # the fixture schema's acceptance rule would then contradict each
+        # other and no engine could satisfy both.
+        #
+        # **Scoped to the primary case, deliberately.** A `variant` is a
+        # different state of the world, not a different expectation about the
+        # same one, and the top-level `forbidden` block belongs to the primary
+        # case only. `AD-SAF-009` is the worked example: its primary case
+        # forbids `SAFETY_HIGH_BREACH_RATE_NOT_RUN_DOSE_UNKNOWN` -- an
+        # uncomputable consumption must not be mistaken for an unknown dose --
+        # while its variant sets `currentDoseMlPerDay: "UNKNOWN"` and requires
+        # exactly that code. Widening this to the whole harvest reports that
+        # fixture as self-contradictory, which it is not. The closure and
+        # retired clauses above DO read every shape, because closed-set
+        # membership does not depend on which state is being described.
+        forbidden_codes = set()
+        for key in ("reasonCodes", "reasonCode", "codes"):
+            v = f.forbidden.get(key)
+            for code in v if isinstance(v, list) else ([v] if isinstance(v, str) else []):
+                if isinstance(code, str):
+                    forbidden_codes.add(code)
+        required_codes = set(f.expected_reason_codes)
+        for _case, _codes in (f.body.get("expectedReasonCodesByCase") or {}).items():
+            required_codes |= {x for x in (_codes or []) if isinstance(x, str)}
+        both = sorted(forbidden_codes & required_codes)
+        if both:
             examined += 1
-            if code not in cat.closed_set:
-                extra = (
-                    " (listed in the catalogue appendix as canon vocabulary, not a "
-                    "reason code)"
-                    if code in cat.non_codes
-                    else ""
-                )
-                violations.append(
-                    f"{f.fixture_id} ({f.source_file}) requires `{code}`, which is not "
-                    f"in the closed set{extra}"
-                )
+            violations.append(
+                f"{f.fixture_id} both requires and forbids {both}; the fixture "
+                f"contradicts itself and no engine can satisfy it"
+            )
+
         forb = f.forbidden
         for key in ("reasonCodes", "reasonCode", "codes"):
             for code in forb.get(key) or []:
@@ -165,14 +218,48 @@ def check_reason_code_closure_documents(
                     f"in the closed set"
                 )
 
+    # Inline negative control, ported from the freeze validator. The harvester
+    # is the thing that could silently stop seeing a shape, and a check that
+    # examines nothing reports a clean pass. Feed it a planted code in the
+    # by-case shape and require it to come back.
+    probe = corpus_mod.Fixture(
+        fixture_id="PROBE",
+        title="",
+        source_file="(negative control)",
+        body={
+            "expectedAction": {
+                "expectedReasonCodesByCase": {"PROBE": ["PROBE_CODE_NOT_IN_CATALOGUE"]}
+            }
+        },
+        klass=corpus_mod.NO_INPUT,
+        reason="",
+    )
+    seen = {code for codes in probe.all_expected_reason_codes.values() for code in codes}
+    if "PROBE_CODE_NOT_IN_CATALOGUE" not in seen:
+        violations.append(
+            "NEGATIVE CONTROL FAILED: the by-case harvester did not see a code "
+            "planted in `expectedReasonCodesByCase`. Every by-case assertion in "
+            "the corpus is therefore unchecked, and this check's PASS would mean "
+            "nothing"
+        )
+    if not cat.retired:
+        violations.append(
+            "NEGATIVE CONTROL FAILED: the catalogue parser found no retired codes "
+            "at all, so the retired clause above cannot fire. The document holds "
+            "several `Retired by ...` tables at both `##` and `###` level"
+        )
+
     return CheckOutcome(
         check_id="CHK-RC-CLOSURE-DOC",
         title="Every reason code named in the corpus or traceability table is catalogued",
         status=FAIL if violations else PASS,
         what_was_checked=(
-            f"{examined} code references drawn from {len(c.fixtures)} fixtures and "
-            f"{len(_trace_rules(trace))} traceability rules, against the "
-            f"{len(cat.closed_set)}-member closed set"
+            f"{examined} code references drawn from {sites} assertion sites in "
+            f"{len(c.fixtures)} fixtures -- expectedReasonCodes, "
+            f"variant.expectedReasonCodes, expectedReasonCodesByCase and "
+            f"variantReasonCodes -- and {len(_trace_rules(trace))} traceability "
+            f"rules, against the {len(cat.closed_set)}-member closed set and the "
+            f"{len(cat.retired)}-member retired set"
         ),
         violations=violations,
         subjects_examined=examined,
@@ -238,13 +325,34 @@ def check_index_integrity(
 
     index_ids: List[str] = list(c.index.get("fixtureIds") or [])
     index_set = set(index_ids)
+    # Cardinality, not just membership. A repeated entry in `fixtureIds` leaves
+    # the two SETS identical, so the set comparison below cannot see it -- and
+    # duplicating a line is what a copy-paste slip looks like when a fixture is
+    # added. The retired validator asserted `len(idx['fixtureIds'])==len(fixtures)`
+    # alongside the set equality; that conjunct had no equivalent here and the
+    # gate inventory wrongly recorded the pair as a duplicate.
+    if len(index_ids) != len(index_set):
+        repeated = sorted({fid for fid in index_ids if index_ids.count(fid) > 1})
+        violations.append(
+            f"index.json lists {len(index_ids)} fixture ids but only "
+            f"{len(index_set)} are distinct; repeated: {repeated}"
+        )
     for fid in sorted(index_set - body_set):
         violations.append(f"index.json lists `{fid}`, which resolves to no fixture body")
     for fid in sorted(body_set - index_set):
         violations.append(f"fixture body `{fid}` exists but index.json does not list it")
 
+    # An absent declaration used to skip the check that reads it, so deleting a
+    # key deleted the check. The retired validator crashed on these, which is
+    # loud; silence is not. An index that declares nothing must not be an index
+    # that passes everything.
     declared_dupes = c.index.get("duplicateFixtureIds")
-    if declared_dupes is not None and sorted(declared_dupes) != dupes:
+    if declared_dupes is None:
+        violations.append(
+            "index.json declares no `duplicateFixtureIds`; the declaration is "
+            "what this check holds the corpus to, and its absence is not a pass"
+        )
+    elif sorted(declared_dupes) != dupes:
         violations.append(
             f"index.json declares duplicateFixtureIds={declared_dupes!r}; "
             f"actual duplicates are {dupes!r}"
@@ -268,12 +376,23 @@ def check_index_integrity(
                 violations.append(f"{name}: file holds but index omits {extra}")
 
     total = c.declared_total
-    if total is not None and total != len(c.fixtures):
+    if total is None:
+        violations.append(
+            "index.json declares no `totals.fixtures`; the corpus size is then "
+            "whatever parsing happened to find, which is not a checkable claim"
+        )
+    elif total != len(c.fixtures):
         violations.append(
             f"index.json totals.fixtures = {total}; {len(c.fixtures)} fixture bodies parsed"
         )
 
     prov_declared = c.index.get("byProvenance") or {}
+    if not prov_declared:
+        violations.append(
+            "index.json declares no `byProvenance` census; provenance is how "
+            "a canon-derived fixture is told from a salvaged one, and an "
+            "undeclared census cannot be checked against the bodies"
+        )
     if prov_declared:
         actual_prov: Dict[str, int] = {}
         for f in c.fixtures:

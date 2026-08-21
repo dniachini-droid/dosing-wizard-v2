@@ -22,11 +22,21 @@ ALK = os.environ.get("ALK_V2_PACKAGE_DIR") or os.path.join(
 )
 FIXTURES = os.path.join(ALK, "fixtures")
 
+#: The canon. Read only by `package_checks.py`, which absorbed the canon-facing
+#: half of the retired `validate-freeze-5.py`. Overridable on the same terms as
+#: `ALK_V2_PACKAGE_DIR` and for the same single reason: the mutation harness
+#: corrupts a throwaway copy and requires the checks to go red. Nothing in a
+#: normal run sets it.
+CANON_DIR = os.environ.get("ALK_V2_CANON_DIR") or os.path.join(ROOT, "docs", "canon")
+CANON_MD = os.path.join(CANON_DIR, "REEF-CHEMISTRY-ENGINE-V2-CANON.md")
+
 REASON_CODES_MD = os.path.join(ALK, "ALK-V2-REASON-CODES.md")
 DATA_CONTRACT_MD = os.path.join(ALK, "ALK-V2-DATA-CONTRACT.md")
 INVARIANTS_MD = os.path.join(ALK, "ALK-V2-INVARIANTS.md")
 IMPLEMENTATION_CONTRACT_MD = os.path.join(ALK, "ALK-V2-IMPLEMENTATION-CONTRACT.md")
 TRACEABILITY_JSON = os.path.join(ALK, "traceability", "alk-v2-traceability.json")
+ALGORITHM_CONTRACT_MD = os.path.join(ALK, "ALK-V2-ALGORITHM-CONTRACT.md")
+OPEN_ISSUES_MD = os.path.join(ALK, "ALK-V2-OPEN-ISSUES.md")
 
 FIXTURE_INDEX = os.path.join(FIXTURES, "index.json")
 FIXTURE_SCHEMA = os.path.join(FIXTURES, "_schema.json")

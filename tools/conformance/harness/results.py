@@ -76,6 +76,11 @@ class RunReport:
     checks: List[CheckOutcome] = field(default_factory=list)
     invariants: List[InvariantOutcome] = field(default_factory=list)
     corpus_problems: List[str] = field(default_factory=list)
+    #: Individual assertions run by the absorbed package checks. Reported
+    #: because 15 CheckOutcomes hide the 422 assertions behind them, and the
+    #: count is what the retirement of the freeze validator is accounted
+    #: against.
+    package_assertions: int = 0
     notes: List[str] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)
 

@@ -57,14 +57,14 @@ NO_EXECUTABLE_FORM = (
     "wording, design-review judgement, or a quantity the canon deliberately "
     "leaves unassigned for alkalinity."
 )
-OWNED_BY_PACKAGE_GATE = (
-    "is a document-level property already executed by the alk-v2 package's own "
-    "validator (docs/implementation/alk-v2/validate-freeze-5.py, and "
-    "recompute-goldens.py for the golden-recomputation clause). Implementing it "
-    "here as well would give one rule two owners, which canon MASTER RULE 1 "
-    "calls a defect rather than a coincidence. Whether the two gates should be "
-    "merged is recorded as an open question, not settled here."
-)
+# `OWNED_BY_PACKAGE_GATE` used to sit here. It said that `INV-I8`, `INV-I9` and
+# `INV-I10` were executed by the alk-v2 package's own validator and that
+# implementing them here as well would give one rule two owners. The owner has
+# since decided one gate: the validator is retired and its checks were absorbed
+# into `package_checks.py`. All three are now delegated below, to the buckets
+# that execute them, and none of them is unowned for a single commit --
+# `docs/process/GATE-CHECK-INVENTORY.md` and `DECISIONS.md` `DEC-019` are the
+# record.
 
 NOT_EXECUTABLE_REASONS: Dict[str, str] = {
     # Group A
@@ -148,20 +148,38 @@ NOT_EXECUTABLE_REASONS: Dict[str, str] = {
     "INV-G16": NO_ENGINE_BEHAVIOUR,
     "INV-G17": NO_ENGINE_BEHAVIOUR,
     "INV-I7": NO_ENGINE_BEHAVIOUR,
-    "INV-I8": OWNED_BY_PACKAGE_GATE,
-    "INV-I9": OWNED_BY_PACKAGE_GATE,
-    "INV-I10": OWNED_BY_PACKAGE_GATE,
 }
 
 #: Invariants this module executes, and the CHK-* checks that carry the
 #: document-level part of an invariant whose full form needs source code.
-EXECUTED_HERE = ("INV-A1", "INV-A2", "INV-A3", "INV-B7", "INV-I2", "INV-I3")
+EXECUTED_HERE = (
+    "INV-A1",
+    "INV-A2",
+    "INV-A3",
+    "INV-B7",
+    "INV-I2",
+    "INV-I3",
+    "INV-I8",
+    "INV-I9",
+    "INV-I10",
+)
 
 DELEGATED_TO_CHECKS = {
     "INV-B7": "CHK-DIMENSION-SAFETY",
     "INV-I2": "CHK-RC-OWNER",
     "INV-I3": "CHK-RC-CLOSURE-DOC + CHK-RC-CLOSURE-ENGINE",
+    # Absorbed from the retired freeze validator. Unlike the three above these
+    # are executed in full, not in part: their subject is a document, and the
+    # document is here.
+    "INV-I8": "CHK-DECISION-COVERAGE",
+    "INV-I9": "CHK-CANON-MANIFEST",
+    "INV-I10": "CHK-FIXTURE-ARITHMETIC",
 }
+
+#: Delegated invariants whose executable form is complete, so the report must
+#: not append the "the full invariant additionally requires scanning engine
+#: source" caveat that applies to `INV-B7`, `INV-I2` and `INV-I3`.
+FULLY_DELEGATED = ("INV-I8", "INV-I9", "INV-I10")
 
 
 def _canonical(obj: Any) -> str:
@@ -382,12 +400,16 @@ def run_invariants(
                     title=inv.title,
                     status=status,
                     what_was_checked=(
-                        f"the part executable without implementation source, carried by "
-                        f"{chk}"
+                        f"executed in full by {chk}"
+                        if inv_id in FULLY_DELEGATED
+                        else f"the part executable without implementation source, "
+                        f"carried by {chk}"
                     ),
                     detail=(
-                        "the full invariant additionally requires scanning engine "
-                        "source, which does not exist yet"
+                        ""
+                        if inv_id in FULLY_DELEGATED
+                        else "the full invariant additionally requires scanning "
+                        "engine source, which does not exist yet"
                     ),
                     has_stated_negative_control=inv.has_negative_control,
                 )

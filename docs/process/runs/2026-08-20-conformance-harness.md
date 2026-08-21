@@ -452,3 +452,12 @@ retired (was 235), **76 invariants** (was 60). Freeze 5 added 44 fixtures and
 
 Two gates now exist. `validate-freeze-5.py` and this harness overlap on document
 checks. Not resolved here; recorded in `CONFORMANCE-HARNESS.md`.
+
+> **CLOSED, 2026-08-20, after this run.** The owner decided one gate (`DEC-019`).
+> `validate-freeze-5.py` is retired and deleted; its 422 unique assertions were
+> absorbed into `tools/conformance/harness/package_checks.py` first, and each
+> arrived with a negative control demonstrated red. `INV-I8`, `INV-I9` and
+> `INV-I10` — recorded above under `OWNED_BY_PACKAGE_GATE` — are now executed
+> here in full. See `docs/process/runs/2026-08-20-gate-consolidation.md` and
+> `docs/process/GATE-CHECK-INVENTORY.md`. This record is left as written; the
+> note is the pointer, not a correction.
