@@ -243,11 +243,15 @@ def assess(
 
     # 10 — MOVEMENT EVIDENCE ------------------------------------------------
     latest_anomalous = pos.episode is not None and pos.episode.status == observation.ANOMALOUS
+    historical_anomalous = any(
+        e.status == observation.ANOMALOUS and e is not pos.episode for e in accepted
+    )
     ev = traj.movement_evidence(
         n=len(accepted),
         span_days=obs.span_days if obs is not None else 0.0,
         hard_confounders=hard_confounders,
         latest_anomalous=latest_anomalous,
+        historical_anomalous=historical_anomalous,
         observed_slope=obs.slope if obs is not None else None,
         supported=sup,
         rapid_confirmed=rapid.confirmed,
@@ -333,8 +337,34 @@ def assess(
         in (observation.BREACHED_LOW, observation.BREACHED_HIGH),
     )
     for c in rec.codes:
-        codes.append(Code(c, **_maintenance_payload(c, rec, obs, sup, cons, cfg)))
+        codes.append(
+            Code(c, **_maintenance_payload(
+                c, rec, obs, sup, cons, cfg, pos.position, ev.trajectory))
+        )
     codes.append(Code("OUTPUT_HOLD_IS_A_RECOMMENDATION", holdReasons=list(rec.codes)))
+
+    # ALK-RETURN-ELIGIBLE-TRAJECTORY-001 — the offer's eligibility, which is a
+    # trajectory fact rather than a plan. The plan itself is out of this build;
+    # this predicate is not, because `ALK-049` P1 makes the offer an outcome of
+    # the ordinary maintenance path and three fixtures assert it there.
+    #
+    # It is NOT `ALK-STABLE-001`'s `STABLE`, and the two must not share a field:
+    # it asks "is there established evidence that no supported trajectory is
+    # already carrying the level?", not "is the tank analytically flat?".
+    return_plan_eligible = ev.movement in (traj.SUFFICIENT, traj.UNCERTAINTY_LIMITED) and (
+        sup is not None and sup.slope == 0.0
+    )
+    return_plan_offer = "AVAILABLE" if return_plan_eligible else "NOT_ELIGIBLE"
+    codes.append(
+        Code(
+            "RETURN_OFFER_AVAILABLE" if return_plan_eligible
+            else "RETURN_OFFER_NOT_ELIGIBLE_TRAJECTORY",
+            movementEvidence=ev.movement,
+            S_observed=obs.slope if obs is not None else UNKNOWN,
+            S_supported=sup.slope if sup is not None else UNKNOWN,
+            ruleId="ALK-RETURN-ELIGIBLE-TRAJECTORY-001",
+        )
+    )
 
     # 14 — SAFETY (state only; the safety RETURN is out of this build) ------
     safety, safety_withheld = _safety(pos, cfg, codes, as_of)
@@ -379,6 +409,8 @@ def assess(
         retest=retest_mod.render(decision, as_of),
         delivery=delivery,
         safety=safety,
+        return_plan_offer=return_plan_offer,
+        return_plan_eligible=return_plan_eligible,
     )
 
     # Every field the engine left `NOT_RUN` or `WITHHELD` must be named by a
@@ -519,8 +551,16 @@ def _evidence_payload(code: str, ev, obs, sup, as_of) -> Dict[str, Any]:
         }
     if code == "EVIDENCE_CONFOUNDED_HARD":
         return {"confounders": ["a hard confounder is present in the selected segment"]}
-    if code == "EVIDENCE_ANOMALOUS_LATEST_CLUSTER":
-        return {"clusterId": UNKNOWN, "spreadDkh": UNKNOWN}
+    if code in (
+        "EVIDENCE_ANOMALOUS_LATEST_CLUSTER",
+        "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER",
+    ):
+        return {
+            "clusterId": UNKNOWN,
+            "spreadDkh": UNKNOWN,
+            "openIssue": "OI-ANOMCLUSTER-001",
+            "affectedOutputs": ["doseRecommendation.recommendedDoseMlPerDay"],
+        }
     return base
 
 
@@ -560,7 +600,7 @@ def _consumption_payload(code, cons, p_selected, delivery, obs) -> Dict[str, Any
     return payload
 
 
-def _maintenance_payload(code, rec, obs, sup, cons, cfg) -> Dict[str, Any]:
+def _maintenance_payload(code, rec, obs, sup, cons, cfg, position, trajectory) -> Dict[str, Any]:
     common = {
         "currentDose": rec.current_dose,
         "recommendedDose": rec.recommended_dose.rendered(),
@@ -582,8 +622,8 @@ def _maintenance_payload(code, rec, obs, sup, cons, cfg) -> Dict[str, Any]:
         return {"S_observed": 0, "S_supported": 0}
     if code == "MAINTENANCE_HOLD_TOWARD_RANGE":
         return {
-            "position": UNKNOWN,
-            "trajectory": UNKNOWN,
+            "position": position,
+            "trajectory": trajectory,
             "S_observed": obs.slope if obs is not None else UNKNOWN,
             "S_supported": sup.slope if sup is not None else UNKNOWN,
             "maintenanceEstimate": rec.maintenance_estimate.rendered(),
@@ -605,7 +645,7 @@ def _maintenance_payload(code, rec, obs, sup, cons, cfg) -> Dict[str, Any]:
             "T_outerDays": UNKNOWN,
         }
     if code == "MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED":
-        return {"failedConditions": ["no outer-bound breach and no crossing forecast within 48 h"]}
+        return {"failedConditions": list(rec.fifty_percent_cap_failed_conditions)}
     if code == "MAINTENANCE_BASELINE_ESTABLISHMENT":
         return {
             "currentDose": rec.current_dose,
@@ -912,6 +952,8 @@ def _assemble(**kw) -> Dict[str, Any]:
             "observedSlopeDkhPerDay": obs.slope,
             "interceptDkh": obs.intercept,
             "residualsDkh": obs.residuals,
+            "madDkh": obs.mad_dkh,
+            "pairwiseSlopesSorted": sorted(obs.pairwise_slopes),
             "sigmaResidDkh": obs.sigma_resid,
             "sigmaPointDkh": obs.sigma_point,
             "tBarDays": obs.t_bar,
@@ -970,6 +1012,10 @@ def _assemble(**kw) -> Dict[str, Any]:
         "bracketStatus": NOT_RUN,
         "maintenanceActionStatus": rec.status,
     }
+    recommendation["towardRangeHoldApplied"] = rec.toward_range_hold_applied
+    recommendation["fiftyPercentCapUnlocked"] = rec.fifty_percent_cap_unlocked
+    recommendation["returnPlanOffer"] = kw["return_plan_offer"]
+    recommendation["returnPlanEligibleTrajectory"] = kw["return_plan_eligible"]
     for name, value in (
         ("ordinaryCapMlPerDay", rec.ordinary_cap_ml_per_day),
         ("exceptionalCapMlPerDay", rec.exceptional_cap_ml_per_day),

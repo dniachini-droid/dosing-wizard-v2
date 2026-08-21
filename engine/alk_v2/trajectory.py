@@ -56,6 +56,7 @@ class Observed:
     pairwise_slopes: List[float]
     times_days: List[float]
     values_dkh: List[float]
+    mad_dkh: float
     sigma_resid: float
     sigma_point: float
     t_bar: float
@@ -104,6 +105,7 @@ def trend(eps: List[Episode]) -> Optional[Observed]:
         intercept=intercept,
         residuals=residuals,
         pairwise_slopes=pairwise,
+        mad_dkh=0.0,
         times_days=times,
         values_dkh=values,
         sigma_resid=0.0,
@@ -150,7 +152,8 @@ def uncertainty(obs: Observed, eps: List[Episode]) -> Observed:
         obs.codes.append("UNCERTAINTY_TWO_POINT_BASIS")
         return obs
 
-    obs.sigma_resid = MAD_SCALE * median([abs(r) for r in obs.residuals])
+    obs.mad_dkh = median([abs(r) for r in obs.residuals])
+    obs.sigma_resid = MAD_SCALE * obs.mad_dkh
     obs.sigma_point = max(SIGMA_ALK_BASE, obs.sigma_resid)
     obs.t_bar, obs.sxx = kernel.sxx(obs.times_days)
     if obs.sxx <= 0:
@@ -212,6 +215,7 @@ def movement_evidence(
     span_days: float,
     hard_confounders: List[str],
     latest_anomalous: bool,
+    historical_anomalous: bool,
     observed_slope: Optional[float],
     supported: Optional[Supported],
     rapid_confirmed: bool,
@@ -232,9 +236,18 @@ def movement_evidence(
         ev.movement, ev.trajectory = CONFOUNDED, UNCERTAIN
         ev.codes.append("EVIDENCE_CONFOUNDED_HARD")
         return ev
-    if latest_anomalous:
+    if latest_anomalous or historical_anomalous:
+        # An unresolved anomaly blocks ordinary inference rather than letting the
+        # engine choose between two slopes. The two codes stay distinct because
+        # the latest anomaly and a historical one are different facts, and
+        # `OI-ANOMCLUSTER-001` is open on exactly what a *historical* anomalous
+        # cluster contributes. Folding them together would hide the open item.
         ev.movement, ev.trajectory = EVIDENCE_ANOMALOUS, UNCERTAIN
-        ev.codes.append("EVIDENCE_ANOMALOUS_LATEST_CLUSTER")
+        ev.codes.append(
+            "EVIDENCE_ANOMALOUS_LATEST_CLUSTER"
+            if latest_anomalous
+            else "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER"
+        )
         return ev
     if n < MIN_ORDINARY_CLUSTERS or span_days < MIN_ORDINARY_SPAN_DAYS:
         if rapid_confirmed:

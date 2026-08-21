@@ -463,7 +463,9 @@ trend segment yet still disqualify potency learning (`AUDIT-018`, `WG-ALK-022`).
 | `sigmaSDkhPerDay` | dKH/day | `sigmaPointDkh / √sxx`, or `√(σ₁²+σ₂²)/Δt` for two-point. |
 | `independentClusters` | count | |
 | `spanDays` | days | |
-| `pairwiseSlopes[]` | dKH/day | Audit. |
+| `pairwiseSlopes[]` | dKH/day | Audit. Emitted as `pairwiseSlopesDkhPerDay`. |
+| `pairwiseSlopesSorted` | dKH/day | The same list in ascending order, which is what the median was taken over. `AD-TRD-002` asserts it, and the even-count median convention is only checkable against the sorted form. Added by `DEC-023`. |
+| `madDkh` | dKH | `median(\|r_i\|)` — the residual MAD `sigmaResidDkh` is `1.4826 ×`. Added by `DEC-023`, asserted by `AD-TRD-002`, `AD-TRD-004`, `AD-TRD-005` and `AD-TRD-006`. **Note the collision it inherits:** `MeasurementCluster.madDkh` is the MAD of an episode's *member values*, a different quantity under the same name. Only one of the two is emitted today. Which name gives way belongs to a governed reissue and is recorded open. |
 | `pairwiseSlopeMadDkhPerDay` | dKH/day | **Diagnostic only.** Must not enter `sigma_S` (Part II §19.5). |
 | `directionConsistency` | 0..1 | Diagnostic metadata, not a threshold. |
 | `endpointMovementDkh` / `fittedMovementDkh` | dKH | |
@@ -563,6 +565,10 @@ Plus:
 | `doseStepRegime` | `ORDINARY` \| `BASELINE_ESTABLISHMENT`. |
 | `capApplied` | `NONE` \| `ORDINARY_25` \| `EXCEPTIONAL_50`. |
 | `bracketStatus` | `NOT_RUN` \| `CONSISTENT` \| `CONFLICT` — advisory only (`OI-BRACKETEFFECT-001`). |
+| `towardRangeHoldApplied` | `boolean`. Whether `ALK-TOWARD-RANGE-HOLD-001` fired. Added by `DEC-023`: the final action is `HOLD_CURRENT_DOSE` whether the toward-range gate fired or `ALK-011`'s uncertainty-limited branch did, so without this field a wrong rule path producing the right number is invisible — which the fixture schema's acceptance rule calls a failure. `AD-MNT-008` asserts it. |
+| `fiftyPercentCapUnlocked` | `boolean`. Whether the exceptional cap was *available*, which is a different fact from `capApplied`, which says which cap bound. Added by `DEC-023`, asserted by `AD-MNT-003`. |
+| `returnPlanOffer` | `AVAILABLE` \| `NOT_ELIGIBLE`. The opt-in offer's state, from `returnPlanEligibleTrajectory`. `ALK-049` P1 makes the offer an outcome of the ordinary maintenance path, which is why it is stated here rather than on `ReturnPlan` — there is no plan to hang it on until the keeper opts in. Added by `DEC-023`, asserted by `AD-MNT-006`, `AD-MNT-007` and `AD-MNT-008`. |
+| `returnPlanEligibleTrajectory` | `boolean`. `ALK-RETURN-ELIGIBLE-TRAJECTORY-001`. Declared elsewhere in this document as a `ReturnPlan` field; surfaced here because it is computed on every assessment, plan or no plan. |
 | `maintenanceActionStatus` | `ISSUED` \| `HELD` \| `DEFERRED_BY_SAFETY_RETURN` \| `WITHHELD_CAPABILITY` \| `WITHHELD_LIQUID_GUARD`. `WITHHELD_LIQUID_GUARD` is distinct from `HELD`: `ALK-LIQUID-VOLUME-GUARD-001` withholds a recommendation rather than affirming the current dose. |
 | `reasonCodes[]` | |
 

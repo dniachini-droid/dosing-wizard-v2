@@ -860,3 +860,64 @@ calls a defect.
 It does not settle whether a retest interval should be carried in hours or in instants as
 the primary form. Both are declared: the instants remain the decision, and the hour-valued
 fields are the scheduler's own audit arithmetic, which is what the fixtures check.
+
+---
+
+## DEC-023 — `OD-012`'s answer applies to the rest of the corpus, one field at a time
+
+- **ID:** DEC-023
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+
+**Decision**
+
+`OD-012` asked which vocabulary owns the retest decision, the data contract's or the
+frozen fixtures'. The owner answered: the contract moves. **The same answer applies
+wherever the same collision appears**, under three conditions, all of which must hold:
+
+1. a frozen fixture asserts the name;
+2. it names a quantity the engine already computes on a path that is built;
+3. it does not contradict a declared name that means something else.
+
+A name failing condition 2 or 3 is **not** bridged. It is recorded as an open question
+with the fixtures that assert it, and its fixtures stay unconverted or red. In
+particular a name that is a second spelling of a declared quantity is a collision, not
+an omission, and adding it would put two names on one meaning — which is what `INV-B7`
+forbids and what `compare.compare_by_name` breaks on.
+
+Every field added under this decision is listed in the data contract at the place it was
+added, with the fixtures that forced it.
+
+**Rationale**
+
+Building the first engine turned an inert disagreement into a measurable one across the
+whole corpus, not just the retest path: the fixtures assert roughly 553 field names and
+the contract declares about 40. Most of the gap is fixtures asserting intermediate
+working, and much of that working is a quantity the engine genuinely has.
+
+Answering each instance as a fresh question would put the same decision in front of the
+owner a dozen times. Answering none of them would leave built paths with no executable
+fixtures, which `DEC-020` calls incomplete. The three conditions are the line the owner
+already drew in `OD-012`: extend the contract to carry what the fixtures assert, and do
+not invent a vocabulary to bridge a gap.
+
+**Consequences**
+
+- Five fields were added under this decision in the run that recorded it —
+  `ObservedTrajectory.madDkh`, `ObservedTrajectory.pairwiseSlopesSorted`,
+  `DoseRecommendation.towardRangeHoldApplied`,
+  `DoseRecommendation.fiftyPercentCapUnlocked` and
+  `DoseRecommendation.returnPlanOffer` — each named in the contract with the fixtures
+  that forced it.
+- `madDkh` arrives carrying a collision it did not create: `MeasurementCluster.madDkh`
+  is a different quantity under the same name. Only one is emitted today. The clash is
+  recorded rather than resolved, because resolving it means renaming one of them and
+  that is a governed reissue.
+- This decision sets no chemistry. It says what the engine's outputs are *called*.
+
+**What this does not say**
+
+It does not licence adding a field because a fixture would then pass. Condition 2 is the
+guard: the quantity must already exist in the engine for a reason the canon states. A
+field invented to satisfy a fixture is the fixture writing the engine, which is the
+inversion this repository exists to prevent.

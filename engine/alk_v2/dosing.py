@@ -257,6 +257,15 @@ class Recommendation:
     raw_supported_delta_dose_ml_per_day: Optional[float] = None
     rail_as_dose_delta_ml_per_day: Optional[float] = None
     binding_constraint: Optional[str] = None
+    #: `ALK-TOWARD-RANGE-HOLD-001` fired. Distinct from `action`, because the
+    #: final action is HOLD either way and a wrong rule path producing the same
+    #: number is a fixture failure (`AD-MNT-008`).
+    toward_range_hold_applied: bool = False
+    #: The exceptional cap was *available*, which is a different fact from which
+    #: cap bound (`capApplied`). `AUDIT-008`: being outside the preferred range
+    #: never unlocks it.
+    fifty_percent_cap_unlocked: bool = False
+    fifty_percent_cap_failed_conditions: List[str] = field(default_factory=list)
 
 
 def _round_to(value: float, step: float, toward: float) -> float:
@@ -343,11 +352,34 @@ def recommend(
 
     assert supported_slope is not None and observed_slope is not None
 
+    # The two explanatory quantities are computed BEFORE the gates, not after.
+    # `A16`: the card still shows `maintenanceEstimate`, `S_observed`,
+    # `S_supported` and the forecast range-entry time on a HOLD -- they explain
+    # the hold, they do not size an action. Computing them only on the acting
+    # path would make every HOLD card unable to say what it is holding against,
+    # and `AD-MNT-005`, `AD-MNT-006` and `AD-TRD-001` all assert them on a HOLD.
+    if p_selected is not None and p_selected > 0 and d_current is not None:
+        if (
+            consumption_estimate.computed.ran
+            and consumption_estimate.physicality == INTERPRETABLE
+        ):
+            r.maintenance_estimate = Computed.of(
+                consumption_estimate.consumption_dkh_per_day / p_selected
+            )
+        else:
+            r.maintenance_estimate = Computed.not_run(
+                *(consumption_estimate.codes or ["CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE"])
+            )
+        r.continuous_candidate = Computed.of(d_current - supported_slope / p_selected)
+
     # P1 — uncertainty-limited gate
     if evidence == UNCERTAINTY_LIMITED:
         r.action = HOLD_CURRENT_DOSE
         r.status = HELD
-        r.balance = BALANCE_UNCERTAIN
+        # There is a non-zero observed lean, but none of it is *supported*, so
+        # there is no supported mismatch to act on. That is a different statement
+        # from "supply matches demand", which is what `MATCHED` says.
+        r.balance = NO_SUPPORTED_MISMATCH
         r.codes.append("MAINTENANCE_HOLD_UNCERTAINTY_LIMITED")
         r.recommended_dose = (
             Computed.of(d_current) if d_current is not None else Computed.withheld()
@@ -356,7 +388,8 @@ def recommend(
     if supported_slope == 0.0 and observed_slope == 0.0:
         r.action = HOLD_CURRENT_DOSE
         r.status = HELD
-        r.balance = NO_SUPPORTED_MISMATCH
+        # Flat, with adequate evidence: supply matches demand.
+        r.balance = MATCHED
         r.codes.append("MAINTENANCE_HOLD_STABLE")
         r.recommended_dose = (
             Computed.of(d_current) if d_current is not None else Computed.withheld()
@@ -373,6 +406,7 @@ def recommend(
         r.status = HELD
         r.balance = BALANCE_UNCERTAIN
         r.codes.append("MAINTENANCE_HOLD_TOWARD_RANGE")
+        r.toward_range_hold_applied = True
         r.recommended_dose = (
             Computed.of(d_current) if d_current is not None else Computed.withheld()
         )
@@ -394,22 +428,10 @@ def recommend(
         r.recommended_dose = Computed.withheld("CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE")
         return r
 
-    # A16 — the two distinct quantities.
-    if consumption_estimate.computed.ran and consumption_estimate.physicality == INTERPRETABLE:
-        r.maintenance_estimate = Computed.of(
-            consumption_estimate.consumption_dkh_per_day / p_selected
-        )
-    else:
-        r.maintenance_estimate = Computed.not_run(
-            *(consumption_estimate.codes or ["CONSUMPTION_NOT_RUN_POTENCY_UNAVAILABLE"])
-        )
-
-    # P4 — continuous action candidate. Depends on `S_supported`, not on
-    # `C_estimate`, so it still computes when the mass balance is broken.
+    # P4 — the continuous action candidate, already computed above. `delta` is
+    # its dose component, and the constraints below narrow it.
     delta = -supported_slope / p_selected
     r.raw_supported_delta_dose_ml_per_day = delta
-    candidate = d_current + delta
-    r.continuous_candidate = Computed.of(candidate)
 
     # A negative or uninterpretable consumption cannot size a change.
     if (
@@ -453,6 +475,7 @@ def recommend(
         # different concepts.
         if rapid_confirmed and (outer_bound_breached or outer_bound_risk):
             cap_fraction = EXCEPTIONAL_STEP_CAP
+            r.fifty_percent_cap_unlocked = True
         cap = cap_fraction * d_current
         if abs(delta) > cap:
             delta = sign(delta) * cap
@@ -466,8 +489,23 @@ def recommend(
                 r.constraints.append("STEP_CAP_25")
                 r.codes.append("MAINTENANCE_STEP_CAP_ORDINARY")
                 binding = "ORDINARY_STEP_CAP_25"
-        elif rapid_confirmed and cap_fraction == ORDINARY_STEP_CAP:
+        if cap_fraction == ORDINARY_STEP_CAP:
+            # "Exceptional cap evaluated and refused." It is evaluated on every
+            # ordinary-regime assessment, not only where rapid movement was
+            # confirmed -- `AD-MNT-003` is a preferred-band excursion with no
+            # rapid movement at all, and it is exactly the case where a reader
+            # needs to be told the 50% cap was considered and why it did not
+            # open (`AUDIT-008`: being outside the preferred range never
+            # unlocks it).
+            failed = []
+            if not rapid_confirmed:
+                failed.append("ALK-RAPID-001 not confirmed")
+            if not (outer_bound_breached or outer_bound_risk):
+                failed.append(
+                    "no outer-bound breach and no crossing forecast at or before 48 h"
+                )
             r.codes.append("MAINTENANCE_STEP_CAP_50_NOT_UNLOCKED")
+            r.fifty_percent_cap_failed_conditions = failed
     r.binding_constraint = binding
 
     # P8 — non-negative clamp. Negative dosing is never recommended.
