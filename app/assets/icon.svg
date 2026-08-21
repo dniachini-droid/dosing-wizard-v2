@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dosing Wizard">
+  <rect width="512" height="512" rx="112" fill="#0D8078"/>
+  <path d="M112 336 C 168 336, 176 232, 232 232 S 296 312, 352 312 S 400 264, 400 264"
+        fill="none" stroke="#E1F2EF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="400" cy="264" r="30" fill="#FFFFFF"/>
+  <rect x="112" y="152" width="288" height="10" rx="5" fill="#E1F2EF" opacity="0.42"/>
+  <rect x="112" y="386" width="288" height="10" rx="5" fill="#E1F2EF" opacity="0.42"/>
+</svg>

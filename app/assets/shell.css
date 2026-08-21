@@ -1,0 +1,357 @@
+/* ============================================================================
+   THE APPLICATION SHELL
+   ----------------------------------------------------------------------------
+   `tokens.css` and `app.css` are carried from the mockups unchanged, and they
+   remain the single source of appearance. This file adds only what a live
+   application needs and a static mockup did not: the fixed tab bar, the sheet
+   presentation, a few interactive states, and the moment scrim.
+
+   The same rule holds here as in `app.css`: no literal colour, radius, shadow
+   or type size. Everything is a `var()` from `tokens.css`.
+   ========================================================================= */
+
+html, body {
+  margin: 0;
+  background: var(--ground);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+/* Room for the fixed tab bar, plus the home indicator underneath it. */
+#app > .screen {
+  padding-bottom: calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom, 0px));
+}
+
+/* --- the tab bar --------------------------------------------------------- */
+
+#tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--card-top);
+  box-shadow: var(--shadow-bar);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#tabbar .tabbar {
+  display: flex;
+  max-width: var(--screen-max);
+  margin: 0 auto;
+  height: var(--tabbar-h);
+}
+
+#tabbar .tab {
+  flex: 1;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--t-micro);
+  font-weight: var(--w-bold);
+  color: var(--grey);
+  /* The accessibility floor: "this app is used one-handed, wet-handed,
+     standing at a tank." Touch targets are at least 44px. */
+  min-height: 44px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+
+#tabbar .tab.on { color: var(--alk); }
+#tabbar .tab.on::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  border-radius: var(--r-chip);
+  background: var(--alk);
+}
+
+#tabbar .tab.off { color: var(--faint); }
+
+/* Out of flow. In flow it made the Tools tab taller than its neighbours, the
+   button overflowed the bar, and the bar itself then intercepted the tap — a
+   tab that looked enabled and could not be pressed. */
+#tabbar .tab .later {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  font-size: var(--t-nano);
+  font-weight: var(--w-heavy);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--faint);
+}
+#tabbar .tab.off { padding-bottom: var(--sp-3); }
+
+/* A DELIBERATE DEPARTURE FROM THE MOCKUPS, recorded rather than silent.
+   `app.css:848` sets `pointer-events: none` on the disabled tab. In a static
+   screen set that is right: there is nowhere to go. In a live application it
+   makes a visible tab that does nothing at all when tapped, with no
+   explanation — the keeper cannot tell "coming later" from "broken".
+
+   So the tab stays pressable and opens a screen that says Tools are not in this
+   build and what is planned. It is still disabled in the sense that matters:
+   there are no tools. It is not disabled in the sense that leaves a keeper
+   tapping a dead label. Recorded in docs/implementation/app/OPEN-ITEMS.md. */
+#tabbar .tab.off { pointer-events: auto; opacity: 1; }
+
+/* --- buttons that used to be links --------------------------------------
+   The mockups used anchors where the app uses buttons. These give a button the
+   anchor's box so `app.css` keeps working unchanged. */
+
+button.attention-item,
+button.taskrow,
+button.tile,
+button.cal-cell,
+button.gear,
+button.arrow,
+button.backlink,
+button.opt {
+  font: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  width: 100%;
+}
+
+button.cal-cell, button.gear, button.arrow { width: auto; text-align: center; }
+button.backlink { width: auto; color: var(--alk); font-weight: var(--w-bold); }
+.seg .opt { cursor: pointer; }
+
+/* --- sheets -------------------------------------------------------------- */
+
+.sheetwrap {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--sheet-scrim);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheetwrap .sheet {
+  width: 100%;
+  max-width: var(--screen-max);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--card-gradient);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow: var(--sh-sheet);
+  padding: var(--card-pad);
+  padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom, 0px));
+  animation: sheetIn var(--sheet-in) var(--sheet-ease);
+}
+
+@keyframes sheetIn { from { transform: translateY(14%); } to { transform: translateY(0); } }
+
+.mclose {
+  border: 0;
+  background: none;
+  font-size: var(--t-h1);
+  line-height: 1;
+  color: var(--grey);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* --- the moment scrim ---------------------------------------------------- */
+
+.moment {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--sheet-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+}
+
+.moment .mcard {
+  width: 100%;
+  max-width: 320px;
+  background: var(--card-top);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-sheet);
+  overflow: hidden;
+}
+
+.moment .mval { display: flex; align-items: baseline; justify-content: center; gap: var(--sp-1); }
+.moment .mval > span:first-child,
+.moment .mval .rc-sheen { font-size: var(--t-hero); font-weight: var(--w-heavy); letter-spacing: var(--ls-hero); }
+.moment .mfrom { font-size: var(--t-h2); font-weight: var(--w-heavy); color: var(--grey); }
+.moment .marrow { font-size: var(--t-h2); color: var(--grey); }
+.moment .mlabel { font-size: var(--t-small); font-weight: var(--w-heavy); margin-top: var(--sp-1); }
+.moment .mtick { font-size: var(--t-hero); line-height: 1; }
+.moment .mhead { font-size: var(--t-h2); font-weight: var(--w-heavy); color: var(--alk); margin: 0 0 var(--sp-2); }
+.moment .mbody { padding: var(--card-pad); }
+.moment .mcap { padding: var(--sp-5) var(--card-pad); text-align: center; }
+.moment .mcap.alk { background: var(--alk-bg); }
+.moment .mcap.done { background: var(--done-bg); }
+.moment .mcap:last-child {
+  background: var(--inset);
+  font-size: var(--t-micro);
+  color: var(--grey);
+  padding: var(--sp-3);
+}
+
+.moment .starrun { display: flex; flex-wrap: wrap; gap: var(--sp-1); justify-content: center; margin-top: var(--sp-3); }
+.moment .gaps { display: flex; align-items: flex-end; gap: var(--sp-1); height: calc(30 * var(--mc-gap-unit)); margin-top: var(--sp-3); }
+.moment .gapbar { flex: 1; background: var(--alk); opacity: 0.45; border-radius: var(--r-swatch); min-height: 2px; }
+
+/* --- moment motion, all of it from tokens.css ---------------------------
+   These are the ported V1 curves. Every duration, delay and easing is a token
+   whose definition in `tokens.css` cites the V1 file and line it came from. */
+
+@keyframes chartIn { 0% { opacity: 0; transform: translateY(10px) scale(0.94); }
+                     60% { opacity: 1; transform: translateY(-3px) scale(1.02); }
+                     100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes dropIn { 0% { opacity: 0; transform: translateY(-26px) scale(0.7); }
+                    65% { opacity: 1; transform: translateY(2px) scale(1.1); }
+                    100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes bandIn { from { opacity: 0; } to { opacity: var(--ma-band-alpha); } }
+@keyframes bandHit { 0% { opacity: var(--ma-band-alpha); }
+                     30% { opacity: var(--ma-band-peak); }
+                     100% { opacity: var(--ma-band-alpha); } }
+@keyframes popDot { 0% { opacity: 0; transform: scale(0.2); }
+                    55% { opacity: 1; transform: scale(1.6); }
+                    100% { opacity: 1; transform: scale(1); } }
+@keyframes ringOut { 0% { opacity: 0.6; transform: scale(0.3); }
+                     100% { opacity: 0; transform: scale(3.4); } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes starPop { 0% { opacity: 0; transform: scale(0.2) rotate(-25deg); }
+                     65% { opacity: 1; transform: scale(1.3) rotate(6deg); }
+                     100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes valuePulse { 0% { transform: scale(1); } 35% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes shimmerSweep { from { background-position: -180% 0; } to { background-position: 180% 0; } }
+
+.moment .rc-chart { opacity: 0; animation: chartIn var(--ma-chart-in) var(--ma-chart-ease) forwards; width: 100%; }
+.moment .rc-band { opacity: 0; animation: bandIn var(--ma-scale-in) ease-out var(--ma-scale-delay) forwards; }
+.moment .rc-band-hit {
+  animation: bandIn var(--ma-scale-in) ease-out var(--ma-scale-delay) forwards,
+             bandHit var(--ma-band-hit) ease-out 1;
+}
+.moment .rc-drop {
+  opacity: 0;
+  animation: dropIn var(--ma-drop-in) var(--ma-drop-ease) var(--ma-drop-delay) forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.moment .rc-new {
+  opacity: 0;
+  animation: popDot var(--ma-pop-dot) var(--ma-pop-ease) forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.moment .rc-ring {
+  opacity: 0;
+  animation: ringOut var(--ma-ring) var(--ma-ring-ease) forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.moment .rc-ring2 { animation-delay: var(--ma-ring2-delay); }
+
+.moment .stagger > * { opacity: 0; animation: riseIn var(--ma-rise) var(--ma-rise-ease) forwards; }
+.moment .stagger > *:nth-child(1) { animation-delay: var(--ma-stagger-1); }
+.moment .stagger > *:nth-child(2) { animation-delay: var(--ma-stagger-2); }
+.moment .stagger > *:nth-child(3) { animation-delay: var(--mc-stagger-3); }
+.moment .stagger > *:nth-child(4) { animation-delay: var(--mc-stagger-4); }
+.moment .stagger > *:nth-child(5) { animation-delay: var(--mc-stagger-5); }
+
+.moment .st {
+  display: inline-block;
+  opacity: 0;
+  animation: starPop var(--mc-star-pop) var(--mc-star-ease) forwards;
+  line-height: 1;
+}
+
+.moment .mval.landed { animation: valuePulse var(--ma-value-pulse) var(--ma-pop-ease); }
+.moment .mval.landed .rc-sheen {
+  background-image: linear-gradient(100deg,
+    currentColor 0%, currentColor 38%,
+    rgba(255, 255, 255, 0.95) 50%,
+    currentColor 62%, currentColor 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: inherit;
+  animation: shimmerSweep var(--ma-sheen) ease-out 1 forwards;
+}
+
+/* Anyone who has asked for less motion should not be made to sit through it.
+   The end state has to be the finished one, so each of these lands at full
+   opacity rather than disappearing. */
+@media (prefers-reduced-motion: reduce) {
+  .moment .rc-chart, .moment .rc-drop, .moment .rc-new, .moment .st,
+  .moment .stagger > *, .sheetwrap .sheet {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+  .moment .rc-ring { display: none; }
+  .moment .rc-band, .moment .rc-band-hit { animation: none !important; opacity: var(--ma-band-alpha); }
+  .moment .mval.landed { animation: none; }
+  .moment .mval.landed .rc-sheen { animation: none; -webkit-text-fill-color: currentColor; }
+}
+
+/* --- odds and ends the app needs ----------------------------------------- */
+
+.labrow { display: grid; grid-template-columns: var(--sz-mark) 1fr auto; gap: var(--sp-2); align-items: center; }
+.labrow .labmeta { display: flex; flex-direction: column; min-width: 0; }
+.labrow .labentry { display: flex; align-items: center; gap: var(--sp-2); }
+.labrow .labentry .input { width: 5.5em; }
+.labrow .hint, .labrow .meta { grid-column: 1 / -1; }
+
+.inline-log .row { display: flex; align-items: center; gap: var(--sp-2); }
+.inline-log .row .input { flex: 1; min-width: 0; }
+
+.taskrow.is-replaced { opacity: 0.6; }
+.tile .sparkgap { display: block; height: var(--sz-spark); }
+
+.windowbar { display: flex; gap: var(--sp-2); margin: 0 var(--gutter) var(--sp-2); }
+.windowbar .opt { flex: 1; }
+
+.pt-repeat { stroke: var(--faint); stroke-width: 1.5; }
+
+.scroll-x { overflow-x: auto; }
+
+/* Grid and flex children default to min-width:auto, which lets an item with a
+   large intrinsic width push past its track. Safari gives date and time inputs
+   exactly that, so a two-column row of them overflowed the card. */
+.inline > *, .kv-row > * { min-width: 0; }
+
+/* Safari sizes date/time inputs to their content and ignores width:100% unless
+   appearance is reset. Without this the time field spills out of its column
+   however narrow the column is. */
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+select.input { -webkit-appearance: none; appearance: none; }
+
+.elgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); }
+.elgrid .elcell { display: flex; align-items: center; gap: var(--sp-2); }
+.elgrid .elcell > span { width: 2.5em; font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--grey); }
