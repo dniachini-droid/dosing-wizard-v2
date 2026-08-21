@@ -559,4 +559,110 @@ export const MUTATIONS = [
     replace: "    const run = Promise.resolve().then(fn);",
     breaks: ["ASS-13"],
   },
+
+  /* --- test mode ---------------------------------------------------------
+     Every one of these is a real mistake with an irreversible consequence:
+     seeded readings in the keeper's own tank history, an assessment stamped
+     with the wrong instant, a stepper that moves a label and nothing else, or
+     a reset aimed at the wrong database.
+     -------------------------------------------------------------------- */
+  {
+    id: "AM-64",
+    why: "test mode uses the real tank's database, so every seeded reading lands in the keeper's own history",
+    file: "app/src/store/mode.js",
+    find: "  return mode === MODE.TEST ? testBackend() : idbBackend;",
+    replace: "  return idbBackend;",
+    breaks: ["TM-01"],
+  },
+  {
+    id: "AM-65",
+    why: "the test database is named the same as the real one, which is the same defect spelled differently",
+    file: "app/src/store/db.js",
+    find: 'export const TEST_DB_NAME = "dosing-wizard-v2-testmode";',
+    replace: "export const TEST_DB_NAME = DB_NAME;",
+    breaks: ["TM-01"],
+  },
+  {
+    id: "AM-66",
+    why: "the chosen instant never reaches the clock, so the engine is asked about today under the keeper's chosen date",
+    file: "app/src/store/mode.js",
+    find: "  const { date, time } = testInstant();\n  setClock(() => localDateTime(date, time));",
+    replace: "  setClock(null);",
+    breaks: ["TM-04", "TM-06", "TM-07"],
+  },
+  {
+    id: "AM-67",
+    why: "the assessment instant is read from the wall clock again, so test mode moves the label and nothing behind it",
+    file: "app/src/assess.js",
+    find: "export function nowAsOf() {\n  return nowIso();\n}",
+    replace:
+      "export function nowAsOf() {\n" +
+      '  return new Date().toISOString().replace(/\\.\\d{3}Z$/, "Z");\n' +
+      "}",
+    breaks: ["TM-05"],
+  },
+  {
+    id: "AM-68",
+    why: "stepping moves the stored date but never reinstalls the clock, so the stepper moves a label on screen and the engine keeps being asked about the day before it",
+    file: "app/src/store/mode.js",
+    find: "  slots.set(KEY_DATE, addDays(at.date, n));\n  applyClock();",
+    replace: "  slots.set(KEY_DATE, addDays(at.date, n));",
+    breaks: ["TM-06", "TM-07"],
+  },
+  {
+    id: "AM-68b",
+    why: "the step direction is ignored, so 'a day earlier' goes forward and the keeper cannot get back to the day they were looking at",
+    file: "app/src/store/mode.js",
+    find: "export function stepTestDays(n) {\n  const at = testInstant();",
+    replace: "export function stepTestDays(n) {\n  n = 1;\n  const at = testInstant();",
+    breaks: ["TM-06"],
+  },
+  {
+    id: "AM-68c",
+    why: "a jump to a chosen date is stored but never reaches the clock, so the app says one date and assesses another",
+    file: "app/src/store/mode.js",
+    find: "  if (!date && !time) return at;\n  applyClock();",
+    replace: "  if (!date && !time) return at;",
+    breaks: ["TM-06"],
+  },
+  {
+    id: "AM-69",
+    why: "a seeded line with no time is given midnight, and the fabricated precision is afterwards indistinguishable from a real one",
+    file: "app/src/store/seed.js",
+    find: "  return row.time\n    ? exactInstant(row.date, row.time, undefined, localZone())\n    : dateOnly(row.date);",
+    replace: '  return exactInstant(row.date, row.time || "00:00", undefined, localZone());',
+    breaks: ["TM-09"],
+  },
+  {
+    id: "AM-70",
+    why: "an unreadable line is dropped instead of reported, so a batch half-applies and the keeper never learns which lines were lost",
+    file: "app/src/store/seed.js",
+    find: '      problems.push({ line: lineNo, text: line, why: t("seed.err.badDate", { text: date }) });\n      return;',
+    replace: "      return;",
+    breaks: ["TM-10"],
+  },
+  {
+    id: "AM-71",
+    why: "the first dose line is recorded as a change from a dose nobody ever gave, which is fabricated delivery history",
+    file: "app/src/store/seed.js",
+    find: "    const kind = runningDose == null ? KIND.DOSE_STATE : KIND.DOSE_CHANGE;",
+    replace: "    const kind = KIND.DOSE_CHANGE;",
+    breaks: ["TM-11"],
+  },
+  {
+    id: "AM-72",
+    why: "clearing the test data is a no-op, so the keeper believes a run has been reset and reads the next one against the last one's records",
+    file: "app/src/store/db.js",
+    find: "    async destroy() {\n      m.clear();\n      return { ok: true, reason: null };\n    },",
+    replace: "    async destroy() {\n      return { ok: true, reason: null };\n    },",
+    breaks: ["TM-08"],
+  },
+  {
+    id: "AM-73",
+    why: "bulk entry and reset lose their guard, so either can be reached while the app is pointed at the real tank",
+    file: "app/src/main.js",
+    find: "  async seedSeries(rows) {\n    if (!isTestMode()) throw new Error(t(\"testmode.err.notInTestMode\"));",
+    replace: "  async seedSeries(rows) {",
+    breaks: ["TM-12"],
+  },
 ];

@@ -925,6 +925,134 @@ export const STRINGS = Object.freeze({
     "There is no cloud copy in this build. An export you keep somewhere else is the only thing that survives " +
     "the second list.",
 
+  /* ======================================================================
+     TEST MODE
+     ================================================================== */
+
+  "settings.testmode.offBody":
+    "Set the app's date by hand and enter a series of readings, to see what the engine says about a run of " +
+    "days without waiting a month for them to happen. It uses its own separate store, so nothing you enter " +
+    "there ever touches this tank.",
+  "settings.testmode.onBody":
+    "Test mode is on. The app is showing a date you set and a store that is not this tank's. Nothing on any " +
+    "screen right now is about your actual tank.",
+  "settings.testmode.setUp": "Set up test mode",
+  "settings.testmode.open": "Test mode controls",
+  "settings.testmode.note":
+    "Off by default, and here rather than on the tab bar, because it is not part of keeping a tank.",
+
+  "testmode.title": "Test mode",
+  "testmode.subtitle": "Set the date. Enter the readings. See what the engine says.",
+  "testmode.on": "on",
+  "testmode.off": "off",
+
+  "testmode.offTitle": "Test mode is off",
+  "testmode.offBody":
+    "Everything you see is your real tank, and the app's date is today. Turning test mode on changes two " +
+    "things: the moment the assessment is worked out for, and which store the app reads and writes.",
+  "testmode.startAt": "Start at",
+  "testmode.startHint":
+    "This is the moment the engine is asked about — not the time of any reading. You can move it a day at a " +
+    "time afterwards.",
+  "testmode.startDate": "Starting date",
+  "testmode.startTime": "Starting time of day",
+  "testmode.turnOn": "Turn test mode on",
+
+  "testmode.whatItIsTitle": "What this is",
+  "testmode.whatItIs":
+    "A way of telling the app what the readings were and what day it is, and reading back what the engine " +
+    "makes of it. It does not generate readings, model a tank or predict anything.",
+  "testmode.whatItIsNot":
+    "It is not a way of changing real data. Your real readings are not editable from here, and a test reading " +
+    "never becomes a real one.",
+  "testmode.samePathNote":
+    "The engine is called by exactly the same code in both modes, with the same two inputs. Only the date and " +
+    "the store differ — so what you see here is what the app would have said on that day with those readings.",
+
+  "testmode.onTitle": "The app's date",
+  "testmode.onBody":
+    "This is the moment every screen is working from. Move it and the assessment, what is due, the retest " +
+    "date and what counts as stale all follow it.",
+  "testmode.stepper.aria": "Move the app's date",
+  "testmode.stepper.back": "A day earlier",
+  "testmode.stepper.forward": "A day later",
+  "testmode.jumpTo": "Jump to",
+  "testmode.timeOfDay": "Time of day",
+  "testmode.goTo": "Go to this moment",
+  "testmode.turnOff": "Turn test mode off",
+  "testmode.stepNote":
+    "Turning it off restores the real date and the real store, and copies nothing in either direction. " +
+    "Whatever you entered here is still here next time.",
+
+  "testmode.marker.tag": "TEST MODE",
+  "testmode.marker.detail": ({ date, time }) => `not your tank · ${date}, ${time}`,
+
+  "testmode.series.title": "Enter a series",
+  "testmode.series.body":
+    "One record per line. Paste a fortnight in one go rather than filling in fourteen forms. Blank lines and " +
+    "lines starting with a hash are ignored.",
+  "testmode.series.grammar":
+    "2026-03-01        alk     8.6\n" +
+    "2026-03-03 09:15  alk     8.4\n" +
+    "2026-03-05        dose    8.8\n" +
+    "2026-03-06        water   0.13\n" +
+    "2026-03-06        water   10L\n" +
+    "2026-03-07        manual  20\n" +
+    "2026-03-08        note    skimmer overflowed",
+  "testmode.series.aria": "The series to enter",
+  "testmode.series.placeholder": "One record per line",
+  "testmode.series.note":
+    "A line with no time is stored with no time — not midnight, not midday. The first dose line is recorded " +
+    "as what the pump is set to; every one after it is a change from the value before it. A dosing problem " +
+    "needs a start and an end, so it has its own form rather than a line here.",
+  "testmode.series.add": "Add these",
+  "testmode.series.added": ({ n }) => `${n} added.`,
+  "testmode.series.willAdd": ({ n }) => `${n} records will be added:`,
+  "testmode.series.nothing": "Nothing to add yet.",
+  "testmode.series.dateOnly": "Without a time",
+  "testmode.series.dateOnlyCount": ({ n, total }) => `${n} of ${total}`,
+  "testmode.series.problems": ({ n }) =>
+    n === 1 ? "One line cannot be read, and nothing will be added until it is fixed:"
+            : `${n} lines cannot be read, and nothing will be added until they are fixed:`,
+  "testmode.series.problemLine": ({ n }) => `Line ${n}`,
+  "testmode.series.fixFirst": "Fix the lines above first — nothing was added.",
+
+  "testmode.separation.title": "Where this is being kept",
+  "testmode.separation.reading": "Reading and writing",
+  "testmode.separation.real": "Your real tank",
+  "testmode.separation.held": "Records held here",
+  "testmode.separation.body":
+    "Two separate databases. There is no query that can see both, and no path that copies between them in " +
+    "either direction.",
+  "testmode.separation.note":
+    "Test mode has its own tank facts too, for the same reason. The first time you turn it on it will ask for " +
+    "them, rather than borrowing your real tank's.",
+
+  "testmode.reset.title": "Clear the test data",
+  "testmode.reset.body":
+    "Removes everything entered in test mode — readings, doses, tasks, assessments and its tank facts. Your " +
+    "real tank is not touched.",
+  "testmode.reset.action": "Clear all test data",
+  "testmode.reset.confirmTitle": "Clear all test data?",
+  "testmode.reset.confirmBody":
+    "Everything entered in test mode is removed and cannot be got back. Your real tank's records are not " +
+    "touched by this.",
+  "testmode.reset.confirmNote": "This clears the test store only.",
+  "testmode.reset.confirmAction": "Yes, clear it",
+
+  "testmode.err.notInTestMode": "That only works in test mode, and test mode is off.",
+
+  "seed.err.tooShort": "A line needs at least a date, what it is, and a value.",
+  "seed.err.badDate": ({ text }) => `${text} is not a date in the form 2026-03-01.`,
+  "seed.err.needValue": "This line has no value on it.",
+  "seed.err.needNote": "A note line needs something written after the word note.",
+  "seed.err.unknownWord": ({ text }) =>
+    `${text} is not something this can record. Use a parameter name, or dose, water, manual or note.`,
+  "seed.err.fractionRange":
+    "A water change given as a fraction has to be less than 1. Add an L for litres.",
+  "seed.err.noVolume":
+    "A water change in litres needs the tank volume, and this store has not been told it yet.",
+
   "platform.title": "Offline, install and updates",
   "platform.network": "Network",
   "platform.online": "online",

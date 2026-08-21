@@ -50,9 +50,18 @@ export function createStore(backend) {
     async health() {
       return b.health();
     },
+    /* Which database this store speaks to. Test mode shows it, and a test
+       asserts that the two modes never name the same one. */
+    dbName: b.dbName,
+    /* Drop everything this store holds. It can only ever destroy the database
+       the backend was constructed for, so "clear the test data" cannot be
+       aimed at the real tank by a mistake in a caller. */
+    async destroy() {
+      return b.destroy ? b.destroy() : { ok: false, reason: null };
+    },
   };
 }
 
-export function createMemoryStore() {
-  return createStore(memoryBackend());
+export function createMemoryStore(dbName) {
+  return createStore(memoryBackend(dbName));
 }

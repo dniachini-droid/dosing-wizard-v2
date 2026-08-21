@@ -24,10 +24,23 @@
    ========================================================================= */
 
 import { h, mount } from "./ui/dom.js";
-import { createStore } from "./store/index.js";
 import { runAssessment, nowAsOf } from "./assess.js";
 import { onEngineState, warmUp, ENGINE_STATE } from "./engine/client.js";
 import { todayLocal } from "./store/time.js";
+import { fmtDayName } from "./ui/format.js";
+import {
+  currentMode,
+  enterTestMode,
+  isTestMode,
+  leaveTestMode,
+  resetTestData,
+  setTestInstant,
+  stepTestDays,
+  storeForMode,
+  testInstant,
+  useSlots,
+} from "./store/mode.js";
+import { applySeries } from "./store/seed.js";
 import { isPresent } from "./present/cards.js";
 import { KIND } from "./store/ledger.js";
 import { taskState } from "./store/schedule.js";
@@ -47,6 +60,7 @@ import { t } from "./strings.js";
 
 import { renderToday } from "./screens/today.js";
 import { renderTestLab } from "./screens/testlab.js";
+import { renderTestMode } from "./screens/testmode.js";
 import { renderTasks, openSuggestionSheet } from "./screens/tasks.js";
 import { renderHistory } from "./screens/history.js";
 import { renderSettings, renderSetup, renderTools } from "./screens/settings.js";
@@ -68,6 +82,12 @@ const TABS = [
   { id: "tools", label: "tab.tools", off: true },
 ];
 
+/* The mode is read BEFORE anything else, because it decides what "today" is.
+   `useSlots()` installs the clock, so every `todayLocal()` below — and every
+   one in every screen — already answers with the keeper's chosen instant by
+   the time the first line of state is built. */
+useSlots();
+
 const state = {
   screen: "today",
   stepperDay: todayLocal(),
@@ -84,13 +104,28 @@ const state = {
   extras: [],
 };
 
-const store = createStore();
+/* THE STORE IS CHOSEN BY THE MODE, IN ONE PLACE.
+
+   `storeForMode` is the only thing that decides which database the app is
+   speaking to. Switching modes rebuilds it; it never copies anything from the
+   one it is leaving, and there is no path in this file or any other that reads
+   both at once. */
+let store = storeForMode(currentMode());
 const root = document.getElementById("app");
 const tabbar = document.getElementById("tabbar");
+const marker = document.getElementById("modemarker");
 
 const ctx = {
-  store,
+  /* A getter, because the store is replaced when the mode changes and a screen
+     that captured it at import time would keep writing to the store the keeper
+     has just left. */
+  get store() {
+    return store;
+  },
   state,
+
+  mode: currentMode,
+  testInstant,
 
   go(screen, opts = {}) {
     state.screen = screen;
@@ -245,7 +280,84 @@ const ctx = {
     await store.kvSet("suggestedTestPreference", how);
     ctx.refresh();
   },
+
+  /* --- test mode --------------------------------------------------------
+     Four verbs, and between them they change exactly two things: what the
+     clock says and which store `storeForMode` hands back. Nothing here calls
+     the engine differently, and nothing here moves a record between the two
+     stores in either direction. */
+
+  async enterTest(at) {
+    enterTestMode(at);
+    await switchedMode();
+  },
+
+  async leaveTest() {
+    leaveTestMode();
+    await switchedMode();
+  },
+
+  async setTestInstant(at) {
+    setTestInstant(at);
+    await movedInstant();
+  },
+
+  async stepTest(n) {
+    stepTestDays(n);
+    await movedInstant();
+  },
+
+  /* Bulk entry, and only in test mode. The guard is here rather than in the
+     screen because a screen is a thing you can navigate to by accident and a
+     store is a thing you cannot un-write. */
+  async seedSeries(rows) {
+    if (!isTestMode()) throw new Error(t("testmode.err.notInTestMode"));
+    const config = await store.config.current();
+    const r = await applySeries(store, rows, { config });
+    await reassess();
+    render();
+    return r;
+  },
+
+  async resetTest() {
+    if (!isTestMode()) throw new Error(t("testmode.err.notInTestMode"));
+    await resetTestData();
+    await switchedMode();
+  },
 };
+
+/* The mode changed: the store is a different database, so everything the shell
+   was holding about the last one — the assessment, the suggestion, the asks —
+   is about a tank this store has never heard of and is dropped rather than
+   carried across. */
+async function switchedMode() {
+  store = storeForMode(currentMode());
+  state.assessment = null;
+  state.suggestion = null;
+  state.doseAsks = {};
+  state.extras = [];
+  state.declinedSuggestions = [];
+  state.storage = null;
+  await movedInstant();
+}
+
+/* The instant moved: the same store, a different "now". The day stepper
+   follows it, and the assessment is recomputed so the keeper sees what the
+   engine says about the day they have just stepped to. */
+async function movedInstant() {
+  state.stepperDay = todayLocal();
+  state.calendarMonth = todayLocal().slice(0, 7);
+  const config = await store.config.current();
+  if (!config && state.screen !== "testmode" && state.screen !== "settings") {
+    /* A store with no configuration has nothing for the engine to resolve
+       against. Test mode does not borrow the real tank's facts, so the first
+       visit lands on setup — which is the honest consequence of the two stores
+       never copying from each other. */
+    state.screen = "setup";
+  }
+  if (config) await reassess();
+  await render();
+}
 
 /* --- assessment ---------------------------------------------------------- */
 
@@ -348,6 +460,7 @@ async function reassess() {
 const SCREENS = {
   today: renderToday,
   testlab: renderTestLab,
+  testmode: renderTestMode,
   tasks: renderTasks,
   history: renderHistory,
   tools: renderTools,
@@ -368,6 +481,7 @@ async function render() {
     const node = await fn(ctx);
     mount(root, node);
     renderTabs();
+    renderMarker();
     window.scrollTo(0, 0);
   } catch (e) {
     /* A crash in one screen used to render nothing at all: a blank page with no
@@ -376,9 +490,53 @@ async function render() {
        `PORT_WITH_CLEANUP`. */
     mount(root, renderCrash(e));
     renderTabs();
+    renderMarker();
   } finally {
     rendering = false;
   }
+}
+
+/* THE MARKER — THE THING THE KEEPER CANNOT MISS.
+
+   The failure this guards against has two halves and both are expensive:
+   entering a real reading into test data, where it is lost; and reading a test
+   recommendation as advice about the actual tank, where it is acted on. Either
+   one is a mistake made in a second and discovered much later.
+
+   So it is not a discreet badge on Settings. It is a bar pinned above every
+   screen, in a colour used nowhere else in the app, it names the date the app
+   is pretending it is, and it is rendered on EVERY render including the crash
+   screen — the one screen where the keeper is least sure what is going on. It
+   is also the way back to the controls, so the answer to "how do I get out of
+   this" is the thing already in front of them.
+
+   `document.body` carries the mode as a class as well, so the tint reaches the
+   chrome the bar itself does not cover. */
+function renderMarker() {
+  if (!marker) return;
+  const on = isTestMode();
+  document.body.classList.toggle("is-testmode", on);
+  if (!on) {
+    marker.replaceChildren();
+    marker.hidden = true;
+    return;
+  }
+  const at = testInstant();
+  marker.hidden = false;
+  mount(
+    marker,
+    h(
+      "button",
+      {
+        class: "modemarker",
+        type: "button",
+        onclick: () => ctx.go("testmode"),
+      },
+      h("span", { class: "tag" }, t("testmode.marker.tag")),
+      h("span", { class: "det" }, t("testmode.marker.detail", { date: fmtDayName(at.date), time: at.time })),
+      h("span", { class: "go" }, "›")
+    )
+  );
 }
 
 function renderCrash(err) {

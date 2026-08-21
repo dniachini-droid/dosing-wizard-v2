@@ -343,6 +343,139 @@ await step("Settings renders", async () => {
   if (/This screen stopped/.test(txt)) throw new Error("crashed: " + txt.slice(0, 300));
 });
 
+/* --------------------------------------------------------------------------
+   TEST MODE
+
+   The part `tests/app/test-testmode.mjs` cannot reach from Node: two real
+   IndexedDB databases in one origin, and the marker actually on screen.
+   ----------------------------------------------------------------------- */
+
+console.log("\nTest mode");
+
+await step("turns on from Settings, with a date", async () => {
+  await page.click("text=Set up test mode");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  const [date, time] = await page.$$(".card .field .inline .input");
+  await date.fill("2026-03-14");
+  await time.fill("09:30");
+  await page.click("text=Turn test mode on");
+  await page.waitForTimeout(900);
+});
+
+await step("the marker is on screen and names the date", async () => {
+  await page.waitForSelector("#modemarker .modemarker", { timeout: 8000 });
+  const txt = await page.innerText("#modemarker");
+  if (!/TEST MODE/.test(txt)) throw new Error("the marker does not say what it is: " + txt);
+  if (!/Mar/.test(txt)) throw new Error("the marker does not name the date: " + txt);
+});
+
+await step("the marker survives moving between screens", async () => {
+  /* The test store has no tank facts of its own, because nothing is copied
+     across. Fill them in on its own setup screen, then walk the tabs. */
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(500);
+  await page.click("text=Set the tank up").catch(() => {});
+  await page.waitForSelector("h1:has-text('Set up your tank')", { timeout: 8000 });
+  const inputs = await page.$$(".card .field .input");
+  const vals = ["77", "8.6", "9.2", "0.0693", "0.1"];
+  for (let i = 0; i < vals.length && i < inputs.length; i++) await inputs[i].fill(vals[i]);
+  await page.click("text=Save and start").catch(() => {});
+  await page.waitForTimeout(900);
+  for (const tab of ["Today", "Test Lab", "Tasks", "History"]) {
+    await page.click(`#tabbar .tab:has-text('${tab}')`);
+    await page.waitForTimeout(400);
+    const on = await page.$("#modemarker .modemarker");
+    if (!on) throw new Error(`the marker is missing on ${tab}`);
+  }
+});
+
+await step("the app's today is the chosen date", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(500);
+  const txt = await page.innerText(".stepper");
+  if (!/Mar/.test(txt)) throw new Error("the day stepper is not on the chosen date: " + txt);
+});
+
+await step("a series goes in in one action", async () => {
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.fill(
+    ".input.series",
+    ["2026-03-01 dose 9.0", "2026-03-08 07:40 alk 9.0", "2026-03-10 07:40 alk 8.9", "2026-03-12 alk 8.8"].join("\n")
+  );
+  await page.waitForTimeout(400);
+  const preview = await page.innerText(".seedreport");
+  if (!/4 records/.test(preview)) throw new Error("the preview did not count them: " + preview);
+  if (!/2 of 4/.test(preview)) throw new Error("the preview did not count the date-only ones: " + preview);
+  await page.click("text=Add these");
+  await page.waitForTimeout(1200);
+});
+
+await step("stepping the date moves the app's today", async () => {
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(400);
+  const before = await page.innerText(".stepper");
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click(".card.is-testmode .stepper .arrow:last-of-type");
+  await page.waitForTimeout(900);
+  await page.click("#tabbar .tab:has-text('Today')");
+  await page.waitForTimeout(400);
+  const after = await page.innerText(".stepper");
+  if (before === after) throw new Error("the day did not move: " + after);
+});
+
+await step("the real tank's store is untouched by all of that", async () => {
+  const counts = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const { createIdbBackend, DB_NAME, TEST_DB_NAME } = await import("/app/src/store/db.js");
+    const real = createStore(createIdbBackend(DB_NAME));
+    const test = createStore(createIdbBackend(TEST_DB_NAME));
+    return {
+      real: (await real.ledger.allEvents()).length,
+      test: (await test.ledger.allEvents()).length,
+      realValues: (await real.ledger.allEvents()).map((e) => e.normalizedValue),
+    };
+  });
+  if (counts.test < 4) throw new Error(`the test store did not take the series: ${counts.test}`);
+  if (counts.realValues.some((v) => v === 8.9 && counts.real > 8)) {
+    throw new Error("a seeded value reached the real store");
+  }
+  if (counts.real === 0) throw new Error("the real store lost its own records");
+});
+
+await step("clearing the test data empties the test store only", async () => {
+  await page.click("#modemarker .modemarker");
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click("text=Clear all test data");
+  await page.waitForSelector(".sheetwrap");
+  await page.click("text=Yes, clear it");
+  await page.waitForTimeout(1500);
+  const counts = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const { createIdbBackend, DB_NAME, TEST_DB_NAME } = await import("/app/src/store/db.js");
+    return {
+      real: (await createStore(createIdbBackend(DB_NAME)).ledger.allEvents()).length,
+      test: (await createStore(createIdbBackend(TEST_DB_NAME)).ledger.allEvents()).length,
+    };
+  });
+  if (counts.test !== 0) throw new Error(`the test store still holds ${counts.test}`);
+  if (counts.real === 0) throw new Error("the reset reached the real store");
+});
+
+await step("turning it off restores the real tank and the real date", async () => {
+  await page.click("#modemarker .modemarker").catch(() => {});
+  await page.waitForSelector("h1:has-text('Test mode')");
+  await page.click("text=Turn test mode off");
+  await page.waitForTimeout(1200);
+  const marker = await page.$("#modemarker .modemarker");
+  if (marker) throw new Error("the marker is still on screen");
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForTimeout(600);
+  const txt = await page.innerText("#app");
+  if (!/8\.7|8\.9/.test(txt)) throw new Error("the real readings did not come back");
+});
+
 await browser.close();
 server.close();
 

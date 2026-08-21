@@ -65,8 +65,51 @@ export function parseLocalDate(iso) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-export function todayLocal(now) {
-  return isoLocalDate(now instanceof Date ? now : new Date());
+/* --- THE APPLICATION'S CLOCK — ONE OWNER --------------------------------
+   Canon `INV-A2` forbids the DOMAIN holding a clock. The application holds
+   one, and this is it: the single function that answers "what moment is the
+   app being asked about". `assess.js` reads it and passes the answer down as
+   `asOf`; nothing below the application layer ever calls it.
+
+   It is replaceable because of test mode. The engine is a pure function of
+   (events, configuration, asOf), and `asOf` is already an explicit input — so
+   letting the keeper state the moment needs no second code path, no flag
+   inside the engine and no alternative pipeline. It needs exactly this: one
+   place that says what "now" is, and one caller allowed to change it.
+
+   `MASTER RULE 1` is why it is one function rather than each screen reading
+   `new Date()` for itself. Twenty readers of the wall clock are twenty places
+   that would have to agree, and "they agree today" is not a design.
+
+   WHAT THIS DELIBERATELY DOES NOT COVER
+   -------------------------------------
+
+   `recordedAt` — when the app was TOLD something — is not this clock and must
+   not become it. The app genuinely was running at the real instant, and
+   `ledger.js` says so in as many words: "`recordedAt` is when the app was
+   told, and it is always exact." A seeded record entered while the assessment
+   instant sits in March was still typed today, and the record says so. Every
+   `recordedAt` in the app therefore reads `new Date()` directly, on purpose. */
+let readClock = () => new Date();
+
+/* Install a clock. `null` restores the wall clock. `store/mode.js` is the only
+   caller; nothing else may set one, because two setters is two owners. */
+export function setClock(fn) {
+  readClock = typeof fn === "function" ? fn : () => new Date();
+}
+
+export function now() {
+  const d = readClock();
+  return d instanceof Date && Number.isFinite(d.getTime()) ? d : new Date();
+}
+
+/* The assessment instant, in the shape the engine's `asOf` takes. */
+export function nowIso() {
+  return now().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+export function todayLocal(at) {
+  return isoLocalDate(at instanceof Date ? at : now());
 }
 
 export function addDays(iso, n) {
@@ -143,7 +186,7 @@ export function localZone() {
 }
 
 export function localOffsetMinutes(at) {
-  return -(at instanceof Date ? at : new Date()).getTimezoneOffset();
+  return -(at instanceof Date ? at : now()).getTimezoneOffset();
 }
 
 /* The calendar day a stored time falls on, for grouping in the app's own

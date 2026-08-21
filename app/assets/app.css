@@ -1424,6 +1424,68 @@ table.data tr.excluded td { color: var(--faint); }
 .chart .boundary { stroke: var(--attention); stroke-width: 1.5; stroke-dasharray: var(--chart-event-dash); }
 .chart .boundary-label { fill: var(--attention); font-size: var(--t-axis); font-family: var(--font); font-weight: var(--w-bold); }
 
+/* ============================================================================
+   TEST MODE
+   ----------------------------------------------------------------------------
+   The marker is a bar pinned above every screen, not a badge tucked into
+   Settings. Two mistakes it exists to prevent: typing a real reading into test
+   data, and reading a test recommendation as advice about the actual tank.
+   Both are made in a second and found much later, so the marker is loud,
+   fixed, present on every screen including the crash screen, and it is the way
+   back to the controls.
+   ========================================================================= */
+
+#modemarker { position: sticky; top: 0; z-index: 40; }
+#modemarker[hidden] { display: none; }
+
+.modemarker {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--testmode-h);
+  padding: 0 var(--gutter);
+  border: 0;
+  border-bottom: 1px solid var(--testmode-edge);
+  background: var(--testmode);
+  color: var(--testmode-ink);
+  font-family: var(--font);
+  font-size: var(--t-micro);
+  text-align: left;
+  cursor: pointer;
+}
+
+.modemarker .tag {
+  font-weight: var(--w-heavy);
+  letter-spacing: var(--ls-caps);
+  flex: none;
+}
+.modemarker .det { font-weight: var(--w-semi); opacity: 0.92; }
+.modemarker .go { margin-left: auto; font-weight: var(--w-bold); flex: none; }
+
+/* The chrome the bar does not cover. A tint rather than a second banner: the
+   screen should feel different without a second thing to read. */
+body.is-testmode { background: var(--testmode-bg); }
+body.is-testmode .tabbar { border-top-color: var(--testmode); }
+
+.pill-test { background: var(--testmode); color: var(--testmode-ink); }
+.card.is-testmode { border-color: var(--testmode); }
+
+/* The bulk-entry box. Monospaced because the format is columns, and a
+   proportional font makes a misaligned line look like a correct one. */
+.input.series {
+  font-family: var(--mono);
+  font-size: var(--t-code);
+  line-height: var(--lh-body);
+  width: 100%;
+  min-height: calc(var(--sp-8) * 4);
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.seedreport { margin-top: var(--sp-3); }
+
 /* --- Reduced motion, extended --------------------------------------------
    Everything added above lands at its finished state. Someone who asks the
    system not to animate should not have to argue with it, and a partial block

@@ -23,7 +23,7 @@
 import { h, svg } from "../ui/dom.js";
 import { parameterDefs, KIND } from "../store/ledger.js";
 import { fmtShort, fmtDayName, fmtEventTime } from "../ui/format.js";
-import { hasExactInstant } from "../store/time.js";
+import { addDays, hasExactInstant, todayLocal } from "../store/time.js";
 import { t } from "../strings.js";
 
 const EVENT_MARKS = Object.freeze({
@@ -102,7 +102,13 @@ export async function renderHistory(ctx) {
 
 function renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment) {
   const card = h("section", { class: "card" });
-  const cutoff = new Date(Date.now() - windowDays * 86400000).toISOString().slice(0, 10);
+  /* Counted back from the application's clock in whole calendar days, not from
+     `Date.now()` in milliseconds. Two reasons, and both were real: 86400000 is
+     the wrong length of day twice a year, and the wall clock is the wrong
+     "now" whenever the keeper has set the assessment instant by hand — the
+     chart would then show a window ending today under an app that is otherwise
+     three weeks earlier. */
+  const cutoff = addDays(todayLocal(), -windowDays);
 
   const raw = projected
     .filter(

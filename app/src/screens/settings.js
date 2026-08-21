@@ -307,6 +307,32 @@ export async function renderSettings(ctx) {
   );
   screen.append(dur);
 
+  /* Test mode.
+
+     Here rather than on the tab bar, because it is not part of keeping a tank
+     — it is a way of asking the engine what it would say on a day that has not
+     happened. Off unless the keeper turned it on, and the row says which. */
+  const testing = ctx.mode ? ctx.mode() === "TEST" : false;
+  screen.append(
+    h(
+      "section",
+      { class: "card" + (testing ? " is-testmode" : "") },
+      h(
+        "div",
+        { class: "card-head" },
+        h("h2", null, t("testmode.title")),
+        h("span", { class: testing ? "pill pill-test" : "pill pill-neutral" }, testing ? t("testmode.on") : t("testmode.off"))
+      ),
+      h("p", { class: "body" }, testing ? t("settings.testmode.onBody") : t("settings.testmode.offBody")),
+      h(
+        "button",
+        { class: "btn", type: "button", onclick: () => ctx.go("testmode") },
+        testing ? t("settings.testmode.open") : t("settings.testmode.setUp")
+      ),
+      h("p", { class: "inert-note" }, t("settings.testmode.note"))
+    )
+  );
+
   /* Platform */
   screen.append(await renderPlatform(ctx));
 

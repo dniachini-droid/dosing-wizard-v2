@@ -361,7 +361,11 @@ s.test("ASS-12", "the IndexedDB backend raises on a failed read rather than retu
   const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
   const src = fs.readFileSync(path.join(ROOT, "app/src/store/db.js"), "utf8");
 
-  const backend = src.slice(src.indexOf("export const idbBackend"), src.indexOf("export function memoryBackend"));
+  /* Anchored on `backendMethods`, which is where the IndexedDB backend's
+     methods now live: `db.js` became a factory when test mode needed a second,
+     separate database, and `idbBackend` is now one call to it rather than the
+     object literal itself. The rule this checks did not change with it. */
+  const backend = src.slice(src.indexOf("function backendMethods"), src.indexOf("export const idbBackend"));
   ok(backend.length > 200, "the IndexedDB backend was found in the source");
 
   /* Every read method, by name, so a method added later is not silently

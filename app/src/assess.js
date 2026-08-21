@@ -16,11 +16,19 @@
 
 import { assess as callEngine, describe } from "./engine/client.js";
 import { toEngineEvents } from "./store/ledger.js";
+import { nowIso } from "./store/time.js";
 
 /* `asOf` is the assessment instant. The application supplies it; nothing below
-   this line invents one. */
+   this line invents one.
+
+   It reads the application's clock (`time.js`) rather than `new Date()`
+   directly, and that one indirection is the whole of test mode's mechanism.
+   When the keeper sets the assessment instant, this function returns it — and
+   `runAssessment` below, the engine client, the worker and the engine itself
+   are untouched, because they were already written to take the instant as an
+   argument. There is no second pipeline to keep in step with this one. */
 export function nowAsOf() {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  return nowIso();
 }
 
 /* Run one assessment and store it if it is a new answer.

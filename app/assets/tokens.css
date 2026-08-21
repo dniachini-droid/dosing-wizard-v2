@@ -76,6 +76,18 @@
   --neutral-chip:      #566966;
   --neutral-chip-bg:   #E8EFEC;
 
+  /* --- Test mode -----------------------------------------------------------
+     Deliberately outside the palette above. Every other colour in this file is
+     either a parameter's identity or a state of the tank; this one is a state
+     of the APP, and it has to be unmistakable at a glance and impossible to
+     confuse with either. A saturated indigo is used nowhere else. */
+
+  --testmode:          #3B2E86;
+  --testmode-bg:       #ECE8FB;
+  --testmode-ink:      #FFFFFF;
+  --testmode-edge:     #2A2065;
+  --testmode-h:        34px;   /* the height of the pinned marker bar */
+
   /* --- Radii ------------------------------------------------------------- */
 
   --r-card:            22px;

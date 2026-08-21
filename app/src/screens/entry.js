@@ -33,6 +33,7 @@ import {
   exactInstant,
   localOffsetMinutes,
   localZone,
+  now,
   todayLocal,
   describeTime,
 } from "../store/time.js";
@@ -138,11 +139,18 @@ export function timeControl({ initialDate, initialTime, initialProvenance, onCha
           buttons.forEach((x, i) => x.classList.toggle("on", OPTIONS[i].key === o.key));
           if (o.fillsFromClock) {
             /* Read once, here, at the moment of the press. Visible in the field
-               immediately, and the keeper can still change it. */
-            const now = new Date();
+               immediately, and the keeper can still change it.
+
+               It reads the APPLICATION's clock rather than the wall clock, so
+               that in test mode "now" is the instant the keeper set. A button
+               labelled "now" that stamped the real time while the whole rest
+               of the app was three weeks earlier would file the reading
+               outside the window being examined, which is the one thing this
+               button must not do. */
+            const at = now();
             const p = (n) => String(n).padStart(2, "0");
-            state.date = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
-            state.time = `${p(now.getHours())}:${p(now.getMinutes())}`;
+            state.date = `${at.getFullYear()}-${p(at.getMonth() + 1)}-${p(at.getDate())}`;
+            state.time = `${p(at.getHours())}:${p(at.getMinutes())}`;
             dateInput.value = state.date;
           }
           /* When the answer is "date only" the time field is removed, not

@@ -32,6 +32,7 @@ const SUITES = [
   "test-cards.mjs",
   "test-schedule.mjs",
   "test-suggestion.mjs",
+  "test-testmode.mjs",
   "test-strings.mjs",
   "test-shell.mjs",
 ];
