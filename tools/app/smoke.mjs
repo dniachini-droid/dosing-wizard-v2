@@ -523,6 +523,11 @@ if (fs.existsSync(BACKUP)) {
     await page.waitForSelector("h1:has-text('Settings')");
     await page.click("text=Import your history");
     await page.waitForSelector("h1:has-text('Import your history')");
+    /* The keeper's stated timezone, which is what turns his 28 timed readings
+       from unusable clock readings into an analysable window. Defaulted to the
+       device's zone; set explicitly here so the run is the same wherever it
+       is driven from. */
+    await page.fill('.card .field .input[aria-label*="timezone"]', "Australia/Sydney");
     await page.setInputFiles('input[type="file"]', BACKUP);
     await page.waitForSelector("text=What would come across", { timeout: 20000 });
 
@@ -570,24 +575,37 @@ if (fs.existsSync(BACKUP)) {
     if (counts.completions < 36) throw new Error(`completions: ${counts.completions}`);
   });
 
-  await step("not one imported record gained a time it did not have", async () => {
-    const bad = await page.evaluate(async () => {
+  await step("not one date-only record gained a time it did not have", async () => {
+    const seen = await page.evaluate(async () => {
       const { createStore } = await import("/app/src/store/index.js");
       const events = await createStore().ledger.allEvents();
       /* Everything the import wrote carries an origin; the smoke run's own
-         earlier entries do not, and those legitimately have instants. */
+         earlier entries do not. */
       const imported = events.filter((e) => e.detail && e.detail.origin);
+      const by = {};
+      for (const e of imported) by[e.time.timeProvenance] = (by[e.time.timeProvenance] || 0) + 1;
       return {
         total: imported.length,
-        withInstant: imported.filter((e) => e.time.absoluteInstant).length,
+        by,
         dateOnlyWithClock: imported.filter(
-          (e) => e.time.timeProvenance === "DATE_ONLY" && e.time.localTime
+          (e) => e.time.timeProvenance === "DATE_ONLY" && (e.time.localTime || e.time.absoluteInstant)
+        ).length,
+        reconstructedWithoutProof: imported.filter(
+          (e) => e.time.timeProvenance === "RECONSTRUCTED_WITH_PROVENANCE" && !e.time.reconstruction
         ).length,
       };
     });
-    if (bad.total < 380) throw new Error(`too few imported records to check: ${bad.total}`);
-    if (bad.withInstant !== 0) throw new Error(`${bad.withInstant} imported records gained an instant`);
-    if (bad.dateOnlyWithClock !== 0) throw new Error(`${bad.dateOnlyWithClock} date-only records gained a clock`);
+    if (seen.total < 380) throw new Error(`too few imported records to check: ${seen.total}`);
+    if (seen.by.DATE_ONLY !== 353) throw new Error(`date-only records: ${JSON.stringify(seen.by)}`);
+    if (seen.by.RECONSTRUCTED_WITH_PROVENANCE !== 32) {
+      throw new Error(`reconstructed records: ${JSON.stringify(seen.by)}`);
+    }
+    if (seen.dateOnlyWithClock !== 0) {
+      throw new Error(`${seen.dateOnlyWithClock} date-only records gained a clock`);
+    }
+    if (seen.reconstructedWithoutProof !== 0) {
+      throw new Error(`${seen.reconstructedWithoutProof} reconstructed records carry no proof`);
+    }
   });
 
   await step("running it again changes nothing", async () => {

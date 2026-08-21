@@ -19,7 +19,7 @@
 import { h } from "../ui/dom.js";
 import { fmtDayName, fmtShort } from "../ui/format.js";
 import { parameterDef } from "../store/ledger.js";
-import { nowIso } from "../store/time.js";
+import { localZone, nowIso } from "../store/time.js";
 import {
   applyImport,
   checkCounts,
@@ -37,6 +37,27 @@ import { t } from "../strings.js";
    Held on the screen rather than in the importer because it is the keeper
    answering a question, and he can change it before pressing the button. */
 const STATED_POTENCY_DKH_PER_ML = "0.0693";
+
+/* THE KEEPER'S STATEMENT ABOUT HIS OWN CLOCK READINGS.
+
+   Canon `SHARED-LEGACY-TIME-001` allows `RECONSTRUCTED_WITH_PROVENANCE` "only
+   when the historical timezone/offset is independently proven and the
+   reconstruction is recorded", and what it forbids is the SILENT version:
+   assigning noon, applying the current timezone to an old stamp, treating a
+   local HH:MM as an absolute instant. None of those is what this is. He is
+   asked, in so many words, which zone he was in; his answer is recorded with
+   its reasoning and travels on every record it touched; and a later reader can
+   see it was reconstructed, from what, and disbelieve it.
+
+   `KEEPER_STATEMENT` is the basis, and it is deliberately not called proof of
+   anything else. He is the only person who knows where he was. */
+const RECONSTRUCTION_BASIS = "KEEPER_STATEMENT";
+
+function reconstructionFrom(zoneInput) {
+  const zoneId = zoneInput && zoneInput.value ? String(zoneInput.value).trim() : "";
+  if (!zoneId) return null;
+  return { zoneId, basis: RECONSTRUCTION_BASIS, statedAt: nowIso() };
+}
 
 export async function renderImportV1(ctx) {
   const screen = h("main", { class: "screen" });
@@ -62,6 +83,18 @@ export async function renderImportV1(ctx) {
   if (already && !justDone) screen.append(previouslyCard(already));
 
   const report = h("div");
+
+  /* Defaulted to the device's own zone, which is a suggestion and not an
+     assumption: it is visible, it is editable, and nothing is stored until he
+     presses the button. Emptying it is a real answer — "I would rather not
+     say" — and leaves every timed reading exactly as it arrived. */
+  const zone = h("input", {
+    class: "input",
+    value: localZone() || "",
+    spellcheck: "false",
+    "aria-label": t("import.zone.label"),
+  });
+
   const potency = h("input", {
     class: "input",
     inputmode: "decimal",
@@ -85,7 +118,7 @@ export async function renderImportV1(ctx) {
         report.replaceChildren(h("p", { class: "body" }, err.message));
         return;
       }
-      await showReport(ctx, report, { text, filename: f.name, potency });
+      await showReport(ctx, report, { text, filename: f.name, potency, zone });
     },
   });
 
@@ -96,6 +129,13 @@ export async function renderImportV1(ctx) {
       h("div", { class: "card-head" }, h("h2", null, t("import.chooseTitle"))),
       h("p", { class: "body" }, t("import.chooseBody")),
       h("div", { class: "field" }, h("span", { class: "flabel" }, t("import.chooseFile")), file),
+      h(
+        "div",
+        { class: "field" },
+        h("span", { class: "flabel" }, t("import.zone.label")),
+        zone,
+        h("p", { class: "hint" }, t("import.zone.hint"))
+      ),
       h(
         "div",
         { class: "field" },
@@ -137,16 +177,27 @@ function doneCard(record) {
 }
 
 function previouslyCard(record) {
+  const incomplete = record.state === "INCOMPLETE" || record.state === "STARTED";
   return h(
     "section",
     { class: "card" },
-    h("div", { class: "card-head" }, h("h2", null, t("import.previously.title"))),
+    h(
+      "div",
+      { class: "card-head" },
+      h("h2", null, incomplete ? t("import.previously.incompleteTitle") : t("import.previously.title")),
+      incomplete ? h("span", { class: "pill pill-attention" }, t("import.previously.incompletePill")) : null
+    ),
+    incomplete
+      ? h("div", { class: "callout attention" }, h("p", null, t("import.previously.incompleteBody")))
+      : null,
     h(
       "div",
       { class: "kv" },
       h("div", { class: "kv-row" }, h("span", { class: "kv-k" }, t("import.previously.when")), h("span", { class: "kv-v" }, fmtDayName(record.at.slice(0, 10)))),
       h("div", { class: "kv-row" }, h("span", { class: "kv-k" }, t("import.previously.file")), h("span", { class: "kv-v" }, record.filename || "—")),
-      h("div", { class: "kv-row" }, h("span", { class: "kv-k" }, t("import.previously.readings")), h("span", { class: "kv-v" }, String(record.written.readings)))
+      record.written
+        ? h("div", { class: "kv-row" }, h("span", { class: "kv-k" }, t("import.previously.readings")), h("span", { class: "kv-v" }, String(record.written.readings)))
+        : null
     ),
     h("p", { class: "inert-note" }, t("import.previously.note"))
   );
@@ -154,7 +205,7 @@ function previouslyCard(record) {
 
 /* --- the report ---------------------------------------------------------- */
 
-async function showReport(ctx, host, { text, filename, potency }) {
+async function showReport(ctx, host, { text, filename, potency, zone }) {
   host.replaceChildren();
 
   const parsed = parseBackup(text);
@@ -175,19 +226,34 @@ async function showReport(ctx, host, { text, filename, potency }) {
       list.append(
         h("li", null, h("span", { class: "taskrow" }, h("span", { class: "tick" }, "·"),
           h("span", null, h("span", { class: "t" }, d.key),
-            h("span", { class: "d" }, t("import.countMismatch", { stated: d.stated, actual: d.actual })))))
+            h("span", { class: "d" }, d.unstated
+              ? t("import.countUnstated", { actual: d.actual })
+              : t("import.countMismatch", { stated: d.stated, actual: d.actual })))))
       );
     }
-    host.append(refusal(t("import.refused.counts"), t("import.refused.countsBody")), list);
+    const allUnstated = counts.disagreements.every((d) => d.unstated);
+    host.append(
+      refusal(
+        t("import.refused.counts"),
+        allUnstated ? t("import.refused.countsUnstated") : t("import.refused.countsBody")
+      ),
+      list
+    );
     return;
   }
 
-  const [projected, completions] = await Promise.all([
+  const [projected, completions, config] = await Promise.all([
     ctx.store.ledger.projection(),
     ctx.store.tasks.completions(),
+    ctx.store.config.current(),
   ]);
-  const planned = planImport(parsed.doc, { existing: projected, existingCompletions: completions });
-  const described = describePlan(planned);
+  const planned = planImport(parsed.doc, {
+    existing: projected,
+    existingCompletions: completions,
+    config,
+    reconstruction: reconstructionFrom(zone),
+  });
+  const described = describePlan(planned, reconstructionFrom(zone));
 
   if (planned.problems.length) {
     const list = h("ul", { class: "tasklist" });
@@ -229,9 +295,11 @@ async function showReport(ctx, host, { text, filename, potency }) {
   }
 
   host.append(whatComesAcross(planned, described));
-  host.append(timeCard(described));
+  host.append(timeCard(described, zone));
+  host.append(zoneCard(described));
   host.append(eligibilityCard(described));
   host.append(provenanceCard(planned));
+  host.append(remindersCard(planned));
   host.append(configurationCard(planned, potency));
 
   const msg = h("p", { class: "hint" });
@@ -253,11 +321,27 @@ async function showReport(ctx, host, { text, filename, potency }) {
             onclick: async (e) => {
               e.target.disabled = true;
               msg.textContent = t("import.run.working");
+              const at = nowIso();
+              /* THE FILE IS KEPT BEFORE ANYTHING IS WRITTEN, NOT AFTER.
+
+                 Kept afterwards, it was kept only on the runs that succeeded —
+                 and the run where the record most needs checking against the
+                 file is the one that failed halfway. It is written first, with
+                 what it is about to attempt, and the outcome is filled in when
+                 there is one. */
+              await ctx.store.kvSet("v1Import", {
+                at,
+                filename,
+                state: "STARTED",
+                potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
+                reconstruction: reconstructionFrom(zone),
+                originalFile: text,
+              });
               try {
-                const at = nowIso();
                 const written = await applyImport(ctx.store, planned, {
                   asOf: at,
-                  correctedPotencyDkhPerMl: Number(potency.value),
+                  correctedPotencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
+                  reconstruction: reconstructionFrom(zone),
                 });
                 /* THE ORIGINAL FILE IS PRESERVED, VERBATIM.
 
@@ -269,8 +353,10 @@ async function showReport(ctx, host, { text, filename, potency }) {
                 await ctx.store.kvSet("v1Import", {
                   at,
                   filename,
+                  state: "DONE",
                   written,
-                  potencyDkhPerMl: Number(potency.value),
+                  potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
+                  reconstruction: reconstructionFrom(zone),
                   originalFile: text,
                 });
                 /* WHAT HAPPENED, ON A SCREEN THAT SURVIVES THE REDRAW.
@@ -283,8 +369,21 @@ async function showReport(ctx, host, { text, filename, potency }) {
                 ctx.state.lastImport = { at, filename, written };
                 await ctx.reassessAndGo("import");
               } catch (err) {
+                /* A partial write is a real state and it is recorded as one.
+                   The natural-key dedupe means running the import again
+                   finishes what this one started rather than duplicating it,
+                   and the screen says so instead of leaving a raw error. */
+                await ctx.store.kvSet("v1Import", {
+                  at,
+                  filename,
+                  state: "INCOMPLETE",
+                  reason: err.message,
+                  potencyDkhPerMl: potency.value.trim() === "" ? null : Number(potency.value),
+                  reconstruction: reconstructionFrom(zone),
+                  originalFile: text,
+                });
                 e.target.disabled = false;
-                msg.textContent = err.message;
+                msg.textContent = t("import.run.failed", { reason: err.message });
               }
             },
           },
@@ -362,7 +461,36 @@ function whatComesAcross(planned, described) {
   return card;
 }
 
-function timeCard(described) {
+/* What the keeper's answer about his timezone actually does, said before he
+   presses anything: which readings become usable, which are untouched, and
+   which the zone cannot resolve. */
+function zoneCard(described) {
+  const card = h("section", { class: "card" });
+  card.append(h("div", { class: "card-head" }, h("h2", null, t("import.zone.title"))));
+
+  if (!described.reconstructedZone) {
+    card.append(h("p", { class: "body" }, t("import.zone.notStated")));
+    return card;
+  }
+
+  card.append(
+    h(
+      "div",
+      { class: "kv" },
+      kv(t("import.zone.stated"), described.reconstructedZone),
+      kv(t("import.zone.reconstructed"), String(described.exactElapsedAvailable)),
+      kv(t("import.zone.unresolved"), String(described.unreconstructable))
+    ),
+    h("p", { class: "body" }, t("import.zone.body", { zone: described.reconstructedZone, n: described.withTime })),
+    h("p", { class: "body" }, t("import.zone.dateOnlyUntouched", { n: described.dateOnly }))
+  );
+  if (described.unreconstructable) {
+    card.append(h("p", { class: "body" }, t("import.zone.unresolvedBody", { n: described.unreconstructable })));
+  }
+  return card;
+}
+
+function timeCard(described, zone) {
   return h(
     "section",
     { class: "card" },
@@ -448,6 +576,22 @@ function provenanceCard(planned) {
     ),
     h("p", { class: "body" }, t("import.provenance.question")),
     h("p", { class: "inert-note" }, t("import.provenance.note"))
+  );
+}
+
+function remindersCard(planned) {
+  if (!planned.tasks.length) return h("div");
+  const list = h("div", { class: "kv" });
+  for (const task of planned.tasks) {
+    list.append(kv(task.label, t("import.reminders.row", { label: "", interval: task.intervalDays }).trim()));
+  }
+  return h(
+    "section",
+    { class: "card" },
+    h("div", { class: "card-head" }, h("h2", null, t("import.reminders.title")), h("span", { class: "aside" }, String(planned.tasks.length))),
+    h("p", { class: "body" }, t("import.reminders.body", { n: planned.tasks.length })),
+    list,
+    h("p", { class: "body" }, t("import.reminders.unverified"))
   );
 }
 

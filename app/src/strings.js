@@ -484,6 +484,25 @@ export const STRINGS = Object.freeze({
     "Stored with the date and no time. It stays that way permanently — the app will never fill the time in later.",
   "time.needTime": "Enter the time, or choose “date only”.",
   "time.needAnswer": "Say how well you know the time.",
+  "entry.detail.origin": "Where this came from",
+  "entry.origin.here": "Entered in this app",
+  "entry.origin.keeper": "Your own records, brought across from the old app",
+  "entry.origin.unconfirmed": "Brought across from the old app — unconfirmed",
+  "entry.origin.configuration": "Settings brought across from the old app",
+  "entry.origin.unconfirmedHead": "It is not certain this one is yours.",
+  "entry.origin.unconfirmedBody":
+    "The review of your old app found records like this identical to values that shipped inside the app " +
+    "itself. It is kept either way, and marked, rather than quietly counted as something you recorded.",
+
+  "entry.reconstructed.head": "This time was worked out, not recorded.",
+  "entry.reconstructed.body": ({ zone, date }) =>
+    `The old app stored the time of day and not the timezone. You said on ${date} that these readings were ` +
+    `taken in ${zone}, and that is what the exact moment here was worked out from — including which side of ` +
+    `a daylight-saving change the date falls on.`,
+  "entry.reconstructed.note":
+    "If that is wrong, this reading's exact moment is wrong with it. The date, the time of day and the value " +
+    "are unaffected — they are what your file recorded.",
+
   "time.describe.exact": "Date and time recorded",
   "time.describe.dateOnly": "Date only — the time of day was not recorded",
   "time.describe.local": "Time of day recorded, but the timezone it was in is not known",
@@ -827,6 +846,13 @@ export const STRINGS = Object.freeze({
     `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
   "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
 
+  "err.reconstructionNeedsZone":
+    "A reconstructed time needs the timezone it was recorded in. Without one there is nothing to reconstruct " +
+    "it from.",
+  "err.reconstructionNeedsRecord":
+    "A reconstructed time has to carry the reason it was reconstructed. A record that claims the stronger " +
+    "precision without saying where it came from is the thing this rule exists to prevent.",
+
   "err.chartNeedsLabel":
     "A chart must be told which parameter it is drawing. This one was not, which is the defect carried over " +
     "from the old app.",
@@ -1133,6 +1159,35 @@ export const STRINGS = Object.freeze({
   "import.chooseFile": "The export file",
   "import.reading": "Reading it…",
 
+  "import.zone.label": "Which timezone were these readings taken in?",
+  "import.zone.hint":
+    "Your old app recorded the time of day and not the timezone, and without one a clock reading cannot be " +
+    "turned into a moment. Saying which zone you were in is what makes those readings usable. It is recorded " +
+    "as YOUR statement, with the date you made it, and it travels with every reading it touched — so it can " +
+    "be seen, and disbelieved, later. Leave it empty and nothing is reconstructed.",
+
+  "import.zone.title": "The times, and what your answer does to them",
+  "import.zone.stated": "Timezone you gave",
+  "import.zone.reconstructed": "Readings that become usable",
+  "import.zone.unresolved": "Readings it cannot resolve",
+  "import.zone.none": "not given",
+  "import.zone.body": ({ zone, n }) =>
+    `${n} readings carry a clock reading, and saying you were in ${zone} turns each of them into a moment — ` +
+    `working out for itself which side of a daylight-saving change each date falls on, so a reading in ` +
+    `February and one in August do not get the same offset.`,
+  "import.zone.dateOnlyUntouched": ({ n }) =>
+    `The other ${n} have no time of day at all. They gain nothing from this and are not touched: there is no ` +
+    `clock reading to work from, and inventing one is the thing this app will not do.`,
+  "import.zone.unresolvedBody": ({ n }) =>
+    n === 1
+      ? "One reading falls in an hour that daylight saving skipped or repeated. It has no single answer, so it " +
+        "is left exactly as it arrived."
+      : `${n} readings fall in hours that daylight saving skipped or repeated. Those have no single answer, so ` +
+        `they are left exactly as they arrived.`,
+  "import.zone.notStated":
+    "No timezone given, so nothing is reconstructed and the readings that carry a time keep it as a clock " +
+    "reading. Everything still imports; the engine will decline to measure rates across them.",
+
   "import.potency.label": "Solution strength (dKH per mL, in your tank)",
   "import.potency.hint":
     "Your file carries a figure that does not match your actual solution. This is the corrected one, and it " +
@@ -1149,6 +1204,21 @@ export const STRINGS = Object.freeze({
   "import.err.notANumber": ({ text, date }) => `A reading on ${date} has the value "${text}", which is not a number.`,
   "import.err.badDose": ({ text, date }) => `A dose record on ${date} is for "${text}" and could not be read.`,
   "import.err.badWater": ({ date }) => `A water change on ${date} has no volume on it.`,
+  "import.err.badDate": ({ what, text }) =>
+    `A ${what} record has "${text}" where its date should be, which is not a date. Nothing has been imported.`,
+  "import.err.badTime": ({ what, date, text }) =>
+    `A ${what} record on ${date} has "${text}" where its time should be, which is not a time of day. ` +
+    `Nothing has been imported.`,
+  "import.err.notAList": ({ name }) =>
+    `The ${name} section of that file is not a list of records, so it could not be read.`,
+  "import.err.emptyIcp": ({ date }) => `The ICP panel dated ${date} has no results in it.`,
+  "import.err.doseNoBounds": ({ date }) =>
+    `The dose record on ${date} has no time of day, and without knowing which timezone your records were in ` +
+    `there is no way to say even roughly when it took effect. Give the timezone, or leave that record out.`,
+  "import.err.badRange": ({ text }) =>
+    `Your file's target range for "${text}" has no usable numbers on it.`,
+  "import.err.unknownRange": ({ text }) =>
+    `Your file has a target range for "${text}", which this app has no place to keep.`,
   "import.err.badReminder": ({ text }) => `The reminder "${text}" has no interval on it.`,
 
   "import.refused.title": "That file cannot be imported",
@@ -1158,6 +1228,10 @@ export const STRINGS = Object.freeze({
     "imported. A file that does not match its own count is not the file it says it is, and guessing which " +
     "half to believe is not something this will do.",
   "import.countMismatch": ({ stated, actual }) => `says ${stated}, contains ${actual}`,
+  "import.countUnstated": ({ actual }) => `says nothing, contains ${actual}`,
+  "import.refused.countsUnstated":
+    "That export does not say how many records it holds, so there is nothing to check its contents against. " +
+    "A file that has been cut short looks exactly like a complete one. Nothing has been imported.",
   "import.refused.rows": "Some rows could not be read",
   "import.refused.rowsBody": ({ n }) =>
     n === 1
@@ -1256,7 +1330,18 @@ export const STRINGS = Object.freeze({
     "The figure from the file is kept alongside it, recorded as superseded. Nothing already worked out is " +
     "recomputed with either number.",
   "import.config.note":
-    "Your reminders come across with the intervals you set, not the ones the old app shipped with.",
+    "Your reminders come across with the intervals your file carries — see below.",
+
+  "import.reminders.title": "Your reminders",
+  "import.reminders.body": ({ n }) =>
+    `All ${n} come across with the intervals your file has on them, so what you actually have in front of you ` +
+    `is what you get here.`,
+  "import.reminders.unverified":
+    "What the file does not record is which of them you chose. The review of your old app found that one " +
+    "interval had been changed and the rest were the defaults it shipped with — and there is nothing in the " +
+    "export that says which is which. So they are brought across marked as unverified rather than as your " +
+    "choices, and you can change any of them.",
+  "import.reminders.row": ({ label, interval }) => `${label} · every ${interval} days`,
 
   "import.run.title": "Run the import",
   "import.run.body":
@@ -1286,6 +1371,16 @@ export const STRINGS = Object.freeze({
     `${n} records are now in your history, alongside your reminders and what you had already marked done.`,
   "import.done.note":
     "The file is kept exactly as it arrived. Importing it again will add nothing, and will say so.",
+
+  "import.run.failed": ({ reason }) =>
+    `The import stopped part-way through and did not finish. ${reason} Nothing is lost and nothing is ` +
+    `duplicated: run it again with the same file and it will add only what is missing.`,
+
+  "import.previously.incompleteTitle": "An import did not finish",
+  "import.previously.incompletePill": "unfinished",
+  "import.previously.incompleteBody":
+    "An earlier run stopped part-way through. Your file was kept, so nothing is lost — run it again with the " +
+    "same file and it will add only the records that are missing.",
 
   "import.previously.title": "Already imported",
   "import.previously.when": "Brought across",

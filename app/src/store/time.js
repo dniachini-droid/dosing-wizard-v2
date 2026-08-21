@@ -195,6 +195,131 @@ export function localTimeZoneUnknown(localDate, localTime) {
   });
 }
 
+/* --- reconstruction, the one governed way provenance may improve ----------
+
+   Canon `SHARED-LEGACY-TIME-001`: `RECONSTRUCTED_WITH_PROVENANCE` "may
+   participate normally ONLY when the historical timezone/offset is
+   independently proven and the reconstruction is recorded." Both halves are
+   load-bearing, and this function refuses to produce a record that satisfies
+   only one of them.
+
+   What is forbidden is the SILENT version — the canon's own list is "silently
+   assigning noon; silently applying the keeper's current timezone to old local
+   timestamps; silently treating a local HH:MM as an absolute instant". A
+   keeper who states which zone he was in, whose statement is recorded with its
+   reasoning and travels with every record it touched, is the opposite of
+   silent. He is also the only person who knows.
+
+   So the reconstruction is stored as HIS STATEMENT, not as a fact: `basis`
+   says where the offset came from, `statedAt` says when he said it, and both
+   are on every record. A later reader can see that this was reconstructed, by
+   whom, from what, and can disbelieve it.
+
+   THE OFFSET IS RESOLVED PER RECORD, NOT ONCE.
+
+   Sydney is +11:00 until early April and +10:00 from then until October, and
+   the keeper's history spans February to August — so a single offset applied
+   to the whole run would be wrong for roughly half of it. Each local moment is
+   resolved against the zone's own rules at that moment.
+
+   AND WHERE IT CANNOT BE RESOLVED, IT IS NOT.
+
+   An hour that daylight saving skipped never happened, and an hour it repeated
+   happened twice. Neither has one answer, and this returns `null` for both
+   rather than picking. The caller then keeps `LOCAL_TIME_ZONE_UNKNOWN`, which
+   is the truth about a record whose instant cannot be established. */
+
+/* The zone's offset from UTC, in minutes, at a given absolute instant. */
+export function zoneOffsetMinutesAt(zoneId, utcMs) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: zoneId,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = {};
+  for (const p of dtf.formatToParts(new Date(utcMs))) parts[p.type] = p.value;
+  const asIfUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24,
+    Number(parts.minute),
+    Number(parts.second)
+  );
+  return (asIfUtc - utcMs) / 60000;
+}
+
+/* The absolute instant a local wall time names in a zone, or `null` when it
+   names none or names two. */
+export function resolveLocalInZone(localDate, localTime, zoneId) {
+  const [y, mo, d] = String(localDate).slice(0, 10).split("-").map(Number);
+  const [hh, mi] = String(localTime).slice(0, 5).split(":").map(Number);
+  if (![y, mo, d, hh, mi].every(Number.isFinite)) return null;
+  const naive = Date.UTC(y, mo - 1, d, hh, mi);
+
+  /* Both offsets in play around this moment. On an ordinary day they are the
+     same number and the second pass changes nothing. */
+  const candidates = new Set();
+  const first = zoneOffsetMinutesAt(zoneId, naive);
+  candidates.add(first);
+  candidates.add(zoneOffsetMinutesAt(zoneId, naive - first * 60000));
+  candidates.add(zoneOffsetMinutesAt(zoneId, naive - 12 * 3600000));
+  candidates.add(zoneOffsetMinutesAt(zoneId, naive + 12 * 3600000));
+
+  /* Keep only the offsets that actually round-trip: an instant that, shown in
+     this zone, reads back as the wall time we started from. */
+  const valid = [];
+  for (const off of candidates) {
+    const utcMs = naive - off * 60000;
+    if (zoneOffsetMinutesAt(zoneId, utcMs) === off) valid.push(utcMs);
+  }
+  const distinct = [...new Set(valid)];
+
+  /* None: the hour was skipped. Two: the hour was repeated. Neither has one
+     answer, and this does not pick one. */
+  if (distinct.length !== 1) return null;
+  return { utcMs: distinct[0], offsetMinutes: (naive - distinct[0]) / 60000 };
+}
+
+/* A reconstructed instant, with its proof attached. Returns `null` where the
+   local moment cannot be resolved to exactly one instant. */
+export function reconstructedInstant(localDate, localTime, zoneId, reconstruction) {
+  if (!localDate || !localTime) throw new Error(t("err.exactInstantNeedsBoth"));
+  if (!zoneId) throw new Error(t("err.reconstructionNeedsZone"));
+  if (!reconstruction || !reconstruction.basis || !reconstruction.statedAt) {
+    /* "The reconstruction is recorded" is half the canon's condition. A record
+       that carries the improved provenance and not the proof of it is exactly
+       the thing the rule exists to prevent, so it cannot be built here. */
+    throw new Error(t("err.reconstructionNeedsRecord"));
+  }
+
+  const resolved = resolveLocalInZone(localDate, localTime, zoneId);
+  if (!resolved) return null;
+
+  const off = resolved.offsetMinutes;
+  const sign = off < 0 ? "-" : "+";
+  const abs = Math.abs(off);
+  const pad = (n) => String(n).padStart(2, "0");
+  const offset = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  const local = new Date(resolved.utcMs + off * 60000).toISOString().replace(/\.\d{3}Z$/, "");
+
+  return Object.freeze({
+    timeProvenance: PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE,
+    absoluteInstant: local + offset,
+    displayTimeZoneId: zoneId,
+    localDate: String(localDate).slice(0, 10),
+    localTime: String(localTime).slice(0, 5),
+    offsetMinutes: off,
+    /* The proof, travelling with the record it justifies. */
+    reconstruction: Object.freeze({ ...reconstruction, zoneId, offsetMinutes: off }),
+  });
+}
+
 function shiftIso(utcIso, offsetMinutes) {
   const ms = Date.parse(utcIso + "Z") + offsetMinutes * 60000;
   return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "");

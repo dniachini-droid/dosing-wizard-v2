@@ -17,6 +17,16 @@ import { PROVENANCE, describeTime } from "../store/time.js";
 import { fmtDayName, fmtEventTime } from "../ui/format.js";
 import { t } from "../strings.js";
 
+function originWords(origin) {
+  return (
+    {
+      V1_KEEPER_RECORD: t("entry.origin.keeper"),
+      V1_SEED_UNCONFIRMED: t("entry.origin.unconfirmed"),
+      V1_CONFIGURATION_UNVERIFIED: t("entry.origin.configuration"),
+    }[origin] || t("entry.origin.here")
+  );
+}
+
 export async function openEntrySheet(ctx, eventId) {
   const projected = await ctx.store.ledger.projection();
   const row = projected.find((r) => r.event.eventId === eventId);
@@ -40,6 +50,58 @@ export async function openEntrySheet(ctx, eventId) {
       h("div", { class: "kv-row" }, h("span", { class: "kv-k" }, t("entry.detail.state")), h("span", { class: "kv-v" }, stateWords(row)))
     )
   );
+
+  /* F-14: where this record came from, said out loud. The import writes an
+     origin on every record it creates and nothing read it, so an imported
+     water change — which the salvage inventory could not confirm was the
+     keeper's at all — looked exactly like one he had typed. */
+  if (e.detail && e.detail.origin) {
+    body.append(
+      h(
+        "div",
+        { class: "kv" },
+        h(
+          "div",
+          { class: "kv-row" },
+          h("span", { class: "kv-k" }, t("entry.detail.origin")),
+          h("span", { class: "kv-v" }, originWords(e.detail.origin))
+        )
+      )
+    );
+    if (e.detail.origin === "V1_SEED_UNCONFIRMED") {
+      body.append(
+        h(
+          "div",
+          { class: "callout attention" },
+          h("p", null, t("entry.origin.unconfirmedHead")),
+          h("p", null, t("entry.origin.unconfirmedBody"))
+        )
+      );
+    }
+  }
+
+  /* And where a reconstructed time came from, with the reasoning attached.
+     Canon `SHARED-LEGACY-TIME-001` allows the stronger provenance only when
+     the reconstruction is RECORDED; a record that carried it silently would be
+     the thing the rule exists to prevent. */
+  if (e.time.reconstruction) {
+    body.append(
+      h(
+        "div",
+        { class: "callout quiet" },
+        h("p", null, t("entry.reconstructed.head")),
+        h(
+          "p",
+          null,
+          t("entry.reconstructed.body", {
+            zone: e.time.reconstruction.zoneId,
+            date: fmtDayName(e.time.reconstruction.statedAt.slice(0, 10)),
+          })
+        ),
+        h("p", null, t("entry.reconstructed.note"))
+      )
+    );
+  }
 
   if (e.time.timeProvenance === PROVENANCE.DATE_ONLY) {
     body.append(
@@ -111,12 +173,69 @@ function openCorrectSheet(ctx, row) {
     initialTime: e.time.localTime || "",
     initialProvenance: e.time.timeProvenance,
   });
-  if (e.time.timeProvenance === PROVENANCE.DATE_ONLY) {
-    /* Matched on the option's own key rather than on its rendered text, so a
-       language pass that rewords "Date only" cannot silently re-enable the
-       stronger options on a date-only record. */
-    tc.removeOptionsAbove(PROVENANCE.DATE_ONLY);
+  /* F-14: where this record came from, said out loud. The import writes an
+     origin on every record it creates and nothing read it, so an imported
+     water change — which the salvage inventory could not confirm was the
+     keeper's at all — looked exactly like one he had typed. */
+  if (e.detail && e.detail.origin) {
+    body.append(
+      h(
+        "div",
+        { class: "kv" },
+        h(
+          "div",
+          { class: "kv-row" },
+          h("span", { class: "kv-k" }, t("entry.detail.origin")),
+          h("span", { class: "kv-v" }, originWords(e.detail.origin))
+        )
+      )
+    );
+    if (e.detail.origin === "V1_SEED_UNCONFIRMED") {
+      body.append(
+        h(
+          "div",
+          { class: "callout attention" },
+          h("p", null, t("entry.origin.unconfirmedHead")),
+          h("p", null, t("entry.origin.unconfirmedBody"))
+        )
+      );
+    }
   }
+
+  /* And where a reconstructed time came from, with the reasoning attached.
+     Canon `SHARED-LEGACY-TIME-001` allows the stronger provenance only when
+     the reconstruction is RECORDED; a record that carried it silently would be
+     the thing the rule exists to prevent. */
+  if (e.time.reconstruction) {
+    body.append(
+      h(
+        "div",
+        { class: "callout quiet" },
+        h("p", null, t("entry.reconstructed.head")),
+        h(
+          "p",
+          null,
+          t("entry.reconstructed.body", {
+            zone: e.time.reconstruction.zoneId,
+            date: fmtDayName(e.time.reconstruction.statedAt.slice(0, 10)),
+          })
+        ),
+        h("p", null, t("entry.reconstructed.note"))
+      )
+    );
+  }
+
+  /* EVERY provenance, not only date-only.
+
+     This guarded `DATE_ONLY` alone, so a correction to one of the imported
+     readings that carries a wall-clock time and no proven offset was still
+     offered "Now" and "Exact" — which would have applied TODAY's device offset
+     to a stamp from last August, the second fabrication the contract forbids
+     by name. The ledger caught it and threw, so nothing was ever stored; what
+     the keeper got was a raw error message for pressing a button the app had
+     shown him. Matched on the option's own key rather than on its rendered
+     text, so a language pass cannot silently re-enable them. */
+  tc.removeOptionsAbove(e.time.timeProvenance);
 
   const msg = h("p", { class: "hint" });
   const body = h("div");

@@ -39,6 +39,14 @@ import { interactiveChart } from "../ui/chart.js";
 import { parameterDefs, KIND } from "../store/ledger.js";
 import { fmtShort, fmtDayName, fmtEventTime } from "../ui/format.js";
 import { addDays, hasExactInstant, todayLocal } from "../store/time.js";
+/* WHERE DOSE HISTORY BEGINS HAS ONE OWNER.
+
+   This screen had its own copy, and the two had already diverged on which
+   events count. `MASTER RULE 1`: two implementations that agree today are a
+   defect, not a coincidence — and here they did not even agree. The import
+   report and this chart now draw the same boundary because they ask the same
+   function. */
+import { firstDoseDate } from "../store/import-v1.js";
 import { t } from "../strings.js";
 
 const EVENT_MARKS = Object.freeze({
@@ -129,22 +137,6 @@ export async function renderHistory(ctx) {
     );
   }
   return screen;
-}
-
-/* The earliest dose event the record holds for the assessed parameter. An
-   event with no parameter is alkalinity's, which is what every dose the app's
-   own forms write means. */
-function firstDoseDate(projected) {
-  let first = null;
-  for (const r of projected) {
-    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
-    const e = r.event;
-    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
-    if (e.parameter != null && e.parameter !== "ALK") continue;
-    const d = e.time.localDate;
-    if (!first || d < first) first = d;
-  }
-  return first;
 }
 
 function renderParameterChart(ctx, def, projected, events, config, windowDays, latestAssessment, doseBoundary) {
