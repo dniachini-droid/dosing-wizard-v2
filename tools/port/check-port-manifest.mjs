@@ -5,7 +5,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT, MANIFEST_PATH, REASONS, readMap, sha256, parseHunks, reverseApply } from "./manifest.mjs";
+import { execFileSync } from "node:child_process";
+import { ROOT, MANIFEST_PATH, REASONS, addsChemistry, readMap, sha256, parseHunks, reverseApply, v1BlobId } from "./manifest.mjs";
 
 /* Read the manifest back into the shape it was generated from. Parsing the
    committed document rather than trusting a sidecar is deliberate: the
@@ -73,6 +74,22 @@ for (const e of entries) {
     if (kind === "defect fixed" && !r.includes("—")) problems.push(`${e.v2}: "defect fixed" must name the defect`);
   }
 
+  /* A REASON IS A LABEL SOMEBODY TYPES. THIS IS THE ONE THING THAT READS THE
+     HUNK.
+
+     A review pointed out that reasons are counted, never inspected: a hunk
+     that ADDS a threshold, labelled `chemistry removed`, passes. That cannot
+     be closed in general — deciding whether a hunk is chemistry is the
+     judgement the reviewer is there for — but its sharpest case can be. "No
+     V1 chemistry crosses" is the brief's central rule, and every name it
+     names is known. A hunk may not put one back, whatever it claims to be
+     doing. */
+  for (const d of e.diffs) {
+    for (const name of addsChemistry(d)) {
+      problems.push(`${e.v2}: a hunk ADDS V1 chemistry back — ${name}`);
+    }
+  }
+
   /* The arm that makes the rest of it true. */
   try {
     const hunks = e.diffs.flatMap((d) => parseHunks(d));
@@ -82,6 +99,40 @@ for (const e of entries) {
     }
   } catch (err) {
     problems.push(`${e.v2}: ${err.message}`);
+  }
+}
+
+/* --- optional: check the recorded originals against V1 itself -------------
+   Everything above runs on a tree that has never seen V1. This arm needs it,
+   and closes the one thing the rest cannot: that the recorded original is the
+   file V1 actually had. */
+const v1Flag = process.argv.indexOf("--v1");
+if (v1Flag >= 0) {
+  const v1Repo = process.argv[v1Flag + 1];
+  if (!v1Repo) {
+    problems.push("--v1 needs a path to the V1 repository");
+  } else {
+    let head = null;
+    try {
+      head = execFileSync("git", ["-C", v1Repo, "rev-parse", map.v1Commit], { encoding: "utf8" }).trim();
+    } catch (err) {
+      problems.push(`the V1 repository at ${v1Repo} does not hold ${map.v1Commit}`);
+    }
+    if (head) {
+      for (const f of map.files) {
+        const e = byPath.get(f.v2);
+        if (!e) continue;
+        const recorded = e.fields["V1 blob"];
+        if (!recorded) { problems.push(`${f.v2}: the manifest records no V1 blob id`); continue; }
+        let actual = null;
+        try { actual = v1BlobId(v1Repo, map.v1Commit, f.v1); }
+        catch { problems.push(`${f.v2}: V1 has no ${f.v1} at ${map.v1Commit}`); continue; }
+        if (actual !== recorded) {
+          problems.push(`${f.v2}: the recorded original is not V1's — blob ${recorded} against ${actual}`);
+        }
+      }
+      if (!problems.length) console.log(`Checked against V1 at ${map.v1Commit}: every recorded original is V1's.`);
+    }
   }
 }
 

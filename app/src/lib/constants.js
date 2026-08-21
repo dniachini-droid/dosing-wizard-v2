@@ -1,6 +1,15 @@
-import { Beaker, FlaskConical, LayoutDashboard, ListChecks, Settings2 } from '../icons.jsx'
-
 /* ---------------------------------- constants ---------------------------------- */
+
+/* THIS MODULE IMPORTS NOTHING, AND THAT IS DELIBERATE.
+
+   V1's version imported five icon components so `NAV` could carry them. That
+   made a file of constants loadable only through a bundler — and the test
+   runner is Node with no dependencies, so anything importing this transitively
+   could not be tested at all. `PORT-11` hit it: it drives the read adapter,
+   the read adapter reads `PARAM_STYLE`, and Node stopped at `icons.jsx`.
+
+   So `NAV` carries an icon KEY and the shell binds it to a component. The tab
+   set is data; which glyph draws it is the shell's business. */
 
 /* V1's `PARAM_DEFS` stood here, and most of it is gone.
 
@@ -58,11 +67,11 @@ export const PARAM_STYLE = {
    owns in V2. The salvage inventory dispositions it
    `TANGLED_WITH_V1_DOMAIN_LOGIC_REBUILD_LATER`. */
 export const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "log", label: "Test", icon: FlaskConical },
-  { id: "dosing", label: "Dosing", icon: Beaker },
-  { id: "tasks", label: "Tasks", icon: ListChecks },
-  { id: "setup", label: "Setup", icon: Settings2 },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "log", label: "Test", icon: "flask" },
+  { id: "dosing", label: "Dosing", icon: "beaker" },
+  { id: "tasks", label: "Tasks", icon: "checks" },
+  { id: "setup", label: "Setup", icon: "settings" },
 ];
 
 /* An id, not a moment. V1 built it from `Date.now()`, which made it a module

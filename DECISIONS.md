@@ -989,6 +989,15 @@ is the whole truth about the difference. It needs no V1 checkout to run.
   gzip against a 180 kB budget, and Recharts is the bulk" still applies, and
   the budget is still not met. Recorded, not resolved.
 
+**One thing the first version of this entry got wrong**
+
+It said the storage layer was untouched. Three files in it changed:
+`store/schedule.js` regained V1's `recent` bucket, `assess.js` moved
+`describe()` out of the storage try — an engine that could not start was being
+reported as a record that could not be read — and gained an injection point so
+canon §64's version stamping could be tested. Only `engine/`, `docs/canon/` and
+`tools/conformance/` are byte-identical.
+
 **What this does not say**
 
 It does not make the interface authoritative about anything. Canon `X-INV-004`

@@ -9,7 +9,7 @@ import { Setup } from './components/Setup.jsx'
 import { TaskDonePopup } from './components/TaskCompletion.jsx'
 import { Tasks } from './components/Tasks.jsx'
 import { TestLab, AllGraphsModal } from './components/AllParametersSheet.jsx'
-import { AlertTriangle, Waves, X } from './icons.jsx'
+import { AlertTriangle, Beaker, FlaskConical, LayoutDashboard, ListChecks, Settings2, Waves, X } from './icons.jsx'
 import { NAV } from './lib/constants.js'
 import { todayStr, fmtShort } from './lib/dates.js'
 import { onStorageError, onToast, notify } from './lib/storage.js'
@@ -31,6 +31,14 @@ import { selectCard, instructsDoseChange } from './present/cards.js'
 import { positionTone } from './present/position.js'
 import { sayVerb, sayAction, sayPosition } from './present/wording.js'
 import { fmtAmount } from './lib/format.js'
+
+/* The tab set is data in `lib/constants.js`, which imports nothing so it stays
+   loadable by a test runner that is Node and nothing else. The glyph each tab
+   is drawn with is bound here. */
+const NAV_ICON = {
+  dashboard: LayoutDashboard, flask: FlaskConical, beaker: Beaker,
+  checks: ListChecks, settings: Settings2,
+};
 
 /* ---------------------------------- main app ---------------------------------- */
 
@@ -256,24 +264,15 @@ export function ReefConsoleInner() {
      one this shell adds when the call itself threw. Null while the first
      assessment is still running, which the screens render as "working it
      out". */
-  /* WITH ONE CORRECTION, WHICH THE INTERFACE MAKES AND THE STORE DOES NOT.
+  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
+     screens get the right label without this having to correct one.
 
-     `assess.js` reads the ledger, the configuration history and the engine's
-     own version stamps in a single `Promise.all`, inside the try whose catch
-     returns `STORAGE_UNAVAILABLE`. So when the engine cannot START — the
-     runtime is not vendored, or the worker fails — the failure arrives labelled
-     as an unreadable record, and the screen tells the keeper his history is
-     gone when it is sitting there intact. That is the worst thing this app can
-     say and the one thing it is not allowed to say wrongly.
-
-     The engine client already reports its own state, and it is the authority on
-     whether the engine started. Where it says the engine failed, that is what
-     the screens say, whatever label came back with the assessment.
-
-     The mislabelling itself is in `assess.js`, which is outside this port's
-     scope. Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */
+     The client's own state still wins where it says the engine failed, because
+     it knows before the first assessment is even attempted — that is what
+     turns a blank card into "the engine could not start" during boot rather
+     than after it. */
   const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
-  const assessmentState = engineDown ? "ENGINE_FAILED" : assessment ? assessment.state : null;
+  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
 
   /* One notice per parameter, from the engine, already worded — and filtered
      by what the keeper has put away. The identity and the signature are V1's
@@ -590,7 +589,7 @@ export function ReefConsoleInner() {
           </div>
           <nav className="flex flex-col gap-1">
             {NAV.map((n) => {
-              const Icon = n.icon;
+              const Icon = NAV_ICON[n.icon];
               const active = tab === n.id;
               return (
                 <button key={n.id} onClick={() => setTab(n.id)}
@@ -756,7 +755,7 @@ export function ReefConsoleInner() {
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {NAV.map((n) => {
-          const Icon = n.icon;
+          const Icon = NAV_ICON[n.icon];
           const active = tab === n.id;
           return (
             <button key={n.id} onClick={() => setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-[56px] rounded-lg active:bg-app">

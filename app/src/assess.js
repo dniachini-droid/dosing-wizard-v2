@@ -18,6 +18,25 @@ import { assess as callEngine, describe } from "./engine/client.js";
 import { happenedBy, toEngineEvents } from "./store/ledger.js";
 import { nowIso } from "./store/time.js";
 
+/* THE ENGINE, AS AN ARGUMENT.
+
+   `runAssessment` and `replay` reach the engine through this pair rather than
+   through the imports directly, so a test can hand them a stub. The default is
+   the real transport and no caller in the application passes anything else.
+
+   This exists because of what could not otherwise be tested. Canon §64
+   conditions deterministic replay on the same ledger, the same configuration
+   versions AND the same engine/canon version, and `replay` below reports those
+   three separately so a divergence names its own cause. None of it was
+   reachable from a test: the only path ran through a Pyodide worker. A review
+   showed the consequence — a stamp hardcoded here would have made
+   `sameEngineVersion` always true, and the whole suite stayed green.
+
+   It is an injection point, not a second engine. `MASTER RULE 1` is untouched:
+   there is one implementation of the chemistry and this cannot become another,
+   because nothing here reads a field of what comes back. */
+export const ENGINE = { assess: callEngine, describe };
+
 /* `asOf` is the assessment instant. The application supplies it; nothing below
    this line invents one.
 
@@ -30,6 +49,8 @@ import { nowIso } from "./store/time.js";
 export function nowAsOf() {
   return nowIso();
 }
+
+const describe0 = () => ENGINE.describe();
 
 /* Run one assessment and store it if it is a new answer.
 
@@ -46,12 +67,11 @@ export async function runAssessment(store, asOf) {
 
      So a storage failure is its own state. It is not an engine failure and it
      is not an empty tank, and nothing below this point runs. */
-  let projected, configurationHistory, versions;
+  let projected, configurationHistory;
   try {
-    [projected, configurationHistory, versions] = await Promise.all([
+    [projected, configurationHistory] = await Promise.all([
       store.ledger.projection(),
       store.config.forEngine(),
-      describe(),
     ]);
   } catch (e) {
     return {
@@ -76,6 +96,35 @@ export async function runAssessment(store, asOf) {
     };
   }
 
+  /* THE ENGINE'S OWN VERSIONS, ASKED FOR OUTSIDE THE STORAGE TRY.
+
+     `describe()` used to sit in the `Promise.all` above, inside the try whose
+     catch returns `STORAGE_UNAVAILABLE` — so an engine that could not START
+     came back labelled as a record that could not be READ, which is the worst
+     sentence this app can produce and the one thing its own comment says must
+     not happen: "a storage failure ... is not an engine failure and it is not
+     an empty tank". A review found it; the interface had already been made to
+     work around it, which is not the same as fixing it. */
+  let versions;
+  try {
+    versions = await describe0();
+  } catch (e) {
+    /* ITS OWN STATE, LIKE THE STORAGE FAILURE ABOVE, AND FOR THE SAME REASON.
+
+       Rethrowing left every caller to guess, and the first caller guessed
+       wrong: the shell reported it as an unreadable record, which is the worst
+       thing this app can say and the one thing it must not say wrongly. An
+       engine that cannot start is not a record that cannot be read and it is
+       not an empty tank. Nothing is stored. */
+    return {
+      state: "ENGINE_UNAVAILABLE",
+      engineResult: null,
+      record: null,
+      asOf,
+      error: e && e.message,
+    };
+  }
+
   const events = toEngineEvents(projected, asOf);
   /* The events the engine was actually given, named as its inputs. It used to
      name every live row, which on a backdated assessment included records that
@@ -86,7 +135,7 @@ export async function runAssessment(store, asOf) {
     .filter((r) => happenedBy(r.event.time, asOf))
     .map((r) => r.event.eventId);
 
-  const engineResult = await callEngine({ events, configurationHistory, asOf });
+  const engineResult = await ENGINE.assess({ events, configurationHistory, asOf });
 
   const { record } = await store.assessments.record({
     engineResult,
@@ -114,7 +163,7 @@ export async function replay(store, assessmentId) {
 
   const [projected, versions, configThen] = await Promise.all([
     store.ledger.projection(),
-    describe(),
+    describe0(),
     /* The configuration the assessment NAMED, not the one in force today.
        Canon §64's third condition. */
     store.config.forEngineUpTo(rec.configVersionId),
@@ -132,7 +181,7 @@ export async function replay(store, assessmentId) {
   const keep = new Set(rec.inputEventIds);
   const kept = projected.filter((r) => keep.has(r.event.eventId));
   const events = toEngineEvents(kept, rec.asOf);
-  const engineResult = await callEngine({
+  const engineResult = await ENGINE.assess({
     events,
     configurationHistory: configThen,
     asOf: rec.asOf,

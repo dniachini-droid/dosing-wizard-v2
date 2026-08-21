@@ -68,6 +68,29 @@ const MUTATIONS = [
     replace: "| V1 SHA-256 xx |",
     expect: /reverse-applying|undefined/,
   },
+  {
+    id: "PM-06",
+    why: "a line is added to a recorded hunk, so the manifest describes a file that is not the one on disk",
+    file: "docs/migration/PORT-MANIFEST.md",
+    find: "+export const PARAM_STYLE = {",
+    replace: "+export const paramStatus = (def, v) => (v < def.min ? 'low' : 'ok');\n+export const PARAM_STYLE = {",
+    /* NOT the chemistry arm. Editing a recorded hunk breaks the reverse-apply
+       first, which is the stronger arm and the one that fires. The chemistry
+       arm cannot be reached by a tree mutation at all — it would need the
+       ported file and the manifest changed together and consistently — so it
+       is proved directly instead, by `PORT-16` in `tests/app/test-port.mjs`
+       against `addsChemistry`. */
+    expect: /reverse-applying|does not match/,
+  },
+  {
+    id: "PM-07",
+    why: "the recorded original is not V1's — the hole the reverse-apply arm cannot see, because it only proves the manifest agrees with itself",
+    file: "docs/migration/PORT-MANIFEST.md",
+    find: "| V1 blob | `",
+    replace: "| V1 blob | `0000000",
+    v1: true,
+    expect: /the recorded original is not V1's/,
+  },
 ];
 
 function copyTree(dest) {
@@ -89,6 +112,9 @@ const base = fs.mkdtempSync(path.join(os.tmpdir(), "port-mutate-"));
 copyTree(base);
 
 let missed = 0;
+let skipped = 0;
+const v1Flag = process.argv.indexOf("--v1");
+const V1_REPO = v1Flag >= 0 ? process.argv[v1Flag + 1] : null;
 console.log("PROVING THE PORT-MANIFEST CHECK CAN FAIL\n");
 
 /* The unmutated copy must be green, or nothing below means anything. */
@@ -113,8 +139,21 @@ for (const m of MUTATIONS) {
   }
   fs.writeFileSync(target, original.replace(m.find, m.replace));
   let output = "", red = false;
+  /* Some arms only exist when V1 is present, and are skipped honestly rather
+     than reported as caught when the checkout is not here. */
+  const args = [path.join(base, "tools/port/check-port-manifest.mjs")];
+  if (m.v1) {
+    if (!V1_REPO) {
+      fs.writeFileSync(target, original);
+      console.log(`[SKIPPED] ${m.id}  needs a V1 checkout: pass --v1 <path>`);
+      console.log(`          ${m.why}\n`);
+      skipped += 1;
+      continue;
+    }
+    args.push("--v1", V1_REPO);
+  }
   try {
-    execFileSync("node", [path.join(base, "tools/port/check-port-manifest.mjs")], { encoding: "utf8", stdio: "pipe" });
+    execFileSync("node", args, { encoding: "utf8", stdio: "pipe" });
   } catch (e) {
     red = true;
     output = (e.stdout || "") + (e.stderr || "");
@@ -140,8 +179,9 @@ fs.rmSync(base, { recursive: true, force: true });
 
 console.log("\n==========================================================================");
 console.log(`mutations defined : ${MUTATIONS.length}`);
-console.log(`mutations caught  : ${MUTATIONS.length - missed}`);
+console.log(`mutations caught  : ${MUTATIONS.length - missed - skipped}`);
 console.log(`mutations missed  : ${missed}`);
+if (skipped) console.log(`mutations skipped : ${skipped}   (need a V1 checkout: --v1 <path>)`);
 console.log(`\nRESULT: ${missed ? "RED" : "GREEN"}`);
 console.log("==========================================================================");
 process.exit(missed ? 1 : 0);

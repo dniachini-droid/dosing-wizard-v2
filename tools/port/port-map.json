@@ -47,7 +47,7 @@
       "v1": "src/lib/constants.js",
       "v2": "app/src/lib/constants.js",
       "reasons": [
-        "chemistry removed \u2014 `PARAM_DEFS`'s target ranges, test cadences and ideal-at directions deleted; what is left is the colour and icon per parameter, keyed by the ledger's parameter keys, with the tab list cut from six to five"
+        "defect fixed \u2014 a module of constants that could not be loaded outside the bundler could not be tested. V1's version imported five icon components so `NAV` could carry them, and anything importing it transitively was unreachable from a Node-only test runner; the chemistry in `PARAM_DEFS` \u2014 target ranges, cadences, ideal-at directions \u2014 is deleted in the same hunk, and `NAV` now carries an icon key the shell binds"
       ]
     },
     {
@@ -257,6 +257,7 @@
         "chemistry removed \u2014 V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration",
         "data source rewired \u2014 V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded",
         "data source rewired \u2014 every tab is wired to V2's store and the engine result, the tab set is five rather than six, and the Test tab carries the my-tests / ICP-panels toggle and All graphs",
+        "defect fixed \u2014 a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here",
         "data source rewired \u2014 the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage"
       ]
     }

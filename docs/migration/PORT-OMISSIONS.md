@@ -185,6 +185,54 @@ them.
 
 ---
 
+## 10a. What an independent test review found, and what happened to it
+
+`test-engineer` reviewed this port's tests and found four things worth the
+owner's attention. Two were defects in the build and are fixed; two are gaps
+recorded below rather than closed.
+
+**Fixed — a fabricated time on three forms.** `recordNote`,
+`recordLightingChange` and `recordIcpPanel` wrote `stamp(date, "12:00")`: a
+literal noon, stamped `EXACT_ABSOLUTE`, on forms that have a date box and no
+time box. `DATA-PROVENANCE.md` §61 forbids it by name — "no defaulting an
+unknown time to midnight, midday, or any other placeholder that would later be
+read as a real timestamp" — and the ledger is append-only, so every one of
+those would have been permanent and indistinguishable from a real instant.
+
+It was a **regression this port introduced**: on `main` those same records went
+through a time control that could say `DATE_ONLY`. They do again.
+
+Worse than the defect was the test. `PORT-10`, the test named for the rule,
+was green while the fabrication existed and **red when it was removed** — it
+asserted that `record.js` must not call `dateOnly`, which forbade the fix. It
+has been replaced by one that drives every recorder and reads what it wrote, so
+no spelling of a default can pass it.
+
+**Fixed — version stamps could be fabricated with the suite green.** `PORT-08`
+handed the stamps in and asserted they came out: a pass-through that would have
+stayed green if `assess.js` had never called the engine. It now runs the real
+`runAssessment` against a stubbed transport reporting a sentinel. And
+`replay()` — the function that implements canon §64 — had **no test that
+called it at all**; `PORT-15` now drives its three conditions separately, so an
+engine upgrade, a canon reissue and an unavailable configuration each name
+themselves.
+
+**Fixed — the manifest could not be checked against V1.** It recorded a hash it
+had written itself, so reverse-apply proved internal consistency and nothing
+more. Every entry now also records **V1's own git blob id**, which anyone can
+verify in one command without trusting this document, and
+`check-port-manifest.mjs --v1 <path>` does it for all 25.
+
+**Fixed — the map was unbounded.** A file lifted from V1 and simply not entered
+in `port-map.json` was invisible; the review demonstrated it. `META-02` now
+requires every file under `app/src` to be either ported or declared V2's own.
+
+**Fixed — the manifest check could sit red unnoticed.** It was an npm script
+nothing called, and it was red across two commits during this run. It is the
+first check `run-app-tests.mjs` performs.
+
+---
+
 ## 11. Open items this port raises and does not resolve
 
 Recorded and left open, as the brief instructs for findings outside its scope.
@@ -239,10 +287,46 @@ Recorded and left open, as the brief instructs for findings outside its scope.
    is still there** and is a one-line fix (move `describe()` out of that try),
    left open because it is storage-boundary code rather than interface.
 
-6. **Two development aids were retired rather than repaired.**
+6. **Twenty-three tests have no negative control, and they pre-date this
+   port.** `META-01` now fails when a test has no mutation that turns it red,
+   and the day it was written it found twenty-five. Two were this port's and
+   have controls; the other twenty-three are on `origin/main` too — verified by
+   running the same scan there. They are on an explicit, named exemption list
+   in `tests/app/test-port.mjs` with the reason "pre-dates the port", and the
+   list can only shrink: an exemption for a test that has since acquired a
+   control fails the check.
+
+   Writing twenty-three negative controls is real work and it is not this
+   port's. It is recorded here so the number is visible rather than absorbed.
+
+7. **A hunk's reason is a label, and only its sharpest case is checked.** The
+   manifest counts reasons and, until this pass, never read the hunk — so a
+   hunk that ADDED a threshold under a `chemistry removed` label would pass.
+   Whether a hunk is chemistry is the judgement a reviewer is there for and
+   cannot be automated; what is now checked is that no hunk reintroduces any of
+   the twenty-eight V1 chemistry functions this port deleted, whatever reason
+   it carries (`PORT-16`).
+
+8. **The static source checks are stronger than they were and are still
+   static.** The review walked nine realistic evasions through the first
+   versions of `PORT-01`…`PORT-07` — an unquoted object key, a computed lookup,
+   a classifier under a new name, a destructured `append`. Each of those is now
+   closed and each has a negative control (`AM-P22`…`AM-P26`). But `PORT-01`'s
+   arm is still a blocklist of V1's own twenty-eight names, and a chemistry
+   function invented from scratch under a new name in a component would pass
+   it. `PORT-04`'s shape rule — a bound compared against something that is not
+   a bound — is the arm that does not depend on a name, and it is the one to
+   extend if this is ever tightened further.
+
+9. **Two development aids were retired rather than repaired.**
    `tools/app/check-moment-timings.py` verified that V2's re-created moment
    timings still matched V1's; the moments are now V1's own files and the port
    manifest accounts for every line of them, which is strictly stronger.
    `tools/app/smoke.mjs` served the no-build application to Chromium; `npm run
    dev` does that properly. Neither was a committed gate. Both now say what
    replaced them rather than failing on a deleted file.
+
+10. **`app/index.html` still advertises the app as installable.** It carries
+    the manifest link and `apple-mobile-web-app-capable`, and there is no
+    service worker behind them. Smaller than the offline-shell debt in §10 and
+    part of the same fix.

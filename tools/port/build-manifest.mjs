@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { ROOT, MANIFEST_PATH, REASONS, readMap, sha256, diffHunks, renderHunk, v1Source } from "./manifest.mjs";
+import { ROOT, MANIFEST_PATH, REASONS, readMap, sha256, diffHunks, renderHunk, v1Source, v1BlobId } from "./manifest.mjs";
 
 const args = process.argv.slice(2);
 const v1Repo = args[args.indexOf("--v1") + 1];
@@ -45,6 +45,23 @@ out.push("recorded here would survive the reverse-apply and change the hash. A f
 out.push("unexplained difference cannot pass.");
 out.push("");
 out.push("`tools/port/mutate-manifest.mjs` proves each arm of that check can actually fail.");
+out.push("");
+out.push("## Checking the recorded original against V1 itself");
+out.push("");
+out.push("The check above proves the recorded diff is complete. It cannot prove the");
+out.push("recorded ORIGINAL is V1's, because nothing in this repository knows what V1");
+out.push("contained — the manifest would be self-certifying without the line below.");
+out.push("");
+out.push("Every entry records **V1's own git blob id**, which is git's content hash of");
+out.push("that file at that commit. Anybody with the V1 repository can check any entry");
+out.push("without trusting this document or whoever built it:");
+out.push("");
+out.push("```");
+out.push("git -C /path/to/tank-wizard rev-parse \\");
+out.push(`  ${map.v1Commit.slice(0, 7)}:src/components/Dashboard.jsx`);
+out.push("```");
+out.push("");
+out.push("`node tools/port/check-port-manifest.mjs --v1 <path>` does it for all of them.");
 out.push("");
 out.push("## Provenance");
 out.push("");
@@ -102,6 +119,7 @@ for (const entry of map.files) {
   bodies.push(`| V1 source | \`${entry.v1}\` |`);
   bodies.push(`| V1 commit | \`${map.v1Commit}\` |`);
   bodies.push(`| V1 SHA-256 | \`${sha256(original)}\` |`);
+  bodies.push(`| V1 blob | \`${v1BlobId(v1Repo, map.v1Commit, entry.v1)}\` |`);
   bodies.push(`| Ported SHA-256 | \`${sha256(ported)}\` |`);
   bodies.push(`| Differences | ${hunks.length} |`);
   bodies.push("");

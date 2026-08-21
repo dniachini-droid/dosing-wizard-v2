@@ -200,4 +200,57 @@ s.test("SCH-12", "no test schedule is seeded, because no cadence exists to seed 
   deepEq(await store.tasks.completions(), [], "and no completions");
 });
 
+/* ---------------------------------------------------------------------------
+   THE `recent` BUCKET — ADDED BY THE V1 INTERFACE PORT, AND UNTESTED UNTIL A
+   REVIEW SAID SO.
+   ---------------------------------------------------------------------------
+   V1's `computeReminders` returned it and V2's port of this file left it out;
+   the ported reminders panel reads it, so it went back in. It went back in
+   with no test, no mutation and no boundary case — in the layer the port's own
+   report claimed was untouched. Both of those were wrong and both are fixed
+   here.
+
+   The rule: a completion counts as recent when it falls WITHIN the window,
+   inclusive of the far edge. `<= windowDays` is the whole of it, and which
+   side that edge belongs to is the thing a boundary test exists to pin.
+   ------------------------------------------------------------------------ */
+
+s.test("SCHED-13", "recently done is the completions inside the window, far edge included", () => {
+  const today = "2026-03-20";
+  const task = makeTask({
+    id: "wc", label: "Water change", kind: TASK_KIND.HUSBANDRY,
+    intervalDays: 7, startDate: "2026-03-01",
+  });
+
+  const at = (daysAgo) => [{ completionId: `c-${daysAgo}`, taskId: "wc", date: addDays(today, -daysAgo) }];
+
+  /* Inside, on the edge, and one day past it. */
+  eq(computeSchedule([task], at(13), today, 14).recent.length, 1, "13 days ago is recent");
+  eq(computeSchedule([task], at(14), today, 14).recent.length, 1, "14 days ago is recent — the far edge is included");
+  eq(computeSchedule([task], at(15), today, 14).recent.length, 0, "15 days ago is not");
+
+  /* Today, and a completion dated ahead of today. Neither is a reason to drop
+     it: `daysBetween` is signed and a negative gap is still inside a window. */
+  eq(computeSchedule([task], at(0), today, 14).recent.length, 1, "done today is recent");
+  eq(computeSchedule([task], at(-1), today, 14).recent.length, 1, "and a completion dated tomorrow is not silently lost");
+
+  /* Never done is not recent, and does not throw. */
+  eq(computeSchedule([task], [], today, 14).recent.length, 0, "never done is not recent");
+
+  /* Most recent first, and one row per task however many completions it has —
+     "a new completion replaces the previous one rather than stacking up". */
+  const many = [
+    { completionId: "a", taskId: "wc", date: addDays(today, -9) },
+    { completionId: "b", taskId: "wc", date: addDays(today, -2) },
+    { completionId: "c", taskId: "wc", date: addDays(today, -5) },
+  ];
+  const view = computeSchedule([task], many, today, 14);
+  eq(view.recent.length, 1, "one row per task, not one per completion");
+  eq(view.recent[0].lastDone, addDays(today, -2), "and it is the most recent one");
+
+  /* A task the keeper turned off is not in any bucket, recent included. */
+  const off = { ...task, enabled: false };
+  eq(computeSchedule([off], at(2), today, 14).recent.length, 0, "a task turned off is not reported as recently done");
+});
+
 export default s;

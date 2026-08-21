@@ -45,6 +45,7 @@ export function cardDirection(engineResult) {
 const ENGINE_STATE_KEY = Object.freeze({
   NO_CONFIGURATION: "card.status.notSetUp",
   STORAGE_UNAVAILABLE: "card.status.storageUnavailable",
+  ENGINE_UNAVAILABLE: "card.status.engineUnavailable",
   ENGINE_FAILED: "card.status.engineUnavailable",
 });
 

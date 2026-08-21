@@ -30,16 +30,43 @@
    for records that arrive from somewhere else, which is the importer's
    business and not a form's.
 
-   Nothing here ever calls `dateOnly`. A reading logged in this app has a time
-   because the form has a time box in it. The keeper's 325 date-only readings
-   come from the import, keep their provenance, and are never improved.
+   A reading logged in this app has a time because its form has a time box in
+   it, so `recordReading` and `recordDoseChange` produce `EXACT_ABSOLUTE`. The
+   lighting, note and ICP forms have no time box, so they produce `DATE_ONLY`
+   and carry no instant at all — not midnight, not midday, absent.
+
+   The keeper's 325 date-only readings come from the import, keep their
+   provenance, and are never improved.
    ========================================================================= */
 
 import { ANNOTATION, KIND, SOURCE } from "../store/ledger.js";
-import { exactInstant, localOffsetMinutes, localZone } from "../store/time.js";
+import { dateOnly, exactInstant, localOffsetMinutes, localZone } from "../store/time.js";
 
+/* THE KEEPER GAVE A DATE AND A TIME. The device supplies the offset that was
+   actually in force, so the instant is provable rather than assumed. */
 function stamp(date, time) {
   return exactInstant(date, time, localOffsetMinutes(new Date()), localZone());
+}
+
+/* THE KEEPER GAVE A DATE AND THE FORM NEVER ASKED FOR A TIME.
+
+   This is the branch that was missing, and its absence was a fabrication:
+   three recorders below wrote `stamp(date, "12:00")`, which produces
+   `EXACT_ABSOLUTE` and an `absoluteInstant` at noon on a record whose form has
+   no time box in it at all. `DATA-PROVENANCE.md` §61 forbids exactly that —
+   "no defaulting an unknown time to midnight, midday, or any other placeholder
+   that would later be read as a real timestamp" — and `store/time.js` exists
+   so that the defect is unrepresentable rather than merely forbidden.
+
+   It was representable because this file reached past `dateOnly` and handed
+   `exactInstant` a literal. The ledger is append-only, so every noon written
+   that way would have been permanent and indistinguishable from a real one.
+
+   Which of the two a recorder uses follows from its FORM: a form with a time
+   box calls `stamp`, a form without one calls `undated`. There is no third
+   option and no default. `PORT-10` drives every recorder and checks it. */
+function undated(date) {
+  return dateOnly(date);
 }
 
 const nowIsoExact = () => new Date().toISOString();
@@ -117,7 +144,9 @@ export async function recordOneOff(store, { amountMl, date, time }) {
 export async function recordLightingChange(store, { date, note }) {
   return store.ledger.append({
     kind: KIND.HUSBANDRY,
-    time: stamp(date, "12:00"),
+    /* Date only. The form asks for a date and nothing else, so the record says
+       a date and nothing else. */
+    time: undated(date),
     recordedAt: nowIsoExact(),
     source: SOURCE.KEEPER_ENTRY,
     detail: { husbandryKind: "LIGHTING", note: note || null },
@@ -129,7 +158,9 @@ export async function recordLightingChange(store, { date, note }) {
 export async function recordNote(store, { date, note }) {
   return store.ledger.append({
     kind: KIND.NOTE,
-    time: stamp(date, "12:00"),
+    /* Date only. The form asks for a date and nothing else, so the record says
+       a date and nothing else. */
+    time: undated(date),
     recordedAt: nowIsoExact(),
     source: SOURCE.KEEPER_ENTRY,
     detail: { note },
@@ -141,7 +172,9 @@ export async function recordNote(store, { date, note }) {
 export async function recordIcpPanel(store, { date, note, elements }) {
   return store.ledger.append({
     kind: KIND.ICP_PANEL,
-    time: stamp(date, "12:00"),
+    /* Date only. The form asks for a date and nothing else, so the record says
+       a date and nothing else. */
+    time: undated(date),
     recordedAt: nowIsoExact(),
     source: SOURCE.KEEPER_ENTRY,
     detail: { note: note || null, elements },

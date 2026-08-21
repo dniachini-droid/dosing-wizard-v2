@@ -201,3 +201,50 @@ export function v1Source(v1Repo, commit, filePath) {
     maxBuffer: 64 * 1024 * 1024,
   });
 }
+
+/* GIT'S OWN NAME FOR THE FILE'S CONTENT, AT THAT COMMIT.
+
+   A review pointed out that the manifest is self-certifying: `build` writes
+   both the V1 hash and the diff from whatever it was pointed at, and `check`
+   only proves those two agree with each other. Reverse-apply establishes
+   internal consistency, not that the "V1 original" is V1's.
+
+   That cannot be closed offline — nothing in this repository can know what V1
+   contained — but it can be made checkable by anybody in one command, without
+   trusting this manifest or the person who built it:
+
+       git -C /path/to/tank-wizard rev-parse 9276a2c:src/components/Dashboard.jsx
+
+   The blob id is git's content hash. If it matches the line in the manifest,
+   the recorded original IS the file V1 had at that commit. */
+export function v1BlobId(v1Repo, commit, filePath) {
+  return execFileSync("git", ["-C", v1Repo, "rev-parse", `${commit}:${filePath}`], {
+    encoding: "utf8",
+  }).trim();
+}
+
+/* The V1 chemistry this port deleted. A hunk may not ADD any of it back,
+   whatever reason it carries — which is the arm that stops a reason from being
+   a label somebody types rather than a description of what the hunk did. */
+/* Does this hunk put any of it back? Reads the `+` lines only, with comments
+   dropped — a comment saying what was deleted names it by design, and this
+   file's whole point is that the manifest is full of those. */
+export function addsChemistry(diffText) {
+  const added = String(diffText).split("\n")
+    .filter((l) => l.startsWith("+"))
+    .join("\n")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\+\s*\*.*$/gm, "");
+  return V1_CHEMISTRY.filter((name) =>
+    new RegExp(`(^|[^\\w.\`'"])${name}\\s*[(=]`, "m").test(added));
+}
+
+export const V1_CHEMISTRY = Object.freeze([
+  "paramStatus", "readingVerdict", "computeControl", "computeStability",
+  "computeRates", "rateNarrative", "assessAlkalinity", "assessCalcium",
+  "assessMagnesium", "doseStatus", "proposeCorrection", "buildFindings",
+  "predictAfterChange", "computeElementConsumption", "icpRef", "ICP_GROUPS",
+  "SAFE_BOUNDS", "SAFE_DAILY_RISE", "STABILITY_RULES", "STABILITY_COLOR",
+  "CONSUMPTION_RULES", "buildOverview", "buildBriefing", "explainScore",
+  "deriveTankState", "alkStamp", "findingsFor", "isCorrectionState",
+]);

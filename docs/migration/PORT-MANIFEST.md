@@ -21,6 +21,23 @@ unexplained difference cannot pass.
 
 `tools/port/mutate-manifest.mjs` proves each arm of that check can actually fail.
 
+## Checking the recorded original against V1 itself
+
+The check above proves the recorded diff is complete. It cannot prove the
+recorded ORIGINAL is V1's, because nothing in this repository knows what V1
+contained — the manifest would be self-certifying without the line below.
+
+Every entry records **V1's own git blob id**, which is git's content hash of
+that file at that commit. Anybody with the V1 repository can check any entry
+without trusting this document or whoever built it:
+
+```
+git -C /path/to/tank-wizard rev-parse \
+  9276a2c:src/components/Dashboard.jsx
+```
+
+`node tools/port/check-port-manifest.mjs --v1 <path>` does it for all of them.
+
 ## Provenance
 
 | | |
@@ -47,10 +64,10 @@ A difference may carry one of these and nothing else.
 |---|---|
 | Files taken from V1 | 25 |
 | Taken byte-identical | 5 |
-| Differences — `chemistry removed` | 41 |
+| Differences — `chemistry removed` | 40 |
 | Differences — `data source rewired` | 47 |
 | Differences — `wording replaced with engine output` | 18 |
-| Differences — `defect fixed` | 6 |
+| Differences — `defect fixed` | 8 |
 | Differences — `styling token substituted` | 0 |
 
 ---
@@ -62,6 +79,7 @@ A difference may carry one of these and nothing else.
 | V1 source | `src/icons.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
+| V1 blob | `632afe7013fae66e08622a2adfef71c728d895f6` |
 | Ported SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
 | Differences | 0 |
 
@@ -76,6 +94,7 @@ Byte-identical to V1.
 | V1 source | `src/main.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `9405e564c30c880232f16147c0ffc249b33bba20ae72cad200ec9203d31464b6` |
+| V1 blob | `cc350595ed7caf78573ce2928c3900030a1a4d8e` |
 | Ported SHA-256 | `9405e564c30c880232f16147c0ffc249b33bba20ae72cad200ec9203d31464b6` |
 | Differences | 0 |
 
@@ -90,6 +109,7 @@ Byte-identical to V1.
 | V1 source | `src/index.css` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `4cc40fad1533315b6f98223ed16ab124d2e2c1ba17ccfac4e494f474007d4978` |
+| V1 blob | `8c8028c2ba835989fc0287bef68f69a74cb3f485` |
 | Ported SHA-256 | `4cc40fad1533315b6f98223ed16ab124d2e2c1ba17ccfac4e494f474007d4978` |
 | Differences | 0 |
 
@@ -104,6 +124,7 @@ Byte-identical to V1.
 | V1 source | `src/styles/base.css` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `32ffdfd42ff8a745a1f58298665fd4e606ca4da490d1686c5fbb9d6e81181a43` |
+| V1 blob | `919636df1a9c02ead8aa21e8bfc8079ef5bbfcee` |
 | Ported SHA-256 | `32ffdfd42ff8a745a1f58298665fd4e606ca4da490d1686c5fbb9d6e81181a43` |
 | Differences | 0 |
 
@@ -118,6 +139,7 @@ Byte-identical to V1.
 | V1 source | `src/styles/aurelia-skin.css` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `8d1cd8b3645821429ce5b9ddbc25383c1b37aa0cc3ffbcf3bd9f29add5bec10c` |
+| V1 blob | `9543bb4f3c0df38d72edfe43700016ff6c937f8c` |
 | Ported SHA-256 | `8d1cd8b3645821429ce5b9ddbc25383c1b37aa0cc3ffbcf3bd9f29add5bec10c` |
 | Differences | 0 |
 
@@ -132,6 +154,7 @@ Byte-identical to V1.
 | V1 source | `index.html` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `e58e95acf9d2f8d09656bb6f06816b341bde8a927ebc23550981cdfa0a1e4b38` |
+| V1 blob | `a25b1e048e3f5967a7bb61ac62178a2b2818d2bf` |
 | Ported SHA-256 | `d9b580aa57011f2be9ded1dd362fbbe3fdd75c26dc3cf8a161e958b7bf7cda37` |
 | Differences | 1 |
 
@@ -173,6 +196,7 @@ Byte-identical to V1.
 | V1 source | `src/lib/dates.js` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `061d83f246b3f30016bc29ddb021e782b0bbda6d42162611ca2b58bc1c336794` |
+| V1 blob | `837de8424fdd6d7baf056aa92f62d5ccea535e57` |
 | Ported SHA-256 | `0032240bd50d1289dc777b224c6268f30b3c75d3d8d6f068aa8cf70343fa2e4d` |
 | Differences | 2 |
 
@@ -243,16 +267,16 @@ Byte-identical to V1.
 | V1 source | `src/lib/constants.js` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `05bb6cc96d447b1a33fa5685fa03518ab828972c25a95e6631145af21b3c5c1b` |
-| Ported SHA-256 | `afc8f6294113c325e6ee68632a84849666a092dbe83a8793107614d97f906cc6` |
+| V1 blob | `ea8d6ab2189ad7c1d3d01f3b5392c0b90a18d30a` |
+| Ported SHA-256 | `88c95d27bbc53d8eb605b6fa7a183f7e8e9c0802271934e87f712db3c15c1c98` |
 | Differences | 1 |
 
-1. **chemistry removed — `PARAM_DEFS`'s target ranges, test cadences and ideal-at directions deleted; what is left is the colour and icon per parameter, keyed by the ledger's parameter keys, with the tab list cut from six to five**
+1. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. V1's version imported five icon components so `NAV` could carry them, and anything importing it transitively was unreachable from a Node-only test runner; the chemistry in `PARAM_DEFS` — target ranges, cadences, ideal-at directions — is deleted in the same hunk, and `NAV` now carries an icon key the shell binds**
 
 ```diff
-@@ -1,57 +1,74 @@
+@@ -1,57 +1,83 @@
 -import { Activity, Beaker, FlaskConical, LayoutDashboard, ListChecks, Settings2 } from '../icons.jsx'
-+import { Beaker, FlaskConical, LayoutDashboard, ListChecks, Settings2 } from '../icons.jsx'
- 
+-
  /* ---------------------------------- constants ---------------------------------- */
  
 -/* Target ranges, checked against the hobby consensus rather than assumed.
@@ -264,7 +288,7 @@ Byte-identical to V1.
 -   to 1475, a level the same sources describe as stressing invertebrates and
 -   suppressing calcium and alkalinity uptake. The app was steering people away
 -   from correct values.
-+/* V1's `PARAM_DEFS` stood here, and most of it is gone.
++/* THIS MODULE IMPORTS NOTHING, AND THAT IS DELIBERATE.
  
 -   Anyone running deliberately higher can still set their own range; these are
 -   the defaults, and defaults should be the consensus. */
@@ -273,13 +297,11 @@ Byte-identical to V1.
 -   a warning nobody can comfortably read is worse than no warning. The muted
 -   ink and the parameter labels were 2.55 to 3.93. Hue is preserved; only
 -   lightness moved, so the palette still reads as itself.
-+   It carried a target range, a test cadence and an "ideal at" direction for
-+   every parameter, with a long comment arguing the ranges against hobby
-+   consensus. Every one of those is chemistry: a band edge, a cadence, a
-+   direction of preference. `CLAUDE.md` is unambiguous that chemistry "may not
-+   arrive by invention, by task instruction, by `DECISIONS.md`, by an
-+   owner-decision entry, by `docs/research/`, or by V1", and V1 is precisely
-+   where those numbers came from.
++   V1's version imported five icon components so `NAV` could carry them. That
++   made a file of constants loadable only through a bundler — and the test
++   runner is Node with no dependencies, so anything importing this transitively
++   could not be tested at all. `PORT-11` hit it: it drives the read adapter,
++   the read adapter reads `PARAM_STYLE`, and Node stopped at `icons.jsx`.
  
 -   Chart strokes and fills keep the original values where they are purely
 -   graphical: 3:1 is the bar for a graphical object and they all clear it. */
@@ -304,12 +326,25 @@ Byte-identical to V1.
 -  { key: "ammonia", label: "Ammonia", unit: "ppm", min: 0, max: 0.25, step: 0.01, freqDays: null, color: "#D0342C", idealAt: "min" },
 -  { key: "ph", label: "pH", unit: "", min: 7.8, max: 8.4, step: 0.01, freqDays: null, color: "#2AA7B0" },
 -];
++   So `NAV` carries an icon KEY and the shell binds it to a component. The tab
++   set is data; which glyph draws it is the shell's business. */
+ 
++/* V1's `PARAM_DEFS` stood here, and most of it is gone.
+ 
++   It carried a target range, a test cadence and an "ideal at" direction for
++   every parameter, with a long comment arguing the ranges against hobby
++   consensus. Every one of those is chemistry: a band edge, a cadence, a
++   direction of preference. `CLAUDE.md` is unambiguous that chemistry "may not
++   arrive by invention, by task instruction, by `DECISIONS.md`, by an
++   owner-decision entry, by `docs/research/`, or by V1", and V1 is precisely
++   where those numbers came from.
++
 +   So what remains is the part that was never chemistry: the colour each
 +   parameter is drawn in, and the icon that makes a card recognisable before it
 +   is read.
- 
++
 +   Where the rest now comes from:
- 
++
 +     the parameter list  `app/src/store/ledger.js` — `PARAMETERS`
 +     the display range   `app/src/store/config.js` — `keeperRange`, which is
 +                         the KEEPER's own number, drawn on his charts and
@@ -350,13 +385,17 @@ Byte-identical to V1.
 +   owns in V2. The salvage inventory dispositions it
 +   `TANGLED_WITH_V1_DOMAIN_LOGIC_REBUILD_LATER`. */
  export const NAV = [
-   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
 -  { id: "log", label: "Test Lab", icon: FlaskConical },
-+  { id: "log", label: "Test", icon: FlaskConical },
-   { id: "dosing", label: "Dosing", icon: Beaker },
+-  { id: "dosing", label: "Dosing", icon: Beaker },
 -  { id: "insights", label: "Insights", icon: Activity },
-   { id: "tasks", label: "Tasks", icon: ListChecks },
-   { id: "setup", label: "Setup", icon: Settings2 },
+-  { id: "tasks", label: "Tasks", icon: ListChecks },
+-  { id: "setup", label: "Setup", icon: Settings2 },
++  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
++  { id: "log", label: "Test", icon: "flask" },
++  { id: "dosing", label: "Dosing", icon: "beaker" },
++  { id: "tasks", label: "Tasks", icon: "checks" },
++  { id: "setup", label: "Setup", icon: "settings" },
  ];
  
 -export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -378,6 +417,7 @@ Byte-identical to V1.
 | V1 source | `src/lib/storage.js` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `ad27013a279585ffdd720b21ab848aaf072168ff7b5f610f4dda398a0e46e311` |
+| V1 blob | `9f41072f8a0b58906cdbd9c70a317714250a2ee9` |
 | Ported SHA-256 | `ac6c12bfdc000c35343b3075fe9f9a486f275bc1b7f68ac326e7c4b68683cbbd` |
 | Differences | 2 |
 
@@ -724,6 +764,7 @@ Byte-identical to V1.
 | V1 source | `src/lib/backup.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
+| V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
 | Ported SHA-256 | `63ebde7f432dcab50f56b2427e341147522ffab7ad4e69c8c0efaacb5de0c20e` |
 | Differences | 7 |
 
@@ -1289,6 +1330,7 @@ Byte-identical to V1.
 | V1 source | `src/components/ZoomableChart.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `263b8560aedea7eb30023c660339d57054ecee1212800425c1f7212a888e9a20` |
+| V1 blob | `bdf2efcbadc8d004d41b4a28d7d683bb885ec9c4` |
 | Ported SHA-256 | `e8c2bbeaf79ab3178b4eaa48b833fc3f5f3d7953d7e81792c6acb84d8d6cbca4` |
 | Differences | 4 |
 
@@ -1384,6 +1426,7 @@ Byte-identical to V1.
 | V1 source | `src/components/ErrorBoundary.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `4d4259628e2feedbff654fc0ea4b1c1a0fa0eb6568c98520bf55a88eda525a05` |
+| V1 blob | `19d77209beca9712957016e539bb16070b330274` |
 | Ported SHA-256 | `0af3aa11a7e0286513a2dd870ff70004328f2b127220237c6f003bde67376d87` |
 | Differences | 2 |
 
@@ -1707,6 +1750,7 @@ Byte-identical to V1.
 | V1 source | `src/components/DoseExpectation.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
+| V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
 | Ported SHA-256 | `d5fbb3a0eab2a4063a08c95ffecf850fbbd4360a62ea428f6fa9321acd9b3c35` |
 | Differences | 13 |
 
@@ -2144,6 +2188,7 @@ Byte-identical to V1.
 | V1 source | `src/components/ReadingContext.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `aece71fabd68e316670d86713f952dd57169c94e9cd12a4d3ecc3cd18f770009` |
+| V1 blob | `e252f1d647c0ad2cf9aab6eb381f7629b78834de` |
 | Ported SHA-256 | `9fdddbbd226df270e745da80db44212ec1badfbad3c56c13a9e388216cbbd01a` |
 | Differences | 8 |
 
@@ -2291,6 +2336,7 @@ Byte-identical to V1.
 | V1 source | `src/components/ReadingConfirmation.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6e3afc520f3ea9c578d157ee1f654a5cc8e5d820d0dd3ad74520c480e963c51a` |
+| V1 blob | `93ec64d731adde6d4ec2173be8841468a7a03cd2` |
 | Ported SHA-256 | `998d4250b8eb45d0bc4150500dcf4ac66ca5a3f9773a87beb81beeb4a40b5beb` |
 | Differences | 7 |
 
@@ -2868,6 +2914,7 @@ Byte-identical to V1.
 | V1 source | `src/components/TaskCompletion.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `4361fd72fab99083d02c8cb9c30c3b777ee93ed39a31d86158ebac87a5afdac8` |
+| V1 blob | `90cfb1bd985a31d89f82d82d788d7116eb33c702` |
 | Ported SHA-256 | `ebbb178419b932e695e88015c285320c13910b270a424b129ed81df11fe819c5` |
 | Differences | 4 |
 
@@ -3035,6 +3082,7 @@ Byte-identical to V1.
 | V1 source | `src/components/TodayPanel.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `c48cecb59afe6219f8b4ccb3bd37f8033df1d1aec52eb6e4ed3a6cdaf417f028` |
+| V1 blob | `0358527fbc2eab1a0b244e928861d8c9bde826e5` |
 | Ported SHA-256 | `7e377dc7d6ebd6a70d94aba3ff563323a7a90d3b5d70dec07e343e552d402540` |
 | Differences | 15 |
 
@@ -3760,6 +3808,7 @@ Byte-identical to V1.
 | V1 source | `src/components/Dashboard.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
+| V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
 | Ported SHA-256 | `098f29cf511286201be2cb7701b0030038ed88170230ffa1b15f14dfc9dfb816` |
 | Differences | 11 |
 
@@ -4733,6 +4782,7 @@ Byte-identical to V1.
 | V1 source | `src/components/AllParametersSheet.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
+| V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
 | Ported SHA-256 | `afe621320207a376739e3c1c6a425c6c7eb6522e3ba849eef682021e50f7639c` |
 | Differences | 9 |
 
@@ -4903,6 +4953,7 @@ Byte-identical to V1.
 | V1 source | `src/components/LogReadingSheet.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `1638a9ec9cc18458cb084f1679d7b4f921fb21a8f0414d492ed5c70def543038` |
+| V1 blob | `205c56b8fe0d98d88631ee5cbd789644dc45318c` |
 | Ported SHA-256 | `85885009bdc3113068fba2cc597bbf4de4ea4a4dd39f9e2f7fc944b61cddb091` |
 | Differences | 4 |
 
@@ -4998,6 +5049,7 @@ Byte-identical to V1.
 | V1 source | `src/components/IcpPanel.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `9e9bdc6f18895b34f018f3982b37186141e1dcc373215ba8277107f264672cc4` |
+| V1 blob | `5f21591915efcb28191343a8ab4def1dc9ff8bd7` |
 | Ported SHA-256 | `e80dcef5800eecf2d54edcd57cba527971ca66c405b35421d77ae760bdb8b412` |
 | Differences | 7 |
 
@@ -5265,6 +5317,7 @@ Byte-identical to V1.
 | V1 source | `src/components/DosingWizard.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
+| V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
 | Ported SHA-256 | `7e4a6607ddc8d251a00bf1f9f2bfaef974da1656c5c3aca8efeddb97edb04795` |
 | Differences | 2 |
 
@@ -5873,6 +5926,7 @@ Byte-identical to V1.
 | V1 source | `src/components/Tasks.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2482249ce03e14404f2f75c9f72a24d140e695c9de908d878fafec0df747d593` |
+| V1 blob | `83583c09cea5fa4080582555219756f49e0cb2e7` |
 | Ported SHA-256 | `5517153b5fb655663fd129a3b8a4ad4d1a23283e5c2bb460baa4850326e0bcfd` |
 | Differences | 5 |
 
@@ -6318,6 +6372,7 @@ Byte-identical to V1.
 | V1 source | `src/components/Setup.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
+| V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
 | Ported SHA-256 | `5fa3b251f1a7782af973564781ea453a0c526ac1ceb7c07f27671a98550c20ce` |
 | Differences | 1 |
 
@@ -7557,13 +7612,14 @@ Byte-identical to V1.
 | V1 source | `src/App.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
-| Ported SHA-256 | `550f534148583be7a44d465d09d0bba5513f68043492dd3d2d151aa7a905207d` |
-| Differences | 7 |
+| V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
+| Ported SHA-256 | `de2630781abeeb29f99619d4a1d6796f51c17884b005e5072b05f7ec197b940d` |
+| Differences | 8 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
 
 ```diff
-@@ -1,62 +1,70 @@
+@@ -1,62 +1,78 @@
 -import React, { useEffect, useMemo, useState } from 'react'
 +import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  import { Dashboard, ParamHistoryModal } from './components/Dashboard.jsx'
@@ -7579,8 +7635,7 @@ Byte-identical to V1.
  import { TaskDonePopup } from './components/TaskCompletion.jsx'
  import { Tasks } from './components/Tasks.jsx'
 -import { WaterLog } from './components/WaterLog.jsx'
-+import { TestLab, AllGraphsModal } from './components/AllParametersSheet.jsx'
- import { AlertTriangle, Waves, X } from './icons.jsx'
+-import { AlertTriangle, Waves, X } from './icons.jsx'
 -import { DOSE_ELEMENTS } from './lib/analytics/consumption.js'
 -import { fmtAmount } from './lib/analytics/time-in-range.js'
 -import { addDays, byNewest, byOldest, nowTime } from './lib/analytics/time-of-day.js'
@@ -7599,6 +7654,8 @@ Byte-identical to V1.
 -import { maybeAutoBackup } from './lib/auto-backup.js'
 -import { assessInstall } from './lib/install-witness.js'
 -import { drainLegacyStore, loadKey, notify, onStorageError, onToast, saveKey } from './lib/storage.js'
++import { TestLab, AllGraphsModal } from './components/AllParametersSheet.jsx'
++import { AlertTriangle, Beaker, FlaskConical, LayoutDashboard, ListChecks, Settings2, Waves, X } from './icons.jsx'
 +import { NAV } from './lib/constants.js'
 +import { todayStr, fmtShort } from './lib/dates.js'
 +import { onStorageError, onToast, notify } from './lib/storage.js'
@@ -7621,6 +7678,14 @@ Byte-identical to V1.
 +import { sayVerb, sayAction, sayPosition } from './present/wording.js'
 +import { fmtAmount } from './lib/format.js'
  
++/* The tab set is data in `lib/constants.js`, which imports nothing so it stays
++   loadable by a test runner that is Node and nothing else. The glyph each tab
++   is drawn with is bound here. */
++const NAV_ICON = {
++  dashboard: LayoutDashboard, flask: FlaskConical, beaker: Beaker,
++  checks: ListChecks, settings: Settings2,
++};
++
  /* ---------------------------------- main app ---------------------------------- */
  
 +/* WHAT USED TO BE HERE.
@@ -7684,7 +7749,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1149 +74,473 @@
+@@ -66,1149 +82,464 @@
    return out;
  }
  
@@ -8388,7 +8453,8 @@ Byte-identical to V1.
 +     one this shell adds when the call itself threw. Null while the first
 +     assessment is still running, which the screens render as "working it
 +     out". */
-+  /* WITH ONE CORRECTION, WHICH THE INTERFACE MAKES AND THE STORE DOES NOT.
++  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
++     screens get the right label without this having to correct one.
  
 -      /* Test reminders exist from the start rather than needing to be created —
 -         the app already knows which parameters exist. Only the schedule is the
@@ -8417,13 +8483,12 @@ Byte-identical to V1.
 -      setCorrectionPlans(cplans || {});
 -      setCaPlan(cap || null);
 -      setMgPlan(mgp || null);
-+     `assess.js` reads the ledger, the configuration history and the engine's
-+     own version stamps in a single `Promise.all`, inside the try whose catch
-+     returns `STORAGE_UNAVAILABLE`. So when the engine cannot START — the
-+     runtime is not vendored, or the worker fails — the failure arrives labelled
-+     as an unreadable record, and the screen tells the keeper his history is
-+     gone when it is sitting there intact. That is the worst thing this app can
-+     say and the one thing it is not allowed to say wrongly.
++     The client's own state still wins where it says the engine failed, because
++     it knows before the first assessment is even attempted — that is what
++     turns a blank card into "the engine could not start" during boot rather
++     than after it. */
++  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
++  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
  
 -      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
 -      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
@@ -8431,37 +8496,6 @@ Byte-identical to V1.
 -      setLoaded(true);
 -    })();
 -  }, []);
-+     The engine client already reports its own state, and it is the authority on
-+     whether the engine started. Where it says the engine failed, that is what
-+     the screens say, whatever label came back with the assessment.
- 
--  /* A restore writes to storage directly, so mirror the merged result into
--     state — otherwise the screen would keep showing the pre-restore data until
--     the next reload. */
--  const saveReminders = async (next) => {
--    setReminders(next);
--    await saveKey("reminders", next);
--  };
-+     The mislabelling itself is in `assess.js`, which is outside this port's
-+     scope. Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */
-+  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
-+  const assessmentState = engineDown ? "ENGINE_FAILED" : assessment ? assessment.state : null;
- 
--  /* Recording a replacement retires every comparison made with the old kit. */
--  const replaceKit = async (paramKey, date = todayStr()) => {
--    const next = { ...kitChanges, [paramKey]: date };
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    const def = paramDefs.find((d) => d.key === paramKey);
--    notify(`${def ? def.label : "Kit"} marked as replaced`);
--  };
--  const undoReplaceKit = async (paramKey) => {
--    const next = { ...kitChanges };
--    delete next[paramKey];
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    notify("Replacement removed");
--  };
 +  /* One notice per parameter, from the engine, already worded — and filtered
 +     by what the keeper has put away. The identity and the signature are V1's
 +     mechanism over V2's reason codes: put one away and it comes back the
@@ -8472,6 +8506,45 @@ Byte-identical to V1.
 +    return findingHidden(c.notice, hiddenNotices) ? null : c.notice;
 +  }, [engineResult, assessmentState, hiddenNotices]);
  
+-  /* A restore writes to storage directly, so mirror the merged result into
+-     state — otherwise the screen would keep showing the pre-restore data until
+-     the next reload. */
+-  const saveReminders = async (next) => {
+-    setReminders(next);
+-    await saveKey("reminders", next);
++  const dismissNotice = async (f) => {
++    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice hidden");
+   };
+-
+-  /* Recording a replacement retires every comparison made with the old kit. */
+-  const replaceKit = async (paramKey, date = todayStr()) => {
+-    const next = { ...kitChanges, [paramKey]: date };
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    const def = paramDefs.find((d) => d.key === paramKey);
+-    notify(`${def ? def.label : "Kit"} marked as replaced`);
++  const restoreNotice = async (n) => {
++    const next = { ...hiddenNotices };
++    delete next[findingKey(n)];
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice shown again");
+   };
+-  const undoReplaceKit = async (paramKey) => {
+-    const next = { ...kitChanges };
+-    delete next[paramKey];
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    notify("Replacement removed");
++  const restoreAllNotices = async () => {
++    await store.kvSet("hidden-notices", {});
++    setHiddenNotices({});
++    notify("All notices shown again");
+   };
+ 
 -  const dismissFinding = async (f) => {
 -    const prev = dismissed[findingKey(f)];
 -    const times = (prev && typeof prev === "object" && prev.times ? prev.times : 0) + 1;
@@ -8480,12 +8553,7 @@ Byte-identical to V1.
 -    setDismissed(next);
 -    await saveKey("findings-dismissed", next);
 -    notify("Hidden — it'll return if this changes");
-+  const dismissNotice = async (f) => {
-+    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice hidden");
-   };
+-  };
 -  /* A claim is put away by its own key rather than a finding id, because most
 -     claims are not findings — a drift or a parked pair is assembled from the
 -     readings themselves. */
@@ -8517,13 +8585,7 @@ Byte-identical to V1.
 -    notify(c.snoozeUntilTest
 -      ? "Put off \u2014 back after your next test"
 -      : "Hidden \u2014 it'll return if this changes");
-+  const restoreNotice = async (n) => {
-+    const next = { ...hiddenNotices };
-+    delete next[findingKey(n)];
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice shown again");
-   };
+-  };
 -  /* One note back, by its own key — restoring everything was the only option
 -     before, which made hiding a thing you had to be sure about. */
 -  /* Start a temporary correction: set the dose and record why, so every
@@ -8548,11 +8610,10 @@ Byte-identical to V1.
 -    await addDoseChange({ date: todayStr(), ml: offer.dose, element: key,
 -      note: `correction toward ${offer.aimPoint}` });
 -    notify(`${key} dose set to ${fmtAmount(offer.dose)} mL/day — correcting toward ${offer.aimPoint}`);
-+  const restoreAllNotices = async () => {
-+    await store.kvSet("hidden-notices", {});
-+    setHiddenNotices({});
-+    notify("All notices shown again");
-   };
+-  };
++  const hiddenList = useMemo(
++    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
++    [hiddenNotices]);
  
 -  /* Cancel: the dose goes back, the plan is deleted, and everything derived
 -     from it disappears with it. Nothing should survive a cancel. */
@@ -8566,10 +8627,6 @@ Byte-identical to V1.
 -    if (plan.returnDose != null) {
 -      await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
 -        note: "correction cancelled" });
-+  const hiddenList = useMemo(
-+    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
-+    [hiddenNotices]);
-+
 +  /* ---- writing ---------------------------------------------------------- */
 +
 +  /* A reading. Four elements went in, and the three things that follow are the
@@ -9217,7 +9274,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1250,8 +582,10 @@
+@@ -1250,13 +581,15 @@
                <Waves size={17} className="text-white" />
              </div>
              <div>
@@ -9230,12 +9287,18 @@ Byte-identical to V1.
              </div>
            </div>
            <nav className="flex flex-col gap-1">
+             {NAV.map((n) => {
+-              const Icon = n.icon;
++              const Icon = NAV_ICON[n.icon];
+               const active = tab === n.id;
+               return (
+                 <button key={n.id} onClick={() => setTab(n.id)}
 ```
 
 4. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1266,9 +600,17 @@
+@@ -1266,9 +599,17 @@
                );
              })}
            </nav>
@@ -9260,7 +9323,7 @@ Byte-identical to V1.
 5. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1275,49 +617,9 @@
+@@ -1275,49 +616,9 @@
          {/* Main */}
          <main className="flex-1 px-4 md:px-8 max-w-6xl"
            style={{
@@ -9315,7 +9378,7 @@ Byte-identical to V1.
 6. **data source rewired — every tab is wired to V2's store and the engine result, the tab set is five rather than six, and the Test tab carries the my-tests / ICP-panels toggle and All graphs**
 
 ```diff
-@@ -1335,105 +637,116 @@
+@@ -1335,105 +636,116 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -9511,10 +9574,24 @@ Byte-identical to V1.
          </main>
 ```
 
-7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
+7. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1457,6 +770,96 @@
+@@ -1443,7 +755,7 @@
+       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
+         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
+         {NAV.map((n) => {
+-          const Icon = n.icon;
++          const Icon = NAV_ICON[n.icon];
+           const active = tab === n.id;
+           return (
+             <button key={n.id} onClick={() => setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-[56px] rounded-lg active:bg-app">
+```
+
+8. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
+
+```diff
+@@ -1457,6 +769,96 @@
    );
  }
  

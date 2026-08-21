@@ -17,6 +17,7 @@
    the test it was written for is not actually checking what it claims to.
    ========================================================================= */
 
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -25,6 +26,28 @@ import { MUTATIONS } from "./mutations.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(path.dirname(HERE));
+
+/* THE PORT MANIFEST IS PART OF THIS RUN.
+
+   It was not, and a review found the consequence: `check-port-manifest.mjs`
+   was RED across two commits and nobody noticed, because it was an npm script
+   nothing called and this repository has no CI. A gate that can sit red
+   unnoticed is a gate in name.
+
+   It runs here, first, because it is cheap and because a tree whose ported
+   files no longer match their record is a tree whose test results are about
+   something other than what the manifest describes. */
+function portManifest() {
+  try {
+    const out = execFileSync("node", [path.join(ROOT, "tools/port/check-port-manifest.mjs")], {
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+    return { ok: true, out };
+  } catch (e) {
+    return { ok: false, out: (e.stdout || "") + (e.stderr || "") };
+  }
+}
 
 const SUITES = [
   "test-ledger.mjs",
@@ -81,7 +104,12 @@ async function main() {
   console.log("APPLICATION-LAYER TESTS");
   console.log("=".repeat(74));
 
-  let failures = 0;
+  const manifest = portManifest();
+  console.log("\nport manifest");
+  console.log("  " + (manifest.ok ? "[PASS]" : "[FAIL]") + "   every ported line is accounted for");
+  if (!manifest.ok) console.log("         " + manifest.out.trim().split("\n").join("\n         "));
+
+  let failures = manifest.ok ? 0 : 1;
   const all = [];
   for (const file of SUITES) {
     const suite = (await import(pathToFileURL(path.join(HERE, file)).href)).default;
@@ -103,7 +131,7 @@ async function main() {
   }
 
   console.log("\n" + "=".repeat(74));
-  console.log(`${all.length} checks, ${failures} failure(s)`);
+  console.log(`${all.length + 1} checks, ${failures} failure(s)`);
 
   if (!wantMutations) {
     console.log(failures ? "\nRESULT: RED" : "\nRESULT: GREEN");
@@ -142,6 +170,14 @@ async function main() {
        Found by an independent test review, which proved it with a no-op
        mutation: it reported CAUGHT before this line and SURVIVED after. */
     fs.cpSync(path.join(ROOT, "docs"), path.join(tree, "docs"), { recursive: true });
+    /* AND `tools/port`, for the same reason and found the same way.
+
+       `META-02` reads the port map and the V2-original list, and `PORT-16`
+       imports the manifest module. Without this those two were RED in every
+       mutation tree before any mutation was applied, so `AM-P35` and `AM-P36`
+       would have reported CAUGHT whatever they did. Only `tools/port` is
+       copied: nothing here mutates the conformance harness. */
+    fs.cpSync(path.join(ROOT, "tools", "port"), path.join(tree, "tools", "port"), { recursive: true });
 
     const target = path.join(tree, m.file);
     const before = fs.readFileSync(target, "utf8");

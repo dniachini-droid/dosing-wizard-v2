@@ -25,8 +25,23 @@ export const MUTATIONS = [
      they mutated — `app/src/ui/chart.js`, `app/src/screens/*`, `app/sw.js`,
      `app/assets/tokens.css` and `app/assets/app.css`. Their tests went in the
      same change (`tests/app/test-chart.mjs`, `test-shell.mjs`,
-     `test-tokens.mjs`), so no surviving test lost its negative control: each
-     pair was retired together, which is the only way a mutation may leave.
+     `test-tokens.mjs`).
+
+     THE FIRST VERSION OF THIS NOTE CLAIMED "no surviving test lost its
+     negative control: each pair was retired together." That was false, and a
+     review said so. Four surviving tests — `IMP-35`, `TM-12`, `TM-24` and
+     `TM-25` — were RE-POINTED at new assertions and their old mutations went
+     with the code they mutated, leaving each of them with none. `TM-25` was
+     the worst of the four: its own comment records that the re-pointing caught
+     a real defect during the port, and no control was written for it.
+
+     They have controls again: `AM-P30`…`AM-P33` below. `META-01` in
+     `tests/app/test-port.mjs` now fails if any test has none, which is what
+     should have caught this instead of a person reading two files side by
+     side.
+
+     Of the 54 that were genuinely retired, every one targets a file that no
+     longer exists.
 
      Retired: AM-105, AM-106, AM-107, AM-108, AM-109, AM-110, AM-111, AM-112, AM-113, AM-114, AM-115, AM-116, AM-117, AM-118, AM-119, AM-120, AM-121, AM-141, AM-142, AM-148, AM-149, AM-151, AM-152, AM-153, AM-154, AM-155, AM-156, AM-157, AM-157b, AM-158, AM-159, AM-160, AM-161, AM-162, AM-163, AM-164, AM-165, AM-178, AM-179, AM-179b, AM-180, AM-180b, AM-182, AM-182b, AM-183, AM-184, AM-185, AM-185b, AM-186, AM-59, AM-73, AM-84, AM-85, AM-86
   */
@@ -1494,25 +1509,6 @@ export const MUTATIONS = [
     breaks: ["PORT-08"],
   },
   {
-    id: "AM-P8",
-    why: "the assessment path stops asking the engine which versions it is, and stamps nothing",
-    file: "app/src/assess.js",
-    find: "    describe: versions,",
-    replace: "    describeRemoved: versions,",
-    breaks: ["PORT-09"],
-  },
-  {
-    id: "AM-P9",
-    why: "the write adapter fills in a default time for a record that has none — the fabrication `DATA-PROVENANCE.md` forbids by name",
-    file: "app/src/lib/record.js",
-    find: "function stamp(date, time) {\n  return exactInstant(date, time, localOffsetMinutes(new Date()), localZone());\n}",
-    replace:
-      "function stamp(date, time) {\n" +
-      "  return exactInstant(date, time || \"12:00\", localOffsetMinutes(new Date()), localZone());\n" +
-      "}",
-    breaks: ["PORT-10"],
-  },
-  {
     id: "AM-P10",
     why: "the read adapter substitutes midday for a reading that has no wall-clock time, so a date-only record reads as a timed one",
     file: "app/src/lib/adapt.js",
@@ -1552,6 +1548,218 @@ export const MUTATIONS = [
     find: '  if (key && OUTPUT_KEYS.has(key)) return has(`output.${s}`) ? t(`output.${s}`) : null;',
     replace: "  if (false) return null;",
     breaks: ["PORT-14"],
+  },
+
+  /* `AM-P8` and `AM-P9` were retired here when `PORT-09` and `PORT-10` were
+     rewritten. Both mutated a source spelling that the old, source-scanning
+     versions of those tests pinned — `describe: versions` and `|| "12:00"` —
+     and neither spelling exists any more, because the tests that named them
+     were replaced by ones that drive the code and read what it wrote. Their
+     replacements are `AM-P18` and `AM-P15`/`AM-P16` below, which are
+     behavioural in the same way. */
+  {
+    id: "AM-P15",
+    why: "the write adapter fills a missing time with midday through a nullish default rather than `||` — the spelling the first version of PORT-10 could not see",
+    file: "app/src/lib/record.js",
+    find: "function undated(date) {\n  return dateOnly(date);\n}",
+    replace: "function undated(date) {\n  return stamp(date, \"12:00\");\n}",
+    breaks: ["PORT-10"],
+  },
+  {
+    id: "AM-P16",
+    why: "one recorder alone starts fabricating a time, which is how the defect arrived the first time — three did and four did not",
+    file: "app/src/lib/record.js",
+    find: "    kind: KIND.NOTE,\n    /* Date only. The form asks for a date and nothing else, so the record says\n       a date and nothing else. */\n    time: undated(date),",
+    replace: "    kind: KIND.NOTE,\n    time: stamp(date, date ? \"12:00\" : \"12:00\"),",
+    breaks: ["PORT-10"],
+  },
+  {
+    id: "AM-P17",
+    why: "a SECOND reader appears in the read adapter and substitutes midday, beside the one the old test pinned",
+    file: "app/src/lib/adapt.js",
+    find: "export function latestByParamFrom(rows, defs) {",
+    replace:
+      "export function readingsForDisplay(projection) {\n" +
+      "  return readingsFrom(projection).map((r) => ({ ...r, time: r.time || \"12:00\" }));\n" +
+      "}\n\n" +
+      "export function latestByParamFrom(rows, defs) {",
+    breaks: ["PORT-11"],
+  },
+  {
+    id: "AM-P18",
+    why: "the version stamps are fabricated in the assessment path while both source literals the old test pinned stay byte-identical",
+    file: "app/src/assess.js",
+    find: "    versions = await describe0();",
+    replace: "    versions = { engineVersion: \"v2\", canonVersion: \"ALK_V2_FREEZE_5\" };",
+    breaks: ["PORT-08"],
+  },
+  {
+    id: "AM-P19",
+    why: "an engine that cannot start is reported as a record that cannot be read — the defect a review found, restored",
+    file: "app/src/assess.js",
+    find: '      state: "ENGINE_UNAVAILABLE",',
+    replace: '      state: "STORAGE_UNAVAILABLE",',
+    breaks: ["PORT-09"],
+  },
+  {
+    id: "AM-P20",
+    why: "a replay folds an engine upgrade into a plain disagreement, so the keeper is given the wrong explanation",
+    file: "app/src/assess.js",
+    find: "  const sameEngineVersion = versions.engineVersion === rec.engineVersion;",
+    replace: "  const sameEngineVersion = true;",
+    breaks: ["PORT-15"],
+  },
+  {
+    id: "AM-P21",
+    why: "a replay against a configuration this device does not hold silently uses today's instead, and blames the difference on the engine",
+    file: "app/src/assess.js",
+    find: "    return { state: \"CONFIGURATION_UNAVAILABLE\", record: rec, configVersionId: rec.configVersionId };",
+    replace: "    return { state: \"REPLAYED\", record: rec, identical: true };",
+    breaks: ["PORT-15"],
+  },
+  {
+    id: "AM-P22",
+    why: "a component maps the position vocabulary to a colour using UNQUOTED object keys, which a quoted-literal scan cannot see",
+    file: "app/src/components/DoseExpectation.jsx",
+    find: "  const tone = positionTone(position);",
+    replace:
+      "  const TONES = { BELOW_RANGE: \"#926A09\", ABOVE_RANGE: \"#C4285B\" };\n" +
+      "  const tone = TONES[position] || positionTone(position);",
+    breaks: ["PORT-02"],
+  },
+  {
+    id: "AM-P23",
+    why: "a component tests a contract action through a computed lookup rather than a quoted comparison",
+    file: "app/src/App.jsx",
+    find: "      goto: instructsDoseChange(engineResult) ? \"dosing\" : null,",
+    replace:
+      "      goto: ({ SET_MAINTENANCE_DOSE: \"dosing\" })[engineResult.doseRecommendation?.action] || null,",
+    breaks: ["PORT-03"],
+  },
+  {
+    id: "AM-P24",
+    why: "a component classifies a reading against the keeper's range under a name that is not on any V1 blocklist",
+    file: "app/src/components/DoseExpectation.jsx",
+    find: "  const moved = direction === \"RISING\" || direction === \"FALLING\";",
+    replace:
+      "  const band = (v, r) => (v < r.lo ? \"low\" : v > r.hi ? \"high\" : \"ok\");\n" +
+      "  const moved = direction === \"RISING\" || direction === \"FALLING\" || band === null;",
+    breaks: ["PORT-04"],
+  },
+  {
+    id: "AM-P25",
+    why: "the present layer reaches browser storage directly, which the first scope of PORT-05 did not cover",
+    file: "app/src/present/cards.js",
+    find: "export function selectCard(engineResult) {",
+    replace:
+      "export function selectCard(engineResult) {\n" +
+      "  if (typeof localStorage !== \"undefined\") localStorage.getItem(\"card\");",
+    breaks: ["PORT-05"],
+  },
+  {
+    id: "AM-P26",
+    why: "a component appends its own ledger event through a destructured reference, so the literal `ledger.append` never appears",
+    file: "app/src/components/Tasks.jsx",
+    find: "  const confirmWaterChange = async () => {",
+    replace:
+      "  const confirmWaterChange = async () => {\n" +
+      "    const { append } = (window.__store || {}).ledger || {};\n" +
+      "    if (append) await append({});",
+    breaks: ["PORT-06"],
+  },
+  {
+    id: "AM-P27",
+    why: "a component holds a second reader of the keeper's band, so which range is his has two owners",
+    file: "app/src/components/ZoomableChart.jsx",
+    find: "export function niceAxis(min, max, padFrac = 0.18) {",
+    replace:
+      "export function myBand(config, key) {\n" +
+      "  return config.parameterRanges ? config.parameterRanges[key] : null;\n" +
+      "}\n\n" +
+      "export function niceAxis(min, max, padFrac = 0.18) {",
+    breaks: ["PORT-13"],
+  },
+  {
+    id: "AM-P28",
+    why: "the ledger stops calling alkalinity assessed, which breaks every real caller while a hand-written literal in a test would not notice",
+    file: "app/src/store/ledger.js",
+    find: '  { key: "ALK", unit: "dKH", decimals: 2, tone: "alk", assessed: true },',
+    replace: '  { key: "ALK", unit: "dKH", decimals: 2, tone: "alk", assessed: false },',
+    breaks: ["PORT-13"],
+  },
+  {
+    id: "AM-P29",
+    why: "the `recent` bucket's far edge moves, so a completion exactly at the window is silently dropped",
+    file: "app/src/store/schedule.js",
+    find: "    .filter((s) => s.lastDone && daysBetween(s.lastDone, today) <= windowDays)",
+    replace: "    .filter((s) => s.lastDone && daysBetween(s.lastDone, today) < windowDays)",
+    breaks: ["SCHED-13"],
+  },
+
+  /* --- the four re-pointed tests, given back the controls they lost ------- */
+  {
+    id: "AM-P30",
+    why: "setup stamps the configuration version from the wall clock again — the defect the port found, which was fixed and never pinned",
+    file: "app/src/App.jsx",
+    find: "    await store.config.append({ ...(config || {}), ...values }, nowIso());",
+    replace: "    await store.config.append({ ...(config || {}), ...values }, new Date().toISOString());",
+    breaks: ["TM-25"],
+  },
+  {
+    id: "AM-P31",
+    why: "a second definition of where dose history begins appears, which is what IMP-35 exists to forbid",
+    file: "app/src/lib/adapt.js",
+    find: "export function rowsFor(rows, key) {",
+    replace:
+      "export function firstDoseDate(projected) {\n" +
+      "  return projected.length ? projected[0].event.time.localDate : null;\n" +
+      "}\n\n" +
+      "export function rowsFor(rows, key) {",
+    breaks: ["IMP-35"],
+  },
+  {
+    id: "AM-P32",
+    why: "the store stops refusing a strengthened time provenance, so a correction can turn a date-only record into a timed one",
+    file: "app/src/store/time.js",
+    /* The refusal itself, not the call site. `IMP-35` checks the ledger still
+       calls it and `PORT-12` checks it still refuses; gutting the function
+       leaves the call in place and is the way the rule dies quietly. */
+    find: "export function assertProvenanceNotImproved(before, after) {",
+    replace: "export function assertProvenanceNotImproved(before, after) {\n  if (true) return;",
+    breaks: ["PORT-12", "TIME-04"],
+  },
+  {
+    id: "AM-P33",
+    why: "the shell acquires a route into test mode while the omissions report still says it has none",
+    file: "app/src/App.jsx",
+    find: "import { nowIso } from './store/time.js'",
+    replace: "import { nowIso } from './store/time.js'\nimport { isTestMode } from './store/mode.js'",
+    breaks: ["TM-24"],
+  },
+  {
+    id: "AM-P34",
+    why: "bulk entry stops refusing outside test mode, which is the guard TM-12's surviving half exists for",
+    file: "app/src/store/mode.js",
+    find: "export function isTestMode() {",
+    replace: "export function isTestMode() {\n  if (true) return true;",
+    breaks: ["TM-12"],
+  },
+
+  {
+    id: "AM-P35",
+    why: "a file is quietly dropped from the two declarations, so a file lifted from V1 and never entered in the manifest becomes invisible — the hole a review demonstrated by copying V1's WaterLog.jsx in and watching the manifest stay green",
+    file: "tools/port/v2-original.json",
+    find: '    "app/src/lib/adapt.js",\n',
+    replace: "",
+    breaks: ["META-02"],
+  },
+  {
+    id: "AM-P36",
+    why: "an exemption is left on META-01's list after the test it covers has acquired a control, so the list grows instead of shrinking",
+    file: "tests/app/test-port.mjs",
+    find: '    ["LED-01", "pre-dates the port"], ["LED-04", "pre-dates the port"],',
+    replace: '    ["LED-01", "pre-dates the port"], ["LED-04", "pre-dates the port"], ["LED-02", "stale"],',
+    breaks: ["META-01"],
   },
 
 ];

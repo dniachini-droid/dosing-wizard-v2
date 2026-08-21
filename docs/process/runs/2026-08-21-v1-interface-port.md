@@ -60,9 +60,21 @@ with `niceAxis` and the gesture handling, verbatim apart from one named defect
 fix — it never received a unit or a parameter name at any of V1's four call
 sites, and now requires both and refuses to draw without them.
 
-**From V2: everything else, untouched.** The engine, the canon, the gate, the
-append-only ledger, stored assessments with their version stamps, the
-configuration history and the import.
+**From V2: the engine, the canon and the gate, untouched and byte-identical.**
+The ledger, stored assessments, the configuration history and the import kept
+their shapes and their rules.
+
+**And a correction to what this record first said.** It claimed the storage
+layer was "verified byte-identical by hash" too. That was wrong, and a test
+review caught it. Three storage files changed:
+`store/schedule.js` gained V1's `recent` bucket, which the V2 port of that file
+had dropped and the ported reminders panel reads; `assess.js` had `describe()`
+moved out of the storage try and gained an injection point so canon §64's
+version stamping could be tested at all; and `store/ledger.js` is unchanged but
+is now covered by more of them. Only `engine/`, `docs/canon/` and
+`tools/conformance/` are byte-identical, and that is what the claim should have
+said. The `recent` bucket now has a boundary test and a control (`SCHED-13`,
+`AM-P29`).
 
 **No V1 chemistry crossed.** `readingVerdict` (390 lines of classifier inside a
 UI component, carrying V1's only ammonia branch), `paramStatus`,
@@ -74,7 +86,8 @@ rather than ported.
 
 ## What the run found that it did not go looking for
 
-Four things, each recorded rather than argued away.
+Six things, each recorded rather than argued away. The last two came from an
+independent test review and are the reason there was a fix pass.
 
 1. **The existing suite caught two real defects in the wiring.** `TM-25` found
    configuration versions being stamped from the wall clock instead of the
@@ -98,6 +111,21 @@ Four things, each recorded rather than argued away.
    nothing like it either. Both were searched. It is built to the brief's
    description in V1's visual language and is deliberately **absent from the
    manifest**, because there is no original to diff it against.
+
+5. **A fabricated noon, and a test that forbade its repair.** The lighting,
+   note and ICP recorders wrote `stamp(date, "12:00")` — `EXACT_ABSOLUTE` on
+   forms with no time box — which `DATA-PROVENANCE.md` §61 forbids by name and
+   which the append-only ledger would have made permanent. A regression this
+   port introduced. `PORT-10`, the test named for the rule, was green while it
+   existed and **red when it was fixed**. Both are fixed; the test now drives
+   every recorder and reads what it wrote.
+
+6. **Rule 3 was not enforced at all.** `PORT-08` handed the version stamps in
+   and asserted they came out, and `replay()` — canon §64's implementation —
+   had no test that called it. A single hardcoded line in `assess.js` could
+   have made every stored stamp a fiction with the whole suite green.
+   `PORT-08` now runs the real path against a sentinel, and `PORT-15` drives
+   replay's three conditions separately.
 
 ---
 
@@ -125,7 +153,30 @@ same 11 fixture, 5 check and 3 invariant failures, all pre-existing and all
 documented. `run-mutations.py` is green. `DEC-016`'s test is "the change must
 not make it worse", and it does not.
 
-Application layer: 159 checks, 160 mutations, all caught.
+Application layer: **165 checks, 180 mutations, all caught** — after a fix pass
+that rewrote six of the port's own tests. The first versions of `PORT-01`…
+`PORT-07` were spelling pins, and a review walked nine realistic evasions
+through them; each is closed and each has a control.
+
+The port manifest is now the first check the application run performs. It had
+been an npm script nothing called, and it sat red across two commits of this
+run without anyone noticing — a gate that can do that is a gate in name.
+
+---
+
+## The two meta-checks, and why they exist
+
+`META-01` fails when a test has no mutation that turns it red. It found
+twenty-five on the day it was written; twenty-three pre-date this port and are
+on a named exemption list that can only shrink. Four of the twenty-five were
+this port's — tests it re-pointed and left without controls, under a note in
+`mutations.mjs` asserting that had not happened. That note was false and is
+corrected.
+
+`META-02` requires every file under `app/src` to be either in the port manifest
+or declared V2's own. Without it a file lifted from V1 and never entered in the
+map was invisible, which a review demonstrated by copying one in and watching
+the manifest stay green.
 
 ---
 
