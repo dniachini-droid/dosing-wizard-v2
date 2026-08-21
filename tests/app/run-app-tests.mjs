@@ -34,10 +34,11 @@ const SUITES = [
   "test-suggestion.mjs",
   "test-testmode.mjs",
   "test-import.mjs",
-  "test-chart.mjs",
   "test-strings.mjs",
-  "test-shell.mjs",
-  "test-tokens.mjs",
+  /* The V1 interface port's own suites. Each one pins a rule the port had to
+     hold, and `mutations.mjs` carries a source change that must turn each of
+     them red. */
+  "test-port.mjs",
 ];
 
 /* Run every suite from a given tree, and return {id -> error|null}. A fresh

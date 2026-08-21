@@ -19,6 +19,18 @@
    ========================================================================= */
 
 export const MUTATIONS = [
+  /* MUTATIONS RETIRED WITH THE SURFACES THEY TESTED.
+
+     54 mutations were removed when the V1 interface port deleted the files
+     they mutated — `app/src/ui/chart.js`, `app/src/screens/*`, `app/sw.js`,
+     `app/assets/tokens.css` and `app/assets/app.css`. Their tests went in the
+     same change (`tests/app/test-chart.mjs`, `test-shell.mjs`,
+     `test-tokens.mjs`), so no surviving test lost its negative control: each
+     pair was retired together, which is the only way a mutation may leave.
+
+     Retired: AM-105, AM-106, AM-107, AM-108, AM-109, AM-110, AM-111, AM-112, AM-113, AM-114, AM-115, AM-116, AM-117, AM-118, AM-119, AM-120, AM-121, AM-141, AM-142, AM-148, AM-149, AM-151, AM-152, AM-153, AM-154, AM-155, AM-156, AM-157, AM-157b, AM-158, AM-159, AM-160, AM-161, AM-162, AM-163, AM-164, AM-165, AM-178, AM-179, AM-179b, AM-180, AM-180b, AM-182, AM-182b, AM-183, AM-184, AM-185, AM-185b, AM-186, AM-59, AM-73, AM-84, AM-85, AM-86
+  */
+
   /* --- the append-only ledger -------------------------------------------- */
   {
     id: "AM-01",
@@ -30,6 +42,7 @@ export const MUTATIONS = [
       "    await backend.put(EVENTS, ev.eventId, ev);",
     breaks: ["LED-02"],
   },
+
   {
     id: "AM-02",
     why: "marking an entry suspect writes a status onto the entry rather than appending an annotation",
@@ -41,6 +54,7 @@ export const MUTATIONS = [
       "    await backend.put(ANNOTATIONS, ann.annotationId, ann);",
     breaks: ["LED-03"],
   },
+
   {
     id: "AM-03",
     why: "the event id counter resets on a new millisecond, so an out-of-order append collides with an earlier id — the defect a test found during the build",
@@ -50,6 +64,7 @@ export const MUTATIONS = [
       "  if (recordedAtMs !== highestMs) {\n    highestMs = recordedAtMs;\n    withinMs = 0;\n  } else {\n    withinMs += 1;\n  }",
     breaks: ["TIME-03"],
   },
+
   {
     id: "AM-04",
     why: "the total order falls back to insertion order rather than (instant, ordinal, id)",
@@ -58,6 +73,7 @@ export const MUTATIONS = [
     replace: "  return [...events].sort(\n    (a, b) =>\n      0 ||\n      0 ||",
     breaks: ["LED-05"],
   },
+
   {
     id: "AM-05",
     why: "a reading the keeper flagged as suspect is quietly withheld from the engine, which puts an eligibility rule in the interface",
@@ -66,6 +82,7 @@ export const MUTATIONS = [
     replace: '    if (row.state !== "CURRENT") continue;',
     breaks: ["LED-06"],
   },
+
   {
     id: "AM-06",
     why: "a date-only reading is dropped on the way to the engine instead of being sent with its provenance",
@@ -86,6 +103,7 @@ export const MUTATIONS = [
       "    absoluteInstant: String(localDate).slice(0, 10) + \"T12:00:00Z\",",
     breaks: ["TIME-01"],
   },
+
   {
     id: "AM-08",
     why: "the provenance rule is relaxed so a correction may improve it",
@@ -94,6 +112,7 @@ export const MUTATIONS = [
     replace: "  if (false) {",
     breaks: ["TIME-02", "TIME-04"],
   },
+
   {
     id: "AM-09",
     why: "the provenance rule is tightened to equality, so an honest downgrade is refused too",
@@ -102,6 +121,7 @@ export const MUTATIONS = [
     replace: "  if (a !== b) {",
     breaks: ["TIME-03", "TIME-04"],
   },
+
   {
     id: "AM-10",
     why: "a date-only time is left unfrozen, so a later line can add the instant the constructor refused to invent",
@@ -120,6 +140,7 @@ export const MUTATIONS = [
     replace: "      canonVersion: null,",
     breaks: ["ASS-01"],
   },
+
   {
     id: "AM-12",
     why: "the input event set is not recorded, so a stored assessment can never be replayed",
@@ -128,6 +149,7 @@ export const MUTATIONS = [
     replace: "      inputEventIds: [],",
     breaks: ["ASS-01"],
   },
+
   {
     id: "AM-13",
     why: "a re-analysis overwrites the earlier record instead of becoming a new one",
@@ -136,6 +158,7 @@ export const MUTATIONS = [
     replace: "    let asOfOrdinal = 0; return { stored: false, record: previous };",
     breaks: ["ASS-03"],
   },
+
   {
     id: "AM-14",
     why: "an id is assumed free rather than claimed, so a new assessment writes straight over an existing record",
@@ -144,6 +167,7 @@ export const MUTATIONS = [
     replace: "    for (let tries = 0; false; tries += 1) {",
     breaks: ["ASS-04"],
   },
+
   {
     id: "AM-15",
     why: "the engine result is summarised rather than stored verbatim, and the reason codes are dropped",
@@ -152,6 +176,7 @@ export const MUTATIONS = [
     replace: "      engineResult: { ...engineResult, reasonCodes: [] },\n      auditTrace,",
     breaks: ["ASS-02"],
   },
+
   {
     id: "AM-16",
     why: "a configuration change edits the current version instead of appending a new one",
@@ -172,6 +197,7 @@ export const MUTATIONS = [
       '    id: "DOSE_CHANGE",\n    rank: 60,\n    when: (r) =>\n      true &&\n      !withheld(r) &&\n      action(r) === "SET_MAINTENANCE_DOSE" &&',
     breaks: ["CARD-02"],
   },
+
   {
     id: "AM-18",
     why: "the safety row stops matching a HIGH breach, so alkalinity above the safe upper limit renders as an ordinary refusal",
@@ -180,6 +206,7 @@ export const MUTATIONS = [
     replace: '    when: (r) => outer(r) === "BREACHED_LOW",',
     breaks: ["CARD-01"],
   },
+
   {
     id: "AM-19",
     why: "the fallback row is removed, so an unrecognised result selects nothing and renders a blank",
@@ -188,6 +215,7 @@ export const MUTATIONS = [
     replace: "    when: () => false,\n    fallback: true,",
     breaks: ["CARD-01", "CARD-03"],
   },
+
   {
     id: "AM-20",
     why: "two rows share a rank, so the declared order stops being total",
@@ -196,6 +224,7 @@ export const MUTATIONS = [
     replace: '    id: "HOLD",\n    rank: 60,',
     breaks: ["CARD-05"],
   },
+
   {
     id: "AM-21",
     why: "NOT_RUN is treated as an ordinary value, so a refusal renders as though it were a number",
@@ -214,6 +243,7 @@ export const MUTATIONS = [
     replace: "  let due = addDays(task.startDate, task.intervalDays);",
     breaks: ["SCH-01", "SCH-02"],
   },
+
   {
     id: "AM-23",
     why: "a nudge is no longer anchored to the completion it was made against, so it persists into every later occurrence and permanently skews the rhythm",
@@ -223,6 +253,7 @@ export const MUTATIONS = [
     replace: "  const nudgeStillApplies = !!task.adjustDays;",
     breaks: ["SCH-03"],
   },
+
   {
     id: "AM-24",
     why: "logging a reading completes every test task rather than the one for its parameter",
@@ -231,6 +262,7 @@ export const MUTATIONS = [
     replace: "    (t) => t.enabled !== false && t.kind === TASK_KIND.TEST",
     breaks: ["SCH-04"],
   },
+
   {
     id: "AM-25",
     why: "a disabled task is still scheduled and still auto-completes",
@@ -239,6 +271,7 @@ export const MUTATIONS = [
     replace: "  const active = tasks || [];",
     breaks: ["SCH-05"],
   },
+
   {
     id: "AM-26",
     why: "the projection guard is removed, so a one-day interval over a long horizon runs away",
@@ -247,6 +280,7 @@ export const MUTATIONS = [
     replace: "  while (d <= untilDate && guard++ < 100000) {",
     breaks: ["SCH-06"],
   },
+
   {
     id: "AM-27",
     why: "a task can be created with no interval, so the app asserts a cadence nobody chose",
@@ -255,6 +289,7 @@ export const MUTATIONS = [
     replace: "  if (false) throw new Error();",
     breaks: ["SCH-08"],
   },
+
   {
     id: "AM-28",
     why: "a completion is given a fresh identity each time, so ticking twice on one day stacks two",
@@ -267,6 +302,7 @@ export const MUTATIONS = [
     replace: "      const id = `${taskId}|${date}|${Math.random()}`;",
     breaks: ["SCH-09"],
   },
+
   {
     id: "AM-29",
     why: "turning a task off deletes it, taking its completion history with it",
@@ -285,6 +321,7 @@ export const MUTATIONS = [
     replace: "  if (true) {",
     breaks: ["SUG-02"],
   },
+
   {
     id: "AM-31",
     why: "replace rewrites the keeper's interval rather than nudging the next occurrence, so their rhythm is destroyed",
@@ -297,6 +334,7 @@ export const MUTATIONS = [
       "    adjustAnchor: null,",
     breaks: ["SUG-03", "SUG-04"],
   },
+
   {
     id: "AM-32",
     why: "an extra test is stored as a repeating task, so a one-off becomes a rhythm the keeper never asked for",
@@ -305,6 +343,7 @@ export const MUTATIONS = [
     replace: "      source: \"ENGINE_SUGGESTION\",\n      intervalDays: 4,",
     breaks: ["SUG-05"],
   },
+
   {
     id: "AM-33",
     why: "a preference is inferred from behaviour rather than from the checkbox",
@@ -315,6 +354,7 @@ export const MUTATIONS = [
       "  await store.kvSet(PREFERENCE_KEY, how);",
     breaks: ["SUG-10"],
   },
+
   {
     id: "AM-34",
     why: "a decline is remembered as a standing preference",
@@ -323,6 +363,7 @@ export const MUTATIONS = [
     replace: "  if (false) {",
     breaks: ["SUG-11"],
   },
+
   {
     id: "AM-35",
     why: "declining one suggestion silences the engine for every later one too",
@@ -331,6 +372,7 @@ export const MUTATIONS = [
     replace: "  if ((declined || []).length > 0) {",
     breaks: ["SUG-13"],
   },
+
   {
     id: "AM-36",
     why: "an app ask never expires, so an unanswered question sits in the list forever",
@@ -339,6 +381,7 @@ export const MUTATIONS = [
     replace: "  return true;",
     breaks: ["SUG-15"],
   },
+
   {
     id: "AM-37",
     why: "an extra test is not cleared by logging its reading, so it nags after it has been done",
@@ -347,6 +390,7 @@ export const MUTATIONS = [
     replace: "    return e.date >= addDays(day, -APP_ASK_EXPIRY_DAYS);",
     breaks: ["SUG-07"],
   },
+
   {
     id: "AM-38",
     why: "an extra test never ages out, so one the keeper ignored in July is still on the list in September",
@@ -355,6 +399,7 @@ export const MUTATIONS = [
     replace: "    return !logged;",
     breaks: ["SUG-16"],
   },
+
   {
     id: "AM-39",
     why: "a suggestion is offered again on a day the keeper is already testing, which is a question with no answer",
@@ -373,6 +418,7 @@ export const MUTATIONS = [
     replace: '"reason.TRAJECTORY_FALLING_RENAMED_BY_MUTATION":',
     breaks: ["STR-01"],
   },
+
   {
     id: "AM-41",
     why: "contract vocabulary is written into a visible string",
@@ -381,6 +427,7 @@ export const MUTATIONS = [
     replace: '  "trajectory.FALLING": "Falling (TRAJECTORY_FALLING)",',
     breaks: ["STR-02"],
   },
+
   {
     id: "AM-42",
     why: "an untranslated payload value is printed verbatim — the leak that reached a real screen during the build",
@@ -389,6 +436,7 @@ export const MUTATIONS = [
     replace: "  /* mutation: print it anyway */",
     breaks: ["STR-03"],
   },
+
   {
     id: "AM-43",
     why: "an unknown reason code renders as its own identifier",
@@ -397,6 +445,7 @@ export const MUTATIONS = [
     replace: "  return code && has(`reason.${code}`) ? t(`reason.${code}`) : String(code);",
     breaks: ["STR-04"],
   },
+
   {
     id: "AM-44",
     why: "a missing string renders as a blank rather than naming the key",
@@ -405,6 +454,7 @@ export const MUTATIONS = [
     replace: '  if (entry === undefined) return "";',
     breaks: ["STR-07"],
   },
+
   {
     id: "AM-45",
     why: "a parameterised sentence is reduced to a value stuck on the end, which is what the whole rule exists to prevent",
@@ -426,6 +476,7 @@ export const MUTATIONS = [
     replace: '      action(r) === "HOLD" &&',
     breaks: ["CARD-01", "CARD-08"],
   },
+
   {
     id: "AM-47",
     why: "the refusal row keys on the action again, which cannot distinguish a refusal from a hold because both are HOLD_CURRENT_DOSE",
@@ -434,6 +485,7 @@ export const MUTATIONS = [
     replace: 'const withheld = (r) => action(r) === "REFUSE";',
     breaks: ["CARD-01", "CARD-08"],
   },
+
   {
     id: "AM-48",
     why: "a present standing dose is read as an instruction, so a hold tells the keeper to change to the dose they are already on",
@@ -442,6 +494,7 @@ export const MUTATIONS = [
     replace: "  return isPresent(d?.recommendedDoseMlPerDay);",
     breaks: ["CARD-09"],
   },
+
   {
     id: "AM-49",
     why: "a failed storage read reports as an empty tank, so an assessment is computed and stored from no history",
@@ -450,6 +503,7 @@ export const MUTATIONS = [
     replace: "    return r.ok ? r.value || [] : [];\n  },\n  async all(store) {",
     breaks: ["ASS-12"],
   },
+
   {
     id: "AM-50",
     why: "the assessment runs on through a storage failure instead of stopping, and stores what it finds",
@@ -458,6 +512,7 @@ export const MUTATIONS = [
     replace: '      state: "ASSESSED",',
     breaks: ["ASS-08"],
   },
+
   {
     id: "AM-51",
     why: "a replay is handed today's configuration rather than the one the assessment named, so a settings change reads as the engine disagreeing with itself",
@@ -466,6 +521,7 @@ export const MUTATIONS = [
     replace: "    const all = await forEngine();\n    return all.slice(0);",
     breaks: ["ASS-09"],
   },
+
   {
     id: "AM-52",
     why: "a version the device does not hold is silently replaced by today's settings instead of refusing",
@@ -474,6 +530,7 @@ export const MUTATIONS = [
     replace: "    if (cut < 0) return h.map(({ schemaVersion, ...rest }) => rest);",
     breaks: ["ASS-09"],
   },
+
   {
     id: "AM-53",
     why: "dedup compares the clock again, so every open of the app writes another stored assessment and the history becomes a launch counter",
@@ -482,6 +539,7 @@ export const MUTATIONS = [
     replace: "    if (previous && previous.fingerprint === fingerprint && previous.asOf === asOf) {",
     breaks: ["ASS-10"],
   },
+
   {
     id: "AM-55",
     why: "records are ordered by their id as text rather than by when they were made",
@@ -490,6 +548,7 @@ export const MUTATIONS = [
     replace: "      return a.assessmentId < b.assessmentId ? -1 : 1;",
     breaks: ["ASS-11"],
   },
+
   {
     id: "AM-56",
     why: "an accepted offer re-applies on every launch, pushing the keeper's own test further out each time so it never comes due",
@@ -498,6 +557,7 @@ export const MUTATIONS = [
     replace: "  if (false) {",
     breaks: ["SUG-17"],
   },
+
   {
     id: "AM-57",
     why: "any retest timing counts as an offer again, so a routine cadence tick raises a suggested-test row on every assessment",
@@ -506,6 +566,7 @@ export const MUTATIONS = [
     replace: "  if (code === null) return null;",
     breaks: ["SUG-01"],
   },
+
   {
     id: "AM-58",
     why: "declining is keyed on the instant again, which is recomputed every run, so 'no thanks' is inert and the stored list grows without bound",
@@ -514,14 +575,7 @@ export const MUTATIONS = [
     replace: "export function suggestionKey(suggestion) {\n  return suggestion.at;",
     breaks: ["SUG-13"],
   },
-  {
-    id: "AM-59",
-    why: "a module drops off the precache list, so an offline open 404s it and the module graph fails to resolve",
-    file: "app/sw.js",
-    find: '  "./src/strings.js",\n',
-    replace: "",
-    breaks: ["SHELL-01"],
-  },
+
   {
     id: "AM-60",
     why: "an engine value loses its wording and renders to the keeper as an absence instead of as what the engine said",
@@ -551,6 +605,7 @@ export const MUTATIONS = [
     replace: "    if (false) {",
     breaks: ["LED-08"],
   },
+
   {
     id: "AM-63",
     why: "assessment writes stop being serialised, so two started in the same second collide on one id and one silently overwrites the other",
@@ -574,6 +629,7 @@ export const MUTATIONS = [
     replace: "  return backendFor(DB_NAME);",
     breaks: ["TM-01", "TM-02", "TM-03"],
   },
+
   {
     id: "AM-65",
     why: "the test database is named the same as the real one, which is the same defect spelled differently",
@@ -582,6 +638,7 @@ export const MUTATIONS = [
     replace: "export const TEST_DB_NAME = DB_NAME;",
     breaks: ["TM-01"],
   },
+
   {
     id: "AM-66",
     why: "the chosen instant never reaches the clock, so the engine is asked about today under the keeper's chosen date",
@@ -590,6 +647,7 @@ export const MUTATIONS = [
     replace: "  setClock(null);",
     breaks: ["TM-04", "TM-06", "TM-07"],
   },
+
   {
     id: "AM-67",
     why: "the assessment instant is read from the wall clock again, so test mode moves the label and nothing behind it",
@@ -601,6 +659,7 @@ export const MUTATIONS = [
       "}",
     breaks: ["TM-05"],
   },
+
   {
     id: "AM-68",
     why: "stepping moves the stored date but never reinstalls the clock, so the stepper moves a label on screen and the engine keeps being asked about the day before it",
@@ -609,6 +668,7 @@ export const MUTATIONS = [
     replace: "  slots.set(KEY_DATE, addDays(at.date, n));",
     breaks: ["TM-06", "TM-07"],
   },
+
   {
     id: "AM-68b",
     why: "the step direction is ignored, so 'a day earlier' goes forward and the keeper cannot get back to the day they were looking at",
@@ -617,6 +677,7 @@ export const MUTATIONS = [
     replace: "export function stepTestDays(n) {\n  n = 1;\n  const at = testInstant();",
     breaks: ["TM-06"],
   },
+
   {
     id: "AM-68c",
     why: "a jump to a chosen date is stored but never reaches the clock, so the app says one date and assesses another",
@@ -625,6 +686,7 @@ export const MUTATIONS = [
     replace: "  if (!date && !time) return at;",
     breaks: ["TM-06"],
   },
+
   {
     id: "AM-69",
     why: "a seeded line with no time is given midnight, and the fabricated precision is afterwards indistinguishable from a real one",
@@ -633,6 +695,7 @@ export const MUTATIONS = [
     replace: '  return exactInstant(row.date, row.time || "00:00", undefined, localZone());',
     breaks: ["TM-09"],
   },
+
   {
     id: "AM-70",
     why: "an unreadable line is dropped instead of reported, so a batch half-applies and the keeper never learns which lines were lost",
@@ -641,6 +704,7 @@ export const MUTATIONS = [
     replace: "      return;",
     breaks: ["TM-10"],
   },
+
   {
     id: "AM-71",
     why: "the first dose line is recorded as a change from a dose nobody ever gave, which is fabricated delivery history",
@@ -649,6 +713,7 @@ export const MUTATIONS = [
     replace: "    const kind = KIND.DOSE_CHANGE;",
     breaks: ["TM-11"],
   },
+
   {
     id: "AM-72",
     why: "clearing the test data is a no-op, so the keeper believes a run has been reset and reads the next one against the last one's records",
@@ -657,6 +722,7 @@ export const MUTATIONS = [
     replace: "    async destroy() {\n      return { ok: true, reason: null };\n    },",
     breaks: ["TM-08"],
   },
+
   {
     id: "AM-72b",
     why: "the reset is aimed at the real tank's database rather than the test one — one line, and the button wipes the keeper's whole history",
@@ -665,6 +731,7 @@ export const MUTATIONS = [
     replace: "export async function resetTestData() {\n  const b = backendFor(DB_NAME);",
     breaks: ["TM-08"],
   },
+
   {
     id: "AM-72c",
     why: "a reset that could not run is reported as success, so the keeper reads the next run against the last one's records",
@@ -673,6 +740,7 @@ export const MUTATIONS = [
     replace: "  backends.delete(TEST_DB_NAME);\n  return { ok: true, reason: null };",
     breaks: ["TM-08b"],
   },
+
   {
     id: "AM-74",
     why: "the whole app is pointed at the real database whatever the mode, so every seeded reading lands in the keeper's own ledger",
@@ -681,6 +749,7 @@ export const MUTATIONS = [
     replace: "export function storeForMode(mode) {\n  return createStore(backendForMode(MODE.REAL));",
     breaks: ["TM-02", "TM-03"],
   },
+
   {
     id: "AM-75",
     why: "a relaunch already in test mode never installs the chosen clock, so the marker names one day and the engine is asked about another — on the path every launch after the first takes",
@@ -689,6 +758,7 @@ export const MUTATIONS = [
     replace: "export function useSlots(custom) {\n  slots = custom || browserSlots() || memorySlots();",
     breaks: ["TM-14"],
   },
+
   {
     id: "AM-76",
     why: "stepping adds a fixed number of milliseconds rather than a calendar day, so a step skips or repeats a date across a daylight-saving boundary",
@@ -697,6 +767,7 @@ export const MUTATIONS = [
     replace: "export function addDays(iso, n) {\n  const d = new Date(parseLocalDate(iso).getTime() + n * 86400000);\n  return isoLocalDate(d);",
     breaks: ["TM-16"],
   },
+
   {
     id: "AM-77",
     why: "a stored date that rolls over is printed on the marker verbatim, so the marker names one day and the engine is asked about another",
@@ -705,6 +776,7 @@ export const MUTATIONS = [
     replace: "    date: slots.get(KEY_DATE) || isoLocalDate(new Date()),",
     breaks: ["TM-17"],
   },
+
   {
     id: "AM-78",
     why: "a water change in litres with no tank volume is discovered halfway through the write, leaving the batch half-applied and a re-paste duplicating everything above it",
@@ -713,6 +785,7 @@ export const MUTATIONS = [
     replace: "    if (false) {",
     breaks: ["TM-19"],
   },
+
   {
     id: "AM-79",
     why: "a planning problem is reported and then written anyway, which is the same half-applied batch by another route",
@@ -721,6 +794,7 @@ export const MUTATIONS = [
     replace: "  if (false) {\n    const e = new Error(problems[0].why);",
     breaks: ["TM-19", "TM-21"],
   },
+
   {
     id: "AM-80",
     why: "dose lines are resolved in the order they were typed, so a later dose pasted above an earlier one records a change from a value that had not yet been set — fabricated delivery history",
@@ -729,6 +803,7 @@ export const MUTATIONS = [
     replace: "  const doseRows = rows.filter((r) => r.kind === DOSE_LINE);",
     breaks: ["TM-20"],
   },
+
   {
     id: "AM-81",
     why: "a dose dated before dose history the ledger already holds is accepted, and its `from` is taken from a record that comes after it",
@@ -737,6 +812,7 @@ export const MUTATIONS = [
     replace: "    if (false) {",
     breaks: ["TM-21"],
   },
+
   {
     id: "AM-82",
     why: "a seeded record claims it was entered on the day it happened, so a fortnight pasted this evening reads as a fortnight of entries made at the time",
@@ -745,6 +821,7 @@ export const MUTATIONS = [
     replace: "    const recordedAt = timeFor(row).absoluteInstant || row.date + \"T00:00:00Z\";",
     breaks: ["TM-22"],
   },
+
   {
     id: "AM-83",
     why: "the task store reads the wall clock again, so what is due stops following the chosen instant and the keeper steps to March with August's task list on screen",
@@ -752,38 +829,6 @@ export const MUTATIONS = [
     find: "    async today() {\n      return todayLocal();",
     replace: "    async today() {\n      return new Date().toISOString().slice(0, 10);",
     breaks: ["TM-23"],
-  },
-  {
-    id: "AM-84",
-    why: "the assessment is not recomputed when the instant moves, so the stepper moves the date label and leaves yesterday's number under it",
-    file: "app/src/main.js",
-    find: "  if (config) await reassess();\n  await render();",
-    replace: "  await render();",
-    breaks: ["TM-24"],
-  },
-  {
-    id: "AM-85",
-    why: "the marker stops being drawn on the crash screen — the one screen where the keeper is least sure which world they are looking at",
-    file: "app/src/main.js",
-    find: "    mount(root, renderCrash(e));\n    renderTabs();\n    renderMarker();",
-    replace: "    mount(root, renderCrash(e));\n    renderTabs();",
-    breaks: ["TM-24"],
-  },
-  {
-    id: "AM-86",
-    why: "the tank facts are stamped from the wall clock again, so every backdated assessment in test mode finds no configuration in force and refuses",
-    file: "app/src/screens/settings.js",
-    find: "              nowIso()\n            );",
-    replace: "              new Date().toISOString()\n            );",
-    breaks: ["TM-25"],
-  },
-  {
-    id: "AM-73",
-    why: "bulk entry and reset lose their guard, so either can be reached while the app is pointed at the real tank",
-    file: "app/src/main.js",
-    find: "  async seedSeries(rows) {\n    if (!isTestMode()) throw new Error(t(\"testmode.err.notInTestMode\"));",
-    replace: "  async seedSeries(rows) {",
-    breaks: ["TM-12"],
   },
 
   /* --- importing the keeper's V1 history ---------------------------------
@@ -799,6 +844,7 @@ export const MUTATIONS = [
     replace: '  if (!row.time) return localTimeZoneUnknown(row.date, "00:00");',
     breaks: ["IMP-01", "IMP-03", "IMP-04", "IMP-21"],
   },
+
   {
     id: "AM-88",
     why: "a date-only reading is given an instant, so 325 readings that never had a time acquire one nobody wrote down",
@@ -834,6 +880,7 @@ export const MUTATIONS = [
     replace: "      continue;",
     breaks: ["IMP-06"],
   },
+
   {
     id: "AM-92",
     why: "pH loses its place in the store, so seventeen of the keeper's real measurements have nowhere to go",
@@ -842,6 +889,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-05"],
   },
+
   {
     id: "AM-93",
     why: "the dose history is back-projected from the tank's current settings, so the whole six months looks analysable and the engine attributes movement to a delivery nobody recorded",
@@ -850,6 +898,7 @@ export const MUTATIONS = [
     replace: "    const prior = running.get(r.parameter) ?? 8.8;",
     breaks: ["IMP-07"],
   },
+
   {
     id: "AM-94",
     why: "a calcium dose change is sent to the alkalinity engine, which then reads 14 mL/day of calcium solution as the alkalinity dose",
@@ -858,6 +907,7 @@ export const MUTATIONS = [
     replace: "function isAlkalinityDose(e) {\n  return true;",
     breaks: ["IMP-08"],
   },
+
   {
     id: "AM-95",
     why: "the imported settings are backdated to the oldest reading, applying today's target range to six months of history — WG-ALK-065 forbids exactly this",
@@ -866,6 +916,7 @@ export const MUTATIONS = [
     replace: '  await store.config.append(values, "2026-02-13T00:00:00Z");',
     breaks: ["IMP-09"],
   },
+
   {
     id: "AM-96",
     why: "the keeper's own display ranges are handed to the engine as configuration it never declared",
@@ -874,6 +925,7 @@ export const MUTATIONS = [
     replace: '        if (k === "schemaVersion") continue;',
     breaks: ["IMP-09"],
   },
+
   {
     id: "AM-97",
     why: "the file's stated counts are not checked against its contents, so a truncated export imports as though it were whole",
@@ -882,6 +934,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-10"],
   },
+
   {
     id: "AM-98",
     why: "any JSON is accepted as an export, so a file from somewhere else is read as the keeper's history",
@@ -890,6 +943,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-11"],
   },
+
   {
     id: "AM-99",
     why: "the import keys on the file's own ids, which do not survive an export — so re-importing duplicates the keeper's entire history",
@@ -898,6 +952,7 @@ export const MUTATIONS = [
     replace: "    const key = String(r.id);",
     breaks: ["IMP-13"],
   },
+
   {
     id: "AM-100",
     why: "already-held records are counted by membership rather than as a multiset, so the second of two repeat tests on one day is silently dropped",
@@ -906,6 +961,7 @@ export const MUTATIONS = [
     replace: "    const already = held.get(key) || 0;\n    return already === 0;",
     breaks: ["IMP-14"],
   },
+
   {
     id: "AM-101",
     why: "the dedup key ignores the time, so two readings of one value at two times on one day are treated as the same reading",
@@ -914,6 +970,7 @@ export const MUTATIONS = [
     replace: '  return [kind, parameter || "", date, String(value)].join("|");',
     breaks: ["IMP-15"],
   },
+
   {
     id: "AM-102",
     why: "records the salvage inventory could not confirm are imported as the keeper's own, settling a question the owner has not answered",
@@ -922,6 +979,7 @@ export const MUTATIONS = [
     replace: "      origin: ORIGIN.KEEPER,\n    };\n    await store.ledger.append({\n      kind: KIND.WATER_CHANGE,",
     breaks: ["IMP-17"],
   },
+
   {
     id: "AM-103",
     why: "the reminders come across with the old app's shipped defaults rather than the intervals the keeper actually set",
@@ -930,6 +988,7 @@ export const MUTATIONS = [
     replace: "      intervalDays: 7,",
     breaks: ["IMP-19"],
   },
+
   {
     id: "AM-104",
     why: "a reading the importer judges ineligible is withheld from the engine, which puts an eligibility rule in the importer and makes the record on screen disagree with the record the engine saw",
@@ -940,152 +999,6 @@ export const MUTATIONS = [
       "    if (!r.time) continue;\n" +
       "    const def = PARAMETERS.find((p) => p.key === r.parameter);",
     breaks: ["IMP-05", "IMP-20"],
-  },
-
-  /* --- the ported chart ---------------------------------------------------
-     The first is the defect that reaches the keeper as a wrong number on his
-     own screen, and V1 wrote its comment beside the branch that fixes it.
-     -------------------------------------------------------------------- */
-  {
-    id: "AM-105",
-    why: "a data value is snapped to its nearest gridline, so a reading of 9.3 is DISPLAYED as 9.5 — the exact defect V1 recorded and fixed",
-    file: "app/src/ui/chart.js",
-    find: "  const formatValue = (v) => {\n    if (v == null || isNaN(v)) return \"\";\n    const a = Math.abs(v);",
-    replace:
-      "  const formatValue = (v) => {\n" +
-      '    if (v == null || isNaN(v)) return "";\n' +
-      "    v = Math.round(v / step) * step;\n" +
-      "    const a = Math.abs(v);",
-    breaks: ["CH-03"],
-  },
-  {
-    id: "AM-106",
-    why: "the axis is allowed a 2.5 step again, so ticks print uneven gaps once rounded",
-    file: "app/src/ui/chart.js",
-    find: "  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;",
-    replace: "  const step = (norm <= 1 ? 1 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;",
-    breaks: ["CH-01"],
-  },
-  {
-    id: "AM-107",
-    why: "the domain is padded without snapping, so the axis prints 8.591999999999999 verbatim",
-    file: "app/src/ui/chart.js",
-    find: "  let lo = Math.floor((min - (max - min) * padFrac) / step) * step;\n  const hi = Math.ceil((max + (max - min) * padFrac) / step) * step;",
-    replace: "  let lo = min - (max - min) * padFrac;\n  const hi = max + (max - min) * padFrac;",
-    breaks: ["CH-01"],
-  },
-  {
-    id: "AM-108",
-    why: "a concentration axis is allowed below zero again, so an all-zero trace element draws a negative gridline",
-    file: "app/src/ui/chart.js",
-    find: "  if (min >= 0 && lo < 0) lo = 0;",
-    replace: "",
-    breaks: ["CH-02"],
-  },
-  {
-    id: "AM-109",
-    why: "the tick decimals are fixed rather than derived from the step, so a fine axis prints whole numbers",
-    file: "app/src/ui/chart.js",
-    find: "  const decimals = Math.min(6, Math.max(0, -Math.floor(Math.log10(step)) + (step < 1 ? 0 : 0)));",
-    replace: "  const decimals = 0;",
-    breaks: ["CH-04"],
-  },
-  {
-    id: "AM-110",
-    why: "an unusable axis returns NaN bounds instead of a domain that can be drawn in, so the chart renders nothing and says nothing",
-    file: "app/src/ui/chart.js",
-    find: "  if (!isFinite(min) || !isFinite(max)) return { domain: [0, 1], ticks: undefined, format: (v) => v };",
-    replace: "",
-    breaks: ["CH-05"],
-  },
-  {
-    id: "AM-111",
-    why: "zooming rewrites the series it is showing instead of slicing a view of it, so the keeper's own readings are altered by a gesture",
-    file: "app/src/ui/chart.js",
-    find: "    const visible = total > 0 ? points.slice(startIdx, endIdx + 1) : [];",
-    replace: "    const visible = total > 0 ? points.splice(startIdx, endIdx - startIdx + 1) : [];",
-    breaks: ["CH-06"],
-  },
-  {
-    id: "AM-112",
-    why: "the zoom floor is removed, so a pinch can divide the window down to nothing",
-    file: "app/src/ui/chart.js",
-    find: "      const newSpan = Math.max(0.04, Math.min(1, span / scale));\n      onChange(clampRange(center - newSpan / 2, center + newSpan / 2));",
-    replace: "      const newSpan = Math.min(1, span / scale);\n      onChange(clampRange(center - newSpan / 2, center + newSpan / 2));",
-    breaks: ["CH-07"],
-  },
-  {
-    id: "AM-113",
-    why: "the double-tap no longer resets, so a keeper who has zoomed in cannot get back to the whole series",
-    file: "app/src/ui/chart.js",
-    find: "      if (now - lastTapRef.current < 300) {\n        onChange({ start: 0, end: 1 }, { reset: true });",
-    replace: "      if (false) {\n        onChange({ start: 0, end: 1 }, { reset: true });",
-    breaks: ["CH-14"],
-  },
-  {
-    id: "AM-114",
-    why: "the moment's chart grows gesture handling of its own, so how a chart answers a finger has two owners",
-    file: "app/src/moments/present.js",
-    find: '  attachGestures(mount, {',
-    replace: '  mount.addEventListener("touchmove", () => {});\n  attachGestures(mount, {',
-    breaks: ["CH-08"],
-  },
-  {
-    id: "AM-115",
-    why: "a chart without a parameter name falls back to a blank instead of refusing — V1's recorded defect, restored",
-    file: "app/src/ui/chart.js",
-    find: '  if (typeof label !== "string" || !label) throw new Error(t("err.chartNeedsLabel"));',
-    replace: '  label = label || "";',
-    breaks: ["CH-09"],
-  },
-  {
-    id: "AM-116",
-    why: "a chart without a unit falls back to a blank instead of refusing, so a number is drawn with nothing saying what it measures",
-    file: "app/src/ui/chart.js",
-    find: '  if (typeof unit !== "string") throw new Error(t("err.chartNeedsUnit"));',
-    replace: '  unit = unit || "";',
-    breaks: ["CH-09"],
-  },
-  {
-    id: "AM-117",
-    why: "History stops passing the parameter's unit to its chart, which is exactly what every V1 call site did",
-    file: "app/src/screens/history.js",
-    find: "    unit: def.unit,",
-    replace: '    unit: "",',
-    breaks: ["CH-10"],
-  },
-  {
-    id: "AM-118",
-    why: "the tapped point's value is read from the last reading rather than from the point tapped",
-    file: "app/src/ui/chart.js",
-    find: '      h("span", { class: "v" }, p.value.toFixed(decimals)),',
-    replace: '      h("span", { class: "v" }, points[points.length - 1].value.toFixed(decimals)),',
-    breaks: ["CH-11"],
-  },
-  {
-    id: "AM-119",
-    why: "the Today card goes back to drawing its own static trace, so the chart the keeper looks at most is the one he cannot touch",
-    file: "app/src/screens/assessment.js",
-    find: 'import { interactiveChart } from "../ui/chart.js";\n',
-    replace: "",
-    breaks: ["CH-12"],
-  },
-
-  {
-    id: "AM-120",
-    why: "the tap goes to whichever point was drawn last under the finger rather than the nearest one — at six months' density the discs overlap eight deep and the keeper taps 9.3 and is told 9.4",
-    file: "app/src/ui/chart.js",
-    find: "            const gap = Math.abs(x(i) - inView);",
-    replace: "            const gap = x(i) <= inView ? 0 : Infinity;",
-    breaks: ["CH-13"],
-  },
-  {
-    id: "AM-121",
-    why: "the per-point handles take the pointer back, reintroducing the overlap the one surface exists to remove",
-    file: "app/assets/app.css",
-    find: ".chart .pt-hit { fill: transparent; stroke: none; pointer-events: none; }",
-    replace: ".chart .pt-hit { fill: transparent; stroke: none; }",
-    breaks: ["CH-13"],
   },
 
   /* --- reconstruction, and what the two reviews found ---------------------
@@ -1158,6 +1071,7 @@ export const MUTATIONS = [
     replace: '  return { level: "EXACT", bounds: {} };',
     breaks: ["IMP-28"],
   },
+
   {
     id: "AM-129",
     why: "dose rows are read in the order the file lists them — and the keeper's export lists them newest-first, so his dose history is inverted and the boundary drawn a week late",
@@ -1166,6 +1080,7 @@ export const MUTATIONS = [
     replace: "  for (const r of planned.doses) {",
     breaks: ["IMP-07"],
   },
+
   {
     id: "AM-130",
     why: "the dose-history boundary is taken from the file's order rather than from event time, so the report and the chart mark it a week late",
@@ -1174,6 +1089,7 @@ export const MUTATIONS = [
     replace: '  const alkDoses = planned.doses.filter((d) => d.parameter === "ALK");',
     breaks: ["IMP-07"],
   },
+
   {
     id: "AM-131",
     why: "a row with no date imports as the literal string 'undefined', which sorts ahead of every real date and lands at the head of the keeper's history",
@@ -1182,6 +1098,7 @@ export const MUTATIONS = [
     replace: "  if (!DATE_SHAPE.test(iso)) return iso;",
     breaks: ["IMP-29"],
   },
+
   {
     id: "AM-132",
     why: "a date that does not exist in its month rolls silently into the next one, so a reading moves day without anything saying so",
@@ -1190,6 +1107,7 @@ export const MUTATIONS = [
     replace: "  if (false) {\n    return null;\n  }",
     breaks: ["IMP-29"],
   },
+
   {
     id: "AM-133",
     why: "a garbage time field climbs the provenance ladder, so a row with time 'banana' claims the time of day is known",
@@ -1198,6 +1116,7 @@ export const MUTATIONS = [
     replace: "  return { ok: true, time: hhmm };",
     breaks: ["IMP-29"],
   },
+
   {
     id: "AM-134",
     why: "a record the keeper corrected or marked invalid is re-imported as a fresh live one, so one real measurement becomes two live observations",
@@ -1206,6 +1125,7 @@ export const MUTATIONS = [
     replace: '    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;\n    const k = naturalKeyOfEvent(row.event);\n    if (k) held.set(k, (held.get(k) || 0) + 1);',
     breaks: ["IMP-30"],
   },
+
   {
     id: "AM-135",
     why: "a dose typed into this app and the same dose arriving from the export key differently, so running both apps until cutover duplicates every dose change",
@@ -1214,6 +1134,7 @@ export const MUTATIONS = [
     replace: "    return naturalKey(KIND.DOSE_STATE, e.parameter, date, time, dose);",
     breaks: ["IMP-31"],
   },
+
   {
     id: "AM-136",
     why: "a second import restarts the dose record rather than continuing it, writing a change as a standing dose and losing what it changed from",
@@ -1222,6 +1143,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-32"],
   },
+
   {
     id: "AM-137",
     why: "a blank solution strength stores zero and marks it configured, in the one field every dose recommendation scales linearly in",
@@ -1230,6 +1152,7 @@ export const MUTATIONS = [
     replace: "  if (Number.isFinite(potency)) {",
     breaks: ["IMP-33"],
   },
+
   {
     id: "AM-138",
     why: "an export with no tank volume stores NaN, which missingFacts reports as supplied — so the app believes it knows the tank's size",
@@ -1238,6 +1161,7 @@ export const MUTATIONS = [
     replace: "    netVolumeL: volume,",
     breaks: ["IMP-33"],
   },
+
   {
     id: "AM-139",
     why: "a file that states no counts passes unchecked, so a truncated export imports as though it were whole",
@@ -1246,6 +1170,7 @@ export const MUTATIONS = [
     replace: "    if (false) {",
     breaks: ["IMP-34"],
   },
+
   {
     id: "AM-140",
     why: "a section that is not a list throws out of the report, leaving the keeper on 'Reading…' with a console error",
@@ -1254,31 +1179,7 @@ export const MUTATIONS = [
     replace: "    throw new TypeError(name);",
     breaks: ["IMP-34"],
   },
-  {
-    id: "AM-141",
-    why: "where dose history begins gets a second implementation, and the chart and the report disagree about where to draw it",
-    file: "app/src/screens/history.js",
-    find: 'import { firstDoseDate } from "../store/import-v1.js";',
-    replace:
-      "function firstDoseDate(projected) {\n" +
-      "  let first = null;\n" +
-      "  for (const r of projected || []) {\n" +
-      '    if (r.event.kind !== KIND.DOSE_STATE && r.event.kind !== KIND.DOSE_CHANGE) continue;\n' +
-      "    const d = r.event.time.localDate;\n" +
-      "    if (!first || d < first) first = d;\n" +
-      "  }\n" +
-      "  return first;\n" +
-      "}",
-    breaks: ["IMP-35"],
-  },
-  {
-    id: "AM-142",
-    why: "a correction sheet offers a stronger provenance to an imported record, applying today's device offset to last August's clock reading",
-    file: "app/src/screens/entrydetail.js",
-    find: "  tc.removeOptionsAbove(e.time.timeProvenance);",
-    replace: "  if (e.time.timeProvenance === PROVENANCE.DATE_ONLY) tc.removeOptionsAbove(PROVENANCE.DATE_ONLY);",
-    breaks: ["IMP-35"],
-  },
+
   {
     id: "AM-143",
     why: "the reminders are attributed to the keeper, when the file does not record which of them he chose and which are the old app's defaults",
@@ -1287,6 +1188,7 @@ export const MUTATIONS = [
     replace: "      createdAt: existing ? existing.createdAt : made.createdAt,\n      origin: ORIGIN.KEEPER,",
     breaks: ["IMP-19"],
   },
+
   {
     id: "AM-144",
     why: "a water-change reminder stops asking for its volume, so completing it writes no water-change event and the engine's segmentation loses it",
@@ -1295,6 +1197,7 @@ export const MUTATIONS = [
     replace: "      needsVolume: false,",
     breaks: ["IMP-19"],
   },
+
   {
     id: "AM-145",
     why: "the keeper's existing tank facts are wiped by the import rather than carried forward, taking the pump step with them",
@@ -1303,6 +1206,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-33"],
   },
+
   {
     id: "AM-146",
     why: "a water change loses the fraction the engine reads, so 25 of them become invisible to segmentation",
@@ -1320,6 +1224,7 @@ export const MUTATIONS = [
     replace: "    if (false) {",
     breaks: ["IMP-36"],
   },
+
   {
     id: "AM-147",
     why: "an ICP panel is identified by how many results it carries rather than by the lab's own reference, so the same panel re-exported with one more element imports a second time",
@@ -1328,168 +1233,12 @@ export const MUTATIONS = [
     replace: '    return naturalKey(KIND.ICP_PANEL, null, date, "", Object.keys(elements).length);',
     breaks: ["IMP-36"],
   },
-  /* --- appearance has one home ------------------------------------------
-     Every one of these is a real way the token file's two rules get broken:
-     somebody types a colour into a stylesheet during a hurried change,
-     somebody reaches past a role to an ink, somebody paints a state with a
-     parameter's colour, somebody flattens the depth while tidying up. Each
-     was prose at the top of `tokens.css` and could not fail. */
-  {
-    id: "AM-148",
-    why: "a colour is typed straight into a stylesheet, so the token file stops being where appearance is changed",
-    file: "app/assets/app.css",
-    find: ".card {\n  background: var(--card-gradient);",
-    replace: ".card {\n  background: #FFFFFF;",
-    breaks: ["TOK-01"],
-  },
-  {
-    id: "AM-149",
-    why: "a screen writes a colour into an inline style rather than asking for the variable",
-    file: "app/src/screens/today.js",
-    find: 'h("span", { class: "dot", style: { background: `var(--${def.tone})` } }),',
-    replace: 'h("span", { class: "dot", style: { background: "#0D8078" } }),',
-    breaks: ["TOK-02"],
-  },
-  {
-    id: "AM-150",
-    why: "the browser chrome drifts off the app's own ground, so the tab is a different green from the screen under it",
-    file: "app/index.html",
-    find: '<meta name="theme-color" content="#EDF2F1">',
-    replace: '<meta name="theme-color" content="#FFFFFF">',
-    breaks: ["TOK-03"],
-  },
-  {
-    id: "AM-151",
-    why: "body text is pointed back at the mid ink — the exact regression this pass exists to undo",
-    file: "app/assets/tokens.css",
-    find: "  --text:              var(--ink);",
-    replace: "  --text:              var(--grey);",
-    breaks: ["TOK-04"],
-  },
-  {
-    id: "AM-152",
-    why: "a rule reaches past the role to the ink, so the next change to body colour misses it",
-    file: "app/assets/app.css",
-    find: "p.body { margin: 0 0 var(--sp-3); color: var(--text);",
-    replace: "p.body { margin: 0 0 var(--sp-3); color: var(--ink);",
-    breaks: ["TOK-05", "TOK-06"],
-  },
-  {
-    id: "AM-153",
-    why: "a sentence the keeper has to read goes back to secondary ink",
-    file: "app/assets/app.css",
-    find: ".notice .say { font-size: var(--t-small); color: var(--text); }",
-    replace: ".notice .say { font-size: var(--t-small); color: var(--text-2); }",
-    breaks: ["TOK-06"],
-  },
-  {
-    id: "AM-154",
-    why: "a whole paragraph is drawn in the lightest ink, which is for dates and axis labels",
-    file: "app/assets/app.css",
-    find: ".inert-note {\n  font-size: var(--t-micro);\n  color: var(--text-2);",
-    replace: ".inert-note {\n  font-size: var(--t-micro);\n  color: var(--text-meta);",
-    breaks: ["TOK-07"],
-  },
-  {
-    id: "AM-155",
-    why: "a parameter is given an identity colour but its range shading is left on alkalinity's, which is what the charts did before the keeper's own ranges arrived",
-    file: "app/assets/app.css",
-    find: ".c-po4 .range-fill { fill: var(--po4-bg); }",
-    replace: ".c-po4 .range-fill { fill: var(--alk-bg); }",
-    breaks: ["TOK-08"],
-  },
-  {
-    id: "AM-156",
-    why: "a state is painted in a parameter's colour, so the tank's condition and the parameter's identity become the same signal",
-    file: "app/assets/app.css",
-    find: ".reco.is-safety .verb { color: var(--safety); }",
-    replace: ".reco.is-safety .verb { color: var(--po4); }",
-    breaks: ["TOK-09"],
-  },
-  {
-    id: "AM-157",
-    why: "the notice strip is drawn only where there is something to report, so its absence has to be read as a statement and a card with no strip is indistinguishable from a card that lost one",
-    file: "app/assets/app.css",
-    find: "  background: var(--strip-quiet);\n  border-radius: 0 0 var(--r-card) var(--r-card);",
-    replace: "  background: transparent;\n  border-radius: 0 0 var(--r-card) var(--r-card);",
-    breaks: ["TOK-10"],
-  },
-  {
-    id: "AM-157b",
-    why: "the card's bottom padding is not extended, so the strip is drawn over the last line of content",
-    file: "app/assets/app.css",
-    find: "  padding-bottom: calc(var(--card-pad) + var(--strip-h));",
-    replace: "  padding-bottom: var(--card-pad);",
-    breaks: ["TOK-10"],
-  },
-  {
-    id: "AM-158",
-    why: "a logged-only tile's strip is tinted amber, so a parameter with no engine appears to be reporting a state",
-    file: "app/assets/app.css",
-    find: ".tile::after {\n  content: \"\";\n  position: absolute;\n  left: 0; right: 0; bottom: 0;\n  height: var(--strip-h);\n  background: var(--strip-quiet);\n}",
-    replace: ".tile::after {\n  content: \"\";\n  position: absolute;\n  left: 0; right: 0; bottom: 0;\n  height: var(--strip-h);\n  background: var(--strip-attention);\n}",
-    breaks: ["TOK-11"],
-  },
-  {
-    id: "AM-159",
-    why: "History's per-parameter cards lose their strip, so the same parameter is a different kind of object on two screens",
-    file: "app/src/screens/history.js",
-    find: '  const card = h("section", { class: "card param-card" });',
-    replace: '  const card = h("section", { class: "card" });',
-    breaks: ["TOK-11"],
-  },
-  {
-    id: "AM-160",
-    why: "an engine output class that is not a state is mapped to a state colour, so a refusal is painted red",
-    file: "app/src/screens/assessment.js",
-    find: '  CAPABILITY_REFUSAL: "",',
-    replace: '  CAPABILITY_REFUSAL: "is-safety-refusal",',
-    breaks: ["TOK-12"],
-  },
-  {
-    id: "AM-161",
-    why: "the tile's chart is inset again, so it stops running to the card's edges and the full-bleed treatment is silently lost",
-    file: "app/assets/app.css",
-    find: "  margin: var(--sp-2) calc(-1 * var(--tile-pad)) var(--strip-h);\n  width: calc(100% + 2 * var(--tile-pad));",
-    replace: "  margin: var(--sp-2) 0 var(--strip-h);\n  width: 100%;",
-    breaks: ["TOK-13"],
-  },
-  {
-    id: "AM-162",
-    why: "the tile's scale is left on the readings' own extremes, so a range the tank sits clear of is clipped off the chart and reads as no range at all",
-    file: "app/src/ui/chart.js",
-    find: "    lo = Math.min(lo, range.min);\n    hi = Math.max(hi, range.max);",
-    replace: "    lo = Math.min(lo, range.min);",
-    breaks: ["TOK-15"],
-  },
-  {
-    id: "AM-163",
-    why: "a screen reads the configuration and picks a range itself — two owners of which range is the keeper's, which is what left a calcium reading on a chart with no band while History drew one",
-    file: "app/src/screens/assessment.js",
-    find: "  const range = keeperRange(def, config);\n\n  const { node } = interactiveChart({",
-    replace:
-      "  const range =\n" +
-      "    config?.targetRangeMinDkh != null && config?.targetRangeMaxDkh != null\n" +
-      "      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }\n" +
-      "      : null;\n\n  const { node } = interactiveChart({",
-    breaks: ["TOK-16"],
-  },
-  {
-    id: "AM-164",
-    why: "the card's depth is flattened to a single shadow while tidying up, which is the presentation the owner asked to keep",
-    file: "app/assets/tokens.css",
-    find: "  --shadow-card:       var(--sh-edge), var(--sh-lift), var(--sh-soft), var(--sh-highlight);",
-    replace: "  --shadow-card:       var(--sh-lift);",
-    breaks: ["TOK-17"],
-  },
-  {
-    id: "AM-165",
-    why: "the graph line loses its rounded cap and joint, so the trace reads flat rather than as the 3D line the owner asked to keep",
-    file: "app/assets/app.css",
-    find: ".chart .trace { fill: none; stroke-width: var(--chart-trace-w); stroke-linecap: round; stroke-linejoin: round; }",
-    replace: ".chart .trace { fill: none; stroke-width: var(--chart-trace-w); stroke-linecap: butt; stroke-linejoin: miter; }",
-    breaks: ["TOK-17"],
-  },
+
+  /* AM-150 was retired with the V1 interface port. It anchored on the V2
+     shell's `theme-color` and guarded `TOK-03`, in `tests/app/test-tokens.mjs`
+     — a suite that tested `app/assets/tokens.css`, which the port deleted
+     along with the rest of the V2 interface. The pair went together, which is
+     the only way a mutation may leave. */
   /* --- what the review found after the import was built ------------------ */
   {
     id: "AM-166",
@@ -1499,6 +1248,7 @@ export const MUTATIONS = [
     replace: "    const litres = null;\n    if (litres != null) return naturalKey(KIND.WATER_CHANGE, null, date, \"\", `L${round6(litres)}`);",
     breaks: ["IMP-37", "IMP-38"],
   },
+
   {
     id: "AM-166b",
     why: "the import side keys a water change its own way again, so the ledger and the importer disagree about what a duplicate is",
@@ -1507,6 +1257,7 @@ export const MUTATIONS = [
     replace: '    const key = naturalKey(KIND.WATER_CHANGE, null, row.date, "", volumeL > 0 ? round6(litres / volumeL) : `L${litres}`);',
     breaks: ["IMP-38"],
   },
+
   {
     id: "AM-167",
     why: "the derived dose 'from' is stored without its mark, so a number this app worked out is indistinguishable from one the keeper wrote down",
@@ -1515,6 +1266,7 @@ export const MUTATIONS = [
     replace: "        detail: { ...detail, fromMlPerDay: prior, toMlPerDay: r.mlPerDay },",
     breaks: ["IMP-39"],
   },
+
   {
     id: "AM-168",
     why: "the water change's fraction is stored without saying which volume it came from, so a fraction derived from today's tank reads as a fact about February",
@@ -1523,6 +1275,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-39"],
   },
+
   {
     id: "AM-169",
     why: "the reminders go uncounted again, so a truncated reminders block passes the file's own self-consistency gate in silence",
@@ -1531,6 +1284,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-40"],
   },
+
   {
     id: "AM-170",
     why: "a collection the format does not state a count for is reported as a disagreement, so every genuine file raises an alarm and the alarm stops meaning anything",
@@ -1551,6 +1305,7 @@ export const MUTATIONS = [
     replace: "  return new Date(y, (mo || 1) - 1, d || 1, 0, 0, 0, 0);",
     breaks: ["TM-26"],
   },
+
   {
     id: "AM-171b",
     why: "stepping a day resets the time of day, so a step is silently a new instant rather than a step",
@@ -1559,6 +1314,7 @@ export const MUTATIONS = [
     replace: 'export function stepTestDays(n) {\n  slots.set(KEY_TIME, "09:00");',
     breaks: ["TM-26"],
   },
+
   {
     id: "AM-172",
     why: "a pasted alkalinity series is recorded as calcium, so the keeper seeds a fortnight and the alkalinity engine sees an empty history",
@@ -1567,6 +1323,7 @@ export const MUTATIONS = [
     replace: '  alk: "CA",',
     breaks: ["TM-27"],
   },
+
   {
     id: "AM-173",
     why: "an exact instant is written as bare UTC, throwing away the offset that made it provable — canon SHARED-LEGACY-TIME-001 by name",
@@ -1575,6 +1332,7 @@ export const MUTATIONS = [
     replace: '    absoluteInstant: iso + "Z",',
     breaks: ["TM-28"],
   },
+
   {
     id: "AM-173b",
     why: "the offset's sign is flipped, putting every recorded moment twice its offset away from where it happened",
@@ -1583,6 +1341,7 @@ export const MUTATIONS = [
     replace: "  const utcMs = Date.UTC(y, mo - 1, d, h, mi) + off * 60000;",
     breaks: ["TM-28"],
   },
+
   {
     id: "AM-174",
     why: "the uncertain bound shrinks to an hour, so the engine reads a dose as unambiguously inside an interval when it was not and attributes a response it should have refused",
@@ -1591,6 +1350,7 @@ export const MUTATIONS = [
     replace: "const OFFSET_EAST_MAX_HOURS = 1;",
     breaks: ["IMP-41"],
   },
+
   {
     id: "AM-174b",
     why: "the western bound shrinks the same way, from the other side",
@@ -1599,6 +1359,7 @@ export const MUTATIONS = [
     replace: "const OFFSET_WEST_MAX_HOURS = 2;",
     breaks: ["IMP-41"],
   },
+
   {
     id: "AM-175",
     why: "where dose history begins stops filtering to alkalinity, so a keeper who dosed calcium first gets the boundary drawn months before any alkalinity dose was recorded",
@@ -1607,6 +1368,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-42"],
   },
+
   {
     id: "AM-175b",
     why: "a superseded dose record draws the boundary, so a correction moves where analysis is said to begin",
@@ -1615,6 +1377,7 @@ export const MUTATIONS = [
     replace: "    const e = r.event;\n    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;",
     breaks: ["IMP-42"],
   },
+
   {
     id: "AM-176",
     why: "an import re-enables a reminder the keeper had turned off, so the app starts asking him for a test he decided to stop doing",
@@ -1623,6 +1386,7 @@ export const MUTATIONS = [
     replace: "      enabled: true,",
     breaks: ["IMP-43"],
   },
+
   {
     id: "AM-176b",
     why: "the reminder's enabled state is dropped at the write, so the task store's own default silently overrides what the file said",
@@ -1631,6 +1395,7 @@ export const MUTATIONS = [
     replace: "",
     breaks: ["IMP-43"],
   },
+
   {
     id: "AM-177",
     why: "the keeper's own note on a reading is dropped on the way in — data loss, silent, and not recoverable from the record afterwards",
@@ -1639,119 +1404,154 @@ export const MUTATIONS = [
     replace: "      detail: { origin: ORIGIN.KEEPER },",
     breaks: ["IMP-43"],
   },
-  {
-    id: "AM-178",
-    why: "the axis stops trimming floating-point noise, and V1's own recorded defect comes back — a y-axis reading 0.30000000000000004",
-    file: "app/src/ui/chart.js",
-    find: "  const clean = (v) => +v.toFixed(10);",
-    replace: "  const clean = (v) => v;",
-    breaks: ["CH-01"],
-  },
-  {
-    id: "AM-179",
-    why: "panning to the end of the series silently shrinks the keeper's zoom instead of stopping at the edge",
-    file: "app/src/ui/chart.js",
-    find: "    if (end > 1) { start -= (end - 1); end = 1; }",
-    replace: "",
-    breaks: ["CH-07"],
-  },
-  {
-    id: "AM-179b",
-    why: "the same at the other edge, panning back past the start",
-    file: "app/src/ui/chart.js",
-    find: "    if (start < 0) { end -= start; start = 0; }",
-    replace: "",
-    breaks: ["CH-07"],
-  },
-  {
-    id: "AM-180",
-    why: "a safety return is painted amber, so the one card that exists to say stop wears the colour of an ordinary warning",
-    file: "app/src/screens/assessment.js",
-    find: '  SAFETY_RETURN: "is-safety",',
-    replace: '  SAFETY_RETURN: "is-attention",',
-    breaks: ["TOK-12"],
-  },
-  {
-    id: "AM-180b",
-    why: "an engine output class this build has no card for stops being flagged at all, so a state nobody designed for renders as an ordinary answer",
-    file: "app/src/screens/assessment.js",
-    find: '  UNCLASSIFIED: "is-attention",',
-    replace: '  UNCLASSIFIED: "",',
-    breaks: ["TOK-12"],
-  },
+
   {
     id: "AM-181",
     why: "the keeper's band is dropped from the one parameter that has an engine, so alkalinity's chart loses the range every other parameter keeps",
     file: "app/src/store/config.js",
     find: "  if (def.assessed) {",
     replace: "  if (false) {",
-    breaks: ["TOK-16"],
+    /* Re-pointed by the V1 interface port. `TOK-16` lived in
+       `tests/app/test-tokens.mjs` and went with the V2 interface; the RULE it
+       guarded — one owner for the keeper's band — is now `PORT-13`, and the
+       ported range bar and sparkline both depend on it. */
+    breaks: ["PORT-13"],
   },
+
   {
     id: "AM-181b",
     why: "a half-written range is accepted, so a parameter with a minimum and no maximum shades a band with no top edge",
     file: "app/src/store/config.js",
     find: "  return r && Number.isFinite(r.min) && Number.isFinite(r.max) ? r : null;",
     replace: "  return r || null;",
-    breaks: ["TOK-16"],
+    breaks: ["PORT-13"],
+  },
+
+  /* --- the V1 interface port ---------------------------------------------
+     Each of these is a real mistake somebody could make while porting a screen
+     — reintroducing a classifier, reaching for storage directly, letting a
+     form invent a time — not a contrived edit. */
+  {
+    id: "AM-P1",
+    why: "a ported component works out the position itself again, which is precisely V1's `paramStatus`",
+    file: "app/src/lib/backup.jsx",
+    find: "  const color = positionTone(position);",
+    replace:
+      "  const paramStatus = (d, v) => (v == null ? \"unknown\" : v < d.min ? \"low\" : v > d.max ? \"high\" : \"ok\");\n" +
+      "  const color = positionTone(position) || paramStatus(def, value);",
+    breaks: ["PORT-01", "PORT-04"],
   },
   {
-    id: "AM-182",
-    why: "a colour is written as a word rather than a hex code, which the appearance check used to be blind to by design",
-    file: "app/assets/app.css",
-    find: ".card {\n  background: var(--card-gradient);",
-    replace: ".card {\n  background: white;",
-    breaks: ["TOK-01"],
+    id: "AM-P2",
+    why: "a component tests the engine's position vocabulary itself, so the mapping has two owners",
+    file: "app/src/components/DoseExpectation.jsx",
+    find: "  const tone = positionTone(position);",
+    replace: "  const tone = position === \"BELOW_RANGE\" ? \"#926A09\" : positionTone(position);",
+    breaks: ["PORT-02"],
   },
   {
-    id: "AM-182b",
-    why: "the same, in a screen's inline style",
-    file: "app/src/screens/today.js",
-    find: 'h("span", { class: "dot", style: { background: `var(--${def.tone})` } }),',
-    replace: 'h("span", { class: "dot", style: { background: "white" } }),',
-    breaks: ["TOK-02"],
+    id: "AM-P3",
+    why: "a screen decides for itself whether the engine instructed a change, rather than asking the one owner",
+    file: "app/src/App.jsx",
+    find: "      goto: instructsDoseChange(engineResult) ? \"dosing\" : null,",
+    replace:
+      "      goto: engineResult.doseRecommendation\n" +
+      "        && engineResult.doseRecommendation.action === \"SET_MAINTENANCE_DOSE\" ? \"dosing\" : null,",
+    breaks: ["PORT-03"],
   },
   {
-    id: "AM-183",
-    why: "a screen reaches past the role to the ink in an inline style, which the role check used to scan only stylesheets for",
-    file: "app/src/screens/today.js",
-    find: '{ class: "name", style: { color: `var(--${def.tone})` } },',
-    replace: '{ class: "name", style: { color: "var(--ink)" } },',
-    breaks: ["TOK-05"],
+    id: "AM-P4",
+    why: "a screen keeps its own copy of state in localStorage beside the ledger, which is a second record of the same tank",
+    file: "app/src/components/Setup.jsx",
+    find: "  const [openId, setOpenId] = useState(null);",
+    replace: "  const [openId, setOpenId] = useState(localStorage.getItem(\"setup-open\"));",
+    breaks: ["PORT-05"],
   },
   {
-    id: "AM-184",
-    why: "the notice strip is given zero height, so every parameter card loses it while the token that declares it still looks present",
-    file: "app/assets/tokens.css",
-    find: "  --strip-h:           6px;",
-    replace: "  --strip-h:           0px;",
-    breaks: ["TOK-10"],
+    id: "AM-P5",
+    why: "a component builds and appends its own ledger event instead of going through the write adapter",
+    file: "app/src/components/Tasks.jsx",
+    find: "    await onAddWaterChange({ date: todayStr(), time: nowTime(), litres: L });",
+    replace:
+      "    await onAddWaterChange({ date: todayStr(), time: nowTime(), litres: L });\n" +
+      "    if (false) await store.ledger.append({});",
+    breaks: ["PORT-06"],
   },
   {
-    id: "AM-185",
-    why: "a double-tap to reset the zoom also opens an entry sheet, so the keeper doing exactly what the hint tells him to do gets a sheet in the face every time",
-    file: "app/src/ui/chart.js",
-    find: "          if (Date.now() - lastResetAt < 400) return;",
-    replace: "",
-    breaks: ["CH-14"],
+    id: "AM-P6",
+    why: "the shell stops reading the configuration history, so screens render against a stale copy",
+    file: "app/src/App.jsx",
+    find: "      store.config.current(),",
+    replace: "      Promise.resolve(null),",
+    breaks: ["PORT-07"],
   },
   {
-    id: "AM-185b",
-    why: "the gesture stops saying a change was a reset, so nothing downstream can tell a reset from a pan",
-    file: "app/src/ui/chart.js",
-    find: "        onChange({ start: 0, end: 1 }, { reset: true });",
-    replace: "        onChange({ start: 0, end: 1 });",
-    /* CH-07 cannot catch this one: its regex is satisfied by the desktop
-       double-click path, which still reports the reset. CH-14 drives the touch
-       path and sees the meta go missing. */
-    breaks: ["CH-14"],
+    id: "AM-P7",
+    why: "the stored assessment stops carrying the engine version that produced it, so a replay cannot tell an upgrade from a disagreement",
+    file: "app/src/store/assessments.js",
+    find: "      engineVersion:",
+    replace: "      engineVersionRemoved:",
+    breaks: ["PORT-08"],
   },
   {
-    id: "AM-186",
-    why: "an eleven-pixel field hint is drawn in body ink, flattening the hierarchy the darkening pass exists to create on the screens with the most prose",
-    file: "app/assets/app.css",
-    find: ".field .hint { font-size: var(--t-micro); color: var(--text-2);",
-    replace: ".field .hint { font-size: var(--t-micro); color: var(--text-meta);",
-    breaks: ["TOK-07"],
+    id: "AM-P8",
+    why: "the assessment path stops asking the engine which versions it is, and stamps nothing",
+    file: "app/src/assess.js",
+    find: "    describe: versions,",
+    replace: "    describeRemoved: versions,",
+    breaks: ["PORT-09"],
   },
+  {
+    id: "AM-P9",
+    why: "the write adapter fills in a default time for a record that has none — the fabrication `DATA-PROVENANCE.md` forbids by name",
+    file: "app/src/lib/record.js",
+    find: "function stamp(date, time) {\n  return exactInstant(date, time, localOffsetMinutes(new Date()), localZone());\n}",
+    replace:
+      "function stamp(date, time) {\n" +
+      "  return exactInstant(date, time || \"12:00\", localOffsetMinutes(new Date()), localZone());\n" +
+      "}",
+    breaks: ["PORT-10"],
+  },
+  {
+    id: "AM-P10",
+    why: "the read adapter substitutes midday for a reading that has no wall-clock time, so a date-only record reads as a timed one",
+    file: "app/src/lib/adapt.js",
+    find: "      time: e.time.localTime || null,",
+    replace: "      time: e.time.localTime || \"12:00\",",
+    breaks: ["PORT-11"],
+  },
+  {
+    id: "AM-P11",
+    why: "a correction is allowed to strengthen a record's time provenance, which cannot be told from a real offset afterwards",
+    file: "app/src/store/time.js",
+    find: "export function assertProvenanceNotImproved(before, after) {",
+    replace: "export function assertProvenanceNotImproved(before, after) {\n  if (true) return;",
+    breaks: ["PORT-12"],
+  },
+
+  {
+    id: "AM-P12",
+    why: "a canon rule identifier reaches the screen because the shape that keeps it off is dropped — `M.2, M.3, M.5` is what the keeper then reads",
+    file: "app/src/present/wording.js",
+    find: "  if (CANON_ID.test(s)) return null;",
+    replace: "  if (false) return null;",
+    breaks: ["PORT-14"],
+  },
+  {
+    id: "AM-P13",
+    why: "a stored instant is printed in the contract's own spelling, which the brief rules out by name",
+    file: "app/src/present/wording.js",
+    find: "  if (INSTANT.test(s)) return sayInstant(s);",
+    replace: "  if (false) return sayInstant(s);",
+    breaks: ["PORT-14"],
+  },
+  {
+    id: "AM-P14",
+    why: "a payload key carrying engine output names stops routing through their wording, so the identifiers go to the screen",
+    file: "app/src/present/wording.js",
+    find: '  if (key && OUTPUT_KEYS.has(key)) return has(`output.${s}`) ? t(`output.${s}`) : null;',
+    replace: "  if (false) return null;",
+    breaks: ["PORT-14"],
+  },
+
 ];

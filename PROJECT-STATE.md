@@ -39,6 +39,17 @@ Phase 0 — Preserve and found V2
   exist under `docs/migration/`. Together with the agent/routine audit they complete the
   Phase 0 salvage deliverables. All four were written from the V1 repository at commit
   `9276a2ca254e88d19e0f02dced42a1b896499780`, read-only.
+- **The application's interface is V1's, ported.** The V2 interface built in the
+  earlier rounds was used by the owner and rejected, and is deleted. V1's is
+  in its place, taken from V1 source at commit
+  `9276a2ca254e88d19e0f02dced42a1b896499780` and accounted for line by line in
+  `docs/migration/PORT-MANIFEST.md`, which
+  `node tools/port/check-port-manifest.mjs` verifies without needing a V1
+  checkout. Five tabs: Dashboard, Test, Dosing, Tasks, Setup. Recorded as
+  `DEC-024`, which also records the toolchain the port brought with it.
+  Everything V1's interface could show and this build cannot is in
+  `docs/migration/PORT-OMISSIONS.md` — including test mode, correcting a
+  reading, and the offline shell, all of which lost their surfaces.
 - A project agent roster and reusable review workflows exist under `.claude/`,
   documented in `docs/process/`.
 - An implementation-specification package for the Alk V2 domain exists under

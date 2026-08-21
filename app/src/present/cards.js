@@ -226,6 +226,17 @@ export function selectCard(engineResult) {
 /* Every row that matches. Only the test uses this — it is how disjointness is
    checked, and exporting it is what makes the property checkable from outside
    rather than asserted in a comment. */
+/* IS THERE A SAFETY STATE WORTH PUTTING ON SCREEN?
+
+   `WITHIN` is the ordinary case and saying it would be noise; the two breach
+   states are the engine's own classification and are worth a row of their own.
+   The comparison lives here, with the rest of the field reading, so no screen
+   holds a member of the `outerBoundState` vocabulary. */
+export function safetyWorthSaying(engineResult) {
+  const v = outer(engineResult);
+  return isPresent(v) && v !== "WITHIN";
+}
+
 export function matchingCards(engineResult) {
   return CARD_TABLE.filter((row) => !row.fallback && row.when(engineResult)).map((r) => r.id);
 }

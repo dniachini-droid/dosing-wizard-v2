@@ -1,0 +1,8 @@
+/* Ported verbatim from the original artifact's two inline <style> blocks.
+   @import must come first, before the Tailwind directives. */
+@import './styles/base.css';
+@import './styles/aurelia-skin.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -50,7 +50,9 @@ STRINGS = os.path.join(SRC, "strings.js")
 # The moment driver is ported V1 motion code and is carried unchanged on
 # purpose; it renders no text of its own. It is listed here rather than
 # silently skipped.
-CARRIED_UNCHANGED = {os.path.join(SRC, "moments", "moments.js")}
+# Nothing is carried unchanged any more: `app/src/moments/moments.js` was
+# deleted by the V1 interface port, and the moments are now V1's own files.
+CARRIED_UNCHANGED = set()
 
 # Literals that are source code rather than text, listed one by one with the
 # reason. An allowlist that is not visible is an allowlist that grows, so this
@@ -138,6 +140,37 @@ def _is_technical(s: str) -> bool:
     return False
 
 
+# WHAT THIS CHECK COVERS AFTER THE V1 INTERFACE PORT, STATED PLAINLY
+# --------------------------------------------------------------------------
+# It walks `.js` files only, and that is now a real limit rather than an
+# incidental one, so it is said out loud here and printed in the output.
+#
+# After the port, `app/src/**/*.js` is the store, the engine boundary, the
+# present layer and the ported V1 libraries. Those are where a sentence about
+# chemistry would do damage, and the rule holds there in full.
+#
+# `app/src/**/*.jsx` is V1's interface, ported. It carries its own chrome text
+# inline — "Reset", "Pinch to zoom · drag to pan · double-tap to reset",
+# "Mark done" — because that is how V1 wrote it, and extracting all of it would
+# have made every line of every ported file a difference with no permitted
+# reason, which is the opposite of a port.
+#
+# What covers the interface instead is `tests/app/test-port.mjs`:
+#
+#   PORT-01  no interface file names a V1 chemistry function
+#   PORT-02  the engine's position vocabulary appears in no interface file
+#   PORT-03  no interface file tests a contract decision value
+#   PORT-04  no interface file compares a reading to a band edge
+#
+# Between them those say the thing that actually matters: no screen composes a
+# sentence about what a reading means, because no screen has the vocabulary to.
+# Every word about chemistry still arrives through `app/src/present/` out of
+# `app/src/strings.js`.
+#
+# Narrowing this checker's stated rule to match is an open item in
+# `docs/migration/PORT-OMISSIONS.md` §11.
+
+
 def main() -> int:
     problems = []
     for dirpath, _dirs, files in os.walk(SRC):
@@ -160,6 +193,9 @@ def main() -> int:
     print("=" * 74)
     print("USER-FACING STRINGS — every one must live in app/src/strings.js")
     print("=" * 74)
+    print("\nSCOPE: app/src/**/*.js. The ported V1 interface (`*.jsx`) carries its own")
+    print("chrome text inline and is covered by PORT-01..04 in tests/app/test-port.mjs")
+    print("instead. See docs/migration/PORT-OMISSIONS.md §11.")
     if problems:
         print(f"\n{len(problems)} literal(s) outside the strings file:\n")
         for p in problems:

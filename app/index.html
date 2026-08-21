@@ -1,86 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#EDF2F1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Dosing Wizard">
-<title>Dosing Wizard</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/tokens.css">
-<link rel="stylesheet" href="assets/app.css">
-<link rel="stylesheet" href="assets/shell.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="apple-touch-icon" href="/app/assets/icon-180.png" />
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Dosing Wizard" />
+  <meta name="theme-color" content="#08191D" />
+  <link rel="manifest" href="/app/manifest.webmanifest" />
+  <title>Dosing Wizard</title>
 </head>
 <body>
-
-<!-- The test-mode marker. Empty and hidden unless the app's assessment instant
-     has been set by hand, in which case it is pinned above every screen and
-     cannot be scrolled away from. It lives outside `#app` because `#app` is
-     replaced wholesale on every render, including by the crash screen — and
-     the crash screen is the one place the keeper most needs to know which
-     world they are looking at. -->
-<div id="modemarker" hidden></div>
-
-<!-- The first paint, before any script runs. If the module below fails to
-     load — an old browser, a corrupted cache — this is what stays on screen,
-     and it says something rather than being a white page. -->
-<div id="app">
-  <main class="screen">
-    <header class="topbar"><div><h1 data-s="app.name"></h1><p class="sub" data-s="app.starting"></p></div></header>
-    <noscript>
-      <section class="card">
-        <p class="body" data-s="app.noscript"></p>
-      </section>
-    </noscript>
-  </main>
-</div>
-
-<div id="tabbar"></div>
-
-<!-- The first paint's text, filled from the strings file before anything else
-     runs. `index.html` contains no sentence of its own: every `data-s` is a key,
-     and the text behind it lives in `app/src/strings.js` with all the rest. -->
-<script type="module">
-import { t } from "./src/strings.js";
-document.querySelectorAll("[data-s]").forEach(function (n) {
-  n.textContent = t(n.getAttribute("data-s"));
-});
-document.title = t("app.name");
-window.__t = t;
-</script>
-
-<script type="module" src="src/main.js"></script>
-
-<script>
-/* If the module never runs, say so. A blank screen with no explanation is the
-   failure mode this project has ruled out repeatedly, and it applies to the app
-   failing to start just as much as to a withheld engine output.
-
-   This one runs as a classic script so it still fires when the module graph
-   failed to load at all — which is exactly the case it exists for. It reads its
-   text through `window.__t` when the strings module did load, and falls back to
-   the key when it did not, because a key on screen is a legible defect and a
-   blank page is not. */
-setTimeout(function () {
-  var app = document.getElementById('app');
-  var sub = app && app.querySelector('.sub');
-  if (!sub) return;
-  var say = window.__t || function (k) { return k; };
-  if (sub.textContent !== say('app.starting')) return;
-  sub.textContent = say('app.slow.title');
-  var s = document.createElement('section');
-  s.className = 'card';
-  var p = document.createElement('p');
-  p.className = 'body';
-  p.textContent = say('app.slow.body');
-  s.appendChild(p);
-  app.querySelector('.screen').appendChild(s);
-}, 15000);
-</script>
-
+  <div id="root"></div>
+  <script type="module" src="/app/src/main.jsx"></script>
 </body>
 </html>

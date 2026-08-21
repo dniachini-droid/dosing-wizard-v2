@@ -73,7 +73,18 @@ async function fetchText(path) {
 }
 
 async function boot() {
-  const { loadPyodide } = await import("../../vendor/pyodide/pyodide.mjs");
+  /* `@vite-ignore` and nothing else. The runtime is fetched and hash-verified
+     by `tools/app/vendor-runtime.py` and is deliberately NOT committed — the
+     script is in the repository, the 12 MB artefact is not, so the two can
+     never drift apart. A bundler asked to resolve it at build time therefore
+     finds nothing and stops. This tells it to leave the import alone and let
+     the browser resolve it at run time, which is what it always did.
+
+     Nothing else in this file changed. The engine's own files and the frozen
+     reason-code catalogue are still fetched from the repository root, and the
+     build serves the repository root for exactly that reason — see
+     `vite.config.js`. */
+  const { loadPyodide } = await import(/* @vite-ignore */ "../../vendor/pyodide/pyodide.mjs");
   const py = await loadPyodide({
     indexURL: new URL("app/vendor/pyodide/", BASE).href,
     stdout: () => {},

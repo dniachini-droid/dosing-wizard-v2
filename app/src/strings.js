@@ -1490,8 +1490,47 @@ export const STRINGS = Object.freeze({
      contract instead of from a hand-written list. */
   "position.ALERT_LOW": "Low enough to need attention now",
   "position.ALERT_HIGH": "High enough to need attention now",
+  /* The short form the parameter card centres on its range bar. The brief for
+     the V1 interface port is explicit that the words are `IN RANGE`,
+     `ABOVE RANGE` and `BELOW RANGE`, and specifically not "in band". They are
+     separate keys rather than a truncation of the sentences above, because a
+     language pass should be able to change one without disturbing the other.
+
+     There is deliberately no short form for `UNKNOWN` or `NOT_RUN`. A card
+     with no position shows no word — see `app/src/present/position.js`. */
+  "positionShort.IN_RANGE": "IN RANGE",
+  "positionShort.BELOW_RANGE": "BELOW RANGE",
+  "positionShort.ABOVE_RANGE": "ABOVE RANGE",
+  "positionShort.ALERT_LOW": "LOW — ATTENTION",
+  "positionShort.ALERT_HIGH": "HIGH — ATTENTION",
+
   "position.UNKNOWN": "Not known",
   "position.NOT_RUN": "Not worked out",
+
+  /* The same trajectory values as they read INSIDE a sentence rather than at
+     the head of one — "In range, holding" needs "holding", not "Holding
+     steady". Separate keys rather than a lowercase() of the ones below,
+     because "Not clear yet" does not survive that treatment. */
+  "trajectoryMid.RISING": "rising",
+  "trajectoryMid.FALLING": "falling",
+  "trajectoryMid.STABLE": "holding",
+
+  /* ---- the parameter card's status line ---- */
+  "card.status.positionAndTrajectory": ({ position, trajectory }) => `${position} · ${trajectory}`,
+  /* Alkalinity, before the engine has a position for it. Not a refusal, and
+     not blank: it says which of the two states this is. */
+  "card.status.noPositionYet": "AWAITING A READING",
+  /* The four states that are not "the engine answered", each said as itself.
+     A blank, or a status line that reads like a verdict when no engine ran, is
+     the failure mode this project has ruled out repeatedly. */
+  "card.status.engineStarting": "WORKING IT OUT",
+  "card.status.engineUnavailable": "ENGINE UNAVAILABLE",
+  "card.status.notSetUp": "SETUP NEEDED",
+  "card.status.storageUnavailable": "RECORD UNREADABLE",
+  /* Every parameter this build does not assess. It states what the app does
+     with these readings, which is true, rather than classifying them — there
+     is no engine for them, so there is no position and none is invented. */
+  "card.status.notAssessed": "LOGGED · NOT ASSESSED",
 
   "trajectory.RISING": "Rising",
   "trajectory.FALLING": "Falling",

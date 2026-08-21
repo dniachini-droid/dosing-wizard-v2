@@ -1,0 +1,259 @@
+html, body { background:#F3F7F6; margin:0; -webkit-text-size-adjust:100%; }
+  /* viewport-fit=cover lets the page extend under the notch and the browser's
+     URL bar. Without compensating padding the first heading is clipped and
+     cannot be scrolled to, because it sits outside the scrollable area. */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    box-sizing: border-box;
+  }
+  /* --- Reading confirmation animation ---
+     Slow enough to watch: the line takes about two seconds to travel, with a
+     glowing head running ahead of it, so the history builds and the new
+     reading arrives as an event rather than appearing fully formed. */
+  @keyframes drawLine    { to { stroke-dashoffset: 0; } }
+  @keyframes fadeDot     { from { opacity: 0; transform: scale(0.3); } to { opacity: 0.55; transform: scale(1); } }
+  @keyframes popDot      { 0% { opacity: 0; transform: scale(0.2); }
+                           55% { opacity: 1; transform: scale(1.6); }
+                           100% { opacity: 1; transform: scale(1); } }
+  @keyframes ringOut     { 0% { opacity: 0.6; transform: scale(0.3); }
+                           100% { opacity: 0; transform: scale(3.4); } }
+  @keyframes bandIn      { from { opacity: 0; } to { opacity: 0.09; } }
+  @keyframes glowPulse   { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+  @keyframes headFade    { 0% { opacity: 0; } 8% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* The chart arrives before anything moves on it: a short bounce so it reads
+     as a thing appearing rather than a thing already there. */
+  @keyframes chartIn { 0%   { opacity: 0; transform: translateY(10px) scale(0.94); }
+                       60%  { opacity: 1; transform: translateY(-3px) scale(1.02); }
+                       100% { opacity: 1; transform: translateY(0) scale(1); } }
+  /* Then the dot falls onto the start of the line and settles. */
+  @keyframes dropIn  { 0%   { opacity: 0; transform: translateY(-26px) scale(0.7); }
+                       65%  { opacity: 1; transform: translateY(2px) scale(1.1); }
+                       100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+  /* Strictly sequential: the chart lands, its scale fades in, and only then
+     does the dot fall onto it. Previously all three ran from zero, so the dot
+     appeared to arrive before there was anything to arrive on. */
+  .rc-chart { opacity: 0; animation: chartIn 460ms cubic-bezier(.2,1.3,.4,1) forwards; }
+  .rc-band  { opacity: 0; animation: bandIn 340ms ease-out forwards; animation-delay: 300ms; }
+  .rc-drop  { opacity: 0; animation: dropIn 440ms cubic-bezier(.3,1.4,.5,1) forwards;
+              animation-delay: 900ms;
+              transform-box: fill-box; transform-origin: center; }
+
+  /* The line, the travelling head and the counter are all driven from one
+     animation-frame loop in the component, because separate CSS and SMIL
+     animations could not be kept in step with each other. Only the landing
+     effects below remain CSS. */
+  .rc-new  { opacity: 0; animation: popDot 620ms cubic-bezier(.3,1.5,.45,1) forwards;
+             transform-box: fill-box; transform-origin: center; }
+  .rc-ring { opacity: 0; animation: ringOut 1100ms cubic-bezier(.2,.7,.3,1) forwards;
+             transform-box: fill-box; transform-origin: center; }
+  .rc-ring2 { animation-delay: 260ms; }
+
+  /* A single acknowledging pulse of the band when a reading lands inside it.
+     Once, quietly — not a celebration, just confirmation. */
+  @keyframes bandHit { 0% { opacity: 0.09; } 30% { opacity: 0.26; } 100% { opacity: 0.09; } }
+  .rc-band-hit { animation: bandIn 340ms ease-out 300ms forwards, bandHit 900ms ease-out 1 !important; }
+
+  /* The card's contents arrive in order rather than all at once, so the eye is
+     led from the result to the reasoning. */
+  @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .rc-stagger > * { opacity: 0; animation: riseIn 420ms cubic-bezier(.2,.8,.3,1) forwards; }
+
+  /* --- Launch animation --- */
+  @keyframes splashFade  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sandRise    { from { transform: translateY(34px); opacity: 0; }
+                           to   { transform: translateY(0); opacity: 1; } }
+  @keyframes coralGrow   { from { transform: scaleY(0.04) scaleX(0.7); opacity: 0; }
+                           68%  { transform: scaleY(1.09) scaleX(1.03); opacity: 1; }
+                           to   { transform: scaleY(1) scaleX(1); opacity: 1; } }
+  /* Each colony sways on its own period so the reef never pulses in unison. */
+  @keyframes sway        { 0%,100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.2deg); } }
+  @keyframes swaySoft    { 0%,100% { transform: rotate(-5deg) scaleY(0.985); }
+                           50%     { transform: rotate(5deg) scaleY(1.03); } }
+  @keyframes polypPulse  { 0%,100% { transform: scale(0.86); opacity: 0.75; }
+                           50%     { transform: scale(1.12); opacity: 1; } }
+  @keyframes tipGlow     { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+  @keyframes drift       { from { transform: translate(-30px,0) scale(0.7); opacity: 0; }
+                           12%  { opacity: 0.55; } 88% { opacity: 0.4; }
+                           to   { transform: translate(360px,-46px) scale(1.15); opacity: 0; } }
+  @keyframes causticSway { 0%,100% { transform: translateX(-11px) skewX(-1.5deg); }
+                           50%     { transform: translateX(11px) skewX(1.5deg); } }
+  @keyframes godrayFade  { 0%,100% { opacity: 0.10; } 50% { opacity: 0.20; } }
+
+  /* Fish follow a curved path rather than a straight line. */
+  @keyframes swimRight   { from { transform: translate(-80px, 14px); }
+                           35%  { transform: translate(60px, -12px); }
+                           70%  { transform: translate(200px, 10px); }
+                           to   { transform: translate(380px, -8px); } }
+  @keyframes swimLeft    { from { transform: translate(380px,-10px) scaleX(-1); }
+                           40%  { transform: translate(180px, 12px) scaleX(-1); }
+                           to   { transform: translate(-80px, -6px) scaleX(-1); } }
+  @keyframes wag         { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+  @keyframes finFlutter  { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(6deg); } }
+
+  @keyframes wizardIn    { from { opacity: 0; transform: translateY(64px) scale(0.9); }
+                           72%  { opacity: 1; transform: translateY(-8px) scale(1.03); }
+                           to   { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes armRaiseL   { from { transform: rotate(4deg); } to { transform: rotate(-64deg); } }
+  @keyframes armRaiseR   { from { transform: rotate(-4deg); } to { transform: rotate(64deg); } }
+  @keyframes robeSway    { 0%,100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+  @keyframes hatBob      { 0%,100% { transform: rotate(-2deg) translateY(0); }
+                           50%     { transform: rotate(2deg) translateY(-1.5px); } }
+  @keyframes sparkOut    { from { opacity: 0; transform: translateY(6px) scale(0.2); }
+                           40%  { opacity: 1; }
+                           to   { opacity: 0; transform: translateY(-34px) scale(1.1); } }
+
+  /* Letters of the title rise one after another, from behind the reef. */
+  @keyframes letterRise  { from { opacity: 0; transform: translateY(46px) rotate(-8deg) scale(0.7); }
+                           68%  { opacity: 1; transform: translateY(-7px) rotate(2deg) scale(1.06); }
+                           to   { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
+  @keyframes shineWipe   { from { transform: translateX(-140%); } to { transform: translateX(240%); } }
+  @keyframes bubblePop2  { from { opacity: 0; transform: translateY(12px) scale(0.4); }
+                           70%  { opacity: 1; transform: translateY(-4px) scale(1.08); }
+                           to   { opacity: 1; transform: translateY(0) scale(1); } }
+
+  @keyframes washAway    { from { transform: translateX(0); } to { transform: translateX(-118%); } }
+  @keyframes foamSweep   { from { transform: translateX(-34%); opacity: 0; }
+                           18%  { opacity: 1; } to { transform: translateX(142%); opacity: 0; } }
+
+  .sp-wrap   { animation: splashFade 300ms ease-out forwards; }
+  .sp-wash   { animation: washAway 900ms cubic-bezier(.7,0,.3,1) forwards; }
+  .sp-foam   { animation: foamSweep 900ms cubic-bezier(.7,0,.3,1) forwards; }
+  .sp-sand   { animation: sandRise 760ms cubic-bezier(.2,.9,.3,1) 120ms both; }
+  .sp-coral  { transform-origin: 50% 100%; animation: coralGrow 1250ms cubic-bezier(.25,1.12,.35,1) both; }
+  .sp-sway   { transform-origin: 50% 100%; animation: sway 5.4s ease-in-out infinite; }
+  .sp-swaySoft { transform-origin: 50% 100%; animation: swaySoft 3.4s ease-in-out infinite; }
+  .sp-polyp  { transform-box: fill-box; transform-origin: center;
+               animation: polypPulse 2.6s ease-in-out infinite; }
+  .sp-tip    { animation: tipGlow 1900ms ease-in-out infinite; }
+  .sp-drift  { animation: drift 7s linear infinite; }
+  .sp-caustic{ animation: causticSway 6s ease-in-out infinite; }
+  .sp-ray    { animation: godrayFade 5s ease-in-out infinite; }
+  .sp-fishR  { animation: swimRight 6.5s cubic-bezier(.4,.1,.6,.9) both; }
+  .sp-fishL  { animation: swimLeft 7s cubic-bezier(.4,.1,.6,.9) both; }
+  .sp-wag    { transform-origin: 0% 50%; animation: wag 340ms ease-in-out infinite; }
+  .sp-fin    { transform-box: fill-box; transform-origin: 50% 100%;
+               animation: finFlutter 700ms ease-in-out infinite; }
+  .sp-wizard { animation: wizardIn 880ms cubic-bezier(.3,1.35,.45,1) 2100ms both; }
+  .sp-armL   { transform-origin: 12% 20%; animation: armRaiseL 760ms cubic-bezier(.3,1.3,.4,1) 2850ms both; }
+  .sp-armR   { transform-origin: 88% 20%; animation: armRaiseR 760ms cubic-bezier(.3,1.3,.4,1) 2850ms both; }
+  .sp-robe   { transform-origin: 50% 0%; animation: robeSway 4s ease-in-out 3s infinite; }
+  .sp-hat    { transform-origin: 50% 100%; animation: hatBob 3.4s ease-in-out 3s infinite; }
+  .sp-spark  { animation: sparkOut 1500ms ease-out infinite; }
+  .sp-letter { display: inline-block; animation: letterRise 760ms cubic-bezier(.25,1.35,.4,1) both; }
+  /* The fill lives on its own element so the transform above cannot disable
+     background-clip. A solid colour is set first, so if clipping is not
+     supported the letters are still legible rather than invisible. */
+  .sp-glyph {
+    display: inline-block;
+    color: #EAFFFB;
+  }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .sp-glyph {
+      background-image: linear-gradient(180deg,#FFFFFF 0%,#DDFBF6 46%,#7FE3D4 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  }
+  .sp-shine  { animation: shineWipe 1200ms ease-in-out 4300ms both; }
+  .sp-bubble { animation: bubblePop2 560ms cubic-bezier(.3,1.5,.45,1) 4400ms both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sp-wrap,.sp-sand,.sp-coral,.sp-wizard,.sp-letter,.sp-bubble,.sp-armL,.sp-armR
+      { animation: none !important; opacity: 1; transform: none; }
+    .sp-sway,.sp-swaySoft,.sp-polyp,.sp-tip,.sp-drift,.sp-caustic,.sp-ray,
+    .sp-wag,.sp-fin,.sp-robe,.sp-hat,.sp-spark,.sp-shine { animation: none !important; }
+    .sp-fishR,.sp-fishL { animation: none !important; opacity: 0; }
+
+    /* Everything else that moves. Ten animations were outside this block —
+       the chart draw, the score bar fill, the stability strips, the splash
+       and the reading-confirmation flourishes. Someone who asks the system
+       not to animate should not have to argue with it, and a partial block is
+       arguably worse than none: the motion that remains is the motion nobody
+       thought to check. The end state has to be the finished one, so each of
+       these lands at full opacity rather than disappearing. */
+    .rc-band-hit,.rc-chart,.rc-drop,.sb-fill,.strip-now,.strip-span,
+    .tp-star,.tp-tick
+      { animation: none !important; opacity: 1; transform: none; }
+    .sp-foam,.sp-wash { animation: none !important; opacity: 0; }
+  }
+
+  /* The tick that replaces a parameter's colour dot once it has been tested. */
+  @keyframes tickIn { 0% { opacity: 0; transform: scale(0.2); }
+                      60% { opacity: 1; transform: scale(1.25); }
+                      100% { opacity: 1; transform: scale(1); } }
+  .tp-tick { animation: tickIn 340ms cubic-bezier(.3,1.5,.45,1); }
+
+  /* Each star in a task's run pops in turn, the most recent one largest. */
+  @keyframes starPop { 0% { opacity: 0; transform: scale(0.2) rotate(-25deg); }
+                       65% { opacity: 1; transform: scale(1.3) rotate(6deg); }
+                       100% { opacity: 1; transform: scale(1) rotate(0); } }
+  .tp-star { display: inline-block; opacity: 0;
+             animation: starPop 420ms cubic-bezier(.3,1.5,.45,1) forwards; }
+
+  /* The value settles with a light sweeping across it — a reflection rather
+     than a flash, so it reads as arriving rather than alerting. */
+  @keyframes shimmerSweep { from { background-position: -180% 0; } to { background-position: 180% 0; } }
+  @keyframes valuePulse   { 0% { transform: scale(1); } 35% { transform: scale(1.14); } 100% { transform: scale(1); } }
+
+  .rc-value { display: inline-block; }
+  .rc-value.landed { animation: valuePulse 700ms cubic-bezier(.3,1.5,.45,1); }
+  .rc-value.landed .rc-sheen {
+    background-image: linear-gradient(100deg,
+      currentColor 0%, currentColor 38%,
+      rgba(255,255,255,0.95) 50%,
+      currentColor 62%, currentColor 100%);
+    background-size: 260% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: inherit;
+    animation: shimmerSweep 1100ms ease-out 1 forwards;
+  }
+
+  /* Anyone who has asked for less motion should not be made to sit through it. */
+  @media (prefers-reduced-motion: reduce) {
+    .rc-value.landed { animation: none; }
+    .rc-value.landed .rc-sheen { animation: none; -webkit-text-fill-color: currentColor; }
+    .rc-new { animation: none; opacity: 1; }
+    .rc-ring, .rc-head { display: none; }
+    .rc-band { animation: none; opacity: 0.09; }
+  }
+
+  /* Grid and flex children default to min-width:auto, which lets an item with a
+     large intrinsic width push past its track. Safari gives date and time
+     inputs exactly that, so a two-column row of them overflowed the card. */
+  .grid > *, .flex > * { min-width: 0; }
+
+  /* Safari sizes date/time inputs to their content and ignores width:100%
+     unless appearance is reset. Without this the time field spills out of its
+     column however narrow the column is. */
+  input[type="date"], input[type="time"], input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+  }
+  /* The spinner iOS adds inside these fields also carries its own width. */
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+    min-width: 0;
+  }
+
+  /* 100vh on mobile means the viewport WITHOUT the toolbar, so a full-height
+     container overflows behind it. dvh tracks the visible height instead. */
+  @supports (height: 100dvh) {
+    .min-h-screen { min-height: 100dvh; }
+  }
+  #boot { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; color:#0B7C86;
+          display:flex; flex-direction:column; gap:10px; align-items:center;
+          justify-content:center; min-height:100vh; padding:24px; text-align:center;
+          font-weight:700; font-size:14px; }
+  #boot .err { color:#C4285B; font-weight:600; font-size:12px; max-width:520px;
+               white-space:pre-wrap; text-align:left; font-family:ui-monospace,monospace; }

@@ -153,12 +153,25 @@ export function computeSchedule(tasks, completions, today, windowDays = 14) {
   const later = states
     .filter((s) => s.status === "upcoming" && s.daysOut > windowDays)
     .sort((a, b) => a.daysOut - b.daysOut);
+  /* Recently completed, most recent completion per task only — "a new
+     completion replaces the previous one rather than stacking up".
+
+     V1's `computeReminders` returned this bucket and the V2 port of this file
+     left it out; the ported reminders panel reads it, and a panel that can
+     show what is coming but not what was just done is the poorer half of the
+     feature. Calendar arithmetic over the keeper's own completion dates: no
+     threshold, no cadence, nothing chemistry owns. */
+  const recent = states
+    .filter((s) => s.lastDone && daysBetween(s.lastDone, today) <= windowDays)
+    .sort((a, b) => (a.lastDone < b.lastDone ? 1 : -1));
+
   return {
     states,
     overdue,
     dueToday,
     upcoming,
     later,
+    recent,
     actionable: [...overdue, ...dueToday],
     allClear: overdue.length === 0 && dueToday.length === 0,
   };
