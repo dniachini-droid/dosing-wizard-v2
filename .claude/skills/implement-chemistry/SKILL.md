@@ -75,7 +75,7 @@ Write, and run:
 
 Paste real output into the run record.
 
-### 3a — The path is not complete until its fixtures execute (`DEC-019`)
+### 3a — The path is not complete until its fixtures execute (`DEC-020`)
 
 **An engine path is not complete until its fixtures execute and its mutations
 turn them red.** Conversion rides along with implementation, one path at a
@@ -168,7 +168,7 @@ carried in, no test weakened.
 
 Also confirm, explicitly, that the path you built is `COMPLETE` in the
 harness's per-path coverage section, or state which of its fixtures remain
-unconverted and which open decision blocks each (`DEC-019`). `COMPLETE` there
+unconverted and which open decision blocks each (`DEC-020`). `COMPLETE` there
 covers two of the rule's three clauses; name the mutations that turned the
 path's fixtures red as well, since the coverage table cannot see them.
 

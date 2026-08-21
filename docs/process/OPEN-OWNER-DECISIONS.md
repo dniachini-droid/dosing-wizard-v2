@@ -403,8 +403,11 @@ does not declare the event and no document states its semantics beyond "shorthan
 regular series".
 
 Two expanders already exist, for their own local purposes:
-`docs/implementation/alk-v2/recompute-goldens.py` and `validate-freeze-5.py`. Neither is
-authoritative for an engine.
+`docs/implementation/alk-v2/recompute-goldens.py` and
+`tools/conformance/harness/package_checks.py`. Neither is authoritative for an engine.
+The second belonged to `validate-freeze-5.py` until the gate consolidation (`DEC-019`)
+retired that validator; the expander was absorbed along with its check, so the
+duplication survived the consolidation rather than being closed by it.
 
 **Why it matters sooner than it looks**
 

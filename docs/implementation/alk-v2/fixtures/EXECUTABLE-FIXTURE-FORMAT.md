@@ -171,10 +171,13 @@ control.
 inherits rather than one it introduces.** The harness passes the event to the
 engine verbatim, so every engine must implement the shorthand — an input form
 the data contract does not declare. Two expanders already exist and neither is
-authoritative for engines: `recompute-goldens.py` and `validate-freeze-5.py`
-each expand it for their own purposes. A third, written by the first engine
-author from a one-line table row, would make three implementations of one
-inference, which `MASTER RULE 1` calls a defect rather than a coincidence.
+authoritative for engines: `recompute-goldens.py` and
+`tools/conformance/harness/package_checks.py` each expand it for their own
+purposes. (The second was `validate-freeze-5.py`'s until that gate was retired
+under `DEC-019`; the expander moved with the check, so the duplication moved
+rather than closing.) A third, written by the first engine author from a
+one-line table row, would make three implementations of one inference, which
+`MASTER RULE 1` calls a defect rather than a coincidence.
 
 `WG-ALK-003` uses it and is among the fixtures that already execute, so this
 lands on the first day of engine work. Recorded as `OD-014`; **do not** resolve

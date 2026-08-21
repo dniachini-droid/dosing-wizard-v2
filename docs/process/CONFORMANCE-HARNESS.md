@@ -141,7 +141,7 @@ number is 11 of 204. Turning an `ABSTRACT_INPUT` fixture into an executable one
 means writing its event ledger, which is fixture work governed by the canon —
 not something the harness may do on the fixture's behalf.
 
-**When that work happens is now decided.** `DEC-019`: an engine path is not
+**When that work happens is now decided.** `DEC-020`: an engine path is not
 complete until its fixtures execute and its mutations turn them red. Conversion
 rides along with implementation, one path at a time, which is why the report
 below breaks coverage down per engine path rather than publishing one corpus
@@ -289,9 +289,9 @@ exactly that.
 checker is not trusted as a gate until a deliberate mutation of the defect class
 it targets has been shown to fail it.
 
-Forty-seven named sabotages. Twenty-one (`M-1`..`M-21`) are applied to a
-**reference oracle** that is emphatically not an engine, and twenty-six
-(`D-1`..`D-26`) corrupt a throwaway copy of the alk-v2 documents **and of the
+Fifty-three named sabotages. Twenty-six (`M-1`..`M-26`) are applied to a
+**reference oracle** that is emphatically not an engine, and twenty-seven
+(`D-1`..`D-27`) corrupt a throwaway copy of the alk-v2 documents **and of the
 canon**, because a hook on an oracle can never reach a check whose subject is a
 document. The repository is never modified by either arm.
 
@@ -315,7 +315,7 @@ scanner sees it, and four owner decisions were once reverted exactly this way
 while a 192-check gate stayed green.
 
 `M-22` and `M-23` attack the retest scheduler specifically, and exist because
-of `DEC-019` clause 3. When `AD-RET-001`..`AD-RET-005` were converted they
+of `DEC-020` clause 3. When `AD-RET-001`..`AD-RET-005` were converted they
 already went red under the generic controls — `M-17` (tolerance drift), `M-18`
 (non-finite), `M-11` (forbidden value), `M-12` (dropped required code), `M-20`
 (silent withhold). That is not enough to call a fixture proven. A numeric offset
