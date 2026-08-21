@@ -128,6 +128,74 @@ def _compare_dict(
         _compare_value(exp, actual[key], tol, path, r, key)
 
 
+#: List element keys that identify an element independently of its position.
+#: Each entry needs a source that *states* the order is not significant -- this
+#: is not a place to record a preference.
+#:
+#: `candidateClass`: canon, of the retest scheduler's audit record -- "Reason
+#: codes are additive, so no precedence between tied candidates is invented and
+#: **the audit record does not depend on evaluation order**". The data contract
+#: declares the element as `candidateTimes[] { candidateClass, at,
+#: included|excluded, reason }`, and the class is what names the candidate.
+#:
+#: Comparing such a list positionally makes a correct engine fail for emitting
+#: its candidates in a defensible order -- sorted by time, by class, by
+#: evaluation sequence -- none of which canon fixes. The likely repair for that
+#: false failure is reordering the engine to match a fixture, which is fitting
+#: the engine to an accident of how the fixture was written.
+_IDENTITY_KEYS = ("candidateClass",)
+
+
+def _identity_key(exp: List[Any], act: List[Any]) -> Optional[str]:
+    """The key identifying these elements, or None to compare positionally.
+
+    Requires every element on both sides to be a dict carrying the key, and the
+    keys to be unique within each list. Anything less and the list is compared
+    by position, which is the right default: for most lists -- a time series,
+    an ordered sequence of clamps -- order *is* the meaning.
+    """
+    for key in _IDENTITY_KEYS:
+        if not exp or not act:
+            continue
+        if not all(isinstance(e, dict) and key in e for e in exp):
+            continue
+        if not all(isinstance(a, dict) and key in a for a in act):
+            continue
+        exp_keys = [e[key] for e in exp]
+        act_keys = [a[key] for a in act]
+        if len(set(exp_keys)) != len(exp_keys) or len(set(act_keys)) != len(act_keys):
+            continue
+        return key
+    return None
+
+
+def _compare_list_by_identity(
+    exp: List[Any],
+    act: List[Any],
+    tol: Dict[str, Any],
+    path: str,
+    r: ComparisonResult,
+    name: str,
+    key: str,
+) -> None:
+    """Match elements by their identity key, then compare each pair.
+
+    The element path is reported as `[candidateClass=SIGNAL_ACCUMULATION]`
+    rather than `[1]`, so a failure names the candidate that is wrong instead of
+    a position whose meaning depends on an order nothing fixes.
+    """
+    by_key = {a[key]: a for a in act}
+    for e in exp:
+        ident = e[key]
+        where = f"{path}[{key}={ident}]"
+        if ident not in by_key:
+            r.mismatches.append(
+                Mismatch(where, e, "<absent>", f"no element with {key} = {ident!r}")
+            )
+            continue
+        _compare_value(e, by_key[ident], tol, where, r, name)
+
+
 def _compare_value(
     exp: Any, act: Any, tol: Dict[str, Any], path: str, r: ComparisonResult, name: str
 ) -> None:
@@ -143,6 +211,10 @@ def _compare_value(
             r.mismatches.append(
                 Mismatch(path, exp, act, f"list length {len(act)} != {len(exp)}")
             )
+            return
+        identity = _identity_key(exp, act)
+        if identity is not None:
+            _compare_list_by_identity(exp, act, tol, path, r, name, identity)
             return
         for i, (e, a) in enumerate(zip(exp, act)):
             _compare_value(e, a, tol, f"{path}[{i}]", r, name)

@@ -2012,7 +2012,38 @@
         "ALK-062",
         "X-INV-004"
       ],
+      "documentType": "WORKED_EXAMPLE",
       "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.3,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.6,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 7.9,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "config": {
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8
+      },
+      "sourceScenario": {
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger.",
         "state": "ordinary monitoring; below range with a supported rise; maintenance HELD by ALK-TOWARD-RANGE-HOLD-001; no intervention, no anomaly, no breach",
         "timesDays": [
           0,
@@ -2029,6 +2060,18 @@
         "outerMaxDkh": 11.0,
         "targetRangeMinDkh": 8.2,
         "targetRangeMaxDkh": 8.8
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [],
+        "prosePromoted": [
+          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation. Number: the 24 h floor is asserted comparably as candidateTimes[candidateClass=SIGNAL_ACCUMULATION].flooredHours = 24.0, and M-24 turns this fixture red at that field. Relation ('on the signal candidate only'): ASSERTED - ROUTINE_CADENCE asserts approxHours 48.0 and FORECAST_BOUNDARY_RISK asserts 472.0, both unfloored, so an engine applying the floor beyond the signal candidate goes red on those."
+        ],
+        "questionsRaised": [
+          "OD-011: this fixture states no currentDoseMlPerDay, so the converted ledger carries NO DOSE_STATE event. Its provenance note says 'Same state as AD-MNT-006', which states 9.0 mL/day - but a note is not an input, and importing it would decide what this fixture meant. The ledger is therefore submitted without a programmed dose. If the RETEST path turns out to need one to reach these expectations, that is a real finding about this fixture, not about the engine."
+        ]
       },
       "expectedRetest": {
         "candidateTimes": [
@@ -2056,7 +2099,7 @@
           "RETEST_DETECTABILITY_POLICY_UNAVAILABLE",
           "RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE"
         ],
-        "minimumUsefulIntervalApplied": "24 h, on the signal candidate only",
+        "derivation": "The minimum useful interval applies at 24 h, on the signal candidate only; that value is asserted comparably as candidateTimes[1].flooredHours.",
         "observationCeilingHours": 96.0,
         "selectedApproxHours": 24.0,
         "selectedReasonCode": "RETEST_SIGNAL_ACCUMULATION"
@@ -2925,7 +2968,44 @@
         "ALK-050",
         "ALK-TOWARD-RANGE-HOLD-001"
       ],
+      "documentType": "WORKED_EXAMPLE",
       "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.78,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.9,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 8.02,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "config": {
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8,
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0
+      },
+      "sourceScenario": {
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger.",
         "timesDays": [
           0,
           2,
@@ -2943,6 +3023,18 @@
         "outerMinDkh": 7.0,
         "outerMaxDkh": 11.0,
         "state": "ordinary monitoring; below range with a supported rise; maintenance HELD; no intervention"
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by all six previously executable fixtures. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [
+          "expectedRetest.minimumUsefulIntervalApplied -> expectedRetest.derivation. Number: raw T_signal is asserted comparably as expectedIntermediateEvidence.tSignalRawHours = 162.76520721 and as candidateTimes[candidateClass=SIGNAL_ACCUMULATION].rawHours. Relation ('not binding'): ENTAILED, not asserted - the floor is max(1 day, .), which cannot reduce a value already above 1 day, so no engine can assert this raw value and have the floor bind. No separate field carries it and none is needed."
+        ],
+        "questionsRaised": []
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": 0.06,
@@ -2972,7 +3064,7 @@
         "observationCeilingHours": 96.0,
         "selectedApproxHours": 48.0,
         "selectedReasonCode": "RETEST_ROUTINE_CADENCE",
-        "minimumUsefulIntervalApplied": "not binding: raw T_signal is 162.765 h"
+        "derivation": "The minimum useful interval is not binding here: raw T_signal is 162.765 h, asserted comparably as expectedIntermediateEvidence.tSignalRawHours."
       },
       "expectedReasonCodes": [
         "RETEST_ROUTINE_CADENCE",
@@ -3004,7 +3096,44 @@
         "ALK-FORECAST-SLOPE-001",
         "ALK-050"
       ],
+      "documentType": "WORKED_EXAMPLE",
       "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.5,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.35,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 7.2,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "config": {
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0,
+        "targetRangeMinDkh": 8.2,
+        "targetRangeMaxDkh": 8.8
+      },
+      "sourceScenario": {
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger.",
         "timesDays": [
           0,
           2,
@@ -3021,6 +3150,16 @@
         "targetRangeMinDkh": 8.2,
         "targetRangeMaxDkh": 8.8,
         "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by all six previously executable fixtures. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.075,
@@ -3093,7 +3232,42 @@
         "ALK-062",
         "PII-55"
       ],
+      "documentType": "WORKED_EXAMPLE",
       "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.35,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.2,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 7.05,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "config": {
+        "outerMinDkh": 7.0,
+        "outerMaxDkh": 11.0
+      },
+      "sourceScenario": {
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger.",
         "timesDays": [
           0,
           2,
@@ -3108,6 +3282,16 @@
         "outerMinDkh": 7.0,
         "outerMaxDkh": 11.0,
         "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by all six previously executable fixtures. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.075,
@@ -3413,7 +3597,42 @@
         "ALK-OUTER-BOUND-ACTION-001",
         "ALK-SAFETY-RETURN-INTEGRATION-001"
       ],
+      "documentType": "WORKED_EXAMPLE",
       "input": {
+        "asOf": "2026-09-05T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "rawValueDkh": 7.15,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-03T09:00:00+10:00",
+            "rawValueDkh": 7.0,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          },
+          {
+            "kind": "READING",
+            "measuredAt": "2026-09-05T09:00:00+10:00",
+            "rawValueDkh": 6.85,
+            "timeProvenance": "EXACT_ABSOLUTE"
+          }
+        ]
+      },
+      "config": {
+        "outerMinDkh": 7.0,
+        "safetyDestinationLowDkh": 7.2
+      },
+      "sourceScenario": {
+        "$comment": "The pre-conversion input, verbatim. Superseded as the engine input by `input`; retained because it is the reasoning, and the reasoning is not reproducible from the ledger.",
         "timesDays": [
           0,
           2,
@@ -3428,6 +3647,16 @@
         "outerMinDkh": 7.0,
         "safetyDestinationLowDkh": 7.2,
         "currentDoseMlPerDay": 9.0
+      },
+      "conversion": {
+        "convertedUnder": "ALK_V2_FREEZE_5",
+        "timeConvention": "_schema.json#/timeConvention",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by all six previously executable fixtures. The fixture states no dose change, so any instant at or before Day 0 gives the same behaviour."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       },
       "expectedIntermediateEvidence": {
         "observedSlopeDkhPerDay": -0.075,

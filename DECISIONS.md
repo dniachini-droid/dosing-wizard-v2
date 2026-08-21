@@ -662,3 +662,79 @@ the record in `docs/process/GATE-CHECK-INVENTORY.md`:
   behaviour — is **not settled by this entry**. It is raised for the owner as `OD-005`
   and the literals are left as they are, because de-literalising 400 absorbed assertions
   by hand is precisely how coverage gets lost quietly.
+
+---
+
+## DEC-020 — An engine path is not complete until its fixtures execute and its mutations turn them red
+
+- **ID:** DEC-020
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+
+> Recorded as `DEC-019` when it was written. `DEC-019` was taken by the gate
+> consolidation, which merged first; this entry was renumbered on rebase. The
+> decision is unchanged — only its number moved.
+
+**Decision**
+
+A unit of engine work — an engine path, in the sense of the owning module named by
+`traceability/alk-v2-traceability.json`'s `owner` column — is **not complete** until:
+
+1. every worked-example fixture attached to that path is executable, meaning the
+   conformance harness can build `(eventLedger, configurationHistory, asOf)` from it
+   without inventing anything; **and**
+2. those fixtures pass against the engine; **and**
+3. a deliberate mutation of a rule the path owns turns them red, and the failure text
+   names the mechanism the mutation claims to guard.
+
+Conversion of fixtures to the executable form (`fixtures/EXECUTABLE-FIXTURE-FORMAT.md`)
+therefore rides along with implementation, one path at a time. It is part of building
+the path, not a separate tidying task to be scheduled afterwards.
+
+Clause 3 is not satisfied by a generic control. A numeric-drift or dropped-reason-code
+mutation turns almost any fixture red and demonstrates only that the comparator
+subtracts. The mutation must attack a rule the path actually owns.
+
+**Rationale**
+
+The corpus holds 204 fixtures and, before this decision, 6 executed. The other 198 were
+not wrong — they hold real worked reasoning — but they were written for a human reader
+before any engine or interface existed, so no machine could check them.
+
+Two ways to close that gap were available. Convert the corpus in bulk, or attach
+conversion to implementation. Bulk conversion would mean writing event ledgers for
+engine paths that do not exist, deciding what a fixture meant in order to convert it,
+and producing a large body of tests for behaviour nobody has implemented — most of it
+unverifiable at the time of writing and some of it wrong.
+
+Attaching conversion to implementation yields the invariant the owner wants: **every
+executable path has executable fixtures.** There is never a partially converted mess,
+because the unconverted fixtures are exactly the ones whose engine paths do not exist
+yet. The backlog stops being a pile and becomes a map.
+
+Clause 3 restates `CORE-CANON-COVERAGE-001` item 9 — no checker is trusted as a gate
+until a deliberate mutation of its defect class has been shown to fail it — and applies
+it to fixtures rather than only to the harness's own checks. A fixture that has never
+been shown to fail has not been proven; it has only been observed not to complain.
+
+**Consequences**
+
+- Every engine brief inherits this rule without anyone remembering to state it. It is
+  written into `.claude/skills/implement-chemistry/SKILL.md`, which governs chemistry
+  implementation.
+- The conformance harness reports conversion coverage **per engine path**, so a
+  completed path can be shown complete and the outstanding fixtures are visibly
+  attached to paths that do not exist yet. `6 of 204` is a true number that tells the
+  owner nothing; per-path coverage tells them where the work is.
+- A path whose fixtures cannot be converted is **blocked, not exempt**. Where the
+  blocker is a missing input the canon does not state, it is raised as an open owner
+  decision and the path does not proceed on a guess. `OD-008` is the first of these and
+  currently blocks roughly forty fixtures.
+- This decision sets no chemistry. It governs when work is *finished*, not what any
+  rule *is*; every threshold, band edge, rail and equation remains the canon's.
+
+**What this does not say**
+
+It does not require the whole corpus to be converted, and it does not make an
+unconverted fixture a defect. An unconverted fixture whose path is unbuilt is the
+expected state.

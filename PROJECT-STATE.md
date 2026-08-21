@@ -66,8 +66,10 @@ Phase 0 — Preserve and found V2
   negative-control set) is a required check under `DEC-016`. The alk-v2 package's own
   `validate-freeze-5.py` was a second gate checking overlapping properties; it is
   **retired and deleted** under `DEC-019`, but only after its unique assertions were
-  moved into the harness and each was demonstrated red under a mutation (47 mutations
-  defined, 45 caught, 2 blocked with their unblocking conditions stated).
+  moved into the harness and each was demonstrated red under a mutation (53 mutations
+  defined, 50 caught, 3 blocked with their unblocking conditions stated; the
+  absorption itself accounted for 47/45/2, and the executable fixture format added
+  `M-22`..`M-26` and `D-27`).
   Independent review of the absorption found six defects, three of them introduced by
   it — including an aborted run reporting PASS on checks that had not run. All six are
   fixed and each carries a control; the two false rows this produced in the gate
@@ -76,9 +78,28 @@ Phase 0 — Preserve and found V2
   eight checks deliberately not carried across and what each dropped.
   `recompute-goldens.py` remains in the package and is unaffected: it is a recorder, not
   a gate.
-  The harness is **RED today, correctly**: no engine exists, so six executable fixtures
+  The harness is **RED today, correctly**: no engine exists, so eleven executable fixtures
   fail `ENGINE_ABSENT`, and five mechanical checks report pre-existing document defects
   that predate this work and are listed in `docs/process/CONFORMANCE-HARNESS.md`.
+- An **executable fixture format** is defined in
+  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **11 of 204
+  fixtures execute**, up from 6: `AD-RET-001` … `AD-RET-005` were converted and each is
+  demonstrated red under a mutation of the retest-scheduler rule it exercises.
+  The harness now reports conversion coverage **per engine path**.
+  `DEC-020` makes this a standing rule: an engine path is not complete until its
+  fixtures execute and its mutations turn them red.
+  The remaining 193 are blocked, and mostly on one thing — **`OD-008`, what the
+  assessment instant of a worked golden is.** Only one unconverted fixture states one.
+  - Those five execute and pass **against the echo oracle**. They assert a retest
+    vocabulary (`selectedApproxHours`, per-candidate `flooredHours` and others) that
+    `ALK-V2-DATA-CONTRACT.md` does not declare, so **no contract-conformant engine can
+    satisfy them as written** — they pass only because the oracle replays their own
+    expectations back. The disagreement is `OD-012` and no session may settle it: the
+    fixture side is frozen, the contract side is out of scope. It will surface as five
+    red fixtures on the first day of retest implementation.
+  - `AD-RET-001` additionally carries an unresolved question about its own input
+    (`OD-011`); the harness now names it on the fixture's line and in the coverage table
+    rather than showing an unqualified pass.
 - No V2 application runtime exists.
 - No technical stack has been selected.
 
@@ -145,6 +166,14 @@ scenarios and interim refusal behaviour. Each is a chemistry or safety judgement
 frozen canon does not contain; none may be resolved in code. Implementation may begin
 without them — every affected output refuses explicitly rather than defaulting — but the
 domain is not complete until they are closed under the Freeze-4 reopening rule.
+
+**`OD-008` blocks most of the fixture corpus becoming machine-checkable.** The engine
+interface is a function of `(eventLedger, configurationHistory, asOf)`; almost no fixture
+states an `asOf`, and choosing one decides what the fixture meant. It blocks roughly forty
+reading-series fixtures directly and every case-set expansion behind them. It does not
+block implementation starting — `DEC-020` attaches conversion to each path as it is
+built — but each path will meet it. `OD-009`, `OD-010` and `OD-011` are the smaller
+fixture-format questions behind it.
 
 **Eleven V1 owner questions arrive unowned**, recorded in
 `docs/migration/V1-OPEN-OWNER-QUESTIONS.md`. None blocks the Alk domain. One — *what is a

@@ -27,6 +27,12 @@ class FixtureOutcome:
     #: Things the harness could not evaluate, or evaluated under a caveat.
     #: Never a pass and never a failure -- a visible gap.
     notes: List[str] = field(default_factory=list)
+    #: Questions the fixture's own conversion recorded about what its input
+    #: means (`conversion.questionsRaised`). Rendered on the fixture's line and
+    #: never truncated: the harness's discipline is that a qualification is
+    #: never invisible, and a fixture whose meaning its own author flagged as
+    #: uncertain must not read as a settled pass.
+    open_questions: List[str] = field(default_factory=list)
     compared: int = 0
 
     @property
@@ -83,6 +89,9 @@ class RunReport:
     package_assertions: int = 0
     notes: List[str] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)
+    #: Conversion coverage per engine path (`coverage.CoverageReport`). Held as
+    #: `Any` so `results` stays free of harness imports and importable alone.
+    coverage: Any = None
 
     @property
     def failures(self) -> int:

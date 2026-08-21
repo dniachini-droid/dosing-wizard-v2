@@ -7,6 +7,7 @@ import json
 from typing import Any, Dict, List
 
 from . import corpus as corpus_mod
+from . import coverage as coverage_mod
 from .results import (
     FAIL,
     NOT_COVERED,
@@ -21,6 +22,133 @@ THIN = "-" * 78
 
 def _pct(n: int, d: int) -> str:
     return f"{(100.0 * n / d):.0f}%" if d else "n/a"
+
+
+def _bar(done: int, total: int, width: int = 20) -> str:
+    if not total:
+        return " " * width
+    filled = int(round(width * done / total))
+    return "#" * filled + "." * (width - filled)
+
+
+def _render_coverage(r: RunReport, w, verbose: bool) -> None:
+    """Conversion coverage per engine path.
+
+    This section adds meaning to the totals above; it does not replace them.
+    Every unconverted fixture is still named individually in NOT COVERED, and
+    this view is deliberately rendered *after* that list so a reader meets the
+    backlog before the summary of it.
+    """
+    cov = r.coverage
+    if cov is None:
+        return
+
+    w(RULE)
+    w("CONVERSION COVERAGE BY ENGINE PATH")
+    w(RULE)
+    w("Which areas of engine behaviour have executable fixtures, and which do")
+    w("not.")
+    w("")
+    w("The standing rule is that an engine path is not complete until its")
+    w("fixtures execute AND they pass AND its mutations turn them red. This")
+    w("table checks the first two clauses:")
+    w("")
+    w("  CONVERTED  every worked-example fixture on the path executes. A")
+    w("             statement about fixture shape only -- it does not mean any")
+    w("             of them passed.")
+    w("  COMPLETE   CONVERTED, and every one of them passed in this run.")
+    w("")
+    w("**The third clause is not checked here.** The mutation arm runs in a")
+    w("separate process against a reference oracle")
+    w("(tools/conformance/run-mutations.py), so this report cannot see it.")
+    w("COMPLETE therefore means two clauses of three, and a path is not done")
+    w("until the mutation run has also been read.")
+    w("")
+    w("Paths come from the `owner` column of")
+    w("traceability/alk-v2-traceability.json, joined to each fixture's")
+    w("`rulesExercised`. The harness holds no mapping of its own.")
+    w("")
+    passed = {o.fixture_id for o in r.fixtures if o.status == "PASS"}
+    questioned = {o.fixture_id for o in r.fixtures if o.open_questions}
+
+    w(
+        f"{'ENGINE PATH':<16} {'EXEC':>5} {'/':^1} {'WORKED':>6}  "
+        f"{'COVERAGE':<20}  {'PROP':>4} {'ALIAS':>5}"
+    )
+    w(THIN)
+    for p in cov.paths:
+        if p.total == 0:
+            # Rendered, not skipped. A path with no fixtures at all is the
+            # shape of "nobody has written a check for this behaviour", which
+            # is one of the more useful things this table can say.
+            w(f"{p.path:<16} {'-':>5} {'/':^1} {'-':>6}  {'(no fixtures)':<20}")
+            continue
+        if p.complete(passed):
+            mark = "  COMPLETE"
+        elif p.converted:
+            mark = "  CONVERTED"
+        else:
+            mark = ""
+        n_q = len(set(p.executable) & questioned)
+        if n_q:
+            # A path cannot be read as settled while one of the fixtures
+            # carrying it has an open question about its own input.
+            mark += f"  ({n_q} open question{'s' if n_q > 1 else ''})"
+        prop = f"{len(p.properties):>4}" if p.properties else "   -"
+        alias = f"{len(p.non_conversion):>5}" if p.non_conversion else "    -"
+        w(
+            f"{p.path:<16} {len(p.executable):>5} {'/':^1} {p.convertible_total:>6}  "
+            f"{_bar(len(p.executable), p.convertible_total):<20}  {prop} {alias}{mark}"
+        )
+    w("")
+    w("EXEC   = worked-example fixtures on this path that execute today")
+    w("WORKED = worked-example fixtures on this path in total")
+    w("PROP   = property/simulation/structural bodies on this path. These are a")
+    w("         different kind of check, not unconverted worked examples, and")
+    w("         are counted apart so the backlog is not overstated.")
+    w("ALIAS  = coverage aliases and bodies that are not fixtures yet. Neither")
+    w("         is work awaiting conversion, so neither is in the ratio. Both")
+    w("         are still named individually in NOT COVERED above.")
+    w("")
+    w("A fixture exercises several rules and so appears on every path those")
+    w("rules are owned by. The columns therefore sum to more than the corpus")
+    w("size, deliberately: this is coverage per path, not a partition of the")
+    w("corpus. The partition is the NOT COVERED section above.")
+    w("")
+
+    unattributed = cov.by_path(coverage_mod.UNATTRIBUTED)
+    if unattributed and unattributed.total:
+        w(f"{coverage_mod.UNATTRIBUTED}  ({unattributed.total} fixtures)")
+        w(f"  why: {coverage_mod.UNATTRIBUTED_REASON}")
+        ids = sorted(
+            unattributed.executable
+            + unattributed.not_executable
+            + unattributed.properties
+            + unattributed.non_conversion
+        )
+        line = "  "
+        for fid in ids:
+            if len(line) + len(fid) + 2 > 76:
+                w(line)
+                line = "  "
+            line += fid + "  "
+        if line.strip():
+            w(line)
+        w("")
+
+    if cov.unresolved_rules:
+        items = sorted(cov.unresolved_rules.items(), key=lambda kv: (-kv[1], kv[0]))
+        w(
+            f"RULE IDS NAMED BY A FIXTURE BUT ABSENT FROM THE TRACEABILITY TABLE "
+            f"({len(items)})"
+        )
+        w("  These contribute no engine path. Reported, never guessed at.")
+        shown = items if verbose else items[:10]
+        for rid, n in shown:
+            w(f"  {rid:<28} named by {n} fixture(s)")
+        if not verbose and len(items) > len(shown):
+            w(f"  ... {len(items) - len(shown)} further; run with --verbose")
+        w("")
 
 
 def render_text(r: RunReport, verbose: bool = False) -> str:
@@ -100,7 +228,23 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
             w(f"{'':<24}note: {n}")
         if not verbose and len(f.notes) > 4:
             w(f"{'':<24}note: ... {len(f.notes) - 4} further notes")
+        # Never truncated, and shown whatever the status. A fixture whose own
+        # conversion recorded a question about what its input means must not
+        # read as a settled pass -- the harness surfaces every other
+        # qualification it knows about, and this was the one it dropped.
+        for q in f.open_questions:
+            w(f"{'':<24}OPEN QUESTION: {q}")
     w("")
+    with_questions = [f.fixture_id for f in executed if f.open_questions]
+    if with_questions:
+        w(
+            f"{len(with_questions)} executed fixture(s) carry an unresolved question "
+            f"about their own input:"
+        )
+        w(f"  {', '.join(sorted(with_questions))}")
+        w("Their result is real, but what it verifies rests on a reading of the")
+        w("fixture that its converter flagged rather than settled.")
+        w("")
 
     # ---- What was NOT covered ---------------------------------------------
     w(RULE)
@@ -150,6 +294,8 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
     w(f"TOTAL EXECUTED    : {len(executed)} of {len(r.fixtures)} fixtures "
       f"({_pct(len(executed), len(r.fixtures))})")
     w("")
+
+    _render_coverage(r, w, verbose)
 
     # ---- Invariants --------------------------------------------------------
     w(RULE)
@@ -301,6 +447,29 @@ def render_json(r: RunReport) -> str:
                 for i in r.invariants
             ],
             "corpusProblems": r.corpus_problems,
+            "coverageByEnginePath": (
+                {
+                    "paths": [
+                        {
+                            "path": p.path,
+                            "executable": p.executable,
+                            "notExecutable": p.not_executable,
+                            "properties": p.properties,
+                            "nonConversion": p.non_conversion,
+                            "workedExampleTotal": p.convertible_total,
+                            "converted": p.converted,
+                            "complete": p.complete(
+                                {o.fixture_id for o in r.fixtures if o.status == "PASS"}
+                            ),
+                            "mutationClauseChecked": False,
+                        }
+                        for p in r.coverage.paths
+                    ],
+                    "rulesAbsentFromTraceability": r.coverage.unresolved_rules,
+                }
+                if r.coverage is not None
+                else None
+            ),
         },
         indent=2,
     )

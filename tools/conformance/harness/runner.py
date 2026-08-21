@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from . import checks as checks_mod
 from . import compare as compare_mod
 from . import corpus as corpus_mod
+from . import coverage as coverage_mod
 from . import data_contract as dc_mod
 from . import engine_adapter as ea
 from . import engine_checks as ec_mod
@@ -56,13 +57,45 @@ def _request_for(f: corpus_mod.Fixture, c: corpus_mod.Corpus) -> Dict[str, Any]:
     inp = f.body.get("input") or {}
     config = dict((c.config_defaults.get("configurations") or {}).get("CANON_DEFAULT") or {})
     config.update(f.body.get("config") or {})
+
+    # `configurationHistory` is the second of the interface's three arguments,
+    # and canon §518 requires the engine to resolve the version effective at
+    # `assessmentAsOf` -- so a fixture whose subject is a configuration *change*
+    # has to be able to state one. `EXECUTABLE-FIXTURE-FORMAT.md` §4.2 tells
+    # authors to prefer it over the top-level `config` for exactly that case.
+    #
+    # This previously built `[config]` unconditionally and never read the
+    # field. A fixture supplying a history would have run against a single
+    # flattened snapshot, silently, and would most likely have passed -- then
+    # stood as evidence that effective-dated configuration worked. Documenting
+    # a preferred input that nothing reads is worse than not offering it.
+    history = inp.get("configurationHistory")
+    if isinstance(history, list) and history:
+        # Each entry is merged onto CANON_DEFAULT the same way the top-level
+        # `config` is, so a history entry states only what it changes.
+        resolved = []
+        for entry in history:
+            merged = dict(
+                (c.config_defaults.get("configurations") or {}).get("CANON_DEFAULT") or {}
+            )
+            if isinstance(entry, dict):
+                merged.update(entry)
+            resolved.append(merged)
+        configuration_history = resolved
+        # The configuration in force at `asOf` is the fixture's own last entry;
+        # the harness does not re-derive it, because choosing which entry is
+        # effective is engine behaviour and canon §518 owns the rule.
+        config = dict(resolved[-1])
+    else:
+        configuration_history = [config]
+
     return {
         "op": "assess",
         "requestId": f"req-{abs(hash(f.fixture_id)) % 10**12:012d}",
         "asOf": inp.get("asOf"),
         "events": copy.deepcopy(inp.get("events") or []),
         "configuration": config,
-        "configurationHistory": [config],
+        "configurationHistory": copy.deepcopy(configuration_history),
     }
 
 
@@ -309,6 +342,11 @@ def run(
                 skipped_prose=sorted(set(prose) | set(f.unreadable_expectations)),
                 tolerance_unspecified=sorted(set(tol_unspec)),
                 notes=sorted(set(notes)),
+                open_questions=[
+                    q
+                    for q in ((f.body.get("conversion") or {}).get("questionsRaised") or [])
+                    if isinstance(q, str)
+                ],
                 compared=compared,
             )
         )
@@ -349,6 +387,13 @@ def run(
     )
     report.invariants.extend(inv_outcomes)
     report.corpus_problems.extend(inv_problems)
+
+    # Conversion coverage per engine path. Built from the traceability table's
+    # own owner column, so the harness still transcribes no mapping of its own.
+    trace_doc, trace_load_problems = checks_mod.load_traceability()
+    report.corpus_problems.extend(trace_load_problems)
+    report.coverage = coverage_mod.build(c, trace_doc)
+    report.corpus_problems.extend(report.coverage.problems)
 
     report.meta = {
         "fixtureCount": len(c.fixtures),
