@@ -665,8 +665,8 @@ recommendations use current potency (`WG-ALK-019`, `WG-ALK-020`, `WG-ALK-038`). 
 
 | Field | Unit | Notes |
 |---|---|---|
-| `postSlopeDkhPerDay` / `sigmaPost` | dKH/day | Genuine post-change clusters only; the Day-0 anchor is excluded. |
-| `preSlopeDkhPerDay` / `sigmaPre` | dKH/day | From the snapshot. |
+| `sPostDkhPerDay` / `sigmaPostDkhPerDay` | dKH/day | Genuine post-change clusters only; the Day-0 anchor is excluded. **Renamed from `postSlopeDkhPerDay` / `sigmaPost` by `DEC-023`**: five frozen fixtures assert the `sPost` spelling (`WG-ALK-007`, `WG-ALK-009`, `AD-RSP-001`, `AD-RSP-002`, `AD-RSP-003`) and `ALK-V2-REASON-CODES.md` states the `RESPONSE_*` payload as `S_post` / `sigma_post`. This is a rename rather than an addition, for the reason `DEC-022` gave: carrying both spellings would put two names on one meaning. `PotencyEvidence` keeps `preSlopeDkhPerDay` / `postSlopeDkhPerDay`, which are a **different record's** pre and post slopes and may legitimately differ from these. |
+| `sPreDkhPerDay` / `sigmaPreDkhPerDay` | dKH/day | From the snapshot. Renamed with the pair above. |
 | `expectedResponseDkhPerDay` | dKH/day | `R_exp = |ΔS_expected|` from the snapshot. |
 | `directedObservedResponseDkhPerDay` | dKH/day | `R_obs = u · (S_post − S_pre)`, `u = sign(ΔS_expected)`. |
 | `sigmaResponseDkhPerDay` | dKH/day | `√(σ_pre² + σ_post²)`. |

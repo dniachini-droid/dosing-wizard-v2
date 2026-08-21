@@ -25,11 +25,13 @@ from . import capability as cap_mod
 from . import dosing, kernel, ledger as ledger_mod, observation, retest as retest_mod
 from . import intervention as iv_mod
 from . import potency as potency_mod
+from . import response as response_mod
 from . import trajectory as traj
 from .constants import (
     ADVISORY_OFFSET,
     B_SAFETY,
     HOURS_PER_DAY,
+    MAX_CONTROL_LOOKBACK_DAYS,
     POSTCHANGE_FIRST_TEST_HOURS,
     POSTCHANGE_SECOND_TEST_HOURS,
 )
@@ -187,8 +189,20 @@ def assess(
     # 3 — POSITION ---------------------------------------------------------
     pos = observation.position(eps, cfg)
 
+    # 5 — SEGMENT -----------------------------------------------------------
+    # `ALK-007` / Part II §13: a maintenance dose change is a hard boundary for
+    # the TRAJECTORY and CONSUMPTION inferences. The current-control segment is
+    # the most recent clean one, and it starts after the latest dose change at
+    # or before `asOf` -- fitting one line across a dose change would average
+    # the tank's behaviour under two different regimes and call the result its
+    # trajectory. The 14-day cap applies on top, and is never extended because
+    # evidence is sparse.
+    segment_eps, segment_codes = _segment(eps, led, as_of)
+    for code, payload in segment_codes:
+        codes.append(Code(code, **payload))
+
     # 6 — INDEPENDENCE ------------------------------------------------------
-    accepted, not_accepted = observation.select_independent(eps)
+    accepted, not_accepted = observation.select_independent(segment_eps)
     if not_accepted:
         codes.append(
             Code(
@@ -227,7 +241,7 @@ def assess(
     sup = traj.supported_slope(obs.slope, obs.sigma_s) if obs is not None else None
 
     # 12 — RAPID -----------------------------------------------------------
-    rapid = traj.rapid(eps, known_events_explain=bool(hard_confounders))
+    rapid = traj.rapid(segment_eps, known_events_explain=bool(hard_confounders))
     if rapid.confirmed:
         codes.append(
             Code(
@@ -463,6 +477,26 @@ def assess(
         )
     )
 
+    # 13 — RESPONSE --------------------------------------------------------
+    # Stage three. The classifier reads the immutable snapshot and the two
+    # windows the intervention module built; it never recomputes the prediction
+    # and never sees the current potency.
+    #
+    # The *latest* intervention is the one the result reports, because that is
+    # the one a keeper is asking about. Every intervention is still assessed --
+    # an earlier one that reached a terminal class stays terminal -- and the
+    # audit list carries them all.
+    assessments = [
+        (iv, response_mod.assess(iv, pos.a_now, cfg)) for iv in interventions
+    ]
+    if assessments:
+        _, latest_assessment = assessments[-1]
+        response_payload = latest_assessment.payload()
+        for code, payload in latest_assessment.codes:
+            codes.append(Code(code, **payload))
+    else:
+        response_payload = NOT_RUN
+
     # 14 — SAFETY (state only; the safety RETURN is out of this build) ------
     safety, safety_withheld = _safety(pos, cfg, codes, as_of)
     withheld_outputs.extend(safety_withheld)
@@ -506,7 +540,11 @@ def assess(
         retest=retest_mod.render(decision, as_of),
         delivery=delivery,
         safety=safety,
-        active_intervention=_active(interventions),
+        active_intervention=_active(
+            interventions,
+            {iv.intervention_id: a.classification for iv, a in assessments},
+        ),
+        response=response_payload,
         return_plan_offer=return_plan_offer,
         return_plan_eligible=return_plan_eligible,
     )
@@ -549,6 +587,65 @@ def assess(
 
 
 
+def _segment(eps, led, as_of):
+    """The most recent clean current-control segment — `A5`, `ALK-007`.
+
+    Boundaries this build observes: the latest maintenance dose change at or
+    before `asOf`, and the 14-day lookback cap. Every other boundary source
+    Part II §13 lists is reported as a confounder by `_hard_confounders` and
+    holds the recommendation rather than silently trimming the window.
+
+    **Never extend the cap because evidence is sparse** (Part II §1.3), and never
+    fall back to an older segment: a sparse recent segment is the truth about a
+    tank that has not been tested, and reaching further back to find three
+    readings would answer a question about last fortnight with data from last
+    month.
+    """
+    codes = []
+    start = None
+    changes = [
+        e
+        for e in led.of_kind("DOSE_CHANGE")
+        if e.at is not None and e.at.epoch_seconds <= as_of.epoch_seconds
+    ]
+    if changes:
+        boundary = max(changes, key=lambda e: e.at.epoch_seconds)
+        start = boundary.at
+        codes.append(
+            (
+                "SEGMENT_BOUNDARY_DOSE_CHANGE",
+                {
+                    "doseStateId": boundary.event_id or f"IV-{boundary.at.text}",
+                    "effectiveAt": boundary.at.text,
+                },
+            )
+        )
+    cap = kernel.plus_hours(as_of, -MAX_CONTROL_LOOKBACK_DAYS * HOURS_PER_DAY)
+    if start is None or cap.epoch_seconds > start.epoch_seconds:
+        start = cap
+    inside = [e for e in eps if e.at.epoch_seconds > start.epoch_seconds]
+    if len(inside) < len(eps):
+        codes.append(
+            (
+                "SEGMENT_LOOKBACK_NOT_EXTENDED",
+                {"spanDays": MAX_CONTROL_LOOKBACK_DAYS, "capDays": MAX_CONTROL_LOOKBACK_DAYS},
+            )
+        )
+    codes.append(
+        (
+            "SEGMENT_SELECTED",
+            {
+                "segmentId": f"SEG-{start.text}",
+                "startAt": start.text,
+                "endAt": as_of.text,
+                "spanDays": elapsed_days(start, as_of),
+                "lookbackCapDays": MAX_CONTROL_LOOKBACK_DAYS,
+            },
+        )
+    )
+    return inside, codes
+
+
 def _potency_at(cfg):
     """`(potency, contextId, confidence)` as they stood at a given instant.
 
@@ -579,7 +676,7 @@ def _discrepancy_band(m: float) -> str:
     return "LARGE"
 
 
-def _active(interventions) -> Any:
+def _active(interventions, attributions) -> Any:
     """The intervention still open at `asOf`, or `NONE`.
 
     `NONE` is a first-class value: no intervention is a fact about the tank, not
@@ -593,6 +690,7 @@ def _active(interventions) -> Any:
     if not live:
         return NONE
     iv = live[-1]
+    kw_attribution = attributions.get(iv.intervention_id, NOT_RUN)
     return {
         "interventionId": iv.intervention_id,
         "interventionType": "MAINTENANCE_DOSE_CHANGE",
@@ -600,6 +698,7 @@ def _active(interventions) -> Any:
         "newDoseMlPerDay": iv.new_dose if iv.new_dose is not None else UNKNOWN,
         "actualStartTime": iv.at.text,
         "phase": iv.phase,
+        "responseAttribution": kw_attribution,
         "anchorRelationAmbiguous": iv.anchor_relation_ambiguous,
         "exposureFraction": "NOT_RUN",
         "predictionSnapshot": iv.snapshot.payload(),
@@ -1219,7 +1318,7 @@ def _assemble(**kw) -> Dict[str, Any]:
         "potency": kw["potency"],
         "doseRecommendation": recommendation,
         "activeIntervention": kw["active_intervention"],
-        "responseAssessment": NOT_RUN,
+        "responseAssessment": kw["response"],
         "returnPlan": NONE,
         "safety": kw["safety"] if "safety" in kw else {},
         "retest": kw["retest"],

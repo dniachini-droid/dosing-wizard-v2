@@ -85,12 +85,12 @@ Phase 0 — Preserve and found V2
   those checks, and eleven fixtures whose expectations the first engine showed to be
   wrong, unsatisfiable or out of the built scope — each one recorded as an open owner
   decision rather than worked around.
-  **The mutation set is GREEN**: 76 mutations defined, 66 caught, 0 missed, 10 blocked
-  with their unblocking conditions stated. Twenty-three of them are new engine mutations
+  **The mutation set is GREEN**: 80 mutations defined, 69 caught, 0 missed, 11 blocked
+  with their unblocking conditions stated. Twenty-seven of them are new engine mutations
   under `DEC-020` clause 3.
 - An **executable fixture format** is defined in
-  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **22 of 204
-  fixtures execute** and 11 pass. The eleven conversions the engine work added are
+  `docs/implementation/alk-v2/fixtures/EXECUTABLE-FIXTURE-FORMAT.md`. **23 of 204
+  fixtures execute** and 12 pass. The eleven conversions the engine work added are
   reading-series fixtures on the trend, uncertainty, support, consumption and maintenance
   paths, each taking its assessment instant from `DEC-021`. The paragraph below records
   the state before that; the counts in it are historical.
@@ -127,6 +127,11 @@ Phase 0 — Preserve and found V2
   - **Stage two — potency learning — is built and remains `CAPABILITY_GATED`** as
     `ALK-POTENCY-CAPABILITY-GATE-001` states. While gated the learner still observes and
     reports what it would conclude; what the gate withholds is the promotion.
+  - **Stage three — response classification — is built**: the six deterministic classes,
+    the terminal and non-terminal states, the three eligibility gates, and the
+    **immutable prediction snapshot captured at the instant of the dose change**. A dose
+    change whose pre-change state cannot be recovered is permanently unclassifiable and
+    says so, which is the failure this stage exists to stop happening to new data.
   - Safety returns and outer-bound *handling*, correction and return plans, and every
     capability and refusal branch not reachable on these paths are **deliberately
     unbuilt**, and each presents as the canon's stated `NOT_RUN` / `WITHHELD` with its

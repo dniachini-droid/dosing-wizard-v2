@@ -194,6 +194,62 @@ def _toward_range_gate_removed(**kwargs):
     return _ORIGINAL["recommend"](**kwargs)
 
 
+
+def _band_from_post_only(r_obs, r_exp, b):
+    """Left in place; the band sabotage is applied to the K constant instead."""
+    return _ORIGINAL["classify"](r_obs, r_exp, b)
+
+
+def _reuse_day_zero_anchor(led, episodes, as_of, potency_at, confounders):
+    """Let the Day-0 anchor be a post-change observation as well as the anchor.
+
+    `AUDIT-013` / Part II §31: the anchor may start the first new-dose interval
+    but is never a post-change observation. Reusing it in both slopes correlates
+    their errors, and the classifier then compares two numbers that share a
+    reading.
+    """
+    out = _ORIGINAL["build"](led, episodes, as_of, potency_at, confounders)
+    for iv in out:
+        latest_pre = [
+            e for e in episodes if e.at.epoch_seconds < iv.at.epoch_seconds
+        ]
+        if not latest_pre or not iv.post.episodes:
+            continue
+        anchor = max(latest_pre, key=lambda e: e.at.epoch_seconds)
+        iv.post = _rebuild_window([anchor] + iv.post.episodes)
+    return out
+
+
+def _rebuild_window(eps):
+    import alk_v2.intervention as iv_mod
+    import alk_v2.trajectory as traj
+
+    w = iv_mod.Window(episodes=eps)
+    obs = traj.trend(eps)
+    if obs is not None:
+        obs = traj.uncertainty(obs, eps)
+    w.observed = obs
+    return w
+
+
+def _sigma_response_post_only(iv, a_now, cfg):
+    """Build the response band from sigma_post alone, dropping sigma_pre.
+
+    `ALK-RESPONSE-CLASSIFIER-001`: `sigma_response = sqrt(sigma_pre^2 +
+    sigma_post^2)`. Dropping either term narrows the band and makes the engine
+    claim a separation the two windows together cannot support.
+    """
+    import alk_v2.response as response
+
+    saved = response.ALK_RESPONSE_K
+    a = _ORIGINAL["assess"](iv, a_now, cfg)
+    if "sigmaPreDkhPerDay" in a.metrics and "sigmaPostDkhPerDay" in a.metrics:
+        sigma_post = a.metrics["sigmaPostDkhPerDay"]
+        a.metrics["sigmaResponseDkhPerDay"] = sigma_post
+        a.metrics["responseBandDkhPerDay"] = saved * sigma_post
+    return a
+
+
 #: Filled by `run-mutations.py` before any engine mutation runs, so a sabotage
 #: can delegate to the real implementation.
 _ORIGINAL: Dict[str, Any] = {}
@@ -213,6 +269,9 @@ ORIGINAL_TARGETS = {
     "schedule": "alk_v2.retest:schedule",
     "movement_evidence": "alk_v2.trajectory:movement_evidence",
     "recommend": "alk_v2.dosing:recommend",
+    "classify": "alk_v2.response:classify",
+    "build": "alk_v2.intervention:build",
+    "assess": "alk_v2.response:assess",
 }
 
 
@@ -635,6 +694,85 @@ ENGINE_MUTATIONS: List[Mutation] = [
             "an event ledger. Converting it is ordinary conversion work under "
             "§10 and is not blocked on an owner decision; it is blocked only on "
             "this run's budget, and it is the first potency fixture to convert."
+        ),
+    ),
+    Mutation(
+        mid="E-24",
+        title="Build the response band from sigma_post alone",
+        defect_class="response classifier / band",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="sigma_response drops the sigma_pre term",
+        guards=(
+            "ALK-RESPONSE-CLASSIFIER-001's band. Both windows contribute "
+            "uncertainty to the comparison; dropping one narrows the band and "
+            "lets the engine claim a separation the evidence does not support."
+        ),
+        expect_red=["fixture:AD-RSP-001"],
+        expect_mechanism="responseBandDkhPerDay",
+        hooks={"alk_v2.response:assess": _sigma_response_post_only},
+    ),
+    Mutation(
+        mid="E-25",
+        title="Reuse the Day-0 anchor as a post-change observation",
+        defect_class="response window / correlated errors",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="the latest pre-change episode is prepended to the post window",
+        guards=(
+            "AUDIT-013 and Part II §31: non-overlapping windows are mandatory. "
+            "The anchor may start the first new-dose interval and is never a "
+            "post-change observation; reusing it correlates the two slopes' "
+            "errors, so the classifier compares two numbers sharing a reading."
+        ),
+        expect_red=["fixture:AD-RSP-001"],
+        expect_mechanism="sPostDkhPerDay",
+        hooks={"alk_v2.intervention:build": _reuse_day_zero_anchor},
+    ),
+    Mutation(
+        mid="E-26",
+        title="Change the response K from 1.28",
+        defect_class="response classifier / K",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="ALK_RESPONSE_K becomes 1.0",
+        guards=(
+            "ALK-RESPONSE-CLASSIFIER-001's constant. It is the same 1.28 the "
+            "supported slope uses and it is frozen; a different value silently "
+            "moves every boundary between the six classes at once."
+        ),
+        expect_red=["fixture:AD-RSP-001"],
+        expect_mechanism="responseBandDkhPerDay",
+        hooks={"alk_v2.response:ALK_RESPONSE_K": 1.0},
+    ),
+    Mutation(
+        mid="E-27",
+        title="Re-benchmark a response against the CURRENT potency",
+        defect_class="prediction snapshot immutability",
+        status=BLOCKED,
+        target=ENGINE,
+        sabotage="expectedSlopeChange is recomputed from the potency in force now",
+        guards=(
+            "ALK-PREDICTION-SNAPSHOT-001 and WG-ALK-019 / WG-ALK-020. A later "
+            "recalibration changes current and future calculations only. An "
+            "intervention that goes on to contribute a potency observation must "
+            "not have its own benchmark rewritten by that observation -- that is "
+            "circular self-validation, and it makes every dose change look "
+            "correct in hindsight."
+        ),
+        expect_red=["fixture:WG-ALK-019"],
+        expect_mechanism="expectedSlopeChange",
+        hooks={},
+        unblocks_when=(
+            "a converted fixture carries a dose change AND a later potency "
+            "change. `WG-ALK-019` and `WG-ALK-038` are the fixtures for exactly "
+            "this claim and both state it qualitatively -- `atInterventionCreation` "
+            "/ `laterRecalibration`, `predictedUsingConcentrationGPerL` / "
+            "`actualConcentrationGPerL` -- rather than as a ledger. Under this "
+            "build the potency learner is capability-gated, so the potency in "
+            "force never moves and the sabotage would change no number even with "
+            "such a fixture: it needs the gate open too. Both conditions are "
+            "stated so neither is quietly forgotten."
         ),
     ),
 ]
