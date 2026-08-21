@@ -31,10 +31,13 @@
     "tolerance": "overrides the default tolerance if the fixture needs one"
   },
   "defaultTolerance": {
+    "$comment": "`days` and `hours` were added when the first engine produced real durations. ALK-V2-IMPLEMENTATION-CONTRACT.md section 7 states 1e-9 on quantities and 1e-12 only on dimensionless ratios; a duration is a quantity, and with no entry the harness fell back to the strictest value in this table (1e-12) against goldens written to nine decimals, which no correct engine can meet. The gap was invisible while no engine existed.",
     "dkh": 1e-9,
     "dkhPerDay": 1e-9,
     "mlPerDay": 1e-9,
     "ml": 1e-9,
+    "days": 1e-9,
+    "hours": 1e-9,
     "dimensionless": 1e-12,
     "enumsAndReasonCodes": "exact",
     "recommendations": "exact after rounding"

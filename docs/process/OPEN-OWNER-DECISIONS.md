@@ -75,7 +75,10 @@ more than a tidy file.
 
 ## OD-008 — What is the assessment instant of a worked golden?
 
-- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** OPEN
+- **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** CLOSED — see `DEC-021` (2026-08-21)
+- **Decided:** option 1. Where a fixture states no assessment instant, `asOf` is the
+  instant of the last `READING` in its ledger; a fixture that states its own keeps it.
+  The original analysis is preserved below as it was written.
 - **Blocks:** roughly forty reading-series fixtures, all six `NO_ASOF` fixtures, and
   every case-set expansion. It is the single largest blocker on making the corpus
   machine-checkable.
@@ -287,7 +290,10 @@ field.
 
 ## OD-012 — Which vocabulary owns the retest decision: the data contract's, or the fixtures'?
 
-- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** OPEN
+- **Raised:** 2026-08-21 · **By:** executable-fixture-format run, test-engineer review · **Status:** CLOSED — see `DEC-022` (2026-08-21)
+- **Decided:** option 1. The contract gains the vocabulary the five fixtures assert. The
+  original analysis is preserved below as it was written; what was actually added is
+  listed in `ALK-V2-DATA-CONTRACT.md` §8 `RetestDecision`.
 - **Blocks:** whether `AD-RET-001..005` can pass against a real engine. Nothing today.
 
 **The question, in plain language**

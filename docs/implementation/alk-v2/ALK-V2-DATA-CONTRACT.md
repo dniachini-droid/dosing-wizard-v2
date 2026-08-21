@@ -746,15 +746,26 @@ pump cannot be changed (`ALK-SAFETY-RETURN-INTEGRATION-001` §10).
 
 ```text
 RetestDecision {
-  action              REPEAT_NOW | TEST_AT | ROUTINE
+  selectedAction      REPEAT_NOW | TEST_AT | ROUTINE
   earliestUsefulAt    Instant
   recommendedAt       Instant
   latestSafeAt        Instant   OPT
   reasonCode          RetestReason      the selected candidate's code
+  selectedReasonCode  RetestReason      the same code, under the name the frozen
+                                        fixtures assert
   tiedReasonCodes[]   RetestReason[]    every OTHER candidate tying on the selected
                                         time; reason codes are additive, so a tie is
                                         recorded rather than broken (ALK-053A)
-  candidateTimes[]    { candidateClass, at, included|excluded, reason }
+  selectedApproxHours hours             the selected candidate's interval from asOf
+  observationCeilingHours   hours       the ~Day-4 ordinary observation ceiling in force
+  observationFloorApplied   boolean     whether the signal candidate's own floor bound
+  tSignalDays         days              raw T_signal, before its own floor and the ceiling
+  tSignalRawHours     hours             the same quantity in hours
+  tSignalHours        hours             the same quantity again, under the other name the
+                                        frozen fixtures use for it
+  tBoundaryDays       days              T_outer - 1.0, the forecast candidate's lead
+  candidateTimes[]    { candidateClass, at, included|excluded, reason,
+                        approxHours, rawHours, flooredHours, clampedHours, boundSide }
   candidatesNotRun[]  reason codes for canonically NOT_RUN candidate classes
                       (T_detect, return-plan arrival cadence)
   clampsApplied[]     RETEST_OBSERVATION_CEILING_APPLIED | RETEST_SIGNAL_FLOOR_APPLIED
@@ -766,15 +777,56 @@ One scheduler owns final next-test timing (`X-INV-004`). A notification surface 
 `recommendedAt`, `earliestUsefulAt`, `latestSafeAt` and `reasonCode` and must not compute
 any of them.
 
+#### What owner decision `DEC-022` added here, exhaustively
+
+`OD-012` recorded that `AD-RET-001`…`AD-RET-005` assert a vocabulary this record did not
+declare, so no contract-conformant engine could satisfy them. `DEC-022` closes it by
+extending the record. **This is the complete list; nothing else was added.**
+
+| Added | Where | Unit | What it is |
+|---|---|---|---|
+| `selectedApproxHours` | `RetestDecision` | hours | `recommendedAt − assessmentAsOf`. The same decision `recommendedAt` already states, as an interval. |
+| `selectedReasonCode` | `RetestDecision` | — | Identical in value to `reasonCode`, under the fixtures' name. |
+| `observationCeilingHours` | `RetestDecision` | hours | The ordinary-observation ceiling in force (96 h, `ALK-053`). |
+| `observationFloorApplied` | `RetestDecision` | — | Whether the `SIGNAL_ACCUMULATION` candidate's own 24 h floor bound. |
+| `approxHours` | `candidateTimes[]` | hours | That candidate's final interval, after its own formula's floor and after the ceiling. |
+| `rawHours` | `candidateTimes[]` | hours | That candidate's interval before its own floor. |
+| `flooredHours` | `candidateTimes[]` | hours | Its interval after the floor inside its own formula, before the ceiling. |
+| `clampedHours` | `candidateTimes[]` | hours | Its interval after the ordinary-observation ceiling. |
+| `boundSide` | `candidateTimes[]` | — | `OUTER_MIN` \| `OUTER_MAX`, for the forecast candidate. |
+| `tSignalDays` | `RetestDecision` | days | Raw `T_signal = 0.10 / \|S_supported\|`, before its own floor and before the ceiling. |
+| `tSignalRawHours` | `RetestDecision` | hours | The same quantity in hours. |
+| `tSignalHours` | `RetestDecision` | hours | The same quantity again: `AD-RET-002` calls it `tSignalRawHours` and `AD-RET-003` calls it `tSignalHours`, both meaning raw. Both names are declared and carry one value, because the fixtures are frozen and an engine that emitted only one of them would fail the other. |
+| `tBoundaryDays` | `RetestDecision` | days | `T_outer − 1.0`: the forecast candidate's 24 h safety lead, before it is converted to an instant. |
+
+Two of these are **renames rather than additions**, and the reason is mechanical rather
+than editorial. The harness resolves a fixture's expectation by field name across the whole
+`EngineResult`, which `INV-B7` / `ALK-VARIABLE-SEMANTICS-001` justify by making one name
+carry one meaning. Two names in this contract carried two:
+
+- `action` named both `RetestDecision`'s scheduling action and `DoseRecommendation.action`,
+  which is a `RecommendationAction` and normally differs. Any engine emitting both makes
+  every fixture asserting `action` unresolvable. `RetestDecision`'s is now
+  `selectedAction`, which is also the name the five fixtures use, so the disambiguation and
+  the extension are the same edit.
+- `reasonCode` named both the retest decision's selected code and `CapabilityState`'s.
+  `WG-ALK-001` and `WG-ALK-006` assert the retest one under the bare name, so it stays;
+  `CapabilityState`'s is renamed below.
+
+`Hours` is deliberately **not** added to §0's dimension-suffix vocabulary. These fields are
+the scheduler's own audit arithmetic over an elapsed duration whose canonical form stays
+`...At`, and adding a tenth suffix would license hour-valued twins of every instant in the
+contract.
+
 ### `CapabilityState` `DERIVED`
 
 ```text
 CapabilityState {
-  capabilityId      M-1 .. M-13
-  present           true | false
-  outcome           OK | DEGRADE | REFUSE | NOT_RUN
-  affectedOutputs[] the specific outputs withheld or degraded
-  reasonCode
+  capabilityId            M-1 .. M-13
+  present                 true | false
+  outcome                 OK | DEGRADE | REFUSE | NOT_RUN
+  affectedOutputs[]       the specific outputs withheld or degraded
+  capabilityReasonCode    renamed from `reasonCode` by DEC-022; see RetestDecision above
 }
 ```
 

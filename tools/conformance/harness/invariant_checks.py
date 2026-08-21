@@ -200,7 +200,7 @@ def _executable_requests(c: corpus_mod.Corpus) -> List[Tuple[str, Dict[str, Any]
                 {
                     "op": "assess",
                     "requestId": f"req-{abs(hash(f.fixture_id)) % 10**12:012d}",
-                    "asOf": inp.get("asOf"),
+                    "asOf": f.resolved_as_of,
                     "events": copy.deepcopy(inp.get("events") or []),
                     "configuration": cfg,
                     "configurationHistory": [cfg],

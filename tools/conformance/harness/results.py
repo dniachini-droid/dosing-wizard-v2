@@ -34,6 +34,10 @@ class FixtureOutcome:
     #: uncertain must not read as a settled pass.
     open_questions: List[str] = field(default_factory=list)
     compared: int = 0
+    #: `DEC-021` supplied this fixture's assessment instant because the fixture
+    #: states none. Rendered on the fixture's line so that a derived instant is
+    #: never mistaken for one the fixture chose.
+    as_of_derived: bool = False
 
     @property
     def counts_as_failure(self) -> bool:

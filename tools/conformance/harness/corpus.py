@@ -56,6 +56,13 @@ NO_INPUT = "NO_INPUT"
 PROPERTY_FIXTURE = "PROPERTY_FIXTURE"
 UNPARSEABLE = "UNPARSEABLE"
 
+#: `DEC-021`. Reported distinctly from a stated instant, and named on the
+#: fixture's own line, so a derived `asOf` never reads as one the fixture chose.
+CLASS_REASON_AS_OF_DERIVED = (
+    "carries an event ledger; asOf derived under DEC-021 as the instant of its "
+    "last READING"
+)
+
 CLASS_ORDER = (
     EXECUTABLE,
     NO_ASOF,
@@ -68,7 +75,11 @@ CLASS_ORDER = (
 
 CLASS_REASON = {
     EXECUTABLE: "carries an event ledger and an asOf; can be run against an engine",
-    NO_ASOF: "carries an event ledger but no asOf; the harness will not choose one",
+    NO_ASOF: (
+        "carries an event ledger with no asOf and no READING carrying an absolute "
+        "instant, so DEC-021's default instant has nothing to name; the harness "
+        "will not choose one"
+    ),
     ABSTRACT_INPUT: "input is a scenario description, not an event ledger",
     CROSS_REFERENCE: "no input of its own; defers to another fixture via equivalentTo",
     NO_INPUT: "no input and no cross-reference; nothing to submit to an engine",
@@ -94,6 +105,24 @@ class Fixture:
     klass: str
     reason: str
     unreadable_expectations: List[str] = field(default_factory=list)
+
+    @property
+    def resolved_as_of(self) -> Optional[str]:
+        """The engine's third argument: stated, or `DEC-021`'s default."""
+        inp = self.body.get("input")
+        if not isinstance(inp, dict):
+            return None
+        stated = inp.get("asOf")
+        if isinstance(stated, str) and stated:
+            return stated
+        return default_as_of(inp)
+
+    @property
+    def as_of_derived(self) -> bool:
+        inp = self.body.get("input")
+        if not isinstance(inp, dict):
+            return False
+        return not inp.get("asOf") and default_as_of(inp) is not None
 
     @property
     def provenance_class(self) -> str:
@@ -192,13 +221,82 @@ class Corpus:
         return (self.index.get("totals") or {}).get("fixtures")
 
 
+#: The absolute-time field each event kind carries, per
+#: `EXECUTABLE-FIXTURE-FORMAT.md` §4.1. An event array whose elements carry none
+#: of these is a scenario description in event-shaped clothing (`atDay: 0`,
+#: `fromDay: 1`), not a ledger an engine can read.
+_ABSOLUTE_TIME_FIELDS = (
+    "measuredAt",
+    "effectiveAt",
+    "occurredAt",
+    "startAt",
+    "fromAt",
+)
+
+
 def _looks_like_event_ledger(inp: Any) -> bool:
+    """An event ledger, not a scenario that happens to use the word `events`.
+
+    Having a `kind` was the whole test until `DEC-021`, and it was too weak in a
+    way that mattered the moment a default `asOf` existed. Six fixtures write
+    `{"kind": "DOSE_CHANGE", "atDay": 0, "from": 9.0, "to": 10.0}` -- an event
+    vocabulary the format does not declare, with a relative day where an instant
+    belongs. Under the old test they classified `NO_ASOF`, which read as "one
+    field away from executable". Applying the default instant to them would have
+    made them `EXECUTABLE`, submitted them to an engine that cannot read `atDay`,
+    and turned an honest refusal into a silent failure.
+
+    So an element must carry at least one of the absolute-time fields §4.1
+    declares for its kind.
+    """
     if not isinstance(inp, dict):
         return False
     events = inp.get("events")
     if not isinstance(events, list) or not events:
         return False
-    return all(isinstance(e, dict) and "kind" in e for e in events)
+    if not all(isinstance(e, dict) and "kind" in e for e in events):
+        return False
+    return all(any(k in e for k in _ABSOLUTE_TIME_FIELDS) for e in events)
+
+
+def default_as_of(inp: Any) -> Optional[str]:
+    """`DEC-021`: the instant of the last `READING` in the ledger.
+
+    Returns `None` where the ledger holds no reading carrying an absolute
+    instant -- there is then no "moment of the last reading" for the rule to
+    name, and the harness refuses rather than choosing one, exactly as it did
+    for every fixture before `DEC-021`.
+
+    A `READING_SERIES` is deliberately **not** expanded here to find its last
+    instant. Expansion has no owner (`OD-014`) and writing a fourth expander to
+    answer a scheduling question would be the third implementation of one
+    inference. Both `READING_SERIES` fixtures in the corpus state their own
+    `asOf`, so nothing is blocked by declining.
+    """
+    if not isinstance(inp, dict):
+        return None
+    latest = None
+    for e in inp.get("events") or []:
+        if not isinstance(e, dict) or e.get("kind") != "READING":
+            continue
+        at = e.get("measuredAt")
+        if not isinstance(at, str):
+            continue
+        key = _instant_sort_key(at)
+        if key is None:
+            continue
+        if latest is None or key > latest[0]:
+            latest = (key, at)
+    return latest[1] if latest else None
+
+
+def _instant_sort_key(text: str):
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        return None
 
 
 def _unreadable_expectations(body: Dict[str, Any]) -> List[str]:
@@ -282,6 +380,8 @@ def _classify(body: Dict[str, Any], source_file: str) -> tuple:
     if _looks_like_event_ledger(inp):
         if inp.get("asOf"):
             return EXECUTABLE, CLASS_REASON[EXECUTABLE]
+        if default_as_of(inp) is not None:
+            return EXECUTABLE, CLASS_REASON_AS_OF_DERIVED
         return NO_ASOF, CLASS_REASON[NO_ASOF]
     return ABSTRACT_INPUT, CLASS_REASON[ABSTRACT_INPUT]
 

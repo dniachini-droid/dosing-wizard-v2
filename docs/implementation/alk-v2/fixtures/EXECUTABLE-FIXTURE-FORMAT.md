@@ -53,19 +53,29 @@ six state an assessment instant.** `AD-RET-001`…`AD-RET-005` state
 states one, anywhere in its body.
 
 `asOf` is not a free parameter. Evidence windows, staleness, every retest
-candidate and the resolved configuration version all move with it. Choosing one
-decides what the fixture meant.
+candidate and the resolved configuration version all move with it.
 
-Neither `ALK-V2-IMPLEMENTATION-CONTRACT.md`, `ALK-V2-DATA-CONTRACT.md` nor
-Part III of the canon states how to choose it — Part III writes its inputs as
-"Day 0 / Day 2 / Day 4" and stops. So **this format requires an explicit
-`asOf`, and a fixture that does not state one cannot be converted.** That is
-recorded as an open owner question, not settled here (`OD-008`, below).
+**`DEC-021` states the rule.** Where a fixture states no assessment instant,
+`asOf` **is the instant of the last `READING` in its ledger**. A fixture that
+states its own `asOf` keeps it; the stated value always wins.
 
-Worth the owner's attention when answering: all six currently-executable
-fixtures set `asOf` to their **last reading instant**, six times out of six.
-That is evidence, not authority. One sentence in canon would unblock roughly
-forty fixtures.
+So a conversion supplies `asOf` by applying a stated rule, not by deciding what
+the fixture meant. It records that it did so:
+
+```jsonc
+"conversion": { "asOfSource": "DEC-021" }        // omitted where the fixture states one
+```
+
+The rule needs a reading to point at. A ledger with no `READING` carrying an
+absolute instant has no "moment of the last reading", and such an input is not
+an event ledger at all — see §9.
+
+This paragraph previously read *"this format requires an explicit `asOf`, and a
+fixture that does not state one cannot be converted"*, and recorded the question
+as `OD-008`. The owner has since decided it. The six-for-six habit of the
+already-executable fixtures was corroboration, not the argument: the argument is
+that a reading is entered and the assessment is produced immediately, which is
+what the application does.
 
 ## 3. Three document types, and one record that is not a fixture
 
@@ -252,22 +262,18 @@ Consequences, all of them enforced by existing harness behaviour:
 > The five converted retest fixtures assert `selectedApproxHours`,
 > `selectedReasonCode`, `selectedAction`, `observationCeilingHours`,
 > `observationFloorApplied` and the per-candidate `rawHours` / `flooredHours` /
-> `clampedHours` / `approxHours` / `boundSide`. **None of these is in
-> `ALK-V2-DATA-CONTRACT.md`'s `RetestDecision`**, which states the decision in
-> instants (`recommendedAt`, `at`) rather than hours. Against a
-> contract-conformant engine, every one of them resolves to *"no field of that
-> name"* and all five fixtures fail.
+> `clampedHours` / `approxHours` / `boundSide`. None of these was in
+> `ALK-V2-DATA-CONTRACT.md`'s `RetestDecision`, so against a contract-conformant
+> engine every one of them resolved to *"no field of that name"* and all five
+> fixtures failed. **`DEC-022` closed that — `OD-012` option 1 — and the contract
+> now declares all ten.** What was added is listed exhaustively in the contract
+> itself.
 >
-> They pass today only because the echo oracle replays each fixture's own
-> expectations back at it, so the vocabulary never has to exist. This is the
-> clearest thing the oracle cannot do for us, and it is worth knowing before
-> trusting a green run.
->
-> The disagreement is `OD-012` and no session may settle it: the fixture side is
-> frozen content this format forbids a conversion to touch, and the contract
-> side is the alk-v2 package. **When converting, do not silently invent a
-> vocabulary to bridge it** — assert what the fixture asserts, and if that name
-> is undeclared, say so in `conversion.questionsRaised`.
+> The general point outlives the instance and still governs conversions: **do not
+> silently invent a vocabulary to bridge a gap** — assert what the fixture
+> asserts, and if that name is undeclared, say so in
+> `conversion.questionsRaised`. It was inert while the fixtures could not
+> execute; an expectation nothing compares can disagree with anything.
 
 **Demotion rule.** A conversion may move a prose expectation into `derivation`
 **only when the whole of what the sentence asserts is already asserted by named
@@ -384,7 +390,12 @@ commit, and every difference must be a key named in `prosePromoted`.
 Absolute rules. If a conversion needs one of these, it stops and records a
 question instead.
 
-1. **`asOf`.** Not derivable (§2).
+1. ~~**`asOf`.** Not derivable (§2).~~ **Superseded by `DEC-021`.** `asOf` is now
+   supplied by a stated rule where the fixture omits one — the instant of the last
+   `READING` in its ledger — and the conversion records `asOfSource: "DEC-021"`.
+   It remains true that a conversion may not *choose* an instant: any instant
+   other than the one `DEC-021` names is still a decision about what the fixture
+   meant, and is still forbidden.
 2. **Any reading value.** `WG-ALK-049` states `readingDays: [0, 10, 20]` with no
    values; inventing three readings invents the trend.
 3. **Any threshold, band edge, rate limit, tolerance, noise floor, cadence,
@@ -500,11 +511,21 @@ Stated plainly, because a format's limits are part of the format. None of these
 is fixed by a better format; each needs a value only the owner or the canon can
 supply.
 
-### Reading series (40) — blocked on `asOf` alone
-Vocabulary is mechanical (§2). 34 of the 40 state no assessment instant. Six do,
-and five of those are convertible today. `WG-ALK-049` additionally states
-reading *days* with no reading *values*.
-**Question:** `OD-008`.
+### Reading series (40) — unblocked by `DEC-021`
+Vocabulary is mechanical (§2). 34 of the 40 state no assessment instant, and
+`DEC-021` now supplies one: the instant of the last `READING`. `WG-ALK-049`
+remains blocked for a different reason — it states reading *days* with no reading
+*values*, and §5 rule 2 forbids inventing them.
+
+**A ledger of relative days is not a ledger.** Six fixtures were classed
+`NO_ASOF` because their `input.events` array looked like an event ledger — every
+element had a `kind`. Their elements carry `atDay: 0`, `fromDay: 1`,
+`occurredAtDay`, not `measuredAt` / `effectiveAt` / `occurredAt`, so no engine
+can read them and there is no reading instant for `DEC-021` to take. They are
+scenario descriptions in event-shaped clothing and the harness now classes them
+`ABSTRACT_INPUT`, which is what they always were. Converting them means writing
+absolute instants, which is ordinary conversion work under §10, not a default
+anyone may apply.
 
 ### Precomputed intermediate (32) — the wrong target, and forcing it would lie
 The input *is* a Layer-2/3 output. `WG-ALK-009` supplies
@@ -561,8 +582,11 @@ conversion.
 For a reading-series fixture that states its `asOf`. Follow in order; stop at
 any step that requires a value the fixture does not state.
 
-1. **Check the `asOf`.** `input.asOf`, or `input.asOfDay` resolved through
-   `_schema.json#/timeConvention`. Absent → stop, record against `OD-008`.
+1. **Resolve the `asOf`.** `input.asOf`, or `input.asOfDay` resolved through
+   `_schema.json#/timeConvention`. Absent → apply `DEC-021`: the instant of the
+   last `READING` in the ledger, and record `conversion.asOfSource: "DEC-021"`.
+   No reading with an absolute instant → stop; there is no instant to take and
+   the input is not a ledger.
 2. **Check every reading has a value.** Days without values → stop.
 3. **Copy the whole original `input` to `sourceScenario`** and add the
    `$comment` from §5. Do this before editing anything.
@@ -598,7 +622,7 @@ Recorded, not settled. See `docs/process/OPEN-OWNER-DECISIONS.md`.
 
 | Id | Question | Blocks |
 |---|---|---|
-| `OD-008` | What is the assessment instant of a worked golden? | ~40 reading-series fixtures, all 6 `NO_ASOF` fixtures, every `CASE_SET` |
+| ~~`OD-008`~~ | What is the assessment instant of a worked golden? | **CLOSED — `DEC-021`.** The instant of the last `READING`, where the fixture states none. |
 | `OD-009` | Should the engine expose unit-level entry points, so a fixture can test one module with the numbers canon states? | 32 precomputed-intermediate fixtures |
 | `OD-010` | Should a fixture be able to assert the *difference* between two assessments? | 11 retro-edit fixtures |
 | `OD-011` | `AD-RET-001` states no `currentDoseMlPerDay`; its provenance says "Same state as `AD-MNT-006`". Is that an input or a note? | 1 fixture, and the precedent |

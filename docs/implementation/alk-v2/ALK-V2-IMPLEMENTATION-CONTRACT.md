@@ -365,8 +365,14 @@ Canon Part II §64, `ALK-G040`, `WG-ALK-040`.
    ⇒ byte-identical `EngineResult`.
 
 Floating-point tolerance for fixture comparison: absolute `1e-9` on dKH and mL
-quantities, `1e-12` on dimensionless ratios, exact equality on enums, reason codes and
-counts. Recommendations compare exactly after rounding. These tolerances govern **fixture
+quantities, `1e-9` on durations in days and hours, `1e-12` on dimensionless ratios, exact
+equality on enums, reason codes and counts.
+
+The duration row was added when the first engine produced one. It states what this
+sentence already implied — a duration is a quantity, not a dimensionless ratio — and it
+closes a gap that was invisible while no engine existed: with no entry for a duration the
+harness fell back to the strictest value in the table, `1e-12`, and compared it against
+goldens written to nine decimals, which no correct engine can meet. Recommendations compare exactly after rounding. These tolerances govern **fixture
 comparison** only; the canonical threshold predicates of item 5a are exact-decimal
 comparisons at runtime and carry no tolerance at all.
 

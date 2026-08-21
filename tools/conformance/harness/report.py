@@ -207,6 +207,11 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
         w(THIN)
     for f in executed:
         w(f"{f.fixture_id:<16}{f.status:<8}{f.detail}")
+        if f.as_of_derived:
+            w(
+                f"{'':<24}asOf DERIVED under DEC-021 (the instant of the last "
+                f"READING); the fixture states none"
+            )
         if f.status == PASS:
             w(f"{'':<24}compared {f.compared} expectation(s)")
         for m in f.mismatches[: (None if verbose else 6)]:
@@ -235,6 +240,15 @@ def render_text(r: RunReport, verbose: bool = False) -> str:
         for q in f.open_questions:
             w(f"{'':<24}OPEN QUESTION: {q}")
     w("")
+    derived = [f.fixture_id for f in executed if f.as_of_derived]
+    if derived:
+        w(
+            f"{len(derived)} executed fixture(s) had their assessment instant supplied "
+            f"by DEC-021 rather than stated:"
+        )
+        w(f"  {', '.join(sorted(derived))}")
+        w("The rule is the instant of the last READING in the fixture's own ledger.")
+        w("")
     with_questions = [f.fixture_id for f in executed if f.open_questions]
     if with_questions:
         w(

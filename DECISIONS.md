@@ -738,3 +738,125 @@ been shown to fail has not been proven; it has only been observed not to complai
 It does not require the whole corpus to be converted, and it does not make an
 unconverted fixture a defect. An unconverted fixture whose path is unbuilt is the
 expected state.
+
+---
+
+## DEC-021 — The default assessment instant of a worked golden is its last reading
+
+- **ID:** DEC-021
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+- **Closes:** `OD-008`
+
+**Decision**
+
+Where an executable fixture states no assessment instant, `asOf` **is the instant of the
+last `READING` in its own event ledger**. A fixture that states its own `asOf` continues
+to use it; the stated value always wins.
+
+The rule is stated, not observed. It applies because it is written here, not because six
+fixtures happened to do it.
+
+Three consequences follow immediately and are part of the decision:
+
+1. The executable fixture format no longer forbids a conversion from supplying `asOf`.
+   Supplying it under this rule is not a judgement about what the fixture meant, so it is
+   not listed in `conversion.suppliedByConversion` as a decision; it is recorded as the
+   rule being applied, under `conversion.asOfSource: "DEC-021"`.
+2. The conformance harness derives the instant rather than refusing. A fixture whose
+   `asOf` was derived is **named as such** on its own line and in the report, so a derived
+   instant never reads as a stated one.
+3. The rule needs a *reading* to point at. Where a ledger holds no `READING` carrying an
+   absolute instant, there is no "moment of the last reading" and the rule does not apply.
+   Such an input was never an event ledger in the first place, and the harness now says so
+   (see **Consequences** below).
+
+**Rationale**
+
+The engine is one pure function of `(eventLedger, configurationHistory, asOf)`. A fixture
+that supplies two of the three arguments is unsubmittable, and `OD-008` recorded that this
+blocked roughly forty reading-series fixtures — the single largest obstacle to the corpus
+being machine-checkable.
+
+The convention matches the application's own behaviour, which is the reason to prefer it
+over the alternatives: a reading is entered and the assessment is produced immediately.
+The assessment instant of a worked example is therefore the instant of its last reading
+for the same reason it is in the app — that is when the assessment happens. It also
+matches all six fixtures that state an instant, six times out of six, which is corroboration
+rather than the argument.
+
+The two alternatives were worse. Requiring every fixture to state its own instant means
+forty hand edits, each a small judgement about what that fixture meant — the very thing
+`EXECUTABLE-FIXTURE-FORMAT.md` §5 forbids a conversion from making. Leaving it open means
+the engine is built against a corpus that cannot check it.
+
+**Consequences**
+
+- `fixtures/EXECUTABLE-FIXTURE-FORMAT.md` §2, §5 and §10 change: `asOf` moves from "a
+  conversion may never supply this" to "supplied by this stated rule where the fixture
+  omits it".
+- `tools/conformance/harness/corpus.py` derives the instant and marks the fixture
+  `asOfDerived`. `CONFORMANCE-HARNESS.md`'s `NO_ASOF` class survives but is now reached
+  only by a ledger with no absolute-timed reading.
+- **An `input.events` array is an event ledger only if its events carry the absolute-time
+  fields the format declares.** The six fixtures previously classed `NO_ASOF` write
+  `atDay: 0` / `fromDay: 1`, not `measuredAt` / `effectiveAt`; they are scenario
+  descriptions in event-shaped clothing and are now classed `ABSTRACT_INPUT`, which is what
+  they always were. Without this, applying the default instant would have "converted" six
+  fixtures whose events no engine can read — turning a refusal into a silent, wrong pass.
+  That is the same hazard `corpus.check_declared_document_type` exists to close, arriving
+  through the other door.
+- This decision sets no chemistry. It fixes the third argument of a test harness. Every
+  threshold, band edge, rail and equation remains the canon's.
+
+**What this does not say**
+
+It does not say that an assessment may only be triggered by a reading, and it does not
+constrain the application's `asOf` at runtime — the application passes its own instant
+through `ClockPort` as it always did. It is a rule about fixtures.
+
+---
+
+## DEC-022 — The retest decision's output vocabulary is the fixtures'
+
+- **ID:** DEC-022
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+- **Closes:** `OD-012`
+
+**Decision**
+
+`ALK-V2-DATA-CONTRACT.md`'s `RetestDecision` is extended to declare the vocabulary the
+five converted retest fixtures assert. `OD-012`'s option 1. The fixtures are frozen
+`ALK_V2_FREEZE_5` content and cannot move; the contract can, and does.
+
+The extension is exhaustive and is listed in the contract itself. Nothing was added that
+`AD-RET-001`…`AD-RET-005` do not assert, and no retest behaviour was designed: every
+value the new fields carry is produced by `ALK-RETEST-SCHEDULER-001` as already frozen,
+stated in the unit the fixtures state it in.
+
+**Rationale**
+
+Converting the five fixtures made an inert disagreement binding. Against an engine
+implementing the contract as written, every one of their retest assertions resolves to
+*"no field of that name in the engine result"* and all five fail. They passed only because
+the echo oracle replays each fixture's own expectations back at it.
+
+Option 2 — restating the fixtures in the contract's names — needs a governed canon reissue
+to edit frozen expectations, and buys nothing the extension does not. Option 3 — a declared
+mapping — adds a third artefact and a second owner of one inference, which `MASTER RULE 1`
+calls a defect.
+
+**Consequences**
+
+- Two field names in the contract had to be *disambiguated*, not merely added, because the
+  by-name resolution the harness uses (`compare.compare_by_name`, justified by `INV-B7`)
+  breaks when one name carries two values in one result. Both are recorded in the contract
+  where they happen and reported in full by the run that made the change.
+- This decision sets no chemistry. It says what the engine's retest output is *called*.
+
+**What this does not say**
+
+It does not settle whether a retest interval should be carried in hours or in instants as
+the primary form. Both are declared: the instants remain the decision, and the hour-valued
+fields are the scheduler's own audit arithmetic, which is what the fixtures check.
