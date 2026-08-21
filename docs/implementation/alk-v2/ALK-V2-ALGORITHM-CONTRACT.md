@@ -31,12 +31,20 @@ calendar-day subtraction are forbidden inputs to any rate.
 
 **REASON CODE** none on success.
 
-**FAILURE STATE** either operand is `LOCAL_TIME_ZONE_UNKNOWN` or `DATE_ONLY` ⇒
-`NOT_RUN`, `TIME_EXACT_ELAPSED_UNAVAILABLE`. The requesting analysis degrades per `M-13`;
-position and history are unaffected.
+**FAILURE STATE** none. **Amended by owner decision 30:** an operand lacking a usable
+instant — `LOCAL_TIME_ZONE_UNKNOWN` or `DATE_ONLY` — is never offered to this function, so
+there is no state in which it is asked for an interval it cannot form. The caller selects
+its operands from records carrying usable instants; where too few remain, the caller states
+the ordinary insufficiency and nothing about the records it did not use. Position, history,
+chart and descriptive statistics are unaffected and continue to include those records.
 
-**TESTS** `TIME-001` DST-crossing pair with proven offsets; `TIME-002` `DATE_ONLY` pair
-refuses; `WG-ALK-066`.
+> **Superseded wording, preserved rather than deleted.** This previously read: *"either
+> operand is `LOCAL_TIME_ZONE_UNKNOWN` or `DATE_ONLY` ⇒ `NOT_RUN`,
+> `TIME_EXACT_ELAPSED_UNAVAILABLE`. The requesting analysis degrades per `M-13`."* The code
+> is retired and `M-13` no longer degrades.
+
+**TESTS** `TIME-001` DST-crossing pair with proven offsets; `AD-TIME-001` date-only records
+are kept, charted and counted while emitting no time code at all; `WG-ALK-066`.
 
 ## A2 — Ingest validation
 

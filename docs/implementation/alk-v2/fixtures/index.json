@@ -144,7 +144,7 @@
     {
       "file": "adversarial.json",
       "corpusId": "alk-v2-adversarial",
-      "count": 72,
+      "count": 73,
       "fixtureIds": [
         "AD-TRD-001",
         "AD-TRD-002",
@@ -157,6 +157,7 @@
         "AD-SEG-003",
         "AD-SEG-004",
         "AD-TIME-001",
+        "AD-TIME-002",
         "AD-CON-001",
         "AD-DEL-001",
         "AD-MNT-001",
@@ -251,11 +252,11 @@
     }
   ],
   "totals": {
-    "fixtures": 204,
+    "fixtures": 205,
     "files": 6
   },
   "byProvenance": {
-    "CANON_DERIVED": 73,
+    "CANON_DERIVED": 74,
     "CANON_QUALITATIVE": 29,
     "CANON_VERBATIM": 102
   },
@@ -381,6 +382,7 @@
     "AD-SEG-003",
     "AD-SEG-004",
     "AD-TIME-001",
+    "AD-TIME-002",
     "AD-CON-001",
     "AD-DEL-001",
     "AD-MNT-001",
@@ -529,6 +531,11 @@
       "AD-EPI-002",
       "AD-SEG-007",
       "AD-SEG-008"
+    ],
+    "OI-EPISODEDATEONLY-001": [
+      "AD-TIME-001",
+      "AD-TIME-002",
+      "INV-TIME-001"
     ],
     "OI-EPISODECONSUMER-001": [
       "AD-EPI-003",

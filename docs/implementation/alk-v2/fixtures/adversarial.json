@@ -888,19 +888,94 @@
     },
     {
       "fixtureId": "AD-TIME-001",
-      "title": "Date-only historical evidence is retained but excluded from trend",
+      "title": "Date-only history is kept, counted and charted, and never announces itself",
       "provenance": {
         "class": "CANON_DERIVED",
         "canonSource": [
           "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.1",
+          "PII-2.3A.2",
           "M-13",
           "DATA-PROVENANCE.md §2"
-        ]
+        ],
+        "note": "Rewritten under owner decision 30. The pre-decision fixture asserted the announcement: two GATING/REFUSAL codes naming the date-only records. The amendment makes the ineligibility silent, so the assertion is now that NOTHING is said — the readings are absent from the trend, present in the record, and named nowhere."
       },
       "rulesExercised": [
-        "SHARED-LEGACY-TIME-001"
+        "SHARED-LEGACY-TIME-001",
+        "ALK-TESTING-EPISODE-001",
+        "M-8",
+        "M-13"
+      ],
+      "openIssues": [
+        "OI-EPISODEDATEONLY-001 - RESOLVED by owner decision 30: a measurement with no usable instant forms no episode and joins none, silently"
       ],
       "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-LEGACY-1",
+            "calendarDate": "2025-11-04",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.6
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-LEGACY-2",
+            "calendarDate": "2025-11-06",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.4
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-EXACT-1",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.3
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "IN_RANGE",
+        "latestValidValueDkh": 8.3,
+        "latestValidClusterId": "CL-2026-09-01T09:00:00+10:00",
+        "movementEvidence": "INSUFFICIENT",
+        "action": "INSUFFICIENT_DATA",
+        "note": "The two date-only readings form no episode and are not operands of any elapsed interval. What is left is one exact reading, so the ordinary insufficiency rules state the whole message: not enough separate tests, and not enough days. Neither statement mentions a record, and neither is about time provenance."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE",
+          "VALIDATION_TIMESTAMP_INVALID"
+        ],
+        "cases": [
+          "defaulting an unknown time to midnight",
+          "defaulting to midday",
+          "inferring a time from testing routine",
+          "inferring a time from entry order",
+          "assigning a timezone that was not recorded",
+          "reporting the date-only records as a validation failure — the contract is being honoured, not broken",
+          "degrading M-8 or M-13 because a record carries no usable instant",
+          "naming which records were skipped, or naming which were used, which is the same list"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "sourceScenario": {
         "readings": [
           {
             "date": "2025-11-04",
@@ -917,27 +992,143 @@
             "timeProvenance": "EXACT_ABSOLUTE",
             "rawValueDkh": 8.3
           }
+        ],
+        "$comment": "The pre-conversion input, verbatim. `date` was the field the abstract fixture used; the contract's field for a DATE_ONLY record is `calendarDate` (owner decision 30, resolving AI-008)."
+      },
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": false,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - not stated by the source fixture. The corpus's existing anchor, used by every previously executable fixture. The fixture states no dose change, so any instant at or before the first reading gives the same behaviour.",
+          "eventIds R-LEGACY-1, R-LEGACY-2, R-EXACT-1 - so that INV-H6 can assert the result names none of them. The source fixture gave its readings no ids.",
+          "calendarDate in place of date - the wire field ALK-V2-DATA-CONTRACT.md §1 declares for a DATE_ONLY record.",
+          "The date-only readings sit ten months before the exact one, which is a choice and not a question: it puts them outside the 14-day window as well as outside the trend, so the fixture cannot pass by accident through the window cap rather than through the amendment. AD-TIME-002 covers the case where they are inside the window."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      },
+      "supersededExpectation": {
+        "expectedAction": {
+          "dateOnlyReadingsVisibleInHistory": true,
+          "dateOnlyReadingsInTrend": false,
+          "positionFrom": "the latest valid reading",
+          "exactElapsedTimeAnalysisAcrossDateOnlyPairs": "NOT_RUN",
+          "dateOnlyStaysDateOnly": true
+        },
+        "expectedReasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE"
+        ],
+        "supersededBy": "owner decision 30",
+        "$comment": "The pre-decision expectation, verbatim. Its substantive claims all survive — the readings stay visible, stay out of the trend, keep their provenance, and position comes from the latest valid reading. What decision 30 removed is the announcement: the two reason codes, and the NOT_RUN field that carried it."
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-002",
+      "title": "Every reading in the window lacks a time: position holds, the trend says only that it is short of evidence",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.1",
+          "PII-2.3A.2"
+        ],
+        "note": "Added by owner decision 30. AD-TIME-001 covers a history that is partly date-only; this covers the keeper whose whole window is. It is the state the amendment was written for and the one that used to produce a blocking panel."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "CORE-POSITION-001",
+        "ALK-008"
+      ],
+      "openIssues": [
+        "OI-EPISODEDATEONLY-001 - RESOLVED by owner decision 30"
+      ],
+      "input": {
+        "asOf": "2026-09-02T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-DO-1",
+            "calendarDate": "2026-08-24",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.6
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-DO-2",
+            "calendarDate": "2026-08-27",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.4
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-DO-3",
+            "calendarDate": "2026-08-30",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.2
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-LZU-1",
+            "localDateTime": "2026-09-01T02:30",
+            "timeProvenance": "LOCAL_TIME_ZONE_UNKNOWN",
+            "rawValueDkh": 8.1
+          }
         ]
       },
       "expectedAction": {
-        "dateOnlyReadingsVisibleInHistory": true,
-        "dateOnlyReadingsInTrend": false,
-        "positionFrom": "the latest valid reading",
-        "exactElapsedTimeAnalysisAcrossDateOnlyPairs": "NOT_RUN",
-        "dateOnlyStaysDateOnly": true
+        "position": "BELOW_RANGE",
+        "latestValidValueDkh": 8.1,
+        "latestValidClusterId": "NONE",
+        "outerBoundState": "WITHIN_BOUNDS",
+        "movementEvidence": "INSUFFICIENT",
+        "action": "INSUFFICIENT_DATA",
+        "recommendedDoseMlPerDay": 9.0,
+        "note": "Four real measurements, none with a usable instant. Position resolves from the latest of them by canon PII-2.3A.2 and is a full answer: 8.1 dKH, below the target range. No slope, no consumption and no dose change, because none of those can be formed without elapsed time — and the engine says exactly that and no more. latestValidClusterId is NONE because no episode formed; NONE is a value, not a withholding, and carries no code."
       },
       "expectedReasonCodes": [
-        "TIME_PROVENANCE_DATE_ONLY",
-        "TIME_EXACT_ELAPSED_UNAVAILABLE"
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
       ],
       "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE",
+          "VALIDATION_TIMESTAMP_INVALID"
+        ],
+        "position": "UNKNOWN",
         "cases": [
-          "defaulting an unknown time to midnight",
-          "defaulting to midday",
-          "inferring a time from testing routine",
-          "inferring a time from entry order",
-          "assigning a timezone that was not recorded"
+          "refusing to state a position because no reading carries a usable instant",
+          "treating four honoured DATE_ONLY records as four validation failures",
+          "emitting one notice per affected record — the state this amendment exists to remove",
+          "deriving a slope from calendar-day differences between the records",
+          "ordering the local-time record by an assumed offset rather than by its stated day"
         ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "stated",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "input.asOf is stated rather than derived: DEC-021's default is the instant of the last READING, and no reading here has one. The assessment instant is the caller's and always was; this fixture is where that stops being a formality."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
       }
     },
     {

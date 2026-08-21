@@ -146,16 +146,37 @@
         "canonSource": [
           "X-INV-007",
           "SHARED-LEGACY-TIME-001",
-          "DATA-PROVENANCE.md §2"
+          "DATA-PROVENANCE.md §2",
+          "PII-2.3A.1"
         ]
       },
       "kind": "PROPERTY",
-      "property": "Legacy date-only and local-time-without-zone records never gain fabricated noon or current-zone instants. Exact elapsed-time calculations use only EXACT_ABSOLUTE or RECONSTRUCTED_WITH_PROVENANCE instants.",
+      "property": "Legacy date-only and local-time-without-zone records never gain fabricated noon, midnight or current-zone instants, and never announce that they lack one. Exact elapsed-time calculations use only EXACT_ABSOLUTE or RECONSTRUCTED_WITH_PROVENANCE instants, and are never offered anything else.",
       "generator": "Randomise the host process timezone and the viewer's display timezone across at least {UTC, +10:00, -07:00, Europe/London during and outside DST}.",
       "mustHold": [
         "every DATE_ONLY record's stored provenance is unchanged after any number of read/render cycles",
         "engine output is byte-identical across all host and display timezones",
-        "no analysis consuming a DATE_ONLY or LOCAL_TIME_ZONE_UNKNOWN instant produces a rate"
+        "no analysis consuming a DATE_ONLY or LOCAL_TIME_ZONE_UNKNOWN instant produces a rate",
+        "no output names such a record, states its provenance, or reports that it was not used — and no output states the provenance of the records that WERE used, which would name the rest by omission (owner decision 30, canon PII-2.3A.1 clause 1)",
+        "M-8 and M-13 report OK with no reason code however many such records the ledger holds"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"
+        ],
+        "cases": [
+          "materialising an absolute instant for a record that carries none",
+          "emitting one notice per affected record"
+        ]
+      },
+      "openIssues": [
+        "OI-EPISODEDATEONLY-001 - RESOLVED by owner decision 30"
       ]
     },
     {

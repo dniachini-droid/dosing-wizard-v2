@@ -30,6 +30,7 @@ Python 3 standard library.
 | Engine-facing mechanical checks | output shape against `EngineResult`; emitted reason codes against the closed set, with their catalogued severity, owner and a non-empty payload; every withheld output — at any depth — named in the `affectedOutputs` of a `GATING` or `REFUSAL` code; engine and canon version declared and current | yes |
 | Executable invariants | `INV-A1` replay determinism, `INV-A2` no clock read, `INV-A3` no iteration-order dependence | yes |
 | Delegated invariants | `INV-B7`, `INV-I2`, `INV-I3` — the part executable without engine source; `INV-I8`, `INV-I9`, `INV-I10` — in full, absorbed from the retired validator | no |
+| `INV-H6` and `INV-I7` | that a record with no usable instant never announces itself, and that no retired reason code is emitted anywhere in a result. Both executable since an engine exists; both derive every subject at run time from the catalogue and from the fixture's own input, and transcribe nothing (`DEC-025`) | yes |
 
 For every fixture it reports the id, the expected value, the actual value and
 pass/fail. For every invariant it reports the id, pass/fail, and what was
@@ -417,9 +418,19 @@ Three document defects, reported and left for the owner. The harness reports
 them on every run, which is the most durable form of recording available.
 
 0. **The reason-code coverage summary disagrees with its own tables.** It
-   declares `CAPABILITY_` = 14 and `SAFETY_` = 18; the document holds 13 and 19
+   declared `CAPABILITY_` = 14 and `SAFETY_` = 18; the document held 13 and 19
    distinct rows respectively, with no duplicates. Hand-verified. New at
    `ALK_V2_FREEZE_5`.
+
+   **Half closed by owner decision 30, and not deliberately.** That decision
+   retires two `CAPABILITY_` rows and five `TIME_` rows, so those two counts had
+   to be restated whatever happened to be wrong with them; they are now the true
+   parsed counts, and the group total with them. **`SAFETY_` was not touched and
+   its line still fails** — declared 18, 19 rows parsed. It is the same
+   pre-existing defect, still for the owner, and it is deliberately left rather
+   than corrected in passing: nothing in decision 30 gives anyone grounds to
+   decide whether the missing row is a duplicate, a row that should not be
+   there, or a count that was simply mistyped.
 
 1. **`POSITION_NO_VALID_MEASUREMENT` is not in the closed catalogue.**
    `ALK-V2-ALGORITHM-CONTRACT.md` §`CORE-POSITION-001` requires the engine to

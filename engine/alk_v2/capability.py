@@ -123,15 +123,26 @@ def evaluate(led, cfg, potency_learning_gated: bool) -> List[Capability]:
     caps.append(Capability("M-7", False, OK))
 
     # M-8 / M-13 — measurement time precision and absolute-time provenance.
-    imprecise = [
-        r for r in led.readings
-        if not r.at.exact
-    ]
-    caps.append(
-        Capability("M-8", not imprecise, OK if not imprecise else DEGRADE,
-                   [] if not imprecise else ["observedTrajectory"],
-                   None if not imprecise else "CAPABILITY_MEASUREMENT_TIME_IMPRECISE")
-    )
+    #
+    # **Owner decision 30: neither degrades, and neither emits a reason code.**
+    # `led.readings` holds only measurements carrying a usable instant; a
+    # measurement without one is in `led.untimed`, which no elapsed-time
+    # consumer can reach. So the datum these capabilities ask about is present
+    # for every observation any analysis is given, and `present=True, OK` is the
+    # literal truth rather than a convenient rounding of it.
+    #
+    # The previous implementation scanned the readings for a non-exact
+    # provenance and degraded `observedTrajectory` on finding one. That was the
+    # capability gate reporting a property of the keeper's *history* as a
+    # deficiency in the *engine's inputs*, and it is the fifth of the five
+    # places the same fact used to be announced. Canon Part II §2.3A.1 clause 1
+    # forbids it now; `CAPABILITY_MEASUREMENT_TIME_IMPRECISE` and
+    # `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE` are retired.
+    #
+    # They stay as rows because `M-1` … `M-13` is the closed set the contract
+    # declares, and a result carrying eleven of thirteen would be an output that
+    # failed to mention what it did not look at.
+    caps.append(Capability("M-8", True, OK))
 
     # M-9 — pre/post programmed dose state, for a potency observation.
     caps.append(Capability("M-9", False, NOT_RUN, ["potency.learnedPotencyDkhPerMl"],
@@ -157,11 +168,7 @@ def evaluate(led, cfg, potency_learning_gated: bool) -> List[Capability]:
                                None if cfg.resolved else
                                "CAPABILITY_HISTORICAL_CONFIGURATION_UNAVAILABLE"))
 
-    caps.append(
-        Capability("M-13", not imprecise, OK if not imprecise else DEGRADE,
-                   [] if not imprecise else ["observedTrajectory"],
-                   None if not imprecise else "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE")
-    )
+    caps.append(Capability("M-13", True, OK))
 
     # The potency learner's own gate is deliberately **not** a fourteenth
     # capability row. `M-1` … `M-13` is the closed set the contract declares,

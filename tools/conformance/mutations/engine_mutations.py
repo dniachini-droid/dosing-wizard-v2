@@ -141,17 +141,23 @@ def _capture_sigma(obs, eps):
     return out
 
 
-def _position_from_earliest(eps, cfg):
+def _position_from_earliest(eps, cfg, untimed=()):
     """Position from the **earliest** episode, not the latest.
 
     `CORE-POSITION-001` / `ALK-010`: position is the latest valid cluster
     representative value. A fitted, smoothed, forecast or older value may never
     replace it.
+
+    `untimed` is accepted and passed through unchanged (owner decision 30). The
+    sabotage is *position from the earliest episode*, and a sabotage that also
+    dropped the untimed readings would be two defects at once -- it would go red
+    on `AD-TIME-002` through `E-30`'s mechanism rather than its own, and this
+    control's claim would stop being falsifiable on its own terms.
     """
     if not eps:
-        return _ORIGINAL["position"](eps, cfg)
+        return _ORIGINAL["position"](eps, cfg, untimed)
     earliest = min(eps, key=lambda e: e.at.epoch_seconds)
-    return _ORIGINAL["position"]([earliest], cfg)
+    return _ORIGINAL["position"]([earliest], cfg, untimed)
 
 
 def _no_forecast_candidate(**kwargs):
@@ -272,7 +278,90 @@ ORIGINAL_TARGETS = {
     "classify": "alk_v2.response:classify",
     "build": "alk_v2.intervention:build",
     "assess": "alk_v2.response:assess",
+    # owner decision 30
+    "evaluate": "alk_v2.capability:evaluate",
+    "readings": "alk_v2.ledger:_readings",
 }
+
+
+
+# ---------------------------------------------------------------------------
+# owner decision 30 -- the four ways the announcement could come back
+# ---------------------------------------------------------------------------
+
+
+def _restore_time_precision_degradation(led, cfg, potency_learning_gated):
+    """`M-8` and `M-13` degrade again on a reading with no usable instant.
+
+    The pre-decision-30 capability gate, restored verbatim in effect: it scanned
+    the readings for a non-exact provenance and reported the keeper's own
+    history as a deficiency in the engine's inputs.
+    """
+    from alk_v2 import capability as cap
+
+    caps = list(_ORIGINAL["evaluate"](led, cfg, potency_learning_gated))
+    if not led.untimed:
+        return caps
+    out = []
+    for c in caps:
+        if c.capability_id == "M-8":
+            out.append(cap.Capability("M-8", False, cap.DEGRADE, ["observedTrajectory"],
+                                      "CAPABILITY_MEASUREMENT_TIME_IMPRECISE"))
+        elif c.capability_id == "M-13":
+            out.append(cap.Capability("M-13", False, cap.DEGRADE, ["observedTrajectory"],
+                                      "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"))
+        else:
+            out.append(c)
+    return out
+
+
+def _announce_untimed_as_unreadable(led):
+    """A record honouring its own provenance is reported as a malformed one.
+
+    This is the state the owner described: *"A record carries a time that could
+    not be read"*, once per affected reading. It is what this engine did before
+    the amendment, and it is the regression the fixtures exist to catch.
+    """
+    timed, untimed = _ORIGINAL["readings"](led)
+    for u in untimed:
+        led.problems.append(
+            ("VALIDATION_TIMESTAMP_INVALID",
+             {"enteredAt": u.day, "readingId": u.reading_id})
+        )
+    return timed, []
+
+
+def _position_ignores_untimed(eps, cfg, untimed=()):
+    """Position stops seeing the readings with no usable instant.
+
+    Canon Part II §2.3A says such a reading may support current position. Drop
+    it and a keeper whose whole window is date-only is told the engine does not
+    know what their alkalinity is, while holding four measurements of it.
+    """
+    return _ORIGINAL["position"](eps, cfg, ())
+
+
+def _fabricate_midnight(led):
+    """A date-only record gains an instant at midnight.
+
+    The single prohibition owner decision 30 does **not** relax, stated three
+    times over in canon Part II §2.3A, `DATA-PROVENANCE.md` §2 and the data
+    contract. Midnight rather than noon deliberately: the forbidden list names
+    both, and a control that only tries noon would pass an engine that assigns
+    midnight.
+    """
+    from alk_v2 import ledger as L
+    from alk_v2.kernel import parse_instant
+
+    timed, untimed = _ORIGINAL["readings"](led)
+    for u in untimed:
+        at = parse_instant(u.day + "T00:00:00+10:00")
+        timed.append(
+            L.Reading(reading_id=u.reading_id, at=at, raw_value_dkh=u.raw_value_dkh,
+                      status=u.status, ordinal=u.ordinal)
+        )
+    timed.sort(key=lambda r: r.at.epoch_seconds)
+    return timed, []
 
 
 ENGINE_MUTATIONS: List[Mutation] = [
@@ -784,5 +873,80 @@ ENGINE_MUTATIONS: List[Mutation] = [
             "such a fixture: it needs the gate open too. Both conditions are "
             "stated so neither is quietly forgotten."
         ),
+    ),
+    Mutation(
+        mid="E-28",
+        title="Restore the M-8 / M-13 degradation on a reading with no usable instant",
+        defect_class="legacy time / silent ineligibility",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="the capability gate degrades again and emits the two retired CAPABILITY_ codes",
+        guards=(
+            "SHARED-LEGACY-TIME-001 Part II §2.3A.1 clause 1 (owner decision 30). "
+            "Lacking a usable instant produces no capability degradation and no "
+            "reason code. This is the fifth of the five places the same fact used "
+            "to be announced, and the one furthest from any surface -- so it is "
+            "the one most likely to come back unnoticed."
+        ),
+        expect_red=["fixture:AD-TIME-001", "fixture:AD-TIME-002", "invariant:INV-I7"],
+        expect_mechanism="CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+        hooks={"alk_v2.capability:evaluate": _restore_time_precision_degradation},
+    ),
+    Mutation(
+        mid="E-29",
+        title="Report a record that honours its own provenance as an unreadable timestamp",
+        defect_class="legacy time / silent ineligibility",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="every reading with no usable instant becomes a VALIDATION_TIMESTAMP_INVALID problem",
+        guards=(
+            "SHARED-LEGACY-TIME-001 Part II §2.3A.1 and AI-008's resolution in "
+            "ALK-V2-DATA-CONTRACT.md §1. A DATE_ONLY record carrying no "
+            "absoluteInstant is the contract being honoured, not broken. This is "
+            "the exact regression the owner saw: one notice per affected reading, "
+            "325 of them, saying a time could not be read when the provenance was "
+            "declared rather than malformed."
+        ),
+        expect_red=["fixture:AD-TIME-001", "fixture:AD-TIME-002"],
+        expect_mechanism="VALIDATION_TIMESTAMP_INVALID",
+        hooks={"alk_v2.ledger:_readings": _announce_untimed_as_unreadable},
+    ),
+    Mutation(
+        mid="E-30",
+        title="Drop the readings with no usable instant from position",
+        defect_class="legacy time / position eligibility",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="position sees only the episodes, so an all-date-only window has no current value",
+        guards=(
+            "SHARED-LEGACY-TIME-001 Part II §2.3A: such a record remains visible "
+            "and may support current position. Silent ineligibility is scoped to "
+            "elapsed-time inference and to nothing else -- over-applying it is the "
+            "opposite failure to announcing it, and just as wrong: the keeper is "
+            "told the engine does not know their alkalinity while it holds four "
+            "measurements of it."
+        ),
+        expect_red=["fixture:AD-TIME-002"],
+        expect_mechanism="position",
+        hooks={"alk_v2.observation:position": _position_ignores_untimed},
+    ),
+    Mutation(
+        mid="E-31",
+        title="Give a date-only record an instant at midnight",
+        defect_class="fabricated timestamp",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="each untimed reading is materialised as a Reading at 00:00 on its stated day",
+        guards=(
+            "SHARED-LEGACY-TIME-001's forbidden list, DATA-PROVENANCE.md §2 and "
+            "ALK-V2-DATA-CONTRACT.md §1 -- the one prohibition owner decision 30 "
+            "explicitly does NOT relax. Midnight rather than noon, because the "
+            "forbidden list names both and a control that tries only noon passes "
+            "an engine that assigns midnight. Three fabricated instants turn "
+            "AD-TIME-002's four measurements into a trend the tank never showed."
+        ),
+        expect_red=["fixture:AD-TIME-002"],
+        expect_mechanism="movementEvidence",
+        hooks={"alk_v2.ledger:_readings": _fabricate_midnight},
     ),
 ]

@@ -1005,3 +1005,81 @@ and `DEC-003` are unchanged: the domain engine owns chemistry, and
 `tests/app/test-port.mjs` `PORT-01`…`PORT-04` fail if any interface file names
 a V1 classifier, holds a member of the engine's decision vocabulary, or
 compares a reading to a band edge.
+
+---
+
+## DEC-025 — The conformance harness carries owner decision 30's silence, and executes the invariants that pin it
+
+- **ID:** DEC-025
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+
+**Decision**
+
+Owner decision 30 amends `SHARED-LEGACY-TIME-001` so that a reading lacking a usable instant
+is **silently** ineligible for elapsed-time inference. That amendment is chemistry and lives
+in `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` Part II §2.3A.1 and §2.3A.2, where the
+freeze, the fixture coverage and the reissue path apply to it. **This entry decides nothing
+about that behaviour and must not be read as authority for it.** It records the three
+technical-architecture consequences in the harness, which are this ledger's scope.
+
+1. **The corpus's "is this an event ledger" test reads the two wire fields the amended data
+   contract added.** `corpus._looks_like_event_ledger` required every event to carry one of
+   five absolute-time fields. Under `AI-008`'s resolution a `DATE_ONLY` record carries
+   `calendarDate` and a `LOCAL_TIME_ZONE_UNKNOWN` record carries `localDateTime`, and
+   **neither carries an absolute instant** — that is the point of the resolution. Such a
+   ledger is readable and now classifies `EXECUTABLE`.
+
+   `_DECLARED_DAY_FIELDS` is declared **apart from** `_ABSOLUTE_TIME_FIELDS` rather than
+   added to it, because two different questions are asked of that tuple and only one answer
+   changed. *Is this a ledger an engine can read?* — yes. *Is there an instant here?* — no,
+   and `default_as_of` must keep answering no, or `DEC-021` would derive an assessment
+   instant from a day nobody stated a time for, which is the fabrication the amendment
+   forbids. A fixture whose ledger holds no absolute-timed reading therefore states its own
+   `asOf`, and `AD-TIME-002` is the first that does.
+
+2. **`INV-I7` becomes executable.** It says "no retired reason code is emitted" and was
+   registered `NO_ENGINE_BEHAVIOUR`. An engine exists, so the reason no longer holds. It
+   sweeps **every string in the whole result**, not `reasonCodes[]` alone: a capability
+   row's `capabilityReasonCode` is an emitted code too, and reading only the top-level array
+   is how a retired `CAPABILITY_` code could return through `capabilities[]` unseen —
+   demonstrated by mutation `E-28`.
+
+3. **`INV-H6` is added and is executable.** `INV-H1` pins what is *stored*; `INV-H6` pins
+   what is *said*, which is the failure every surface reproduced. Every subject it checks is
+   read out of the fixture's own input — the provenance tokens the fixture supplied, the
+   days its untimed records state, their event ids — so it transcribes no vocabulary and
+   keeps testing the right thing across a vocabulary change.
+
+**Rationale**
+
+`DEC-016` makes the harness a required check and `CLAUDE.md` requires the harness to
+transcribe nothing. A silence is harder to test than a statement: the obvious check is a
+list of forbidden strings, and a transcribed list drifts the moment the vocabulary moves,
+passing while checking nothing. Deriving every subject from the fixture's own input is what
+makes the check survive its own catalogue.
+
+The second half of `INV-H6` — that the result must not name the records it *did* use either
+— is not padding. A per-record provenance channel names the ineligible records by omission,
+so retiring only the two negative codes would have left the surface able to reconstruct
+exactly the list the owner asked never to be produced. That is why all four
+`TIME_PROVENANCE_*` codes are retired and not just the two.
+
+**Consequences**
+
+- `tools/conformance/harness/corpus.py`, `invariant_checks.py`, `package_checks.py` change.
+- `tools/conformance/mutations/engine_mutations.py` gains `E-28` … `E-31`, one per way the
+  announcement could come back: the capability degradation, the validation refusal, position
+  over-applying the exclusion, and a fabricated midnight instant. All four are caught, each
+  via the mechanism it names.
+- `ORIGINAL_TARGETS` gains `alk_v2.capability:evaluate` and `alk_v2.ledger:_readings`, so
+  those sabotages delegate to the real implementation rather than reimplementing it.
+- `reference/echo_oracle.py`'s event sort key stops tie-breaking on the event's position in
+  the submitted array and uses a content hash, matching `ledger._content_ordinal`. The array
+  index made the oracle's own output depend on the ordering `INV-A1` exists to defeat; it had
+  never shown because no fixture until `AD-TIME-002` held two events the key could not
+  separate. The control that names `INV-A1` — `M-1` — was itself disabled by the defect,
+  since a subject already failing at baseline cannot be turned red by a mutation.
+- The gate's absolute verdict is unchanged in kind: `CHK-RC-CATALOGUE`'s `CAPABILITY_`
+  coverage line is closed as a side effect of restating a count that had to change anyway,
+  and its `SAFETY_` line is a pre-existing defect that stays open and is out of scope here.

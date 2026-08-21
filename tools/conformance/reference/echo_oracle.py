@@ -54,6 +54,7 @@ THE THREE THINGS IT DOES COMPUTE, AND WHY
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import sys
@@ -138,12 +139,64 @@ def _parse_instant(s: Any) -> Optional[datetime]:
         return None
 
 
+def _declared_day(event: Dict[str, Any]) -> Optional[str]:
+    """The calendar day a record with no usable instant states.
+
+    `ALK-V2-DATA-CONTRACT.md` §1 `ObservedTime` (owner decision 30): a
+    `DATE_ONLY` record carries `calendarDate` and a `LOCAL_TIME_ZONE_UNKNOWN`
+    record carries `localDateTime`, and neither carries an `absoluteInstant`.
+    """
+    for key in ("calendarDate", "localDateTime"):
+        value = event.get(key)
+        if isinstance(value, str) and len(value) >= 10:
+            return value[:10]
+    return None
+
+
+def _content_ordinal(event: Dict[str, Any]) -> str:
+    """A stable ordinal derived from the event's own content.
+
+    **Not the event's position in the submitted array.** That was the tie-break
+    here until owner decision 30 put two events at the same sort position for
+    the first time, and it made the oracle's own output depend on the array
+    order `INV-A1` exists to defeat -- silently, because no fixture until then
+    had two events the key could not separate. `ledger._content_ordinal` in the
+    engine solves it the same way and for the same reason.
+    """
+    return hashlib.sha256(
+        json.dumps(event, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
+
+
 def _sort_key(event: Dict[str, Any], ordinal: int):
-    """(absoluteInstant, eventOrdinal, eventId) -- the determinism contract."""
+    """(absoluteInstant, eventOrdinal, eventId) -- the determinism contract.
+
+    An event with no usable instant sorts by the day it states, at the **end**
+    of that day: canon Part II §2.3A.2 clause 2 puts a record carrying a usable
+    instant *before* one that carries none within the same day, because the
+    record without a time cannot be shown to be later. An event that states
+    neither an instant nor a day sorts last, as it always did.
+
+    `ordinal` is accepted for signature compatibility and deliberately unused;
+    see `_content_ordinal`.
+    """
     instant = _parse_instant(event.get("measuredAt") or event.get("effectiveAt"))
+    if instant is not None:
+        rank = (instant.timestamp(), 0)
+    else:
+        day = _declared_day(event)
+        if day is None:
+            rank = (float("inf"), 1)
+        else:
+            # End of the stated day, so an instant anywhere in that day sorts
+            # first. `+ 86399` rather than the next midnight, so a day-only
+            # record never overtakes an instant on the following day.
+            midnight = _parse_instant(day + "T00:00:00+00:00")
+            rank = ((midnight.timestamp() if midnight else float("inf")) + 86399.0, 1)
     return (
-        instant.timestamp() if instant else float("inf"),
-        ordinal,
+        rank[0],
+        rank[1],
+        _content_ordinal(event),
         str(event.get("eventId", "")),
     )
 
@@ -214,9 +267,16 @@ class EchoOracle:
             "configVersionId", _NOT_RUN
         )
         result["latestValidValueDkh"] = latest_value
-        result["latestValidClusterId"] = (
-            f"CL-{latest.get('measuredAt')}" if latest else _NOT_RUN
-        )
+        # `CL-<instant>` where the latest reading carries one; `NONE` where it
+        # does not, because a reading with no usable instant forms no episode
+        # and so has no cluster id (owner decision 30). `NONE` is a value, not a
+        # withholding.
+        if latest is None:
+            result["latestValidClusterId"] = _NOT_RUN
+        elif latest.get("measuredAt"):
+            result["latestValidClusterId"] = f"CL-{latest.get('measuredAt')}"
+        else:
+            result["latestValidClusterId"] = "NONE"
         result["auditTraceId"] = f"TRACE-{label}"
         result["capabilities"] = []
 
