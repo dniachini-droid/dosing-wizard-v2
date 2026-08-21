@@ -564,4 +564,77 @@ ENGINE_MUTATIONS: List[Mutation] = [
             "harness does not perform it, and no case-set fixture executes yet."
         ),
     ),
+    Mutation(
+        mid="E-21",
+        title="Promote a learned potency on a single observation",
+        defect_class="potency confidence ladder",
+        status=BLOCKED,
+        target=ENGINE,
+        sabotage="CALIBRATED's minimum drops from three calibration-eligible observations to one",
+        guards=(
+            "ALK-POTENCY-CONFIDENCE-001's ladder. One observation from one dose "
+            "change is EXPLORATORY and must leave selectedPotency on the "
+            "theoretical figure; promoting on it would let a single noisy "
+            "interval rewrite every subsequent dose."
+        ),
+        expect_red=["fixture:WG-ALK-026"],
+        expect_mechanism="potencyConfidence",
+        hooks={"alk_v2.potency:POTENCY_CALIBRATED_N": 1},
+        unblocks_when=(
+            "one potency fixture becomes executable. Every fixture on the POTENCY "
+            "path -- WG-ALK-024..027, WG-ALK-036..039, WG-ALK-050, WG-ALK-064, "
+            "AD-POT-001, AD-POT-002 -- states a Layer-2 or Layer-3 output as its "
+            "input (`sPreDkhPerDay`, `sigmaPostDkhPerDay`, a `preSide` with a "
+            "slope and a sigma already computed). Converting one means choosing "
+            "readings whose residual scatter reproduces the stated sigma, which "
+            "EXECUTABLE-FIXTURE-FORMAT.md §5 rule 5 forbids because the fixture's "
+            "expectation was computed from the abstract sigma and the converted "
+            "fixture would assert something the original never did. That is "
+            "OD-009: these fixtures need a unit-level entry point bound to a "
+            "named module, not a whole-pipeline expectation."
+        ),
+    ),
+    Mutation(
+        mid="E-22",
+        title="Admit a below-threshold potency signal to the pool",
+        defect_class="potency signal classification",
+        status=BLOCKED,
+        target=ENGINE,
+        sabotage="the calibration SNR threshold drops from 3.0 to 1.0",
+        guards=(
+            "ALK-017's signal classes. Below SNR 3.0 an observation is diagnostic "
+            "at best; admitting it to the pool would calibrate the dose from a "
+            "difference the evidence cannot separate from noise."
+        ),
+        expect_red=["fixture:WG-ALK-024"],
+        expect_mechanism="signalClass",
+        hooks={"alk_v2.potency:POTENCY_SNR_CALIBRATION": 1.0},
+        unblocks_when="the same condition as E-21 — one executable POTENCY fixture (OD-009).",
+    ),
+    Mutation(
+        mid="E-23",
+        title="Let the capability gate promote a learned potency anyway",
+        defect_class="capability gate",
+        status=BLOCKED,
+        target=ENGINE,
+        sabotage="the gate is ignored and selectedPotency takes the pool median",
+        guards=(
+            "ALK-POTENCY-CAPABILITY-GATE-001. While gated, selectedPotency is the "
+            "theoretical or configured value and the core controller is fully "
+            "functional (WG-ALK-046). A gate that can be bypassed is a switch "
+            "nobody documented."
+        ),
+        expect_red=["fixture:WG-ALK-046"],
+        expect_mechanism="selectedPotencyDkhPerMl",
+        hooks={},
+        unblocks_when=(
+            "WG-ALK-046 becomes executable. It is the fixture for exactly this "
+            "claim -- configured potency, gated learner, controller fully "
+            "functional -- and its input is a scenario description "
+            "(`configuredPotency`, `measurements`, `programmedDose`) rather than "
+            "an event ledger. Converting it is ordinary conversion work under "
+            "§10 and is not blocked on an owner decision; it is blocked only on "
+            "this run's budget, and it is the first potency fixture to convert."
+        ),
+    ),
 ]

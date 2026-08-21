@@ -23,6 +23,8 @@ from typing import Any, Dict, List, Optional
 
 from . import capability as cap_mod
 from . import dosing, kernel, ledger as ledger_mod, observation, retest as retest_mod
+from . import intervention as iv_mod
+from . import potency as potency_mod
 from . import trajectory as traj
 from .constants import (
     ADVISORY_OFFSET,
@@ -271,31 +273,126 @@ def assess(
             # past the umbrella below and be reported by nobody.
             codes.append(Code(c.reason_code, capabilityId=c.capability_id))
 
-    # 12 — POTENCY (configured only; the learner is CAPABILITY_GATED) -------
-    p_selected = cfg.num("selectedPotencyDkhPerMl")
-    potency = {
-        "selectedPotencyDkhPerMl": p_selected if p_selected is not None else UNKNOWN,
-        "selectedPotencySource": cfg.get("selectedPotencySource", "THEORETICAL_OR_CONFIGURED"),
-        "learnedPotencyDkhPerMl": UNKNOWN,
-        "potencyConfidence": "THEORETICAL_ONLY",
-    }
-    codes.append(
-        Code(
-            "POTENCY_LEARNING_CAPABILITY_GATED",
-            missingCapabilities=["M-2", "M-3", "M-9"],
+    # 12 — POTENCY ----------------------------------------------------------
+    # Stage two. The learner reads the interventions built from stage one's
+    # episodes and produces an estimate; nothing here writes back into trend,
+    # uncertainty, support or consumption.
+    #
+    # `potencyLearning` is `CAPABILITY_GATED` in this runtime by
+    # `MIGRATION-ALK-ONLY-001` and ships disabled. The gate is read from
+    # configuration rather than hard-coded, so opening it is a configuration
+    # change and not an engine change -- but the default stays shut, and the
+    # core controller is fully functional while it is (`WG-ALK-046`).
+    gated = str(cfg.get("potencyLearning", "CAPABILITY_GATED")) != "ACTIVE"
+
+    interventions = iv_mod.build(
+        led,
+        eps,
+        as_of,
+        potency_at=_potency_at(cfg),
+        confounders=hard_confounders,
+    )
+    for iv in interventions:
+        codes.append(
+            Code(
+                "INTERVENTION_CREATED",
+                interventionId=iv.intervention_id,
+                oldDose=iv.old_dose if iv.old_dose is not None else UNKNOWN,
+                newDose=iv.new_dose if iv.new_dose is not None else UNKNOWN,
+                actualStartTime=iv.at.text,
+                origin="MANUAL",
+            )
         )
-    )
-    codes.append(
-        Code("CAPABILITY_POTENCY_LEARNER_GATED", missingCapabilities=["M-2", "M-3", "M-9"])
-    )
+        if iv.snapshot.available:
+            codes.append(
+                Code(
+                    "INTERVENTION_PREDICTION_SNAPSHOT_STORED",
+                    interventionId=iv.intervention_id,
+                    expectedSlopeChange=iv.snapshot.expected_slope_change,
+                    predictedPostSlope=iv.snapshot.predicted_post_slope,
+                    selectedPotencyAtPrediction=iv.snapshot.selected_potency_at_prediction,
+                )
+            )
+        else:
+            codes.append(
+                Code(
+                    "INTERVENTION_PREDICTION_SNAPSHOT_UNAVAILABLE",
+                    interventionId=iv.intervention_id,
+                    affectedOutputs=["responseAssessment"],
+                )
+            )
+            codes.append(
+                Code(
+                    "CAPABILITY_PREDICTION_SNAPSHOT_MISSING",
+                    interventionId=iv.intervention_id,
+                )
+            )
+        if iv.anchor_relation_ambiguous:
+            codes.append(
+                Code(
+                    "INTERVENTION_ANCHOR_AMBIGUOUS",
+                    readingId=UNKNOWN,
+                    instant=iv.at.text,
+                )
+            )
+        if iv.interrupted_by:
+            codes.append(
+                Code(
+                    "INTERVENTION_INTERRUPTED",
+                    interventionId=iv.intervention_id,
+                    interruptedByInterventionId=iv.interrupted_by,
+                )
+            )
+        if iv.phase == iv_mod.EXPIRED:
+            codes.append(
+                Code(
+                    "INTERVENTION_EXPIRED",
+                    interventionId=iv.intervention_id,
+                    daysSinceStart=iv.days_since_start,
+                )
+            )
+
+    pot = potency_mod.run(cfg, interventions, gated=gated)
+    p_selected = pot.selected
+    potency = pot.projection()
+    for code, payload in pot.codes:
+        codes.append(Code(code, **payload))
+    if gated:
+        codes.append(
+            Code("POTENCY_LEARNING_CAPABILITY_GATED", missingCapabilities=["M-2", "M-3", "M-9"])
+        )
+        codes.append(
+            Code("CAPABILITY_POTENCY_LEARNER_GATED", missingCapabilities=["M-2", "M-3", "M-9"])
+        )
     if p_selected is not None:
         codes.append(
             Code(
-                "POTENCY_SELECTED_THEORETICAL",
-                theoreticalDkhPerMl=p_selected,
-                chemical=cfg.get("chemical", UNKNOWN),
-                concentrationGPerL=cfg.get("stockConcentrationGPerL", UNKNOWN),
-                netVolumeL=cfg.get("netVolumeL", UNKNOWN),
+                "POTENCY_SELECTED_LEARNED"
+                if pot.source == potency_mod.LEARNED
+                else "POTENCY_SELECTED_THEORETICAL",
+                **(
+                    {
+                        "learnedDkhPerMl": p_selected,
+                        "n": len(pot.observations),
+                        "RDisp_P": pot.r_disp if pot.r_disp is not None else UNKNOWN,
+                        "confidence": pot.confidence,
+                    }
+                    if pot.source == potency_mod.LEARNED
+                    else {
+                        "theoreticalDkhPerMl": p_selected,
+                        "chemical": cfg.get("chemical", UNKNOWN),
+                        "concentrationGPerL": cfg.get("stockConcentrationGPerL", UNKNOWN),
+                        "netVolumeL": cfg.get("netVolumeL", UNKNOWN),
+                    }
+                ),
+            )
+        )
+    if pot.learned is not None and pot.theoretical:
+        codes.append(
+            Code(
+                "POTENCY_DISCREPANCY_BAND",
+                M=pot.learned / pot.theoretical,
+                band=_discrepancy_band(pot.learned / pot.theoretical),
             )
         )
 
@@ -409,6 +506,7 @@ def assess(
         retest=retest_mod.render(decision, as_of),
         delivery=delivery,
         safety=safety,
+        active_intervention=_active(interventions),
         return_plan_offer=return_plan_offer,
         return_plan_eligible=return_plan_eligible,
     )
@@ -448,6 +546,64 @@ def assess(
 
     result["reasonCodes"] = _ordered(codes)
     return clean(result)
+
+
+
+def _potency_at(cfg):
+    """`(potency, contextId, confidence)` as they stood at a given instant.
+
+    The prediction snapshot needs the potency **in force at the dose change**,
+    not the one in force now. In this build the learner is gated, so the figure
+    at every instant is the configured one and the configuration history resolves
+    it. When the gate opens, this is the one function that has to learn to walk
+    the pool as it stood then -- which is why the intervention module takes it as
+    an argument rather than importing the learner.
+    """
+
+    def at(_instant):
+        return (
+            cfg.num("selectedPotencyDkhPerMl"),
+            cfg.get("solutionContextId", "UNKNOWN"),
+            "THEORETICAL_ONLY",
+        )
+
+    return at
+
+
+def _discrepancy_band(m: float) -> str:
+    """`ALK-021`. Wording only, and no action anywhere follows from it."""
+    if 0.85 <= m <= 1.15:
+        return "BROADLY_CONSISTENT"
+    if 0.70 <= m < 0.85 or 1.15 < m <= 1.30:
+        return "MEANINGFUL"
+    return "LARGE"
+
+
+def _active(interventions) -> Any:
+    """The intervention still open at `asOf`, or `NONE`.
+
+    `NONE` is a first-class value: no intervention is a fact about the tank, not
+    a missing field.
+    """
+    live = [
+        iv
+        for iv in interventions
+        if iv.phase in (iv_mod.JUST_IMPLEMENTED, iv_mod.OBSERVING, iv_mod.ASSESSMENT_DUE)
+    ]
+    if not live:
+        return NONE
+    iv = live[-1]
+    return {
+        "interventionId": iv.intervention_id,
+        "interventionType": "MAINTENANCE_DOSE_CHANGE",
+        "oldDoseMlPerDay": iv.old_dose if iv.old_dose is not None else UNKNOWN,
+        "newDoseMlPerDay": iv.new_dose if iv.new_dose is not None else UNKNOWN,
+        "actualStartTime": iv.at.text,
+        "phase": iv.phase,
+        "anchorRelationAmbiguous": iv.anchor_relation_ambiguous,
+        "exposureFraction": "NOT_RUN",
+        "predictionSnapshot": iv.snapshot.payload(),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1062,7 +1218,7 @@ def _assemble(**kw) -> Dict[str, Any]:
         "maintenanceBalance": rec.balance,
         "potency": kw["potency"],
         "doseRecommendation": recommendation,
-        "activeIntervention": NONE,
+        "activeIntervention": kw["active_intervention"],
         "responseAssessment": NOT_RUN,
         "returnPlan": NONE,
         "safety": kw["safety"] if "safety" in kw else {},
