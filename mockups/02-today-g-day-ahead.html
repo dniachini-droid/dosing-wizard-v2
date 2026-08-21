@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Friday 21 August — what is due · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Friday</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="02-today-a-dose-change.html" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Friday 21 August</span>
+      <span class="r">Tomorrow</span>
+    </span>
+    <a class="arrow" href="#sat" aria-label="The day after">&rsaquo;</a>
+  </nav>
+
+  <div class="mockup-note">
+    <b>The stepper, forward.</b> Same screen, same list, filtered to a day that has not happened.
+    A future day shows what is <b>due</b> &mdash; a clean checklist and nothing else.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Due on Friday</h2>
+      <span class="aside">2 items</span>
+    </div>
+    <ul class="attention-list">
+      <li><a class="attention-item" href="12-reschedule-sheet.html">
+        <span class="rank">1</span>
+        <span>
+          <span class="t">Test salinity</span>
+          <span class="d">Still outstanding from Wednesday. Every three days &mdash; move it, change how often, or skip it.</span>
+        </span>
+      </a></li>
+      <li><a class="attention-item" href="12-reschedule-sheet.html">
+        <span class="rank">2</span>
+        <span>
+          <span class="t">Replace carbon</span>
+          <span class="d">Every four weeks. Last done 24 July.</span>
+        </span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      Nothing here can be logged, because it has not happened yet. Tapping an item opens the
+      same sheet the calendar and the task list open &mdash; one item, one place to change it.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Not due on Friday</h2>
+    </div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Alkalinity</span><span class="kv-v">Sun 23 Aug<span class="sub">every three days, counted from this morning</span></span></div>
+      <div class="kv-row"><span class="kv-k">Phosphate</span><span class="kv-v">Sun 23 Aug</span></div>
+      <div class="kv-row"><span class="kv-k">Water change</span><span class="kv-v">Thu 27 Aug</span></div>
+    </div>
+    <p class="inert-note">
+      Shown because &ldquo;nothing else is due&rdquo; is worth being able to see, and because a
+      day that looks empty and is not would be worse than one that says so.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Coming next</h2></div>
+    <div class="suggested">
+      <span class="lbl">Suggested by the app</span>
+      <span class="t">An alkalinity test on Saturday 22 August</span>
+      <span class="d">
+        Because a dose change went in on Thursday morning, and two days later is the earliest a
+        reading can say anything about it. This is a suggestion, not one of your tasks: you
+        accept it or you decline it.
+      </span>
+      <div class="btn-row" style="margin-top:var(--sp-3)">
+        <a class="btn btn-primary" href="14-suggested-test.html">See what accepting does</a>
+        <span class="btn">Decline</span>
+      </div>
+    </div>
+    <p class="inert-note">
+      Your own alkalinity test is Sunday. Accepting would pull it forward to Saturday rather
+      than leaving you with two &mdash; the next screen shows exactly what changes.
+    </p>
+  </section>
+
+  <div class="callout quiet">
+    <strong>There is no assessment on this screen, and there will not be.</strong>
+    An assessment is a statement about how the tank is right now. The app cannot know what
+    Friday&rsquo;s reading will say, and a card that looks like a prediction and is not one has
+    no business existing.
+  </div>
+
+  <div class="mockup-note">
+    <b>What is deliberately absent.</b> No alkalinity card, no dose recommendation, no trend, no
+    &ldquo;expected&rdquo; figure. The one honest prediction the app holds &mdash; what this
+    morning&rsquo;s dose change should produce &mdash; lives on its own moment screen, where it is
+    plainly labelled as a prediction and stamped with the moment it was made.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your data · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="07-settings.html">Settings</a>
+    <h1>Your data</h1>
+    <p class="sub">Where it is, what would survive, and what would not.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>V1&rsquo;s hardest-won engineering had no surface at all in PR&nbsp;#6.</b> Three tiers of
+    backup, each with its limits written down rather than glossed; two independent detectors for a
+    wipe; and an honest statement of what neither of them survives.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Right now</h2>
+      <span class="pill pill-attention">One weak point</span>
+    </div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Readings, events and settings</span><span class="kv-v">1,204 records<span class="sub">in this browser, on this device</span></span></div>
+      <div class="kv-row"><span class="kv-k">Photos</span><span class="kv-v">7<span class="sub">stored as files, not as text &mdash; so they do not eat the text quota</span></span></div>
+      <div class="kv-row"><span class="kv-k">Space used</span><span class="kv-v">3.6&nbsp;MB of about 5&nbsp;MB</span></div>
+      <div class="kv-row"><span class="kv-k">Last export you actually saved</span><span class="kv-v is-absent">Never</span></div>
+    </div>
+    <div class="callout attention">
+      <strong>Nothing you have is anywhere but here.</strong> The snapshots below are not a backup
+      &mdash; they live in the same place as the data they copy and die with it. Save an export
+      somewhere else.
+    </div>
+    <span class="btn btn-primary">Export everything to a file</span>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Three tiers, and what each one is worth</h2></div>
+
+    <div class="tier">
+      <div class="h">
+        <span class="n">Snapshots</span>
+        <span class="pill pill-alk">On</span>
+      </div>
+      <p class="caption">The last 12 states of the app, kept automatically.</p>
+      <p class="limit">
+        <b>This is an undo history, not a backup.</b> It lives in the same browser storage as
+        everything else. Clearing site data, a browser eviction, or a lost phone takes the
+        snapshots with the data. It will refuse to write an empty snapshot over a full one, so a
+        wipe cannot quietly overwrite the last good copy &mdash; but that is the only thing it
+        protects you from.
+      </p>
+    </div>
+
+    <div class="tier">
+      <div class="h">
+        <span class="n">Write to a folder you choose</span>
+        <span class="pill pill-neutral">Not available here</span>
+      </div>
+      <p class="caption">A real file on your own disk, rewritten automatically.</p>
+      <p class="limit">
+        <b>Chromium browsers only, which means not iOS.</b> On an iPhone or iPad no browser can do
+        this, whatever it is called. Said plainly rather than offered and then failing.
+      </p>
+    </div>
+
+    <div class="tier">
+      <div class="h">
+        <span class="n">Send it somewhere</span>
+        <span class="pill pill-alk">Available</span>
+      </div>
+      <p class="caption">The system share sheet &mdash; email it, put it in a cloud folder, message it to yourself.</p>
+      <p class="limit">
+        <b>Not automatic, and the app cannot tell whether it worked.</b> The share sheet does not
+        report back, so a dismissal and a successful save look identical from here. The app will
+        not claim you have a backup on the strength of it.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>If your data disappears</h2></div>
+    <p class="body">
+      Two checks run independently, because either one alone can be fooled.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">A marker left behind</span><span class="kv-v">Present<span class="sub">written on first run; missing means either a wipe or a genuinely new install</span></span></div>
+      <div class="kv-row"><span class="kv-k">The shape of the storage</span><span class="kv-v">Consistent<span class="sub">orphaned photos with no records pointing at them is the signature of a partial wipe</span></span></div>
+    </div>
+    <div class="callout quiet">
+      <strong>The honest limit.</strong> On a full clear, both of these go too. The app then cannot
+      tell a wiped install from a new one, and it will say so rather than guess. It will not tell
+      you your data was lost, and it will not tell you everything is fine.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Bringing a file back in</h2></div>
+    <span class="btn">Choose a file to restore from</span>
+    <p class="body" style="margin-top:var(--sp-3)">
+      You will be shown what is in the file and exactly what would change before anything is
+      written &mdash; how many records are new, how many already exist, and how many disagree with
+      what you have.
+    </p>
+    <div class="refusal">
+      <span class="state">What a restore will never do</span>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Overwrite a stretch of your history in one go</span><span class="kv-v is-absent">No</span></div>
+        <div class="kv-row"><span class="kv-k">Drop a same-day record without telling you</span><span class="kv-v is-absent">No</span></div>
+        <div class="kv-row"><span class="kv-k">Report success while having lost something</span><span class="kv-v is-absent">No</span></div>
+      </div>
+      <p style="margin-top:var(--sp-3)">V1&rsquo;s restore did all three and reported that nothing
+      was lost. That is the first thing this one is tested against.</p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

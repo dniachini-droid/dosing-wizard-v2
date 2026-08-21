@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# The combined single-file mockup build. Rebuilt by
+# `python3 mockups/build-single-file.py`; the script is committed, the artefact
+# is not, so the two can never drift apart.
+mockups/dosing-wizard-v2-mockups.html

@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>First-run setup · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <p class="eyebrow">Setting up</p>
+    <h1>Four things, then you&rsquo;re done</h1>
+    <p class="sub">Every one of these is required. Skipping any of them means the app has to
+    refuse part of its answer rather than guess.</p>
+  </header>
+
+  <div class="steps"><span class="s done"></span><span class="s done"></span><span class="s done"></span><span class="s done"></span></div>
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="card" id="step1">
+    <p class="stepno">Step 1 of 4</p>
+    <div class="card-head"><h2>How much water is in the system?</h2></div>
+    <p class="body">
+      The actual water volume, after rock and sand &mdash; not the tank&rsquo;s printed size.
+      Include the sump. An estimate you can defend is fine; a guess you cannot is not.
+    </p>
+
+    <div class="field">
+      <label for="vol">Net water volume</label>
+      <div class="inline">
+        <input class="input" id="vol" value="77" inputmode="decimal">
+        <span class="suffix">litres</span>
+      </div>
+      <p class="hint">Used for two things: turning your solution&rsquo;s recipe into a strength
+      per millilitre, and working out how much a water change moves alkalinity.</p>
+    </div>
+
+    <div class="refusal">
+      <span class="state">If this is left empty</span>
+      <p>Alkalinity is still measured, stored and charted. Everything downstream of the mass
+      balance stops:</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">What your tank uses</span><span class="kv-v is-absent">Refused<span class="sub">it needs the net water volume</span></span></div>
+        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">it needs the solution strength</span></span></div>
+        <div class="kv-row"><span class="kv-k">Any dose in mL</span><span class="kv-v is-absent">Refused<span class="sub">nothing can be sized in millilitres without it</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="card" id="step2">
+    <p class="stepno">Step 2 of 4</p>
+    <div class="card-head"><h2>Where do you want alkalinity to sit?</h2></div>
+    <p class="body">
+      Two pairs of numbers. The <strong>target range</strong> is where you want to be. The
+      <strong>outer bounds</strong> are where the app stops offering and starts recommending
+      an urgent return.
+    </p>
+
+    <div class="field">
+      <span class="flabel">Target range</span>
+      <div class="inline">
+        <input class="input" value="8.6" inputmode="decimal" aria-label="Target range minimum">
+        <span class="suffix">to</span>
+        <input class="input" value="9.2" inputmode="decimal" aria-label="Target range maximum">
+        <span class="suffix">dKH</span>
+      </div>
+      <p class="hint">Suggested 8.2 &ndash; 8.8&nbsp;dKH. Edited here to 8.6 &ndash; 9.2. The
+      suggestion is a starting point, not a rule.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Outer bounds</span>
+      <div class="inline">
+        <input class="input" value="7.0" inputmode="decimal" aria-label="Outer minimum">
+        <span class="suffix">to</span>
+        <input class="input" value="11.0" inputmode="decimal" aria-label="Outer maximum">
+        <span class="suffix">dKH</span>
+      </div>
+      <p class="hint">Defaults 7.0 &ndash; 11.0&nbsp;dKH. Outside these, the app switches to a
+      different register entirely and recommends a safety return.</p>
+    </div>
+
+    <div class="callout quiet">
+      <strong>Worked out by the engine from the above, not stored:</strong> the aim point a return plan heads
+      for is the middle of your target range &mdash; 8.90&nbsp;dKH. The safety destination is
+      the outer bound plus a fixed 0.20&nbsp;dKH buffer &mdash; 7.20 low, 10.80 high. You never
+      set these directly, and they move when you edit the ranges.
+    </div>
+
+    <div class="refusal">
+      <span class="state">Rules the app will not bend</span>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Minimum must be below maximum</span><span class="kv-v is-absent">Will not save</span></div>
+        <div class="kv-row"><span class="kv-k">Target range must sit inside the outer bounds</span><span class="kv-v is-absent">Will not save</span></div>
+        <div class="kv-row"><span class="kv-k">Outer minimum must be below outer maximum</span><span class="kv-v is-absent">Will not save</span></div>
+      </div>
+      <p style="margin-top:var(--sp-3)">Without a target range there is no position at all &mdash;
+      not &ldquo;in range&rdquo;, not &ldquo;out of range&rdquo;, nothing. Readings are still stored.</p>
+    </div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="card" id="step3">
+    <p class="stepno">Step 3 of 4</p>
+    <div class="card-head"><h2>What are you dosing?</h2></div>
+    <p class="body">
+      This is what turns a dKH figure into millilitres. Without it the app can still tell you
+      how much alkalinity you need &mdash; it just cannot tell you how much liquid that is.
+    </p>
+
+    <div class="field">
+      <span class="flabel">Solution type</span>
+      <div class="seg">
+        <span class="opt on">Sodium carbonate<span class="oz">soda ash</span></span>
+        <span class="opt">Sodium bicarbonate<span class="oz">baking soda</span></span>
+        <span class="opt">Sodium hydroxide</span>
+        <span class="opt">Commercial product</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="conc">Concentration</label>
+      <div class="inline">
+        <input class="input" id="conc" value="100" inputmode="decimal">
+        <span class="suffix">g per litre</span>
+      </div>
+      <p class="hint">Grams of dry powder per litre of finished solution. For a commercial
+      product, enter the manufacturer&rsquo;s stated strength instead.</p>
+    </div>
+
+    <div class="callout quiet">
+      <strong>That gives 0.0686&nbsp;dKH per mL</strong> in a 77-litre system. Calculated from
+      your recipe, not measured. The app will use this figure for every dose until you give it
+      a reason to change.
+    </div>
+
+    <div class="refusal">
+      <span class="state">If this is left empty</span>
+      <p>The app switches to stating movements in dKH and refuses to convert them to
+      millilitres. It will not assume a product.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Strength per mL</span><span class="kv-v is-absent">Refused<span class="sub">it needs the solution strength</span></span></div>
+        <div class="kv-row"><span class="kv-k">Any dose or correction in mL</span><span class="kv-v is-absent">Refused<span class="sub">nothing can be sized in millilitres without it</span></span></div>
+        <div class="kv-row"><span class="kv-k">Required movement in dKH</span><span class="kv-v">Still given</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 4 ================= -->
+  <section class="card" id="step4">
+    <p class="stepno">Step 4 of 4</p>
+    <div class="card-head"><h2>What can your pump actually do?</h2></div>
+    <p class="body">
+      Two things: the smallest change you can set it to, and how it spreads the daily dose out.
+    </p>
+
+    <div class="field">
+      <label for="inc">Smallest step you can set</label>
+      <div class="inline">
+        <input class="input" id="inc" value="0.1" inputmode="decimal">
+        <span class="suffix">mL/day</span>
+      </div>
+      <p class="hint">If your pump moves in whole millilitres, put 1. If it does tenths, put
+      0.1. Every recommended dose gets rounded to a multiple of this, and then re-checked
+      against the safety limits.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">How the daily dose is delivered</span>
+      <div class="seg">
+        <span class="opt on">Hourly<span class="oz">24 &times; per day</span></span>
+        <span class="opt">Several times a day</span>
+        <span class="opt">Once a day</span>
+        <span class="opt">Not sure yet</span>
+      </div>
+      <p class="hint">Used to work out how much of a dose change had actually landed by the
+      time you next tested. &ldquo;Not sure yet&rdquo; is a real answer and is recorded as
+      unknown &mdash; it is not treated as once a day.</p>
+    </div>
+
+    <div class="refusal quiet">
+      <span class="state">If this is left empty</span>
+      <p>Nothing is held back. This app never drives your pump &mdash; it tells you a number and
+      you set it &mdash; so a rounding step is about <strong>legibility</strong> and nothing
+      else. Leave it blank and you get the figure at full precision.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v">Still given<span class="sub">at full precision, e.g. 9.288 mL/day</span></span></div>
+        <div class="kv-row"><span class="kv-k">Rounded to something tidier</span><span class="kv-v is-absent">Not done<span class="sub">nothing to round to</span></span></div>
+        <div class="kv-row"><span class="kv-k">One-off safety corrections</span><span class="kv-v">Still given</span></div>
+      </div>
+      <p class="hint" style="margin-top:var(--sp-3)">The sharpest refusal in the app is not
+      here &mdash; it is a missing solution strength, on the previous step.
+      <a class="fix" href="02-today-d-refusal.html">See what that looks like on Today &rarr;</a></p>
+    </div>
+  </section>
+
+  <!-- ================= CLOSING STATEMENT ================= -->
+  <section class="card">
+    <div class="card-head"><h2>What this app does, and does not do, yet</h2></div>
+
+    <p class="body"><strong>Alkalinity is assessed end to end.</strong> Position against your
+    target range, trend, how much your tank uses, a maintenance dose recommendation, safety
+    returns when you go outside the outer bounds, and when to test next.</p>
+
+    <p class="body"><strong>Everything else is logged and charted, and nothing more.</strong>
+    Calcium, magnesium, nitrate, phosphate and salinity are recorded as facts. They get a
+    value, a date and a chart. They get no status, no range position, no trend, no advice and
+    no reminders &mdash; and they cannot affect the alkalinity advice.</p>
+
+    <p class="body"><strong>The app recommends. You implement.</strong> It cannot see your
+    tank or your pump. When it recommends a dose it will ask you afterwards whether you made
+    the change, and &ldquo;I&rsquo;m not sure&rdquo; is a real answer that it stores as unknown
+    rather than converting into a yes or a no.</p>
+
+    <p class="body"><strong>It will refuse rather than guess.</strong> Where a rule it needs
+    does not exist, or a fact you have not given it is load-bearing, it says so, names what is
+    missing, and gives you everything it can still stand behind. Refusals are normal here. A
+    blank would be a bug.</p>
+
+    <div class="callout quiet">
+      Calculators &mdash; the sort where you type in numbers and get an answer &mdash; will
+      live in their own <strong>Tools</strong> tab when they arrive, deliberately away from
+      advice. A calculator answering a question you asked and a recommendation the engine
+      chose to make are different things, and they should never look alike.
+    </div>
+
+    <a class="btn btn-primary" href="02-today-a-dose-change.html">Start using it</a>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today — insufficient data · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Today</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="02-today-h-day-past.html" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Thursday 20 August</span>
+      <span class="r">Today</span>
+    </span>
+    <a class="arrow" href="02-today-g-day-ahead.html" aria-label="The day after">&rsaquo;</a>
+  </nav>
+
+  <div class="mockup-note">
+    <b>Variant C &mdash; not enough evidence.</b> Two usable readings, three days apart, one
+    discarded. The screen has to say what is missing, which test fixes it, and what can still
+    be concluded right now. It must not go blank.
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Needs you</h2><span class="aside">3 items</span></div>
+    <ul class="attention-list">
+      <li><a class="attention-item" href="03-assessment-detail.html">
+        <span class="rank">1</span>
+        <span>
+          <span class="t">Test alkalinity again tomorrow</span>
+          <span class="d">Two readings is not enough to say which way it is going. One more, on a different day, and it can.</span>
+        </span>
+      </a></li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">2</span>
+            <span>
+              <span class="t">Test alkalinity</span>
+              <span class="d">Due today &mdash; and it is the reading that is missing.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="8.74" aria-label="Alkalinity">
+              <span class="suffix">dKH</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">Logged here, at 08:12 today. Recording the reading is what completes the test &mdash; there is no separate tick to remember.</p>
+          </div>
+        </details>
+      </li>
+      <li>
+        <details class="expandable">
+          <summary>
+            <span class="rank">3</span>
+            <span>
+              <span class="t">Test salinity</span>
+              <span class="d">Due today. Last done Sunday, 35.1&nbsp;ppt.</span>
+            </span>
+            <span class="chev"></span>
+          </summary>
+          <div class="inline-log">
+            <div class="row">
+              <input class="input" inputmode="decimal" placeholder="35.1" aria-label="Salinity">
+              <span class="suffix">ppt</span>
+              <span class="btn btn-primary">Log</span>
+            </div>
+            <p class="note">Logged here, at 08:12 today. Recording the reading is what completes the test &mdash; there is no separate tick to remember.</p>
+          </div>
+        </details>
+      </li>
+    </ul>
+    <p class="inert-note">One list, ordered by what matters most &mdash; tests, chores and the assessment together rather than a section each. The order is supplied by the engine; this list does not rank anything itself. Anything due opens where it sits.</p>
+  </section>
+
+  <section class="card" id="alk">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>Alkalinity</h2>
+      <span class="aside">20 Aug 07:40</span>
+    </div>
+
+    <div><span class="hero">8.74</span><span class="unit">dKH</span></div>
+    <p class="caption">Latest valid measurement. Position is read from this value alone.</p>
+
+    <svg class="chart c-alk" viewBox="0 0 296 116" role="img"
+         aria-label="Two valid alkalinity readings three days apart, 8.83 then 8.74 dKH, with one invalid reading on 19 August excluded.">
+      <defs>
+        <linearGradient id="g-alk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--alk)" stop-opacity="0.20"/>
+          <stop offset="100%" stop-color="var(--alk)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect class="range-fill" x="20" y="23.3" width="270" height="56"/>
+      <line class="range-edge" x1="20" y1="23.3" x2="290" y2="23.3"/>
+      <line class="range-edge" x1="20" y1="79.3" x2="290" y2="79.3"/>
+      <line class="grid" x1="20" y1="51.3" x2="290" y2="51.3"/>
+      <text class="axis" x="1" y="26.5">9.2</text>
+      <text class="axis" x="1" y="82.5">8.6</text>
+      <text class="axis" x="20" y="112">17 Aug</text>
+      <text class="axis" x="290" y="112" text-anchor="end">20 Aug</text>
+
+      <path class="area" d="M20,57.9 C110,60.7 200,63.5 290,66.3 L290,98 L20,98 Z"/>
+      <path class="trace" d="M20,57.9 C110,60.7 200,63.5 290,66.3" stroke-dasharray="4 4"/>
+      <g class="reveal d6"><circle class="pt-excluded" cx="200" cy="84" r="4"/></g>
+      <circle class="pt reveal d0" cx="20" cy="57.9" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="66.3" r="4"/>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--alk-bg)"></span>Target range 8.6&ndash;9.2&nbsp;dKH</span>
+      <span><span class="swatch" style="background:var(--card-top);border:1px dashed var(--faint)"></span>Invalid, excluded</span>
+      <span>Dashed trace &mdash; two points only</span>
+    </div>
+
+    <p class="seclabel">Where this stands</p>
+    <dl class="dims">
+      <div class="dim">
+        <dt>Where it sits</dt>
+        <dd>In range<span class="why">8.74&nbsp;dKH, inside 8.6&ndash;9.2. This is still known.</span></dd>
+      </div>
+      <div class="dim is-attention">
+        <dt>Which way it is going</dt>
+        <dd>Uncertain<span class="why">Two readings give a direction, not a trend. Not reported as steady.</span></dd>
+      </div>
+      <div class="dim is-attention">
+        <dt>How much is known</dt>
+        <dd>Not enough yet<span class="why">2 tests over 3.00 days. The minimum is 3 tests over 4 days.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>What is running</dt>
+        <dd>None open<span class="why">No dose change is currently being watched.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Whether it responded</dt>
+        <dd>Not run<span class="why">No dose change is being watched, so there is nothing to attribute a response to.</span></dd>
+      </div>
+      <div class="dim">
+        <dt>Whether it overshot</dt>
+        <dd>None<span class="why">No target boundary has been crossed in the unwanted direction.</span></dd>
+      </div>
+    </dl>
+
+    <div class="slopepair">
+      <div class="slopebox">
+        <span class="lbl">What your tests show</span>
+        <span class="n">&minus;0.0300</span>
+        <span class="sub">dKH/day, and not yet enough to act on</span>
+      </div>
+      <div class="slopebox">
+        <span class="lbl">What&rsquo;s certain enough to act on</span>
+        <span class="n">0.0000</span>
+        <span class="sub">dKH/day, after the uncertainty is taken off</span>
+      </div>
+    </div>
+    <p class="inert-note">
+      With two readings, uncertainty is 0.0471&nbsp;dKH/day &mdash; larger than the drift itself.
+      The first number is a signal worth noting; it is not an established trend.
+    </p>
+
+    <div class="refusal">
+      <span class="state">Not run &middot; dose recommendation</span>
+      <h3>No dose change can be sized yet</h3>
+      <p><strong>What is missing:</strong> one more valid, independent alkalinity test, and one
+      more day of span. You have 2 tests across 3.00 days; an ordinary dose decision needs 3
+      across 4 days, all inside the same 14-day window.</p>
+      <p><strong>What would fix it:</strong> test alkalinity tomorrow, 21 Aug, any time after
+      07:40. That single test satisfies both.</p>
+      <div class="stillknown">
+        <p style="margin-bottom:var(--sp-2)"><strong>What is known right now:</strong></p>
+        <div class="kv">
+          <div class="kv-row"><span class="kv-k">Alkalinity</span><span class="kv-v">8.74 dKH<span class="sub">in the target range</span></span></div>
+          <div class="kv-row"><span class="kv-k">Outer operating range</span><span class="kv-v">Not breached<span class="sub">7.0&ndash;11.0 dKH</span></span></div>
+          <div class="kv-row"><span class="kv-k">Current dose</span><span class="kv-v">9.0 mL/day<span class="sub">unchanged &mdash; keep dosing it</span></span></div>
+          <div class="kv-row"><span class="kv-k">Direction so far</span><span class="kv-v">Slightly down<span class="sub">provisional, from two readings</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="seclabel">Next test</p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Fri 21 Aug, 07:40</span></div>
+      <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">To reach the minimum this app will act on</span></div>
+      <div class="kv-row"><span class="kv-k">Latest the app will let it slip</span><span class="kv-v is-absent">Not set<span class="sub">the scheduler picks an earliest, never a deadline</span></span></div>
+    </div>
+
+    <details class="notices">
+      <summary>
+        <span class="lbl">Why the engine said this</span>
+        <span class="sevcount">
+          <span class="pill pill-attention">3 limiting</span>
+          <span class="pill pill-neutral">12 info</span>
+        </span>
+        <span class="chev"></span>
+      </summary>
+      <ul class="notice-list">
+
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">Not enough independent tests inside the 14-day window.</span>
+          <span class="payload"><span class="k">you have</span> <b>2</b> &nbsp; <span class="k">needed</span> <b>3</b> &nbsp; <span class="k">window (days)</span> <b>14</b> &nbsp; <span class="k">earliest useful test</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">The readings do not cover enough days.</span>
+          <span class="payload"><span class="k">days you have</span> <b>3.00</b> &nbsp; <span class="k">days needed</span> <b>4</b> &nbsp; <span class="k">earliest useful test</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">Insufficiency is stated with what is missing and when the next useful test is &mdash; never as a dead end.</span>
+          <span class="payload"><span class="k">missing</span> <b>one more separate test, and more days covered</b> &nbsp; <span class="k">earliest useful test</span> <b>2026-08-21T07:40Z</b> &nbsp; <span class="k">latest reading</span> <b>8.74</b></span>
+        </li>
+
+        <li class="notice rows-1">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">You marked the 19 Aug reading invalid. It stays in your history and is excluded from analysis.</span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">A two-test basis is a signal, not an established trend.</span>
+          <span class="payload"><span class="k">separate tests</span> <b>2</b> &nbsp; <span class="k">days covered</span> <b>3.00</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">With two readings the rate is simply the difference divided by the time between them.</span>
+          <span class="payload"><span class="k">days between</span> <b>3.00</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Uncertainty comes from both readings' floors divided by the gap between them.</span>
+          <span class="payload"><span class="k">uncertainty, earlier stretch</span> <b>0.10</b> &nbsp; <span class="k">uncertainty, later stretch</span> <b>0.10</b> &nbsp; <span class="k">days between</span> <b>3.00</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0471</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The rapid-movement exception was checked and does not apply, so the ordinary evidence minimum stands.</span>
+          <span class="payload"><span class="k">what did not hold</span> <b>no pair of readings moved fast enough</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The stretch of history used for this assessment.</span>
+          <span class="payload"><span class="k">from</span> <b>2026-08-17T07:40Z</b> &nbsp; <span class="k">to</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">days covered</span> <b>3.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The 14-day window was not stretched to find more readings, even though evidence is short.</span>
+          <span class="payload"><span class="k">days covered</span> <b>3.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Strength per millilitre comes from your recipe and tank volume.</span>
+          <span class="payload"><span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">solution strength</span> <b>100</b> &nbsp; <span class="k">net water volume</span> <b>77</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Your confirmed pump schedule was used as the delivery record.</span>
+          <span class="payload"><span class="k">dose set on the pump</span> <b>9.0</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The next test is timed to reach the evidence minimum rather than to follow the routine rhythm.</span>
+          <span class="payload"><span class="k">separate tests needed</span> <b>1</b> &nbsp; <span class="k">days needed</span> <b>1.00</b> &nbsp; <span class="k">test again</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+
+        <li class="notice rows-1">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">There is no movement the app can stand behind yet, so there is nothing for it to wait to accumulate. That is why the next test is set by building evidence instead.</span>
+        </li>
+
+        <li class="notice rows-1">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+        </li>
+
+      </ul>
+    </details>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open question for the owner.</b> Whether the daily-consumption figure may be computed
+    from a two-reading provisional trend is not stated anywhere, and the reason-code catalogue
+    has no way to refuse it on those grounds &mdash; the four refusals it does carry cover
+    missing potency, missing dose history, missing net volume and legacy context only. This screen therefore shows no consumption figure and
+    no reason for its absence, which breaks the rule that no output is silently absent.
+    Recorded as gap&nbsp;5.
+  </div>
+
+  <p class="seclabel">Logged only</p>
+  <section class="card">
+    <div class="tilegrid">
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--ca)"><span class="dot" style="background:var(--ca)"></span>Calcium</span>
+        <span class="n">428<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-ca chart" aria-hidden="true">
+          <defs><linearGradient id="g-ca" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--ca)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--ca)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,17 C16,15 28,13 40,14 C52,15 64,20 76,19 C84,18.5 92,16 96,15 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,17 C16,15 28,13 40,14 C52,15 64,20 76,19 C84,18.5 92,16 96,15"/>
+          <circle class="pt-last reveal d8" cx="96" cy="15" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--mg)"><span class="dot" style="background:var(--mg)"></span>Magnesium</span>
+        <span class="n">1340<span class="unit">mg/L</span></span><span class="when">14 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-mg chart" aria-hidden="true">
+          <defs><linearGradient id="g-mg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--mg)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--mg)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,12 C16,13 28,16 40,17 C52,18 64,16 76,17 C84,17.6 92,19 96,20 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,12 C16,13 28,16 40,17 C52,18 64,16 76,17 C84,17.6 92,19 96,20"/>
+          <circle class="pt-last reveal d8" cx="96" cy="20" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--no3)"><span class="dot" style="background:var(--no3)"></span>Nitrate</span>
+        <span class="n">5.2<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-no3 chart" aria-hidden="true">
+          <defs><linearGradient id="g-no3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--no3)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--no3)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,20 C16,19 28,17 40,15 C52,13 64,14 76,13 C84,12.4 92,11 96,10 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,20 C16,19 28,17 40,15 C52,13 64,14 76,13 C84,12.4 92,11 96,10"/>
+          <circle class="pt-last reveal d8" cx="96" cy="10" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html">
+        <span class="name" style="color:var(--po4)"><span class="dot" style="background:var(--po4)"></span>Phosphate</span>
+        <span class="n">0.06<span class="unit">mg/L</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 100 30" class="c-po4 chart" aria-hidden="true">
+          <defs><linearGradient id="g-po4" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--po4)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--po4)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,13 C16,14 28,17 40,18 C52,19 64,17 76,16 C84,15.4 92,15 96,15 L96,30 L4,30 Z"/>
+          <path class="trace" d="M4,13 C16,14 28,17 40,18 C52,19 64,17 76,16 C84,15.4 92,15 96,15"/>
+          <circle class="pt-last reveal d8" cx="96" cy="15" r="2.6"/></svg>
+      </a>
+      <a class="tile" href="06-history.html" style="grid-column:1 / -1">
+        <span class="name" style="color:var(--sal)"><span class="dot" style="background:var(--sal)"></span>Salinity</span>
+        <span class="n">35.1<span class="unit">ppt</span></span><span class="when">18 Aug</span>
+        <svg viewBox="0 0 216 30" class="c-sal chart" aria-hidden="true">
+          <defs><linearGradient id="g-sal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--sal)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--sal)" stop-opacity="0"/></linearGradient></defs>
+          <path class="area" d="M4,16 C30,15 56,14 82,15 C108,16 134,18 160,17 C180,16.2 200,15 212,14 L212,30 L4,30 Z"/>
+          <path class="trace" d="M4,16 C30,15 56,14 82,15 C108,16 134,18 160,17 C180,16.2 200,15 212,14"/>
+          <circle class="pt-last reveal d8" cx="212" cy="14" r="2.6"/></svg>
+      </a>
+    </div>
+    <p class="inert-note">Logged and charted only: no status, no range position, no trend, no advice, no reminders.</p>
+  </section>
+
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; reason codes and payloads</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface. The engine emits an ordered, severity-graded
+      list of reason codes with a payload each, and this is that list verbatim, so the screen
+      above can be checked against the contract it renders. Nothing outside this block uses
+      this vocabulary.</p>
+      <ul class="notice-list">
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">EVIDENCE_INSUFFICIENT_CLUSTERS</span>
+          <span class="say">Not enough independent tests inside the 14-day window.</span>
+          <span class="payload"><span class="k">have</span> <b>2</b> &nbsp; <span class="k">need</span> <b>3</b> &nbsp; <span class="k">windowDays</span> <b>14</b> &nbsp; <span class="k">nextUsefulTestAt</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">EVIDENCE_INSUFFICIENT_SPAN</span>
+          <span class="say">The readings do not cover enough days.</span>
+          <span class="payload"><span class="k">haveDays</span> <b>3.00</b> &nbsp; <span class="k">needDays</span> <b>4</b> &nbsp; <span class="k">nextUsefulTestAt</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">OUTPUT_INSUFFICIENT_DATA_ACTIONABLE</span>
+          <span class="say">Insufficiency is stated with what is missing and when the next useful test is &mdash; never as a dead end.</span>
+          <span class="payload"><span class="k">missing</span> <b>[INDEPENDENT_CLUSTER, SPAN_DAYS]</b> &nbsp; <span class="k">nextUsefulTestAt</span> <b>2026-08-21T07:40Z</b> &nbsp; <span class="k">currentValueDkh</span> <b>8.74</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">VALIDATION_READING_MARKED_INVALID</span>
+          <span class="say">You marked the 19 Aug reading invalid. It stays in your history and is excluded from analysis.</span>
+          <span class="payload"><span class="k">readingId</span> <b>R-0151</b> &nbsp; <span class="k">invalidReason</span> <b>&ldquo;Reagent past expiry&rdquo;</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_PROVISIONAL_TWO_POINT</span>
+          <span class="say">A two-test basis is a signal, not an established trend.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>2</b> &nbsp; <span class="k">spanDays</span> <b>3.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_ESTIMATOR_TWO_POINT</span>
+          <span class="say">With two readings the rate is simply the difference divided by the time between them.</span>
+          <span class="payload"><span class="k">deltaDays</span> <b>3.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">UNCERTAINTY_TWO_POINT_BASIS</span>
+          <span class="say">Uncertainty comes from both readings' floors divided by the gap between them.</span>
+          <span class="payload"><span class="k">sigma1</span> <b>0.10</b> &nbsp; <span class="k">sigma2</span> <b>0.10</b> &nbsp; <span class="k">deltaDays</span> <b>3.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0471</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">TRAJECTORY_RAPID_NOT_CONFIRMED</span>
+          <span class="say">The rapid-movement exception was checked and does not apply, so the ordinary evidence minimum stands.</span>
+          <span class="payload"><span class="k">failedConditions</span> <b>[PAIR_SLOPE_BELOW_THRESHOLD]</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_SELECTED</span>
+          <span class="say">The stretch of history used for this assessment.</span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0817</b> &nbsp; <span class="k">startAt</span> <b>2026-08-17T07:40Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>3.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_LOOKBACK_NOT_EXTENDED</span>
+          <span class="say">The 14-day window was not stretched to find more readings, even though evidence is short.</span>
+          <span class="payload"><span class="k">spanDays</span> <b>3.00</b> &nbsp; <span class="k">capDays</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="say">Strength per millilitre comes from your recipe and tank volume.</span>
+          <span class="payload"><span class="k">theoreticalDkhPerMl</span> <b>0.0686</b> &nbsp; <span class="k">chemical</span> <b>NA2CO3</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">DELIVERY_BASIS_PROGRAMMED_SCHEDULE</span>
+          <span class="say">Your confirmed pump schedule was used as the delivery record.</span>
+          <span class="payload"><span class="k">programmedDoseMlPerDay</span> <b>9.0</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">RETEST_EVIDENCE_BUILDING</span>
+          <span class="say">The next test is timed to reach the evidence minimum rather than to follow the routine rhythm.</span>
+          <span class="payload"><span class="k">clustersNeeded</span> <b>1</b> &nbsp; <span class="k">spanNeededDays</span> <b>1.00</b> &nbsp; <span class="k">recommendedAt</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">RETEST_SIGNAL_ACCUMULATION_NOT_RUN</span>
+          <span class="say">There is no movement the app can stand behind yet, so there is nothing for it to wait to accumulate. That is why the next test is set by building evidence instead.</span>
+          <span class="payload"><span class="k">sSupportedDkhPerDay</span> <b>0.0000</b> &nbsp; <span class="k">movementEvidence</span> <b>INSUFFICIENT</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>2</b> &nbsp; <span class="k">spanDays</span> <b>2.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0707</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
+        </li>
+      </ul>
+    </div>
+  </details>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

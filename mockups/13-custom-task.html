@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Add something · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="10-tasks.html">Tasks</a>
+    <h1>Add something</h1>
+    <p class="sub">A task of your own, a chore you have just done, or a one-off nobody planned.</p>
+  </header>
+
+  <section class="card">
+    <div class="card-head"><h2>A task of your own</h2></div>
+
+    <div class="field">
+      <label for="lbl">What is it called?</label>
+      <input class="input" id="lbl" placeholder="e.g. Strip down the return pump">
+    </div>
+
+    <div class="field">
+      <span class="flabel">How often</span>
+      <div class="inline">
+        <input class="input" value="3" inputmode="numeric" aria-label="How many">
+        <div class="seg" style="flex:2">
+          <span class="opt">Days</span>
+          <span class="opt on">Months</span>
+        </div>
+      </div>
+      <p class="hint">Your rhythm, your choice. Nothing about a chore is chemistry, so the app has
+      no opinion about how often you do it.</p>
+    </div>
+
+    <div class="field">
+      <label for="first">First one due</label>
+      <input class="input" id="first" value="20 Aug 2026">
+    </div>
+
+    <span class="btn btn-primary">Add it</span>
+    <p class="inert-note">
+      It joins the same list, the same calendar and the same sheet as everything else. There is
+      no second-class kind of task.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>A water change you have just done</h2></div>
+
+    <div class="field">
+      <span class="flabel">When</span>
+      <div class="inline">
+        <input class="input" value="20 Aug 2026" aria-label="Date">
+        <input class="input is-empty" placeholder="time, if you know it" aria-label="Time">
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="flabel">Volume</span>
+      <div class="inline">
+        <input class="input" value="15" inputmode="decimal" aria-label="Volume">
+        <span class="suffix">L</span>
+      </div>
+      <p class="hint">Against 77&nbsp;L net, this replaces about 19% of the water. A change that
+      size is large enough that the app will treat the history before it and after it as separate
+      stretches rather than one run.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">What went in</span>
+      <div class="tri">
+        <span class="opt on">Fresh salt mix</span>
+        <span class="opt">Something else</span>
+        <span class="opt">Do not know</span>
+      </div>
+      <p class="hint">&ldquo;Do not know&rdquo; is a real answer and stays a real answer. It is not
+      quietly rounded to the common case.</p>
+    </div>
+
+    <span class="btn btn-primary">Log it</span>
+    <p class="inert-note">
+      Logging it here completes the scheduled water change, if one was due. The next is counted
+      from today.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>A one-off nobody planned</h2></div>
+    <p class="body">
+      These are the things the engine cannot work out for itself and will not guess at. Each of
+      them changes how a later reading should be read.
+    </p>
+    <ul class="picker">
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-alk">&#8593;</span>
+        <span><span class="t">I changed the dose</span>
+        <span class="d">With the date and the time it took effect.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">The doser stopped, or ran wrong</span>
+        <span class="d">From when to when, and roughly what went in instead. Without it the app reads a gap in dosing as the tank suddenly consuming more.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-ca">&#9878;</span>
+        <span><span class="t">I corrected it by hand</span>
+        <span class="d">A one-off volume, outside the daily dose. It is a separate kind of event and it is not folded into your maintenance rate.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="04-log-entry.html">
+        <span class="pmark p-mg">&#9998;</span>
+        <span><span class="t">Something else worth remembering</span>
+        <span class="d">A note against a date. It is recorded and it is never used as evidence for anything.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

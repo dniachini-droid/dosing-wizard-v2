@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One reading · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="06-history.html">History</a>
+    <p class="eyebrow">Alkalinity test &middot; R-0138</p>
+    <h1>15 August 2026</h1>
+    <p class="sub">Recorded 15 Aug at 21:04, from memory, with the date but not the time.</p>
+  </header>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-alk">Alk</span><h2>What was recorded</h2>
+      <span class="pill pill-attention">Date only</span></div>
+
+    <div><span class="hero">8.90</span><span class="unit">dKH</span></div>
+    <p class="caption">The value exactly as you entered it. This number is never overwritten by
+    anything the app works out later.</p>
+
+    <div class="kv" style="margin-top:var(--sp-4)">
+      <div class="kv-row"><span class="kv-k">Measured</span><span class="kv-v">15 Aug 2026<span class="sub">time within the day not known</span></span></div>
+      <div class="kv-row"><span class="kv-k">How well the time is known</span><span class="kv-v">Date only<span class="sub">date only &mdash; no time was recorded</span></span></div>
+      <div class="kv-row"><span class="kv-k">Entered into the app</span><span class="kv-v">15 Aug 2026, 21:04<span class="sub">kept separately; never used as the measurement time</span></span></div>
+      <div class="kv-row"><span class="kv-k">As you typed it</span><span class="kv-v">8.90 dKH</span></div>
+      <div class="kv-row"><span class="kv-k">Test kit</span><span class="kv-v">Salifert Alk</span></div>
+      <div class="kv-row"><span class="kv-k">Working uncertainty</span><span class="kv-v">0.10 dKH<span class="sub">the analytical floor, not a claim about your kit</span></span></div>
+      <div class="kv-row"><span class="kv-k">Source</span><span class="kv-v">Entered by hand</span></div>
+      <div class="kv-row"><span class="kv-k">Status</span><span class="kv-v">Valid</span></div>
+      <div class="kv-row"><span class="kv-k">Part of a repeat group</span><span class="kv-v is-absent">No</span></div>
+      <div class="kv-row"><span class="kv-k">Before or after an event</span><span class="kv-v is-absent">Not recorded<span class="sub">which is not the same as &ldquo;after&rdquo;</span></span></div>
+      <div class="kv-row"><span class="kv-k">Note</span><span class="kv-v is-absent">None</span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>How it is being used</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">In your history and charts</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">Can set your current position</span><span class="kv-v">Yes<span class="sub">if it is ever the most recent valid reading</span></span></div>
+      <div class="kv-row"><span class="kv-k">In the trend calculation</span><span class="kv-v is-absent">No<span class="sub">no time was recorded</span></span></div>
+      <div class="kv-row"><span class="kv-k">In response or learning</span><span class="kv-v is-absent">No<span class="sub">same reason</span></span></div>
+    </div>
+    <p class="body" style="margin-top:var(--sp-3)">
+      Working out a rate needs the exact gap between two measurements. A date on its own cannot
+      give that, and the app will not pick a time within the day to make it work &mdash; not
+      noon, not midnight, not your usual testing hour.
+    </p>
+    <div class="callout attention">
+      <strong>This cannot be upgraded.</strong> Editing the entry will not let you add a time to
+      it. If you genuinely establish when it was &mdash; from a photograph, a note, a message
+      &mdash; that is a new record carrying the proof, not a change to this one.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What you can do with it</h2></div>
+
+    <ul class="picker">
+      <li><a href="#edit">
+        <span class="pmark p-alk">&#9998;</span>
+        <span><span class="t">Correct a typo</span>
+        <span class="d">Fixes the value or the date. The original is kept alongside, and any assessment that already used it is left exactly as it was &mdash; a fresh assessment is made instead.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+
+      <li><a href="#supersede">
+        <span class="pmark p-alk">&#8635;</span>
+        <span><span class="t">Replace it with a better record</span>
+        <span class="d">Marks this one superseded and points at the replacement. Both stay visible. Use this when you have a genuinely better record of the same test &mdash; not when a repeat test simply gave a different number.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+
+      <li><a href="#suspect">
+        <span class="pmark p-ca">&#8264;</span>
+        <span><span class="t">Mark it suspect</span>
+        <span class="d">Says it is plausible but odd enough to want confirming. It stays in view and in your history. It may hold back a dose change until it is settled. It does not become invalid on its own.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+
+      <li><a href="#invalid">
+        <span class="pmark p-po4">&#10007;</span>
+        <span><span class="t">Mark it invalid</span>
+        <span class="d">Says it is not a usable measurement. It is kept forever and still shown in your history, greyed, and it is excluded from every calculation. You must say why.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+
+    <div class="callout quiet">
+      None of these deletes anything. There is no delete.
+    </div>
+  </section>
+
+  <section class="card" id="edit">
+    <div class="card-head"><h2>Correcting it</h2></div>
+    <div class="field">
+      <label for="v">Value</label>
+      <div class="inline"><input class="input" id="v" value="8.90" inputmode="decimal"><span class="suffix">dKH</span></div>
+    </div>
+    <div class="field">
+      <span class="flabel">Date</span>
+      <div class="inline">
+        <input class="input" value="15 Aug 2026" aria-label="Date">
+        <input class="input is-empty" placeholder="no time &mdash; date only" disabled aria-label="Time">
+      </div>
+      <p class="hint">The time field stays closed. How well a time is known cannot be improved by
+      editing.</p>
+    </div>
+    <div class="field">
+      <label for="reason">Why are you changing it?</label>
+      <input class="input" id="reason" placeholder="e.g. typed 8.90, the kit read 8.80">
+      <p class="hint">Stored with the edit.</p>
+    </div>
+
+    <div class="refusal">
+      <span class="state">What saving this will do</span>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Your original entry</span><span class="kv-v">Kept, unchanged</span></div>
+        <div class="kv-row"><span class="kv-k">Assessments that already used it</span><span class="kv-v">Left exactly as they were<span class="sub">what the app said at the time is a fact about the past</span></span></div>
+        <div class="kv-row"><span class="kv-k">A new assessment</span><span class="kv-v">Created, with a new identity<span class="sub">the assessment made at the time is kept as it was</span></span></div>
+        <div class="kv-row"><span class="kv-k">Conclusions that depended on the old value</span><span class="kv-v">Marked as invalidated<span class="sub">not silently rewritten</span></span></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <span class="btn btn-primary">Save correction</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <section class="card" id="invalid">
+    <div class="card-head"><h2>Marking it invalid</h2></div>
+    <div class="field">
+      <label for="ireason">Why is it not usable?</label>
+      <input class="input" id="ireason" placeholder="e.g. reagent past expiry, wrong sample">
+      <p class="hint">Required. This sentence is shown wherever the exclusion is explained,
+      including inside the working on any assessment that would otherwise have used it.</p>
+    </div>
+    <div class="refusal">
+      <span class="state">What this will do</span>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">The reading</span><span class="kv-v">Kept forever</span></div>
+        <div class="kv-row"><span class="kv-k">In your history</span><span class="kv-v">Still shown, greyed and marked</span></div>
+        <div class="kv-row"><span class="kv-k">In every calculation</span><span class="kv-v is-absent">Excluded</span></div>
+        <div class="kv-row"><span class="kv-k">If it was your latest reading</span><span class="kv-v">Position falls back to the one before it</span></div>
+        <div class="kv-row"><span class="kv-k">What is written down</span><span class="kv-v">Marked invalid, with your reason<span class="sub">the reading is kept; it stops counting</span></span></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <span class="btn btn-safety">Mark invalid</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <section class="card" id="suspect">
+    <div class="card-head"><h2>Marking it suspect</h2></div>
+    <div class="refusal">
+      <span class="state">What this will do</span>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">The reading</span><span class="kv-v">Kept, still in view</span></div>
+        <div class="kv-row"><span class="kv-k">In calculations</span><span class="kv-v">Conditionally<span class="sub">it does not automatically become invalid</span></span></div>
+        <div class="kv-row"><span class="kv-k">Dose increases</span><span class="kv-v">May be held back until it is settled</span></div>
+        <div class="kv-row"><span class="kv-k">What is written down</span><span class="kv-v">Marked suspect, with your reason<span class="sub">the reading is kept; it still counts</span></span></div>
+        <div class="kv-row"><span class="kv-k">How you settle it</span><span class="kv-v is-absent">Not defined<span class="sub">no rule exists yet</span></span></div>
+      </div>
+    </div>
+    <p class="inert-note">
+      That last row is honest rather than helpful. Nothing in the specification says what
+      resolves a suspect reading or which screen does it, so the app cannot promise a route out.
+    </p>
+    <div class="btn-row">
+      <span class="btn">Mark suspect</span>
+      <span class="btn btn-quiet">Cancel</span>
+    </div>
+  </section>
+
+  <section class="card" id="supersede">
+    <div class="card-head"><h2>Its record so far</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">15 Aug 2026, 21:04</span><span class="kv-v">Created<span class="sub">8.90 dKH, date only, entered by hand</span></span></div>
+      <div class="kv-row"><span class="kv-k">&mdash;</span><span class="kv-v is-absent">Never edited</span></div>
+      <div class="kv-row"><span class="kv-k">&mdash;</span><span class="kv-v is-absent">Never superseded</span></div>
+      <div class="kv-row"><span class="kv-k">Used in</span><span class="kv-v">0 trend calculations<span class="sub">4 assessments where it was considered and excluded</span></span></div>
+    </div>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open question for the owner.</b> This screen works because the entry is a reading.
+    Readings are the only kind of entry with a status, a supersede link and an invalid reason.
+    A mistyped water change, correction or delivery problem has no equivalent route &mdash;
+    recorded as gap&nbsp;8. Also: history charts show grouped repeat tests as one point, but a
+    group is a derived object with no entry behind it, so tapping one has nowhere to go
+    &mdash; gap&nbsp;7.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

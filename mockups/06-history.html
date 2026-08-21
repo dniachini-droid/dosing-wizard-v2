@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>History · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <p class="eyebrow">7 &ndash; 20 August 2026</p>
+    <h1>History</h1>
+    <p class="sub">Every reading you have taken and every event you have logged. Tap any point
+    to open it.</p>
+  </header>
+
+
+  <div class="mockup-note">
+    <b>Thickened here.</b> PR&nbsp;#6 gave every parameter a chart with its events and exclusions
+    marked. Added below: a zoomable window that <i>names itself</i>, the whole record with the one
+    boundary marker on it, tap-through from a point to its entry, and every graph on one surface.
+  </div>
+
+  <!-- ================= THE WHOLE RECORD ================= -->
+  <section class="card">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>The whole record</h2>
+      <span class="aside">19 readings</span>
+    </div>
+
+    <svg class="chart c-alk" viewBox="0 0 296 132" role="img"
+         aria-label="Alkalinity from 8.52 dKH in March 2026 to 8.70 dKH on 20 August, nineteen readings, with a marker on 9 August where dose history begins.">
+      <defs>
+        <linearGradient id="g-alk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--alk)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--alk)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      <rect class="range-fill" x="30" y="38.7" width="258" height="53.5"/>
+      <line class="range-edge" x1="30" x2="288" y1="38.7" y2="38.7"/>
+      <line class="range-edge" x1="30" x2="288" y1="92.2" y2="92.2"/>
+
+      <line class="grid" x1="30" x2="288" y1="110.0" y2="110.0"/>
+      <text class="axis" x="25" y="113.0" text-anchor="end">8.4</text>
+      <line class="grid" x1="30" x2="288" y1="92.2" y2="92.2"/>
+      <text class="axis" x="25" y="95.2" text-anchor="end">8.6</text>
+      <line class="grid" x1="30" x2="288" y1="56.5" y2="56.5"/>
+      <text class="axis" x="25" y="59.5" text-anchor="end">9.0</text>
+      <line class="grid" x1="30" x2="288" y1="38.7" y2="38.7"/>
+      <text class="axis" x="25" y="41.7" text-anchor="end">9.2</text>
+      <line class="grid" x1="30" x2="288" y1="20.9" y2="20.9"/>
+      <text class="axis" x="25" y="23.9" text-anchor="end">9.4</text>
+
+      <path class="area" d="M30.0,99.3 L44.3,91.3 L58.7,79.7 L73.0,65.5 L87.3,52.1 L101.7,40.5 L116.0,28.9 L130.3,36.9 L144.7,47.6 L159.0,53.0 L173.3,31.6 L187.7,20.9 L202.0,24.5 L216.3,36.9 L230.7,54.8 L245.0,61.9 L259.3,69.0 L273.7,75.3 L288.0,83.3 L288.0,110.0 L30.0,110.0 Z"/>
+      <path class="trace" d="M30.0,99.3 L44.3,91.3 L58.7,79.7 L73.0,65.5 L87.3,52.1 L101.7,40.5 L116.0,28.9 L130.3,36.9 L144.7,47.6 L159.0,53.0 L173.3,31.6 L187.7,20.9 L202.0,24.5 L216.3,36.9 L230.7,54.8 L245.0,61.9 L259.3,69.0 L273.7,75.3 L288.0,83.3"/>
+
+      <!-- One marker. Not one per reading. -->
+      <line class="boundary" x1="216.3" x2="216.3" y1="12" y2="110.0"/>
+      <text class="boundary-label" x="216.3" y="9" text-anchor="middle">dose history starts</text>
+
+      <circle class="pt" cx="30.0" cy="99.3" r="3.4"/>
+      <circle class="pt" cx="44.3" cy="91.3" r="3.4"/>
+      <circle class="pt" cx="58.7" cy="79.7" r="3.4"/>
+      <circle class="pt" cx="73.0" cy="65.5" r="3.4"/>
+      <circle class="pt" cx="87.3" cy="52.1" r="3.4"/>
+      <circle class="pt" cx="101.7" cy="40.5" r="3.4"/>
+      <circle class="pt" cx="116.0" cy="28.9" r="3.4"/>
+      <circle class="pt" cx="130.3" cy="36.9" r="3.4"/>
+      <circle class="pt" cx="144.7" cy="47.6" r="3.4"/>
+      <circle class="pt" cx="159.0" cy="53.0" r="3.4"/>
+      <circle class="pt" cx="173.3" cy="31.6" r="3.4"/>
+      <circle class="pt" cx="187.7" cy="20.9" r="3.4"/>
+      <circle class="pt" cx="202.0" cy="24.5" r="3.4"/>
+      <circle class="pt" cx="216.3" cy="36.9" r="3.4"/>
+      <circle class="pt" cx="230.7" cy="54.8" r="3.4"/>
+      <circle class="pt" cx="245.0" cy="61.9" r="3.4"/>
+      <circle class="pt" cx="259.3" cy="69.0" r="3.4"/>
+      <circle class="pt" cx="273.7" cy="75.3" r="3.4"/>
+      <circle class="pt-last" cx="288.0" cy="83.3" r="3.4"/>
+
+      <text class="axis" x="30.0" y="126">Mar</text>
+      <text class="axis" x="144.7" y="126" text-anchor="middle">Jun</text>
+      <text class="axis" x="288.0" y="126" text-anchor="end">20 Aug</text>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--alk)"></span>Your readings</span>
+      <span><span class="rule" style="color:var(--attention)"></span>Dose history starts</span>
+      <span><span class="swatch" style="background:var(--alk-bg)"></span>Target range</span>
+    </div>
+
+    <div class="callout attention">
+      <strong>Analysis starts on 9 August.</strong> Everything before that line is a real
+      measurement you took, and it is shown as one. What is missing from that period is the
+      <i>dosing</i> record that would have to sit beside it &mdash; so the app can chart those
+      readings and cannot work out consumption, response or potency across them.
+    </div>
+
+    <p class="inert-note">
+      One marker, on the period. Not a mark on each reading, and no dimming: the readings are not
+      individually suspect, and treating them as though they were would misrepresent your own
+      history back to you.
+    </p>
+  </section>
+
+  <!-- ================= THE WINDOW ================= -->
+  <section class="card">
+    <div class="card-head"><h2>The window you are looking at</h2></div>
+
+    <div class="windowbar">
+      <span class="name">7 &ndash; 20 August &middot; 14 days</span>
+      <span class="zoom">
+        <a href="#out" aria-label="Zoom out">&minus;</a>
+        <a href="#in" aria-label="Zoom in">&plus;</a>
+        <a href="#reset" aria-label="Reset">&#8635;</a>
+      </span>
+    </div>
+
+    <div class="seg">
+      <span class="opt">14 days</span>
+      <span class="opt on">Since the last dose change</span>
+      <span class="opt">3 months</span>
+      <span class="opt">All</span>
+    </div>
+
+    <p class="body" style="margin-top:var(--sp-3)">
+      Pinch or drag the charts below to move this window. Everything on this screen &mdash; the
+      readings table, the events list, the highest and lowest &mdash; describes <strong>this
+      window</strong> and says so.
+    </p>
+
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Highest and lowest in this window</span><span class="kv-v">8.62 &ndash; 8.91&nbsp;dKH<span class="sub">a spread of 0.29&nbsp;dKH</span></span></div>
+      <div class="kv-row"><span class="kv-k">Readings in this window</span><span class="kv-v">8<span class="sub">7 usable for a rate</span></span></div>
+      <div class="kv-row"><span class="kv-k">Events in this window</span><span class="kv-v">5</span></div>
+    </div>
+
+    <p class="inert-note">
+      The window is named because an unnamed one lets a panel quietly grade a different stretch
+      from the one on screen. If you move it, this figure moves with it and the name changes.
+    </p>
+  </section>
+
+  <!-- ================= ALKALINITY ================= -->
+  <section class="card">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>Alkalinity</h2>
+      <span class="aside">dKH</span>
+    </div>
+
+    <svg class="chart c-alk" viewBox="0 0 296 120" role="img"
+         aria-label="Alkalinity history from 9.36 dKH on 7 August down to 8.70 dKH on 20 August, with the target range shaded and five logged events marked.">
+      <defs>
+        <linearGradient id="g-alk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--alk)" stop-opacity="0.20"/>
+          <stop offset="100%" stop-color="var(--alk)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      <rect class="range-fill" x="20" y="39.2" width="270" height="50.4"/>
+      <line class="range-edge" x1="20" y1="39.2" x2="290" y2="39.2"/>
+      <line class="range-edge" x1="20" y1="89.6" x2="290" y2="89.6"/>
+      <line class="grid" x1="20" y1="64.4" x2="290" y2="64.4"/>
+      <text class="axis" x="1" y="42.4">9.2</text>
+      <text class="axis" x="1" y="92.8">8.6</text>
+
+      <path class="area" d="M20,25.8 C33.8,29.7 47.7,33.6 61.5,37.5 C82.3,43.1 103.1,48.7 123.8,54.3
+                            C137.6,56.5 151.5,58.8 165.4,61 C179.2,63.3 193.1,65.5 206.9,67.8
+                            C220.8,69.7 234.6,71.7 248.5,73.6 C262.3,76.1 276.2,78.7 290,81.2
+                            L290,98 L20,98 Z"/>
+
+      <!-- logged events, marked as the trace reaches them -->
+      <g class="reveal d1"><line class="evline" x1="40.8"  y1="10" x2="40.8"  y2="98"/><polygon class="evmark" points="36.8,4 44.8,4 40.8,10"/></g>
+      <g class="reveal d2"><line class="evline" x1="61.5"  y1="10" x2="61.5"  y2="98"/><polygon class="evmark" points="57.5,4 65.5,4 61.5,10"/></g>
+      <g class="reveal d3"><line class="evline" x1="103.1" y1="10" x2="103.1" y2="98"/><polygon class="evmark" points="99.1,4 107.1,4 103.1,10"/></g>
+      <g class="reveal d4"><line class="evline" x1="123.8" y1="10" x2="123.8" y2="98"/><polygon class="evmark" points="119.8,4 127.8,4 123.8,10"/></g>
+      <g class="reveal d7"><line class="evline" x1="206.9" y1="10" x2="206.9" y2="98"/><polygon class="evmark" points="202.9,4 210.9,4 206.9,10"/></g>
+
+      <path class="trace" d="M20,25.8 C33.8,29.7 47.7,33.6 61.5,37.5 C82.3,43.1 103.1,48.7 123.8,54.3
+                             C137.6,56.5 151.5,58.8 165.4,61 C179.2,63.3 193.1,65.5 206.9,67.8
+                             C220.8,69.7 234.6,71.7 248.5,73.6 C262.3,76.1 276.2,78.7 290,81.2"/>
+
+      <!-- 15 Aug: date only, not eligible for the trend -->
+      <g class="reveal d6"><circle class="pt-excluded" cx="186.2" cy="64.4" r="4"/></g>
+
+      <!-- 18 Aug: two tests, one observation, spread drawn as a whisker -->
+      <g class="reveal d7">
+        <line x1="248.5" y1="72.8" x2="248.5" y2="74.5" stroke="var(--alk)" stroke-width="1.5" opacity="0.5"/>
+        <line x1="245.5" y1="72.8" x2="251.5" y2="72.8" stroke="var(--alk)" stroke-width="1.5" opacity="0.5"/>
+        <line x1="245.5" y1="74.5" x2="251.5" y2="74.5" stroke="var(--alk)" stroke-width="1.5" opacity="0.5"/>
+      </g>
+
+      <circle class="pt reveal d0" cx="20"    cy="25.8" r="3.4"/>
+      <circle class="pt reveal d2" cx="61.5"  cy="37.5" r="3.4"/>
+      <circle class="pt reveal d4" cx="123.8" cy="54.3" r="3.4"/>
+      <circle class="pt reveal d5" cx="165.4" cy="61"   r="3.4"/>
+      <circle class="pt reveal d7" cx="206.9" cy="67.8" r="3.4"/>
+      <circle class="pt reveal d7" cx="248.5" cy="73.6" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="81.2" r="4"/>
+
+      <text class="axis" x="20" y="116">7 Aug</text>
+      <text class="axis" x="290" y="116" text-anchor="end">20 Aug</text>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--alk-bg)"></span>Target range 8.6&ndash;9.2</span>
+      <span><span class="swatch" style="background:var(--faint)"></span>Logged event</span>
+      <span><span class="swatch" style="background:var(--card-top);border:1px dashed var(--faint)"></span>Not eligible for the trend</span>
+      <span>Bar = spread of a repeat</span>
+    </div>
+
+    <p class="seclabel">Readings</p>
+    <div class="scroll-x">
+      <table class="data">
+        <thead><tr><th>When</th><th>dKH</th><th>In the trend?</th></tr></thead>
+        <tbody>
+          <tr><td><a href="05-entry-detail.html">7 Aug 07:40</a></td><td class="n">9.36</td><td>Yes</td></tr>
+          <tr><td><a href="05-entry-detail.html">9 Aug 07:40</a></td><td class="n">9.22</td><td>Yes</td></tr>
+          <tr><td><a href="05-entry-detail.html">12 Aug 07:40</a></td><td class="n">9.02</td><td>Yes</td></tr>
+          <tr><td><a href="05-entry-detail.html">14 Aug 07:40</a></td><td class="n">8.94</td><td>Yes</td></tr>
+          <tr class="excluded"><td><a href="05-entry-detail.html">15 Aug <span class="off">no time</span></a></td><td class="n">8.90</td><td>No &mdash; date only</td></tr>
+          <tr><td><a href="05-entry-detail.html">16 Aug 07:40</a></td><td class="n">8.86</td><td>Yes</td></tr>
+          <tr><td><a href="05-entry-detail.html">18 Aug 07:34 &amp; 07:46</a></td><td class="n">8.79<span class="off"><br>8.80 / 8.78</span></td><td>Yes<span class="off"><br>as one, spread 0.02</span></td></tr>
+          <tr><td><a href="05-entry-detail.html">20 Aug 07:40</a></td><td class="n">8.70</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="inert-note">
+      The 18 August pair is one observation, not two. Its two members are shown so you can see
+      how far apart they were.
+    </p>
+
+    <p class="seclabel">Events</p>
+    <ul class="picker">
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-ca">&#9888;</span>
+        <span><span class="t">8 Aug &middot; A dose was missed</span>
+        <span class="d">Delivery problem. Ends the previous stretch of usable history.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-mg">&#9634;</span>
+        <span><span class="t">9 Aug 19:12 &middot; New batch of solution, and the pump recalibrated</span>
+        <span class="d">Two events. Both start fresh contexts; what the app learned about the old setup stays with the old setup.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-no3">&#9788;</span>
+        <span><span class="t">11 Aug &middot; Corals added</span>
+        <span class="d">Something changed in the tank. Comparisons across this point are not trusted.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-alk">&#8646;</span>
+        <span><span class="t">12 Aug 07:55 &middot; Dose raised from 8.6 to 9.0&nbsp;mL/day</span>
+        <span class="d">The current stretch of history starts here.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="05-entry-detail.html">
+        <span class="pmark p-sal">&#8776;</span>
+        <span><span class="t">16 Aug &middot; Water change, 10%</span>
+        <span class="d">New water measured at 8.90&nbsp;dKH. Effect 0.004&nbsp;dKH &mdash; too small to adjust for, so nothing was subtracted.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+    <p class="inert-note">
+      No one-off corrections and no safety returns have been logged for this tank. Those two
+      families make up the remaining nine kinds of entry.
+    </p>
+  </section>
+
+  <!-- ================= INERT PARAMETERS ================= -->
+  <p class="seclabel">Logged only</p>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-ca">Ca</span><h2>Calcium</h2><span class="aside">mg/L</span></div>
+    <div><span class="value">428</span><span class="unit">mg/L &middot; 18 Aug</span></div>
+    <svg class="chart c-ca" viewBox="0 0 296 94" role="img" aria-label="Calcium history, four readings between 435 and 425 mg/L.">
+      <defs><linearGradient id="g-ca" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--ca)" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="var(--ca)" stop-opacity="0"/></linearGradient></defs>
+      <line class="grid" x1="20" y1="33.3" x2="290" y2="33.3"/>
+      <line class="grid" x1="20" y1="54.7" x2="290" y2="54.7"/>
+      <text class="axis" x="1" y="36.5">435</text>
+      <text class="axis" x="1" y="57.9">425</text>
+      <path class="area" d="M20,33.3 C58.6,35.4 97.1,37.6 135.7,39.7 C161.4,44.7 187.1,49.7 212.9,54.7 C238.6,52.6 264.3,50.4 290,48.3 L290,76 L20,76 Z"/>
+      <path class="trace" d="M20,33.3 C58.6,35.4 97.1,37.6 135.7,39.7 C161.4,44.7 187.1,49.7 212.9,54.7 C238.6,52.6 264.3,50.4 290,48.3"/>
+      <circle class="pt reveal d0" cx="20" cy="33.3" r="3.4"/>
+      <circle class="pt reveal d3" cx="135.7" cy="39.7" r="3.4"/>
+      <circle class="pt reveal d6" cx="212.9" cy="54.7" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="48.3" r="4"/>
+      <text class="axis" x="20" y="90">4 Aug</text>
+      <text class="axis" x="290" y="90" text-anchor="end">18 Aug</text>
+    </svg>
+    <p class="inert-note">Value, date, chart. No status, no range position, no trend, no advice.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-mg">Mg</span><h2>Magnesium</h2><span class="aside">mg/L</span></div>
+    <div><span class="value">1340</span><span class="unit">mg/L &middot; 14 Aug</span></div>
+    <svg class="chart c-mg" viewBox="0 0 296 94" role="img" aria-label="Magnesium history, three readings from 1355 to 1340 mg/L.">
+      <defs><linearGradient id="g-mg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--mg)" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="var(--mg)" stop-opacity="0"/></linearGradient></defs>
+      <line class="grid" x1="20" y1="31.2" x2="290" y2="31.2"/>
+      <line class="grid" x1="20" y1="50.4" x2="290" y2="50.4"/>
+      <text class="axis" x="1" y="34.4">1355</text>
+      <text class="axis" x="1" y="53.6">1340</text>
+      <path class="area" d="M20,31.2 C65,34.2 110,37.2 155,40.2 C200,43.6 245,47 290,50.4 L290,76 L20,76 Z"/>
+      <path class="trace" d="M20,31.2 C65,34.2 110,37.2 155,40.2 C200,43.6 245,47 290,50.4"/>
+      <circle class="pt reveal d0" cx="20" cy="31.2" r="3.4"/>
+      <circle class="pt reveal d4" cx="155" cy="40.2" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="50.4" r="4"/>
+      <text class="axis" x="20" y="90">2 Aug</text>
+      <text class="axis" x="290" y="90" text-anchor="end">14 Aug</text>
+    </svg>
+    <p class="inert-note">
+      Logged only. The alkalinity safety logic treats magnesium as unknown regardless of this
+      value, deliberately, for the whole of this build.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-no3">NO&#8323;</span><h2>Nitrate</h2><span class="aside">mg/L</span></div>
+    <div><span class="value">5.2</span><span class="unit">mg/L &middot; 18 Aug</span></div>
+    <svg class="chart c-no3" viewBox="0 0 296 94" role="img" aria-label="Nitrate history rising from 3.8 to 5.2 mg per litre.">
+      <defs><linearGradient id="g-no3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--no3)" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="var(--no3)" stop-opacity="0"/></linearGradient></defs>
+      <line class="grid" x1="20" y1="29.1" x2="290" y2="29.1"/>
+      <line class="grid" x1="20" y1="58.9" x2="290" y2="58.9"/>
+      <text class="axis" x="1" y="32.3">5.2</text>
+      <text class="axis" x="1" y="62.1">3.8</text>
+      <path class="area" d="M20,58.9 C65,53.2 110,47.6 155,41.9 C200,37.6 245,33.4 290,29.1 L290,76 L20,76 Z"/>
+      <path class="trace" d="M20,58.9 C65,53.2 110,47.6 155,41.9 C200,37.6 245,33.4 290,29.1"/>
+      <circle class="pt reveal d0" cx="20" cy="58.9" r="3.4"/>
+      <circle class="pt reveal d4" cx="155" cy="41.9" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="29.1" r="4"/>
+      <text class="axis" x="20" y="90">6 Aug</text>
+      <text class="axis" x="290" y="90" text-anchor="end">18 Aug</text>
+    </svg>
+    <p class="inert-note">Value, date, chart. Nothing else.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-po4">PO&#8324;</span><h2>Phosphate</h2><span class="aside">mg/L</span></div>
+    <div><span class="value">0.06</span><span class="unit">mg/L &middot; 18 Aug</span></div>
+    <svg class="chart c-po4" viewBox="0 0 296 94" role="img" aria-label="Phosphate history falling from 0.09 to 0.06 mg per litre.">
+      <defs><linearGradient id="g-po4" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--po4)" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="var(--po4)" stop-opacity="0"/></linearGradient></defs>
+      <line class="grid" x1="20" y1="31.2" x2="290" y2="31.2"/>
+      <line class="grid" x1="20" y1="50.4" x2="290" y2="50.4"/>
+      <text class="axis" x="1" y="34.4">0.09</text>
+      <text class="axis" x="1" y="53.6">0.06</text>
+      <path class="area" d="M20,31.2 C65,35.5 110,39.7 155,44 C200,46.1 245,48.3 290,50.4 L290,76 L20,76 Z"/>
+      <path class="trace" d="M20,31.2 C65,35.5 110,39.7 155,44 C200,46.1 245,48.3 290,50.4"/>
+      <circle class="pt reveal d0" cx="20" cy="31.2" r="3.4"/>
+      <circle class="pt reveal d4" cx="155" cy="44" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="50.4" r="4"/>
+      <text class="axis" x="20" y="90">6 Aug</text>
+      <text class="axis" x="290" y="90" text-anchor="end">18 Aug</text>
+    </svg>
+    <p class="inert-note">Value, date, chart. Nothing else.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span class="pmark p-sal">Sal</span><h2>Salinity</h2><span class="aside">ppt</span></div>
+    <div><span class="value">35.1</span><span class="unit">ppt &middot; 18 Aug</span></div>
+    <svg class="chart c-sal" viewBox="0 0 296 94" role="img" aria-label="Salinity history between 35.0 and 35.3 parts per thousand.">
+      <defs><linearGradient id="g-sal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--sal)" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="var(--sal)" stop-opacity="0"/></linearGradient></defs>
+      <line class="grid" x1="20" y1="33.3" x2="290" y2="33.3"/>
+      <line class="grid" x1="20" y1="49.3" x2="290" y2="49.3"/>
+      <text class="axis" x="1" y="36.5">35.3</text>
+      <text class="axis" x="1" y="52.5">35.0</text>
+      <path class="area" d="M20,49.3 C65,43.9 110,38.6 155,33.3 C200,36.9 245,40.4 290,44 L290,76 L20,76 Z"/>
+      <path class="trace" d="M20,49.3 C65,43.9 110,38.6 155,33.3 C200,36.9 245,40.4 290,44"/>
+      <circle class="pt reveal d0" cx="20" cy="49.3" r="3.4"/>
+      <circle class="pt reveal d4" cx="155" cy="33.3" r="3.4"/>
+      <circle class="pt-last reveal d8" cx="290" cy="44" r="4"/>
+      <text class="axis" x="20" y="90">6 Aug</text>
+      <text class="axis" x="290" y="90" text-anchor="end">18 Aug</text>
+    </svg>
+    <p class="inert-note">Value, date, chart. Nothing else.</p>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open questions for the owner.</b> The alkalinity chart marks readings that could not
+    enter the trend, which the specification supports. Tapping the grouped 18 August point has
+    nowhere to go, because a group is derived and has no entry of its own &mdash; gap&nbsp;7.
+    Nitrate, phosphate and salinity have no place in the data contract at all &mdash;
+    gap&nbsp;1. Nothing says how old a logged-only value has to be before its age should be
+    called out, so none of these five says anything about staleness &mdash; gap&nbsp;10.
+  </div>
+
+</main>
+
+  <section class="card">
+    <div class="card-head"><h2>All of them at once</h2></div>
+    <p class="body">
+      Six parameters, six charts, one scrollable surface, same window. Useful when you are looking
+      for something that happened rather than checking something you already suspect.
+    </p>
+    <a class="btn btn-primary" href="15-history-all-graphs.html">Open every graph</a>
+  </section>
+
+  <div class="mockup-note">
+    <b>Tap a point, open its entry.</b> Every reading on every chart on this screen is a target,
+    and every one of them opens the same entry sheet the Test Lab and the calendar open. PR&nbsp;#6
+    recorded the absence of that as its own gap&nbsp;7; the route now exists on the screens even
+    though nothing in the contract yet says a chart point carries an identity.
+  </div>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab on" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

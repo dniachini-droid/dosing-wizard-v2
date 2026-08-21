@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A test the app suggests · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="10-tasks.html">Tasks</a>
+    <p class="eyebrow">Suggested by the app</p>
+    <h1>Test alkalinity on Saturday</h1>
+    <p class="sub">This is not one of your tasks, and it does not behave like one.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Owner decision 7 on one screen.</b> The app&rsquo;s suggested test sits on the calendar with
+    everything else, and reads differently because it is a different kind of thing. You accept it
+    or you decline it. You do not move it, because it is not a slot in your week &mdash; it is the
+    app saying when a reading would actually be worth taking.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Why Saturday</h2>
+    </div>
+    <p class="body">
+      You changed the alkalinity dose at 08:20 this morning, from 9.0 to 9.3&nbsp;mL/day. Saturday
+      morning is the earliest a reading can carry any information about whether that did what it
+      was meant to &mdash; before then the tank has not had long enough for the difference to
+      show above the noise in an alkalinity kit.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Earliest a reading would be useful</span><span class="kv-v">Sat 22 Aug, 08:20<span class="sub">two days after the change went in</span></span></div>
+      <div class="kv-row"><span class="kv-k">Suggested</span><span class="kv-v">Sat 22 Aug, 07:40</span></div>
+      <div class="kv-row"><span class="kv-k">Latest the app will let it slip</span><span class="kv-v is-absent">Not set<span class="sub">the scheduler picks an earliest, never a deadline</span></span></div>
+      <div class="kv-row"><span class="kv-k">Your own next alkalinity test</span><span class="kv-v">Sun 23 Aug<span class="sub">every three days, counted from today</span></span></div>
+    </div>
+  </section>
+
+  <!-- ===================== THE IMPACT ===================== -->
+  <section class="card">
+    <div class="card-head"><h2>What accepting would do</h2></div>
+
+    <div class="suggested">
+      <span class="lbl">Before and after</span>
+      <div class="impact">
+        <div class="kv">
+          <div class="kv-row"><span class="kv-k">Your alkalinity test moves</span><span class="kv-v">Sun 23 Aug &rarr; Sat 22 Aug<span class="sub">one day earlier</span></span></div>
+          <div class="kv-row"><span class="kv-k">The one after that</span><span class="kv-v">Wed 26 Aug &rarr; Tue 25 Aug<span class="sub">still every three days, counted from the new completion</span></span></div>
+          <div class="kv-row"><span class="kv-k">Everything else on your schedule</span><span class="kv-v">Unchanged</span></div>
+          <div class="kv-row"><span class="kv-k">The suggestion itself</span><span class="kv-v">Disappears<span class="sub">it has been folded into your test, not left beside it</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="inert-note">
+      Shown before you agree to it, not after. A suggestion that quietly rewrote your week would
+      be worse than one you had to think about.
+    </p>
+
+    <div class="btn-row" style="margin-top:var(--sp-4)">
+      <span class="btn btn-primary">Accept &mdash; move my test to Saturday</span>
+      <span class="btn">Keep both</span>
+    </div>
+    <span class="btn btn-quiet">Decline the suggestion</span>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What declining does</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Your schedule</span><span class="kv-v">Untouched<span class="sub">alkalinity still on Sunday</span></span></div>
+      <div class="kv-row"><span class="kv-k">The suggestion</span><span class="kv-v">Goes away for this dose change</span></div>
+      <div class="kv-row"><span class="kv-k">Sunday&rsquo;s assessment</span><span class="kv-v">Still made<span class="sub">it will simply be reading a three-day-old change instead of a two-day-old one</span></span></div>
+      <div class="kv-row"><span class="kv-k">Whether the app nags</span><span class="kv-v is-absent">No</span></div>
+    </div>
+    <p class="inert-note">
+      Declining is not a mistake and is not recorded as one. It is a reasonable thing to do with a
+      suggestion.
+    </p>
+  </section>
+
+  <div class="mockup-note">
+    <b>Left open deliberately.</b> Whether the app&rsquo;s suggested test and your own scheduled
+    test are two things or one is not settled anywhere. This screen shows a third option
+    &mdash; &ldquo;keep both&rdquo; &mdash; precisely because that question has no owner yet.
+    Recorded as gap&nbsp;15.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

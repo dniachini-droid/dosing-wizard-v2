@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Enter an ICP panel · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="08-test-lab.html">Test Lab</a>
+    <h1>ICP panel</h1>
+    <p class="sub">Thirty-odd elements from a lab, entered together.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>A lab panel is not a reading.</b> It is a multi-element result that arrives as one document
+    on one date, and the app has nowhere to put it &mdash; a reading holds one parameter from a
+    closed list. This screen shows what the surface would be; the record behind it does not exist
+    yet. Recorded as gap&nbsp;13.
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>The panel</h2></div>
+
+    <div class="field">
+      <span class="flabel">Date on the report</span>
+      <div class="inline">
+        <input class="input" value="18 Aug 2026" aria-label="Date">
+        <input class="input is-empty" placeholder="time not on the report" disabled aria-label="Time">
+      </div>
+      <p class="hint">A lab report carries a date, not a time. That is recorded honestly as a date
+      and the app does not invent an hour for it.</p>
+    </div>
+
+    <div class="field">
+      <label for="lab">Which lab</label>
+      <input class="input" id="lab" value="ATI Labs">
+      <p class="hint">Kept with the panel. Two labs disagreeing is a real thing and the app should
+      not average them into one story.</p>
+    </div>
+
+    <div class="field">
+      <span class="flabel">A photo of the report</span>
+      <span class="btn">Take one, or choose a file</span>
+      <p class="hint">Shrunk until it fits its budget rather than trusting one quality setting. A
+      full-size photo would eat a fifth of the space the whole app has.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Elements</h2>
+      <span class="aside">34 entered</span>
+    </div>
+
+    <div class="labrow is-logged">
+      <span class="pmark p-alk">Alk</span>
+      <span class="who">
+        <span class="nm">Alkalinity</span>
+        <span class="last">Reference 7.0&ndash;9.0&nbsp;dKH</span>
+        <span class="logged"><span class="n">8.6</span><span class="unit">dKH</span></span>
+      </span>
+    </div>
+    <div class="labrow is-logged">
+      <span class="pmark p-ca">Ca</span>
+      <span class="who">
+        <span class="nm">Calcium</span>
+        <span class="last">Reference 400&ndash;450&nbsp;ppm</span>
+        <span class="logged"><span class="n">431</span><span class="unit">ppm</span></span>
+      </span>
+    </div>
+    <div class="labrow">
+      <span class="pmark p-mg">Sr</span>
+      <span class="who">
+        <span class="nm">Strontium</span>
+        <span class="last">Reference 7&ndash;9&nbsp;ppm</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="6.1" aria-label="Strontium in ppm">
+          <span class="suffix">ppm</span>
+          <span class="btn btn-primary">Set</span>
+        </span>
+      </span>
+    </div>
+    <div class="labrow">
+      <span class="pmark p-po4">I</span>
+      <span class="who">
+        <span class="nm">Iodine</span>
+        <span class="last">Reference 0.03&ndash;0.09&nbsp;ppm</span>
+        <span class="entry">
+          <input class="input" inputmode="decimal" placeholder="0.02" aria-label="Iodine in ppm">
+          <span class="suffix">ppm</span>
+          <span class="btn btn-primary">Set</span>
+        </span>
+      </span>
+    </div>
+
+    <p class="inert-note">
+      Type the first letters of an element and it completes. Thirty-four rows is a lot of typing
+      and the entry surface is most of the work.
+    </p>
+    <span class="btn btn-primary" style="margin-top:var(--sp-3)">Save the panel</span>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What the app will and will not do with it</h2></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Stored, shown and comparable to the last panel</span><span class="kv-v">Yes</span></div>
+      <div class="kv-row"><span class="kv-k">Checked against the lab&rsquo;s reference ranges</span><span class="kv-v">Yes<span class="sub">the lab&rsquo;s ranges, named as theirs</span></span></div>
+      <div class="kv-row"><span class="kv-k">Used to dose anything</span><span class="kv-v is-absent">No</span></div>
+      <div class="kv-row"><span class="kv-k">Mixed into your alkalinity history</span><span class="kv-v is-absent">No<span class="sub">a lab figure and a kit figure are not the same measurement</span></span></div>
+      <div class="kv-row"><span class="kv-k">Used to correct your test kit</span><span class="kv-v is-absent">No<span class="sub">tempting, and there is no rule for it</span></span></div>
+    </div>
+    <p class="inert-note">
+      The last two are the ones people expect and they are deliberately refused. Nothing here
+      becomes advice.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab on" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Change this entry · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="02-today-h-day-past.html">Wednesday</a>
+    <p class="eyebrow">The shared sheet</p>
+    <h1>Alkalinity, 8.74&nbsp;dKH</h1>
+    <p class="sub">Reached from Today&rsquo;s stepper, from the Test Lab, from Tasks, or from the calendar.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>Owner decision 6.</b> One item, one sheet. There is not an edit-a-reading flow and a
+    separate edit-a-task flow &mdash; whichever surface you found the entry on, this is what
+    opens, and it does the same thing.
+  </div>
+
+  <div class="sheetwrap">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h2>Alkalinity test</h2>
+      <p class="who">Wednesday 19 August, 07:40 &middot; exact time &middot; entered by hand</p>
+
+      <div class="field">
+        <label for="v">Value</label>
+        <div class="inline">
+          <input class="input" id="v" value="8.74" inputmode="decimal">
+          <span class="suffix">dKH</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="flabel">When</span>
+        <div class="inline">
+          <input class="input" value="19 Aug 2026" aria-label="Date">
+          <input class="input" value="07:40" aria-label="Time">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="flabel">How well the time is known</span>
+        <div class="seg">
+          <span class="opt on">Exact</span>
+          <span class="opt">Worked out</span>
+          <span class="opt">Zone unsure</span>
+          <span class="opt">Date only</span>
+        </div>
+        <p class="hint">This can be weakened but never strengthened. If you genuinely establish a
+        time you did not have, that is a new record carrying the proof, not an edit to this one.</p>
+      </div>
+
+      <div class="field">
+        <label for="why">Why are you changing it?</label>
+        <input class="input" id="why" placeholder="e.g. typed 8.74, the kit read 8.70">
+        <p class="hint">Stored with the edit. Required &mdash; a change with no reason is
+        indistinguishable from a mistake later.</p>
+      </div>
+
+      <span class="btn btn-primary">Save the change</span>
+      <div class="btn-row">
+        <span class="btn">Mark it suspect</span>
+        <span class="btn">Mark it invalid</span>
+      </div>
+      <span class="btn btn-quiet">Remove it from the day</span>
+
+      <div class="refusal" style="margin-top:var(--sp-4)">
+        <span class="state">What each of those does</span>
+        <div class="kv">
+          <div class="kv-row"><span class="kv-k">Save the change</span><span class="kv-v">Original kept alongside<span class="sub">assessments already made are left exactly as they were</span></span></div>
+          <div class="kv-row"><span class="kv-k">Mark it suspect</span><span class="kv-v">Stays, still counts<span class="sub">may hold back a dose change until settled</span></span></div>
+          <div class="kv-row"><span class="kv-k">Mark it invalid</span><span class="kv-v">Stays, stops counting<span class="sub">still shown in your history</span></span></div>
+          <div class="kv-row"><span class="kv-k">Remove it from the day</span><span class="kv-v">Detaches it from the schedule<span class="sub">the reading itself is not deleted &mdash; there is no delete</span></span></div>
+        </div>
+      </div>
+
+      <div class="callout attention" style="margin-top:var(--sp-4)">
+        <strong>This reading completed Wednesday&rsquo;s alkalinity test.</strong> Removing it from
+        the day puts that test back to outstanding, and the ones scheduled after it move with it.
+        You will be shown the new dates before anything is saved.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

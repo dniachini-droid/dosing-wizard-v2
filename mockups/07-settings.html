@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Settings · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="02-today-a-dose-change.html">Today</a>
+    <p class="eyebrow">Mixed reef</p>
+    <h1>Settings</h1>
+    <p class="sub">Settings are versioned. Changing one starts a new version from the moment you
+    change it, and never reaches backwards into what the app already said.</p>
+  </header>
+
+  <section class="card">
+    <div class="card-head"><h2>Current settings</h2><span class="aside">CFG-0004</span></div>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Net water volume</span><span class="kv-v">77 L</span></div>
+      <div class="kv-row"><span class="kv-k">Target range</span><span class="kv-v">8.6 &ndash; 9.2 dKH</span></div>
+      <div class="kv-row"><span class="kv-k">Outer bounds</span><span class="kv-v">7.0 &ndash; 11.0 dKH</span></div>
+      <div class="kv-row"><span class="kv-k">Pump&rsquo;s smallest step</span><span class="kv-v">0.1 mL/day</span></div>
+      <div class="kv-row"><span class="kv-k">Delivery schedule</span><span class="kv-v">Hourly<span class="sub">24 doses per day</span></span></div>
+      <div class="kv-row"><span class="kv-k">Parameters with a controller</span><span class="kv-v">Alkalinity only</span></div>
+      <div class="kv-row"><span class="kv-k">In force since</span><span class="kv-v">9 Aug 2026, 19:12</span></div>
+    </div>
+
+    <div class="callout quiet">
+      <strong>Worked out by the engine from the above, and shown here rather than stored:</strong> aim point 8.90&nbsp;dKH (middle
+      of the target range) &middot; safety destinations 7.20 and 10.80&nbsp;dKH (outer bounds plus
+      a fixed 0.20 buffer) &middot; solution strength 0.0686&nbsp;dKH per mL.
+      Edit a range and all of these move with it.
+    </div>
+
+    <a class="btn" href="01-setup.html">Change settings</a>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>What changing something does</h2></div>
+    <p class="body">
+      A settings change makes a new version, stamped with the moment it takes effect. Every
+      assessment records which version it ran under. Assessments made before your change keep
+      running on the version that was in force then &mdash; what the app told you in the past
+      stays true to what it knew at the time.
+    </p>
+    <p class="body">
+      Editing your target range reclassifies where you sit relative to it, and nothing else.
+      Your trend, what your tank consumes and your solution&rsquo;s strength are properties of
+      the tank, not of your preferences, and they do not move.
+    </p>
+    <div class="callout attention">
+      <strong>The one thing this cannot do:</strong> replay an assessment from before your very
+      first settings version. There is nothing to replay it against, so the app refuses rather
+      than assuming today&rsquo;s settings applied back then.
+      not recorded
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Change history</h2><span class="aside">4 versions</span></div>
+    <div class="scroll-x">
+      <table class="data">
+        <thead><tr><th>Version</th><th>In force from</th><th>What changed</th></tr></thead>
+        <tbody>
+          <tr><td class="n">CFG-0004</td><td>9 Aug 19:12</td><td>New batch of solution<br><span class="off">solution, pump setup</span></td></tr>
+          <tr><td class="n">CFG-0003</td><td>5 Aug 08:30</td><td>Target range 8.2&ndash;8.8 &rarr; 8.6&ndash;9.2<br><span class="off">target minimum, target maximum</span></td></tr>
+          <tr><td class="n">CFG-0002</td><td>1 Aug 12:00</td><td>Volume 80 &rarr; 77&nbsp;L<br><span class="off">net water volume</span></td></tr>
+          <tr><td class="n">CFG-0001</td><td>28 Jul 18:40</td><td>First setup<br><span class="off">all fields</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="inert-note">
+      Each row is what the app was working from at that time, not a note about what you meant to
+      do. Versions are never backdated and never edited.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Your solution</h2><span class="pill pill-neutral">Read only</span></div>
+
+    <div><span class="value">0.0686</span><span class="unit">dKH per mL</span></div>
+    <p class="caption">This is the single strength figure the dosing engine uses. Nothing else
+    keeps a second opinion about it.</p>
+
+    <div class="kv" style="margin-top:var(--sp-4)">
+      <div class="kv-row"><span class="kv-k">Where it comes from</span><span class="kv-v">Your recipe<span class="sub">0.05284 &times; 100&nbsp;g/L &divide; 77&nbsp;L</span></span></div>
+      <div class="kv-row"><span class="kv-k">Chemical</span><span class="kv-v">Sodium carbonate<span class="sub">NA2CO3</span></span></div>
+      <div class="kv-row"><span class="kv-k">Concentration</span><span class="kv-v">100 g/L</span></div>
+      <div class="kv-row"><span class="kv-k">Confidence</span><span class="kv-v">From the recipe only<span class="sub">from the recipe only</span></span></div>
+      <div class="kv-row"><span class="kv-k">Measured strength</span><span class="kv-v is-absent">Not available</span></div>
+      <div class="kv-row"><span class="kv-k">Solution context</span><span class="kv-v">SOL-0002<span class="sub">opened 9 Aug 19:12 &mdash; new batch</span></span></div>
+      <div class="kv-row"><span class="kv-k">Delivery context</span><span class="kv-v">DLV-0001<span class="sub">opened 9 Aug 19:12 &mdash; recalibrated</span></span></div>
+    </div>
+
+    <div class="refusal">
+      <span class="state">Not run &middot; learning your solution&rsquo;s real strength</span>
+      <h3>Learning is switched off in this build</h3>
+      <p>
+        The app could, in principle, watch what actually happens when you change the dose and
+        work out how strong your solution really is. That is deliberately disabled here, and it
+        ships disabled &mdash; the recipe figure above is used for every calculation.
+      </p>
+      <p><strong>Why:</strong> learning needs three facts recorded reliably before it can be
+      trusted, and the app is not yet capturing them.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="kv-k">Which batch of solution was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">Which pump setup was in use</span><span class="kv-v is-absent">Not captured</span></div>
+        <div class="kv-row"><span class="kv-k">The confirmed rate before and after each change</span><span class="kv-v is-absent">Not captured</span></div>
+      </div>
+      <p style="margin-top:var(--sp-3)"><strong>What this costs you:</strong> nothing about the
+      core advice. Position, trend, consumption, dose recommendations and safety returns all run
+      normally on the recipe figure. What you lose is the app noticing that your actual solution
+      is, say, 15% weaker than the recipe says.</p>
+    </div>
+
+    <div class="kv" style="margin-top:var(--sp-4)">
+      <div class="kv-row"><span class="kv-k">Observations recorded so far</span><span class="kv-v">0</span></div>
+      <div class="kv-row"><span class="kv-k">Kept if learning is switched on later</span><span class="kv-v">Yes, all of them<span class="sub">including ineligible ones, attached to the context they came from</span></span></div>
+    </div>
+  </section>
+
+
+  <!-- ================= SOLUTION STRENGTH PROVENANCE ================= -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Where each strength came from</h2>
+      <span class="pill pill-attention">2 to confirm</span>
+    </div>
+    <p class="body">
+      Some of these you typed. Some were written by a default when the app first ran, and a
+      default is a guess about a bottle it has never seen. The difference matters, because every
+      dose in millilitres is scaled by these figures.
+    </p>
+
+    <ul class="tasklist">
+      <li><span class="taskrow">
+        <span class="tick done">&#10003;</span>
+        <span><span class="t">Alkalinity &mdash; 100&nbsp;g/L sodium carbonate</span>
+        <span class="d">You typed this on 2 August. Confirmed.</span></span>
+        <span class="when">Yours</span>
+      </span></li>
+      <li><a class="taskrow" href="#confirm-ca">
+        <span class="tick"></span>
+        <span><span class="t">Calcium &mdash; 100&nbsp;g/L calcium chloride</span>
+        <span class="d">Never typed. This is the figure the app shipped with. Is it your bottle?</span></span>
+        <span class="when is-overdue">A default</span>
+      </a></li>
+      <li><a class="taskrow" href="#confirm-mg">
+        <span class="tick"></span>
+        <span><span class="t">Magnesium &mdash; 200&nbsp;g/L mixed magnesium salts</span>
+        <span class="d">Never typed. Same figure as above, and the same question.</span></span>
+        <span class="when is-overdue">A default</span>
+      </a></li>
+    </ul>
+
+    <div class="callout attention">
+      <strong>Confirming is not the same as leaving it alone.</strong> A figure you have looked at
+      and agreed with is worth more than an identical figure nobody ever checked, and the app can
+      tell the two apart only if you say so.
+    </div>
+    <span class="btn btn-primary">Check the two defaults</span>
+
+    <p class="inert-note">
+      Nothing is refused for want of this. The two above are only used for parameters this build
+      measures and does not dose, so today the question is about honesty rather than about output.
+    </p>
+  </section>
+
+  <!-- ================= HIDDEN NOTICES ================= -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Things you have put away</h2>
+      <span class="aside">3 hidden</span>
+    </div>
+    <p class="body">
+      Anything you dismissed is listed here, with what would bring it back. Nothing is hidden
+      forever and nothing is hidden without a way to find it again.
+    </p>
+    <div class="kv">
+      <div class="kv-row"><span class="kv-k">Water change is overdue</span><span class="kv-v">Hidden 14 Aug<span class="sub">comes back when you next log one</span></span></div>
+      <div class="kv-row"><span class="kv-k">One reading has a date but no time</span><span class="kv-v">Hidden 16 Aug<span class="sub">comes back if another one does</span></span></div>
+      <div class="kv-row"><span class="kv-k">You have never saved an export</span><span class="kv-v">Hidden 18 Aug<span class="sub">comes back in 30 days, or when you next add a lot of data</span></span></div>
+    </div>
+    <span class="btn" style="margin-top:var(--sp-3)">Show all of them again</span>
+    <p class="inert-note">
+      A dismissal is tied to the state that produced it. A worse number brings the same notice
+      straight back rather than staying quiet because you once said you had seen it.
+    </p>
+  </section>
+
+  <!-- ================= DATA AND PLATFORM ================= -->
+  <section class="card">
+    <div class="card-head"><h2>Your data and this device</h2></div>
+    <ul class="picker">
+      <li><a href="21-durability.html">
+        <span class="pmark p-alk">&#9673;</span>
+        <span><span class="t">Backup, export and restore</span>
+        <span class="d">Three tiers, each with what it is actually worth. One of them is not a backup and says so.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="22-offline-install.html">
+        <span class="pmark p-sal">&#9729;</span>
+        <span><span class="t">Offline and installing</span>
+        <span class="d">What works with no connection, and what putting it on your home screen changes.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="23-error-boundary.html">
+        <span class="pmark p-po4">&#9888;</span>
+        <span><span class="t">When something breaks</span>
+        <span class="d">What a crashed tab looks like, and why navigation keeps working through it.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+      <li><a href="24-developer-view.html">
+        <span class="pmark p-mg">&#9881;</span>
+        <span><span class="t">Developer view</span>
+        <span class="d">Reason codes, payloads and version stamps. Off by default; not part of the interface.</span></span>
+        <span class="go">&rsaquo;</span></a></li>
+    </ul>
+  </section>
+
+  <div class="mockup-note">
+    <b>Setup asks for facts, not judgements.</b> Everything on this screen is something only you
+    know &mdash; your volume, your bottles, your pump. There is no band-width setting, no
+    tolerance, no notification threshold, because the app has better answers to those than a new
+    keeper does. If a default is not good enough to ship unattended, the defect is in the default
+    and not in the absence of a question.
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Tools</h2><span class="pill pill-neutral">Coming later</span></div>
+    <p class="body">
+      Calculators &mdash; work out a dose by hand, convert units, plan a water change &mdash;
+      will live in their own tab. They are not here yet, and the tab is deliberately in place
+      and disabled rather than absent.
+    </p>
+    <p class="body">
+      The reason is that a calculator answering a question you asked and a recommendation the
+      engine decided to make are different kinds of statement, and they must never be mistaken
+      for one another. Deciding that now means it does not have to be untangled later.
+    </p>
+  </section>
+
+  <div class="mockup-note">
+    <b>Open question for the owner.</b> There is a reason code for the target range changing and
+    one for the volume changing, but none for the outer bounds changing &mdash; even though
+    editing them moves the safety destinations and can turn a breach into a non-breach. The
+    change history row above is honest, but the assessment that follows it has no code to
+    explain itself with. Recorded as gap&nbsp;11.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today — settled · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar with-gear">
+    <div>
+      <h1>Today</h1>
+      <p class="sub">Mixed reef &middot; 77&nbsp;L net volume &middot; assessed 08:05</p>
+    </div>
+    <a class="gear" href="07-settings.html" aria-label="Settings">&#9881;</a>
+  </header>
+
+  <nav class="stepper" aria-label="Move through the days">
+    <a class="arrow" href="02-today-h-day-past.html" aria-label="The day before">&lsaquo;</a>
+    <span class="when">
+      <span class="d">Thursday 20 August</span>
+      <span class="r">Today</span>
+    </span>
+    <a class="arrow" href="02-today-g-day-ahead.html" aria-label="The day after">&rsaquo;</a>
+  </nav>
+
+  <div class="mockup-note">
+    <b>Variant F &mdash; settled.</b> Nothing is due and nothing is wrong. On a tank that is
+    behaving this is most days, and it was the only state with no screen. The point of it is
+    that it says something: a card is here because the answer is &ldquo;carry on&rdquo;, not
+    because the app had nothing to put in the space.
+  </div>
+
+  <!-- ===================== THE ONE RANKED LIST ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Needs you</h2>
+      <span class="aside">Nothing</span>
+    </div>
+    <p class="body">
+      No test is due, no chore is due, and alkalinity is sitting where you asked it to sit.
+      The next thing on the list is a water change on <strong>Sunday</strong>.
+    </p>
+    <p class="inert-note">
+      This list is empty because it is empty, not because something failed to load. When it
+      has an item, that item is genuinely worth your attention.
+    </p>
+  </section>
+
+  <!-- ===================== THE ASSESSMENT ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <span class="pmark p-alk">Alk</span>
+      <h2>Alkalinity</h2>
+      <span class="pill pill-alk">In range</span>
+    </div>
+
+    <div><span class="hero">8.74</span><span class="unit">dKH</span></div>
+    <p class="caption">Measured this morning at 07:40. Your target is 8.6 to 9.2.</p>
+
+    <dl class="dims">
+      <div class="dim">
+        <dt>Where it sits</dt>
+        <dd>Inside your target range
+          <span class="why">Nearer the bottom than the top, which is where it has been all month.</span>
+        </dd>
+      </div>
+      <div class="dim">
+        <dt>Which way it is going</dt>
+        <dd>Too small to call
+          <span class="why">Six tests over twelve days lean very slightly down. Take the uncertainty off and nothing is left, so the app will not call it a fall &mdash; and will not call it steady either.</span>
+        </dd>
+      </div>
+      <div class="dim">
+        <dt>How much is known</dt>
+        <dd>Enough to act on
+          <span class="why">Six separate tests, twelve days covered. Comfortably past the minimum.</span>
+        </dd>
+      </div>
+      <div class="dim">
+        <dt>What is running</dt>
+        <dd>9.0&nbsp;mL/day
+          <span class="why">Unchanged since 9 August. Nothing has been asked of it since.</span>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="slopepair">
+      <div class="slopebox">
+        <span class="lbl">What the readings did</span>
+        <span class="n">&minus;0.0040</span>
+        <span class="sub">dKH per day</span>
+      </div>
+      <div class="slopebox">
+        <span class="lbl">What that supports</span>
+        <span class="n">0.0000</span>
+        <span class="sub">dKH per day, after the uncertainty is taken off</span>
+      </div>
+    </div>
+
+    <div class="reco">
+      <p class="verb">Recommendation</p>
+      <p class="headline">Leave the dose alone</p>
+      <p class="detail">
+        There is a faint downward lean in the numbers, and it is smaller than the noise in the
+        measurement. Chasing it would be chasing the test kit. Test again on Saturday as usual.
+      </p>
+    </div>
+
+    <details class="notices">
+      <summary>
+        <span class="lbl">Why it says that</span>
+        <span class="sevcount">
+          <span class="pill pill-attention">2 limiting</span>
+          <span class="pill pill-neutral">7 info</span>
+        </span>
+        <span class="chev"></span>
+      </summary>
+      <ul class="notice-list">
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">The readings lean down very slightly. Subtracting the uncertainty leaves nothing, so this is reported as too small to call &mdash; never as steady.</span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0079</b> &nbsp; <span class="k">uncertainty allowance subtracted</span> <b>0.0079</b> &nbsp; <span class="k">days covered</span> <b>12.00</b> &nbsp; <span class="k">separate tests</span> <b>6</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">The dose is left alone for that reason and no other.</span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0079</b> &nbsp; <span class="k">uncertainty allowance subtracted</span> <b>0.0079</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Leaving the dose alone is a full recommendation, not a failure to answer.</span>
+          <span class="payload"><span class="k">why it is held</span> <b>the lean is smaller than its own uncertainty</b></span>
+        </li>
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The ordinary minimum is comfortably met, so this is not a provisional answer.</span>
+          <span class="payload"><span class="k">separate tests</span> <b>6</b> &nbsp; <span class="k">days covered</span> <b>12.00</b></span>
+        </li>
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">The stretch of history used runs from the last dose change to this morning, with no water change big enough to break it.</span>
+          <span class="payload"><span class="k">from</span> <b>9 Aug 2026, 19:12</b> &nbsp; <span class="k">to</span> <b>20 Aug 2026, 07:40</b> &nbsp; <span class="k">days covered</span> <b>12.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">What your tank uses each day, worked out from what goes in and what the level actually did.</span>
+          <span class="payload"><span class="k">the tank uses</span> <b>0.6214</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
+        </li>
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Strength per millilitre comes from the recipe you entered, not from watching your tank.</span>
+          <span class="payload"><span class="k">chemical</span> <b>sodium carbonate</b> &nbsp; <span class="k">solution strength</span> <b>100 g/L</b> &nbsp; <span class="k">net water volume</span> <b>77</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b></span>
+        </li>
+        <li class="notice rows-2">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="say">Nothing unusual is in play, so the next test falls on the ordinary rhythm.</span>
+          <span class="payload"><span class="k">test again</span> <b>Sat 22 Aug, 07:40</b> &nbsp; <span class="k">earliest useful test</span> <b>Fri 21 Aug, 07:40</b></span>
+        </li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===================== THE MONTH ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>The rest of your week</h2>
+      <span class="aside">4 things</span>
+    </div>
+    <ul class="tasklist">
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Test alkalinity</span><span class="d">Your own schedule, every two days</span></span>
+        <span class="when">Sat</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Test phosphate</span><span class="d">Every three days</span></span>
+        <span class="when">Sat</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Water change</span><span class="d">15&nbsp;L, every week</span></span>
+        <span class="when">Sun</span>
+      </a></li>
+      <li><a class="taskrow" href="12-reschedule-sheet.html">
+        <span class="tick"></span>
+        <span><span class="t">Replace carbon</span><span class="d">Every four weeks</span></span>
+        <span class="when">Mon</span>
+      </a></li>
+    </ul>
+    <p class="inert-note">
+      <a class="fix" href="10-tasks.html">Open the calendar &rarr;</a>
+    </p>
+  </section>
+
+  <div class="mockup-note">
+    <b>What this variant is arguing.</b> The five states beside it are five shapes of
+    recommendation. This one is the shape of <i>no recommendation needed</i>, and it still has
+    to be designed &mdash; otherwise the app is silent on the days it is working best, and
+    silence reads as broken.
+  </div>
+
+  <details class="devview">
+    <summary>
+      <span class="lbl">Developer view &mdash; reason codes and payloads</span>
+      <span class="chev"></span>
+    </summary>
+    <div class="devbody">
+      <p class="devnote">Not part of the interface. The engine emits an ordered, severity-graded
+      list of reason codes with a payload each, and this is that list verbatim, so the screen
+      above can be checked against the contract it renders. Nothing outside this block uses
+      this vocabulary.</p>
+      <ul class="notice-list">
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">TRAJECTORY_UNCERTAINTY_LIMITED</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0040</b> &nbsp; <span class="k">sigmaS</span> <b>0.0079</b> &nbsp; <span class="k">supportSubtraction</span> <b>0.0079</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b> &nbsp; <span class="k">independentClusters</span> <b>6</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">MAINTENANCE_HOLD_UNCERTAINTY_LIMITED</span>
+          <span class="payload"><span class="k">S_observed</span> <b>&minus;0.0040</b> &nbsp; <span class="k">sigmaS</span> <b>0.0079</b> &nbsp; <span class="k">supportSubtraction</span> <b>0.0079</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">OUTPUT_HOLD_IS_A_RECOMMENDATION</span>
+          <span class="payload"><span class="k">holdReasons</span> <b>[TRAJECTORY_UNCERTAINTY_LIMITED]</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">EVIDENCE_SUFFICIENT</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>6</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">SEGMENT_SELECTED</span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0809</b> &nbsp; <span class="k">startAt</span> <b>2026-08-09T19:12Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">CONSUMPTION_ESTIMATED</span>
+          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6214</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0040</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">POTENCY_SELECTED_THEORETICAL</span>
+          <span class="payload"><span class="k">chemical</span> <b>SODIUM_CARBONATE</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b> &nbsp; <span class="k">theoreticalDkhPerMl</span> <b>0.0686</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-INFO sev">Info</span>
+          <span class="code">RETEST_ROUTINE_CADENCE</span>
+          <span class="payload"><span class="k">recommendedAt</span> <b>2026-08-22T07:40Z</b> &nbsp; <span class="k">nextUsefulTestAt</span> <b>2026-08-21T07:40Z</b></span>
+        </li>
+      </ul>
+    </div>
+  </details>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab on" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>

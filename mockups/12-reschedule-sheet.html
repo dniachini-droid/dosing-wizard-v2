@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Move this task · Dosing Wizard V2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="screen">
+
+  <header class="topbar">
+    <a class="backlink" href="10-tasks.html">Tasks</a>
+    <p class="eyebrow">The shared sheet</p>
+    <h1>Water change</h1>
+    <p class="sub">Reached identically from the calendar, from the task list and from Today.</p>
+  </header>
+
+  <div class="mockup-note">
+    <b>One sheet, not three.</b> V1 built this once and opened it from both the calendar and the
+    reminder list, so a task could be moved from wherever you happened to be looking at it. That
+    is the whole design and it is worth keeping.
+  </div>
+
+  <div class="sheetwrap">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h2>Water change</h2>
+      <p class="who">Every week &middot; last done Thursday 13 August &middot; due today</p>
+
+      <div class="field">
+        <label for="due">Next due</label>
+        <input class="input" id="due" value="20 Aug 2026">
+        <p class="hint">Moving this moves only the next one. The one after it is still counted
+        from when you actually do it, so a nudge never permanently skews the rhythm.</p>
+      </div>
+
+      <div class="field">
+        <span class="flabel">How often</span>
+        <div class="inline">
+          <input class="input" value="1" inputmode="numeric" aria-label="How many">
+          <div class="seg" style="flex:2">
+            <span class="opt">Days</span>
+            <span class="opt on">Weeks</span>
+          </div>
+        </div>
+        <p class="hint">Shown back to you the way you entered it &mdash; 42 days reads better as
+        six weeks.</p>
+      </div>
+
+      <div class="field">
+        <span class="flabel">Volume</span>
+        <div class="inline">
+          <input class="input" value="15" inputmode="decimal" aria-label="Volume">
+          <span class="suffix">L</span>
+        </div>
+        <p class="hint">Carried into the record, so the day reads &ldquo;water change &middot;
+        15&nbsp;L&rdquo; rather than only naming the task. A change this size against 77&nbsp;L
+        replaces about a fifth of the water.</p>
+      </div>
+
+      <span class="btn btn-primary">Mark it done today</span>
+      <div class="btn-row">
+        <span class="btn">Push it a day</span>
+        <span class="btn">Skip this one</span>
+      </div>
+      <span class="btn btn-quiet">Turn this task off</span>
+
+      <div class="refusal" style="margin-top:var(--sp-4)">
+        <span class="state">What each of those does</span>
+        <div class="kv">
+          <div class="kv-row"><span class="kv-k">Mark it done today</span><span class="kv-v">Next one falls a week from today<span class="sub">not a week from when it was due</span></span></div>
+          <div class="kv-row"><span class="kv-k">Push it a day</span><span class="kv-v">Only this one moves<span class="sub">the rhythm underneath is untouched</span></span></div>
+          <div class="kv-row"><span class="kv-k">Skip this one</span><span class="kv-v">Recorded as skipped<span class="sub">not as done, and not silently forgotten</span></span></div>
+          <div class="kv-row"><span class="kv-k">Turn this task off</span><span class="kv-v">Stops scheduling it<span class="sub">its history stays</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-note">
+    <b>Skip is not done.</b> They produce different histories and the difference matters: a run
+    of skips is a signal that the interval is wrong, and folding them into completions would
+    hide exactly that.
+  </div>
+
+</main>
+
+<nav class="tabbar"><div class="inner">
+  <a class="tab" href="02-today-a-dose-change.html"><span class="ic">&#9673;</span>Today</a>
+  <a class="tab" href="08-test-lab.html"><span class="ic">&#9707;</span>Test Lab</a>
+  <a class="tab on" href="10-tasks.html"><span class="ic">&#9635;</span>Tasks</a>
+  <a class="tab" href="06-history.html"><span class="ic">&#8767;</span>History</a>
+  <span class="tab off"><span class="ic">&#8862;</span>Tools<span class="soon">Later</span></span>
+</div></nav>
+</body>
+</html>
