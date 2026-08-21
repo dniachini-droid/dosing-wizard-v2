@@ -410,18 +410,21 @@ s.test("TM-11", "the first dose line is a standing dose, not a change from a dos
 s.test("TM-12", "bulk entry is refused outside test mode", async () => {
   reset();
   eq(isTestMode(), false, "test mode is off");
-  /* The guard lives on the shell's own verb, which is where the store is
-     chosen. Proved here through the module the shell calls: a caller that
-     reaches `applySeries` has already been through it. */
-  const main = fs.readFileSync(path.join(ROOT, "app/src/main.js"), "utf8");
-  ok(
-    /async seedSeries\(rows\) \{\s*\n\s*if \(!isTestMode\(\)\) throw/.test(main),
-    "seeding a series refuses when test mode is off"
-  );
-  ok(
-    /async resetTest\(\) \{\s*\n\s*if \(!isTestMode\(\)\) throw/.test(main),
-    "and so does clearing the test data"
-  );
+  /* THE SHAPE HALF OF THIS TEST WAS RETIRED WITH THE SCREEN IT PINNED.
+
+     It read `app/src/main.js` and asserted that `seedSeries` and `resetTest`
+     each began with `if (!isTestMode()) throw`. The V1 interface port deleted
+     that shell, and with it the only route into `store/seed.js`: the ported
+     five-tab interface has no bulk-entry surface at all, so there is nothing
+     left for the guard to guard. A shape assertion against a file that no
+     longer exists is a check that cannot fail, which V1's own verify gate
+     calls worse than no check.
+
+     The absence is recorded in `docs/migration/PORT-OMISSIONS.md`, with what
+     restoring the surface would need — including this guard.
+
+     What survives is the half that is still about behaviour: the guard's own
+     shape, proved through the module the shell would call. */
   await throws(
     async () => {
       const { rows } = parseSeries("2026-03-01 alk 8.6");
@@ -717,15 +720,19 @@ s.test("TM-23", "nothing outside the listed places reads the wall clock", () => 
     "./store/seed.js",       /* seeded records: recordedAt is the REAL instant, per TM-22 */
     "./store/mode.js",       /* the date test mode OFFERS as a starting point, before it owns the clock */
     "./store/import-v1.js",  /* imported records: recordedAt is when the app was told, per TM-22's rule */
-    "./screens/entry.js",    /* reading and correction recordedAt */
-    "./screens/entrydetail.js",
-    "./screens/logentry.js",
-    "./screens/tasks.js",
-    "./screens/settings.js", /* exportedAt, and the export's filename */
-    "./main.js",             /* water-change recordedAt written alongside a completion */
-    "./ui/chart.js",         /* the double-tap window — a gesture interval, not a moment in time */
-    "./moments/present.js",  /* a DOM id, not a time */
-    "./moments/moments.js",  /* ported V1 motion code, carried unchanged */
+    /* The V1 interface port replaced every screen. What is left on this list
+       is the same class of thing the entries above are — `recordedAt`: when
+       the app was TOLD something, which is always the real instant, per
+       `TM-22`. Every entry has to earn its place by being one of those.
+
+       The V2 screens that used to be here went with the port:
+       `./screens/*`, `./main.js`, `./ui/chart.js` and `./moments/*`. */
+    "./lib/record.js",       /* every event's recordedAt, and the device offset in force at the entry */
+    "./App.jsx",             /* exportedAt on a rescue or an export, and when a notice was put away */
+    "./components/ZoomableChart.jsx", /* the double-tap window — a gesture interval, not a moment in time */
+    "./components/ReadingConfirmation.jsx", /* ported V1 motion code: a moment key, carried unchanged */
+    "./components/TaskCompletion.jsx",      /* the same */
+    "./components/DoseExpectation.jsx",     /* the same */
   ]);
 
   const found = [];
@@ -756,37 +763,54 @@ s.test("TM-23", "nothing outside the listed places reads the wall clock", () => 
   ok(/async today\(\) \{\s*\n\s*return todayLocal\(\);/.test(schedule), "the task store's today is the app's today");
 });
 
-s.test("TM-24", "the shell recomputes the assessment when the instant moves, and marks every screen", () => {
-  /* Requirement 2 is that the assessment recomputes at each step, and
-     requirement 4 that the marker is on every screen. Both live in `main.js`,
-     which needs a DOM and so cannot be run here; both are pinned by shape, the
-     way `TM-05` and `SHELL-01` are, because the alternative is nothing.
+s.test("TM-24", "test mode has no surface in this build, and that is recorded", () => {
+  /* RETIRED WITH THE SHELL IT PINNED, AND SAYING SO RATHER THAN PASSING
+     QUIETLY.
 
-     What each guards: a stepper that moves the date label and leaves
-     yesterday's number under it, and a marker that stops being drawn on the
-     screen the keeper is looking at. */
-  const main = fs.readFileSync(path.join(ROOT, "app/src/main.js"), "utf8");
+     This test read `app/src/main.js` and pinned the shape of test mode's
+     surface: that stepping the instant moved the day label AND recomputed the
+     assessment, that switching stores dropped the previous store's answer, and
+     that the marker was drawn on every render including the crash render.
 
-  const moved = main.slice(main.indexOf("async function movedInstant"), main.indexOf("/* --- rendering"));
-  ok(/state\.stepperDay = todayLocal\(\);/.test(moved), "the day stepper follows the instant");
-  ok(/if \(config\) await reassess\(\);/.test(moved), "and the assessment is recomputed");
-  ok(/await render\(\);/.test(moved), "and the screen redrawn");
+     The V1 interface port deleted that shell and did not carry test mode's
+     screen across — the brief specifies five tabs and none of them is it.
+     `app/src/store/mode.js` survives untouched, so the mechanism is intact and
+     nothing about the record changed; what is gone is the way in.
 
-  const switched = main.slice(main.indexOf("async function switchedMode"), main.indexOf("async function movedInstant"));
-  ok(/state\.assessment = null;/.test(switched), "switching stores drops the last store's assessment");
-  ok(/await movedInstant\(\);/.test(switched), "and recomputes against the new one");
+     Re-pointing the assertions at the new shell would have meant asserting a
+     shape that does not exist, and deleting the test outright would have made
+     a real loss invisible. So it asserts the true thing: the mechanism is
+     still here and the surface is not, and the omission is written down where
+     the owner reads it.
 
-  /* The marker is drawn on every render, including the crash render — the one
-     screen where the keeper is least sure what they are looking at. */
-  const renders = [...main.matchAll(/renderTabs\(\);\s*\n\s*renderMarker\(\);/g)];
-  ok(renders.length >= 2, `the marker is drawn on the ordinary render and the crash render (${renders.length})`);
+     `docs/migration/PORT-OMISSIONS.md` carries what restoring it needs. */
+  const mode = fs.readFileSync(path.join(ROOT, "app/src/store/mode.js"), "utf8");
+  ok(/export function enterTestMode/.test(mode), "the mechanism is still here");
+  ok(/export function setClock|setClock\(/.test(mode), "and it still owns the clock");
 
-  /* And it is not on the tab bar: requirement 7 puts test mode behind
-     Settings, not in the main navigation. */
-  const tabs = main.slice(main.indexOf("const TABS = ["), main.indexOf("];", main.indexOf("const TABS = [")));
-  ok(!/testmode/.test(tabs), "test mode is not a tab");
-  const settings = fs.readFileSync(path.join(ROOT, "app/src/screens/settings.js"), "utf8");
-  ok(/ctx\.go\("testmode"\)/.test(settings), "it is reached from Settings");
+  /* A ROUTE, not a mention. The shell may well talk about test mode in a
+     comment — it does, to explain why the Test tab's state is not called
+     `testMode` — and a check that a word is absent from a file would fail on
+     that and pass on a real route spelled differently. What makes a route is
+     importing the module that owns the mode. */
+  const app = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
+  ok(!/^import[^\n]*from\s+['"]\.\/store\/mode\.js['"]/m.test(app),
+    "the ported shell imports the test-mode module — it has a route in after all");
+  const files = [];
+  const walk = (dir) => {
+    for (const name of fs.readdirSync(dir)) {
+      const p = path.join(dir, name);
+      if (fs.statSync(p).isDirectory()) { walk(p); continue; }
+      if (/\.jsx?$/.test(name)) files.push(p);
+    }
+  };
+  walk(path.join(ROOT, "app/src"));
+  const importers = files.filter((f) =>
+    /^import[^\n]*from\s+['"][^'"]*store\/mode\.js['"]/m.test(fs.readFileSync(f, "utf8")));
+  eq(importers.length, 0, `no interface file reaches test mode: ${importers.join(", ")}`);
+
+  const omissions = fs.readFileSync(path.join(ROOT, "docs/migration/PORT-OMISSIONS.md"), "utf8");
+  ok(/test mode/i.test(omissions), "and the omission is recorded for the owner");
 });
 
 s.test("TM-25", "the tank facts are stamped at the app's own instant, so a backdated assessment resolves one", async () => {
@@ -796,10 +820,20 @@ s.test("TM-25", "the tank facts are stamped at the app's own instant, so a backd
      created inside test mode was effective at the real instant it was typed —
      and every assessment the keeper backdated found no configuration at all
      and refused. The feature did not work on its own primary path. */
-  const settings = fs.readFileSync(path.join(ROOT, "app/src/screens/settings.js"), "utf8");
-  const save = settings.slice(settings.indexOf("await ctx.store.config.append("), settings.indexOf("ctx.go(\"today\")"));
+  /* Re-pointed at the ported shell, which is where configuration is now
+     written. The rule is unchanged and it caught a real defect during the
+     port: the first wiring of `saveConfig` stamped `effectiveFrom` from
+     `new Date().toISOString()`. */
+  const app = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
+  const save = app.slice(app.indexOf("const saveConfig ="), app.indexOf("const saveRange ="));
   ok(/nowIso\(\)/.test(save), "setup stamps the configuration from the application clock");
   ok(!/new Date\(\)\.toISOString\(\)/.test(save), "and not from the wall clock");
+
+  /* And so does changing a target range, which appends a version the same
+     way and had the same defect. */
+  const range = app.slice(app.indexOf("const saveRange ="), app.indexOf("const resetRange ="));
+  ok(/nowIso\(\)/.test(range), "a target-range change is stamped from the application clock too");
+  ok(!/new Date\(\)\.toISOString\(\)/.test(range), "and not from the wall clock");
 
   /* And the consequence, through the engine's own resolution rule: a version
      effective at the chosen instant is found, rather than none. */

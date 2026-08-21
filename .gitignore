@@ -11,3 +11,11 @@ mockups/dosing-wizard-v2-mockups.html
 # script is committed, the 12 MB artefact is not, on the same principle as the
 # single-file mockup build above.
 app/vendor/pyodide/
+
+# The interface is V1's React code, so the repository now carries a Node
+# toolchain. The lockfile IS committed; the installed tree is not.
+node_modules/
+
+# The Vite build output. Same principle as the two artefacts above: the
+# configuration is committed, the built artefact is not.
+app/dist/

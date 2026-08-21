@@ -1,0 +1,27 @@
+{
+  "name": "dosing-wizard-v2-app",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Dosing Wizard V2 — the application shell. The engine, the canon and the conformance gate are Python and are not part of this package.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:app": "node tests/app/run-app-tests.mjs",
+    "test:mutations": "node tests/app/run-app-tests.mjs --mutations",
+    "check:port": "node tools/port/check-port-manifest.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.7"
+  }
+}

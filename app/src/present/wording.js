@@ -67,6 +67,11 @@ export function valueOrAbsence(v, { decimals = 2, unit = null } = {}) {
 export const sayPosition = (v) => fromNamespace("position", v);
 export const sayTrajectory = (v) => fromNamespace("trajectory", v);
 export const sayEvidence = (v) => fromNamespace("evidence", v);
+
+/* The one evidence value a screen asks for by name: the label for the row that
+   appears when `supportedTrajectory.limitedByUncertainty` is set. Named here
+   so no screen holds a member of the evidence vocabulary. */
+export const sayUncertaintyLimited = () => fromNamespace("evidence", "UNCERTAINTY_LIMITED");
 export const sayOuter = (v) => fromNamespace("outer", v);
 export const sayResponseClass = (v) => fromNamespace("response", v);
 export const sayAction = (v) => fromNamespace("action", v);
@@ -127,19 +132,69 @@ export function sayPayloadKey(k) {
    leak; omitting it is not.
 
    The test is SHAPE, not a list, so a value the contract adds tomorrow cannot
-   leak by being forgotten. */
+   leak by being forgotten.
+
+   FOUR SHAPES, AND WHY EACH ONE IS HERE. The first was here from the start; the
+   other three were added after the ported Dosing tab was driven against the
+   real engine for the first time and the screen was read line by line. Every
+   one of them had leaked something the brief rules out — "no reason-code
+   identifiers, no canon variable names, and no raw precision in any visible
+   string ... A timestamp does not render as `2026-08-23T07:48:22+00:00`." */
+
+/* `SET_MAINTENANCE_DOSE`, `EPISODE_RESOLVED` — the contract's own vocabulary. */
 const CONTRACT_SHAPED = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/;
 
-export function sayPayloadValue(v) {
+/* `M-5`, `M.2`, `ALK-014`, `X-INV-004`, `WG-ALK-066`, `OI-ANOMCLUSTER-001` —
+   canon rule and issue identifiers. They read as gibberish to a keeper and
+   they are exactly what owner decision 9 keeps off the screen. */
+const CANON_ID = /^[A-Z]{1,4}([-.][A-Z0-9]+)+$/;
+
+/* `maintenanceEstimateMlPerDay`, `potencyConfidence` — engine field names.
+   A camelCase identifier is never a sentence. */
+const FIELD_NAME = /^[a-z]+([A-Z][a-zA-Z0-9]*)+$/;
+
+/* An offset-aware or UTC instant, which is rendered rather than dropped: the
+   moment IS worth showing, just not in the contract's spelling. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
+
+function sayInstant(iso) {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.toLocaleString("en-AU", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/* SOME PAYLOAD KEYS CARRY ENGINE OUTPUT NAMES, NOT VALUES.
+
+   `affectedOutputs` is a list of the engine's own output identifiers —
+   `consumption`, `maintenanceEstimateMlPerDay` — and `strings.js` already has
+   wording for each of them under `output.*`. It was not being used, so the
+   identifiers went to the screen verbatim. Routed by KEY, because the value
+   alone cannot tell you that "consumption" is a field name here and an
+   ordinary English word elsewhere. */
+const OUTPUT_KEYS = new Set(["affectedOutputs", "affectedOutput", "outputs", "withheldOutputs"]);
+const CAPABILITY_KEYS = new Set(["capabilities", "missingCapabilities", "capabilityId", "capability"]);
+const CONSTRAINT_KEYS = new Set(["constraints", "constraint", "binding", "bindingConstraint"]);
+
+export function sayPayloadValue(v, key = null) {
   if (Array.isArray(v)) {
-    const parts = v.map(sayPayloadValue).filter((x) => x != null);
+    const parts = v.map((x) => sayPayloadValue(x, key)).filter((x) => x != null);
     return parts.length === v.length ? parts.join(", ") : null;
   }
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (v == null) return null;
   const s = String(v);
+
+  if (key && OUTPUT_KEYS.has(key)) return has(`output.${s}`) ? t(`output.${s}`) : null;
+  if (key && CAPABILITY_KEYS.has(key)) return has(`capability.${s}`) ? t(`capability.${s}`) : null;
+  if (key && CONSTRAINT_KEYS.has(key)) return has(`constraint.${s}`) ? t(`constraint.${s}`) : null;
+
   if (has(`value.${s}`)) return t(`value.${s}`);
+  if (INSTANT.test(s)) return sayInstant(s);
   if (CONTRACT_SHAPED.test(s)) return null; /* to the developer view instead */
+  if (CANON_ID.test(s)) return null;
+  if (FIELD_NAME.test(s)) return null;
   return s;
 }
 

@@ -921,3 +921,87 @@ It does not licence adding a field because a fixture would then pass. Condition 
 guard: the quantity must already exist in the engine for a reason the canon states. A
 field invented to satisfy a fixture is the fixture writing the engine, which is the
 inversion this repository exists to prevent.
+
+---
+
+## DEC-024 — The application's interface is V1's, and it brings V1's toolchain with it
+
+- **ID:** DEC-024
+- **Date:** 2026-08-21
+- **Status:** ACTIVE
+
+**Decision**
+
+The V2 interface is replaced by V1's, ported from V1 source rather than
+reimplemented. Because V1's interface is React, the repository now carries a
+Node toolchain — React, recharts, Vite, Tailwind and PostCSS — and the
+application is built rather than served as hand-written ES modules.
+
+`engine/`, `docs/canon/` and `tools/conformance/` are untouched by this and
+remain byte-identical. So does V2's storage: the append-only event ledger,
+stored assessments with their version stamps, the configuration history and the
+import.
+
+**Rationale**
+
+The owner used the V2 interface and rejected it. The instruction was to bring
+V1's across, and — the load-bearing part — to bring it across as *code*:
+
+> Previous briefs said "port from V1 source, do not reimplement." Nothing
+> checked it ... so the build wrote its own version of everything and the
+> result was worse than the thing it replaced.
+
+A port that is checkable line by line is only possible if the ported files stay
+comparable to their originals. Translating V1's JSX into V2's vanilla-DOM idiom
+would have made every line a difference, which is a reimplementation wearing a
+port's name — exactly what failed before.
+
+So the toolchain follows the code. It is a consequence of the decision to port,
+not a preference about frameworks.
+
+**What makes it checkable**
+
+`docs/migration/PORT-MANIFEST.md` records, for every file taken from V1, the V1
+path and commit, the SHA-256 of the original and of the ported file, and the
+complete diff with a reason on every hunk drawn from a fixed vocabulary.
+`tools/port/check-port-manifest.mjs` reverse-applies the recorded diff to the
+ported file and hashes the result: if it equals the recorded V1 hash, the diff
+is the whole truth about the difference. It needs no V1 checkout to run.
+`tools/port/mutate-manifest.mjs` proves each arm of that check can fail.
+
+**Consequences**
+
+- `npm install` is required to run or build the application. The lockfile is
+  committed; `node_modules/` and `app/dist/` are not.
+- Vite's root is the **repository**, not `app/`. `app/src/engine/worker.js`
+  resolves the engine's own files three directories above itself; serving the
+  repository root is what keeps that true. The alternative was editing the
+  engine boundary to suit the build, which is the wrong way round.
+- The Python runtime stays an uncommitted, hash-verified artefact
+  (`tools/app/vendor-runtime.py`) and is declared external to the build and
+  served raw in development. Nothing about the engine boundary changed.
+- **The offline shell was lost.** `app/sw.js` precached a hand-written list of
+  files that no longer exist. Regenerating it from a hashed bundle is real work
+  and is recorded as open in `docs/migration/PORT-OMISSIONS.md`.
+- `tools/app/smoke.mjs` and `tools/app/check-moment-timings.py` are superseded
+  and say so; the second is superseded by the manifest, which is stronger.
+- The bundle is about 233 kB gzip. V1's own note that it "measured 288.5 kB
+  gzip against a 180 kB budget, and Recharts is the bulk" still applies, and
+  the budget is still not met. Recorded, not resolved.
+
+**One thing the first version of this entry got wrong**
+
+It said the storage layer was untouched. Three files in it changed:
+`store/schedule.js` regained V1's `recent` bucket, `assess.js` moved
+`describe()` out of the storage try — an engine that could not start was being
+reported as a record that could not be read — and gained an injection point so
+canon §64's version stamping could be tested. Only `engine/`, `docs/canon/` and
+`tools/conformance/` are byte-identical.
+
+**What this does not say**
+
+It does not make the interface authoritative about anything. Canon `X-INV-004`
+and `DEC-003` are unchanged: the domain engine owns chemistry, and
+`tests/app/test-port.mjs` `PORT-01`…`PORT-04` fail if any interface file names
+a V1 classifier, holds a member of the engine's decision vocabulary, or
+compares a reading to a band edge.

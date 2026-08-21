@@ -1,0 +1,265 @@
+{
+  "v1Repository": "dniachini-droid/tank-wizard",
+  "v1Commit": "9276a2ca254e88d19e0f02dced42a1b896499780",
+  "note": "Every file the interface port took from V1. `v1` is the path in the V1 repository at `v1Commit`; `v2` is where it now lives. `reasons` carries one entry per hunk of the real diff, in order, and the checker refuses a count that does not match.",
+  "files": [
+    {
+      "v1": "src/icons.jsx",
+      "v2": "app/src/icons.jsx",
+      "reasons": []
+    },
+    {
+      "v1": "src/main.jsx",
+      "v2": "app/src/main.jsx",
+      "reasons": []
+    },
+    {
+      "v1": "src/index.css",
+      "v2": "app/src/index.css",
+      "reasons": []
+    },
+    {
+      "v1": "src/styles/base.css",
+      "v2": "app/src/styles/base.css",
+      "reasons": []
+    },
+    {
+      "v1": "src/styles/aurelia-skin.css",
+      "v2": "app/src/styles/aurelia-skin.css",
+      "reasons": []
+    },
+    {
+      "v1": "index.html",
+      "v2": "app/index.html",
+      "reasons": [
+        "data source rewired \u2014 icon, manifest and entry-module paths point at V2's own assets and V2's module tree instead of V1's, and the app's name and title are V2's"
+      ]
+    },
+    {
+      "v1": "src/lib/dates.js",
+      "v2": "app/src/lib/dates.js",
+      "reasons": [
+        "data source rewired \u2014 the local-day helpers read the application's clock (`app/src/store/time.js`) instead of the wall clock, so test mode's chosen instant moves them",
+        "chemistry removed \u2014 `paramStatus`, V1's position classifier, deleted; `todayStr` and `addDaysFromToday` rewired onto the application clock in the same hunk"
+      ]
+    },
+    {
+      "v1": "src/lib/constants.js",
+      "v2": "app/src/lib/constants.js",
+      "reasons": [
+        "defect fixed \u2014 a module of constants that could not be loaded outside the bundler could not be tested. V1's version imported five icon components so `NAV` could carry them, and anything importing it transitively was unreachable from a Node-only test runner; the chemistry in `PARAM_DEFS` \u2014 target ranges, cadences, ideal-at directions \u2014 is deleted in the same hunk, and `NAV` now carries an icon key the shell binds"
+      ]
+    },
+    {
+      "v1": "src/lib/storage.js",
+      "v2": "app/src/lib/storage.js",
+      "reasons": [
+        "data source rewired \u2014 V1's localStorage and photo-store machinery deleted; V2's ledger, assessments and configuration are the record. Only the notification bus survives",
+        "data source rewired \u2014 the remainder of V1's key-value store, quota handling and orphan collector deleted for the same reason"
+      ]
+    },
+    {
+      "v1": "src/lib/backup.jsx",
+      "v2": "app/src/lib/backup.jsx",
+      "reasons": [
+        "data source rewired \u2014 V1's backup, restore and merge (lines 1-344) deleted because V2's storage is not going anywhere; imports repointed at V2's formatting, position presenter, clock and task store",
+        "chemistry removed \u2014 the target band is drawn only where the keeper has a range, and its fill follows the engine's position rather than `paramStatus`",
+        "chemistry removed \u2014 the centred status word is the engine's position, looked up in the strings file, instead of V1's own \"in band\" / \"below band\" verdict",
+        "chemistry removed \u2014 `StatusPill` deleted; it rendered the same `paramStatus` vocabulary and every caller went with the surfaces that computed chemistry",
+        "chemistry removed \u2014 `pinReasonLabel` and its use deleted; it named why V1's own protocol had pinned a retest date, and in V2 the retest date is the engine's",
+        "chemistry removed \u2014 the second use of the same pin label, in the reschedule sheet's header",
+        "data source rewired \u2014 the calendar's current month follows the application's clock instead of the wall clock"
+      ]
+    },
+    {
+      "v1": "src/components/ZoomableChart.jsx",
+      "v2": "app/src/components/ZoomableChart.jsx",
+      "reasons": [
+        "defect fixed \u2014 the chart never received or displayed a unit or a parameter name at any of V1's four call sites; both are now required parameters",
+        "defect fixed \u2014 the same defect: the refusal is computed after the hooks so the hook order cannot change between renders",
+        "defect fixed \u2014 the same defect: it refuses to render rather than drawing an unlabelled trace, and draws the parameter's name and unit above the plot",
+        "defect fixed \u2014 the same defect: the tooltip states the unit and the parameter name alongside the value"
+      ]
+    },
+    {
+      "v1": "src/components/ErrorBoundary.jsx",
+      "v2": "app/src/components/ErrorBoundary.jsx",
+      "reasons": [
+        "chemistry removed \u2014 imports of V1's safe-rate module and alkalinity dosing engine deleted with the block that used them",
+        "chemistry removed \u2014 `AlkAssessmentBlock` deleted: 264 lines rendering a dose figure, a staged step, a rate rail and a retest date computed inside a presentation component"
+      ]
+    },
+    {
+      "v1": "src/components/DoseExpectation.jsx",
+      "v2": "app/src/components/DoseExpectation.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed from V1's analytics modules onto V2's formatting and the position presenter",
+        "wording replaced with engine output \u2014 the dose moment no longer destructures V1's own predicted value, per-day movement, retest date and staged target; in V2 the prediction is the engine's immutable snapshot and is not available at this instant",
+        "wording replaced with engine output \u2014 the chart emoji replaced by the icon set's arrow; the brief rules out emojis",
+        "wording replaced with engine output \u2014 V1's predicted-value sentence and retest date replaced by a statement of what was recorded, which is what the app knows at that moment",
+        "defect fixed \u2014 an apostrophe escaped so the string parses after the surrounding template was rewritten",
+        "wording replaced with engine output \u2014 a notice's identity and signature are keyed on the engine's reason code and its payload instead of V1's own finding id and title",
+        "wording replaced with engine output \u2014 the tone table keys on the frozen catalogue's severity (`REFUSAL` / `GATING` / `INFO`) instead of V1's own `act` / `watch` / `info`",
+        "data source rewired \u2014 the icon table is keyed by the ledger's parameter keys instead of V1's own spellings, and has no ammonia row because this build has no ammonia parameter",
+        "chemistry removed \u2014 the sparkline's band is drawn only where the keeper has a range, because this build ships no range it cannot source",
+        "chemistry removed \u2014 `ParamCard` no longer computes position, direction or a stability grade; all four are props decided by the engine, and the noise-floor comparison behind V1's trend arrow is deleted",
+        "chemistry removed \u2014 the trend arrow follows the engine's trajectory instead of a delta compared against `def.step`",
+        "chemistry removed \u2014 the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label",
+        "wording replaced with engine output \u2014 V1's dose chip and worst-finding chip replaced by one notification strip carrying the engine's own notice"
+      ]
+    },
+    {
+      "v1": "src/components/ReadingContext.jsx",
+      "v2": "app/src/components/ReadingContext.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed onto V2's formatting, the read adapter and the position presenter",
+        "data source rewired \u2014 the prior readings come from the read adapter's ordering instead of a second sort in the component",
+        "chemistry removed \u2014 the scale includes the keeper's range only where he has one",
+        "chemistry removed \u2014 the axis labels include the band edges only where a band exists",
+        "chemistry removed \u2014 the geometry reports whether a band exists rather than assuming two bounds",
+        "chemistry removed \u2014 the trace's colour follows the engine's position instead of `result.status`, the verdict V1's own `readingVerdict` had just produced",
+        "chemistry removed \u2014 a tick is a band edge only where a band exists",
+        "chemistry removed \u2014 the shaded band is drawn only where a band exists, and lights on the engine's position rather than V1's verdict"
+      ]
+    },
+    {
+      "v1": "src/components/ReadingConfirmation.jsx",
+      "v2": "app/src/components/ReadingConfirmation.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed onto V2's formatting and task store; V1's findings, narrative engine and stability rules deleted",
+        "chemistry removed \u2014 `readingVerdict` deleted (390 lines of chemistry classifier inside a UI component, carrying V1's only ammonia branch), and `SplashBurst` with it",
+        "wording replaced with engine output \u2014 the moment's headline and line arrive as a prop built from the engine's answer; where the engine has not answered yet it acknowledges the save and claims nothing",
+        "wording replaced with engine output \u2014 the emoji and the celebration burst removed; the brief rules out emojis, ticks, confetti and stars",
+        "chemistry removed \u2014 the previous reading is stated as a fact instead of being compared against `def.step`, which is a noise floor",
+        "wording replaced with engine output \u2014 the hand-off button's label and variant no longer depend on V1's celebrate verdict",
+        "wording replaced with engine output \u2014 the parameter's mid-sentence name comes from the strings file instead of lowercasing its heading form"
+      ]
+    },
+    {
+      "v1": "src/components/TaskCompletion.jsx",
+      "v2": "app/src/components/TaskCompletion.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed onto V2's formatting and task store, and the header records what the brief removed from this moment",
+        "wording replaced with engine output \u2014 the completion count and the average interval between completions removed; the brief records the streak content for later and forbids synthesising it in the interface",
+        "wording replaced with engine output \u2014 the moment renders without those statistics",
+        "wording replaced with engine output \u2014 the green-tick emoji and the row of stars removed; the brief rules out emojis and stars, and the stars displayed the streak content above"
+      ]
+    },
+    {
+      "v1": "src/components/TodayPanel.jsx",
+      "v2": "app/src/components/TodayPanel.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed onto V2's task store and application clock; V1's stability engine, narrative engine and analytics deleted",
+        "data source rewired \u2014 a row reads V2's task vocabulary (`task.kind === \"TEST\"`, `task.parameter`) instead of V1's reminder vocabulary",
+        "data source rewired \u2014 a reading logged from a due row carries value, date and time and nothing else, per the brief's logging rule",
+        "data source rewired \u2014 the row's label, id and interval read V2's task; the pin label is deleted because in V2 the retest date is the engine's and is never written into a task",
+        "data source rewired \u2014 the complete action reads V2's task id",
+        "data source rewired \u2014 the snooze and reschedule actions read V2's task id",
+        "data source rewired \u2014 the collapsed bar's preview reads V2's task labels",
+        "data source rewired \u2014 the row list keys and looks up parameters through V2's task fields",
+        "data source rewired \u2014 the reminders panel's row reads V2's task label and interval",
+        "data source rewired \u2014 the needs-doing rows read V2's task vocabulary",
+        "data source rewired \u2014 the needs-doing snooze and reschedule actions read V2's task id",
+        "data source rewired \u2014 the coming-up rows read V2's task vocabulary",
+        "data source rewired \u2014 the recently-done rows key on V2's task id",
+        "data source rewired \u2014 the beyond-the-window sentence reads V2's task label",
+        "chemistry removed \u2014 `StabilityStrip`, `ScoreBreakdown`, `SnoozeSheet`, `Briefing` and `OverviewCard` deleted: the tank assessment score, the headline sentence and the stability grading, all computed inside presentation components"
+      ]
+    },
+    {
+      "v1": "src/components/Dashboard.jsx",
+      "v2": "app/src/components/Dashboard.jsx",
+      "reasons": [
+        "chemistry removed \u2014 the whole `Dashboard` body: the overview card, the score, the briefing, the hidden-count reconciliation, the out-of-range alert strip and the snooze machinery, replaced by the due bar, the parameter grid and the reminders panel reading V2's store and one `EngineResult`",
+        "data source rewired \u2014 the reminders panel and calendar read V2's schedule view, tasks and completions",
+        "chemistry removed \u2014 the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead",
+        "wording replaced with engine output \u2014 a cleared range is described as cleared rather than reverted to a default, because this build ships no default range",
+        "chemistry removed \u2014 the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter",
+        "chemistry removed \u2014 `computeControl` and `computeRates` replaced by `describeRows`, which reports minimum, maximum, median, spread and an in-range count and grades nothing",
+        "wording replaced with engine output \u2014 V1's dose banner, which rendered its own dose state and predicted value, replaced by the engine's own notice with the strings file's wording",
+        "chemistry removed \u2014 the target range is stated only where the keeper has one",
+        "wording replaced with engine output \u2014 the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest",
+        "chemistry removed \u2014 each period box shows the spread and the in-range count instead of V1's graded consistency and its colour",
+        "chemistry removed \u2014 V1's verdict box, its rate rows, its two narrative paragraphs, its suggested replacement range and its consumption-and-dosing block deleted; the statistics box is two ungraded rows, the chart is passed its unit and parameter name, and one note beneath it reports how many readings have no time"
+      ]
+    },
+    {
+      "v1": "src/components/AllParametersSheet.jsx",
+      "v2": "app/src/components/AllParametersSheet.jsx",
+      "reasons": [
+        "data source rewired \u2014 imports repointed onto V2's formatting, application clock and read adapter",
+        "data source rewired \u2014 the Test Lab takes V2's schedule view instead of V1's reminders and reminder view",
+        "data source rewired \u2014 the latest reading per parameter comes from the read adapter's ordering",
+        "data source rewired \u2014 a logged reading carries value, date and time and nothing else",
+        "data source rewired \u2014 the due state reads V2's task vocabulary",
+        "data source rewired \u2014 the session progress and the due lookup read V2's schedule view",
+        "wording replaced with engine output \u2014 the party emoji in the completion state replaced by the icon set's tick; the brief rules out emojis",
+        "data source rewired \u2014 All graphs builds its series through the read adapter",
+        "chemistry removed \u2014 the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name"
+      ]
+    },
+    {
+      "v1": "src/components/LogReadingSheet.jsx",
+      "v2": "app/src/components/LogReadingSheet.jsx",
+      "reasons": [
+        "data source rewired \u2014 the clock comes from the application's, not V1's time-of-day analytics module",
+        "data source rewired \u2014 the unused settings and reminders props removed, and the header states the brief's logging rule: value, date, time, save, and no time-provenance question",
+        "defect fixed \u2014 V1 wrote \"Log a alkalinity reading\"; the article now follows the word",
+        "chemistry removed \u2014 the placeholder falls back to nothing where the keeper has no range, instead of printing a band edge"
+      ]
+    },
+    {
+      "v1": "src/components/IcpPanel.jsx",
+      "v2": "app/src/components/IcpPanel.jsx",
+      "reasons": [
+        "chemistry removed \u2014 the reference-range table and the element grouping deleted, along with the photo-compression import; the header records what left and why",
+        "chemistry removed \u2014 `ICP_GROUPS`, which ordered elements by which ones matter, replaced by the elements as entered",
+        "data source rewired \u2014 the photo capture handler deleted; the brief removes file upload for now",
+        "data source rewired \u2014 a saved panel carries its date, note and elements and no image",
+        "data source rewired \u2014 the reset drops the image state, and the graph reads the ledger's own ordering instead of re-sorting",
+        "data source rewired \u2014 the report-photo field deleted",
+        "chemistry removed \u2014 the element graph draws no reference band and states why; the grouped dropdown is a flat list; V1's `Past results` list is not carried, per the brief"
+      ]
+    },
+    {
+      "v1": "src/components/DosingWizard.jsx",
+      "v2": "app/src/components/DosingWizard.jsx",
+      "reasons": [
+        "chemistry removed \u2014 V1's alkalinity assessment block, correction panel and dose-state imports deleted; the imports are V2's engine-result readers and wording helpers",
+        "chemistry removed \u2014 the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes and the selected-parameter detail are V1's layout; everything inside is what V2's engine returned, including the potency estimator, which had no screen anywhere until now"
+      ]
+    },
+    {
+      "v1": "src/components/Tasks.jsx",
+      "v2": "app/src/components/Tasks.jsx",
+      "reasons": [
+        "chemistry removed \u2014 the water-change dilution preview (`predictAfterChange`) deleted, and the imports repointed onto V2's task store and application clock; completing a water change asks for litres and nothing else",
+        "data source rewired \u2014 the empty state explains that this build ships no seeded test schedule, because a cadence is chemistry",
+        "data source rewired \u2014 the task rows read V2's task vocabulary and the water-change prompt is keyed to the task that raised it",
+        "wording replaced with engine output \u2014 the section is a task rather than a reminder, matching V2's vocabulary",
+        "data source rewired \u2014 a custom task may be a one-off, and the three unscheduled records the brief puts here are added: a one-off addition by hand, a lighting change, and a dated note for anything that changed what the tank uses"
+      ]
+    },
+    {
+      "v1": "src/components/Setup.jsx",
+      "v2": "app/src/components/Setup.jsx",
+      "reasons": [
+        "chemistry removed \u2014 V1's Setup was 931 lines importing the magnesium gate, a settle-window function, kit-noise figures and a fourth correction calculator. All of it is deleted. What replaces it is the keeper's facts, dose changes above dosing setup, lighting changes, hidden notices, backup and the import, in the expandable card pattern the brief describes"
+      ]
+    },
+    {
+      "v1": "src/App.jsx",
+      "v2": "app/src/App.jsx",
+      "reasons": [
+        "chemistry removed \u2014 V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer",
+        "chemistry removed \u2014 `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter",
+        "data source rewired \u2014 the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity",
+        "chemistry removed \u2014 V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration",
+        "data source rewired \u2014 V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded",
+        "data source rewired \u2014 every tab is wired to V2's store and the engine result, the tab set is five rather than six, and the Test tab carries the my-tests / ICP-panels toggle and All graphs",
+        "defect fixed \u2014 a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here",
+        "data source rewired \u2014 the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage"
+      ]
+    }
+  ]
+}

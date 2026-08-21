@@ -1109,26 +1109,53 @@ s.test("IMP-34", "a file that cannot be checked against itself is refused", asyn
 
 s.test("IMP-35", "one owner for the boundary, and no route to a stronger provenance", () => {
   /* `MASTER RULE 1`. History had its own copy of "where dose history begins",
-     and the two had already diverged on which events count. */
-  const history = fs.readFileSync(path.join(ROOT, "app/src/screens/history.js"), "utf8");
-  ok(
-    /import \{ firstDoseDate \} from "\.\.\/store\/import-v1\.js";/.test(history),
-    "History asks the one function"
-  );
-  ok(!/function firstDoseDate/.test(history), "and does not carry a second copy of the rule");
+     and the two had already diverged on which events count.
 
-  /* And the correction sheet offers no provenance stronger than the record
-     already has — for EVERY provenance, not only date-only. Offered "Exact" on
-     an imported reading, it would have applied today's device offset to last
-     August's clock reading. */
-  const detail = fs.readFileSync(path.join(ROOT, "app/src/screens/entrydetail.js"), "utf8");
+     Re-pointed by the V1 interface port. The half that pinned
+     `app/src/screens/history.js` importing `firstDoseDate` is now stated over
+     the WHOLE interface, which is stronger: no file anywhere may define a
+     second one, whatever it is called. */
+  const files = [];
+  const walk = (dir) => {
+    for (const name of fs.readdirSync(dir)) {
+      const p = path.join(dir, name);
+      if (fs.statSync(p).isDirectory()) { walk(p); continue; }
+      if (/\.(jsx?|mjs)$/.test(name)) files.push(p);
+    }
+  };
+  walk(path.join(ROOT, "app/src"));
+  const owners = files.filter((f) => /function firstDoseDate/.test(fs.readFileSync(f, "utf8")));
+  eq(owners.length, 1, "exactly one definition of where dose history begins");
   ok(
-    /tc\.removeOptionsAbove\(e\.time\.timeProvenance\);/.test(detail),
-    "the correction sheet ceilings on the record's own provenance"
+    owners[0].endsWith(path.join("store", "import-v1.js")),
+    `and it is the store's: ${owners[0]}`
   );
+
+  /* THE SECOND HALF WAS RETIRED WITH THE SURFACE IT PINNED, AND IS RECORDED.
+
+     It read `app/src/screens/entrydetail.js` and asserted that the correction
+     sheet ceilinged the provenance options on the record's own — so that
+     "Exact" was never offered on an imported reading, which would have applied
+     today's device offset to last August's clock reading.
+
+     The V1 interface port carried no correction sheet across: the five-tab
+     interface has no surface for editing or deleting a reading at all. The
+     rule it enforced cannot be violated by a screen that does not exist, and
+     asserting it against a deleted file would be a check that cannot fail.
+
+     What still holds, and is proved here rather than assumed, is the rule
+     underneath it — `assertProvenanceNotImproved` in the store, which refuses
+     the supersession whatever surface asks for it. A correction sheet built
+     later meets that refusal on the way in. */
+  const time = fs.readFileSync(path.join(ROOT, "app/src/store/time.js"), "utf8");
   ok(
-    !/if \(e\.time\.timeProvenance === PROVENANCE\.DATE_ONLY\) \{\s*\n\s*\/\* Matched/.test(detail),
-    "and not on date-only alone"
+    /export function assertProvenanceNotImproved/.test(time),
+    "the store still refuses a strengthened provenance"
+  );
+  const ledger = fs.readFileSync(path.join(ROOT, "app/src/store/ledger.js"), "utf8");
+  ok(
+    /assertProvenanceNotImproved\(prior\.time, ev\.time\)/.test(ledger),
+    "and the ledger still calls it on every supersession"
   );
 });
 
