@@ -119,7 +119,12 @@ def _representative_at(members: List[Reading]) -> Instant:
     if len(members) == 1:
         return members[0].at
     seconds = median([m.at.epoch_seconds for m in members])
-    when = kernel.utc(seconds)
+    # Rendered in the offset the members arrived in, not in UTC. `Instant`'s own
+    # docstring states the principle: an engine that answers with its own
+    # preferred spelling of the same instant has changed the answer. A keeper in
+    # +10:00 who repeat-tests at 08:00 must not see their episode stamped as the
+    # previous day.
+    when = kernel.utc(seconds).astimezone(members[0].at.when.tzinfo)
     return Instant(text=kernel.iso(when), when=when)
 
 

@@ -146,12 +146,25 @@ def delivery(led, segment_start, segment_end) -> Delivery:
         # basis rather than a degraded one.
         basis = CONFIRMED_PROGRAMMED_SCHEDULE
 
-    inside = [p for p in timeline if segment_start is not None
-              and p[0] > segment_start.epoch_seconds]
-    if inside:
-        # A dose change inside the analysed interval: the interval is mixed, and
-        # the segment should have been cut at the boundary. Integration of a
-        # mixed interval without an eligible basis is `NOT_RUN`, never a guess.
+    # An interval is **mixed** when the delivered rate changed within it -- not
+    # when a rate was merely stated within it. A `DOSE_STATE` is a declaration of
+    # the standing rate; one of them inside the window says the interval is
+    # uniform, and treating it as a change withheld the consumption estimate on
+    # the commonest first-run ledger there is (a few back-entered readings, then
+    # "here is what my doser is set to").
+    rates_in_force = {r for at, r, _ in timeline if segment_start is None
+                      or at <= segment_start.epoch_seconds}
+    if segment_start is not None:
+        # The rate in force at the segment start is whatever the latest
+        # declaration at or before it said; only later declarations of a
+        # *different* rate make the interval mixed.
+        at_start = [r for at, r, _ in timeline if at <= segment_start.epoch_seconds]
+        rates_in_force = {at_start[-1]} if at_start else set()
+        rates_in_force |= {r for at, r, _ in timeline if at > segment_start.epoch_seconds}
+    if len(rates_in_force) > 1:
+        # The rate genuinely moved inside the analysed interval: the segment
+        # should have been cut at the boundary. Integration of a mixed interval
+        # without an eligible basis is `NOT_RUN`, never a guess.
         return Delivery(basis, d_current, None, True, "NOT_RUN",
                         ["DELIVERY_MIXED_INTEGRATION_NOT_RUN"])
 
@@ -175,6 +188,10 @@ class Consumption:
     physicality: Optional[str] = None
     materiality_margin: Optional[float] = None
     codes: List[str] = field(default_factory=list)
+    #: `True` when the estimate is withheld because the trend evidence is not
+    #: usable, rather than because anything about the dose history is missing.
+    #: The evidence code that stated the cause carries the explanation.
+    blocked_by_evidence: bool = False
 
 
 def consumption(
@@ -209,8 +226,16 @@ def consumption(
         c.codes = list(c.computed.codes)
         return c
     if observed_slope is None or evidence in (INSUFFICIENT, CONFOUNDED, EVIDENCE_ANOMALOUS):
-        c.computed = Computed.not_run("CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE")
-        c.codes = list(c.computed.codes)
+        # The dose history is neither unknown nor missing here -- the *trend* is.
+        # Saying `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`, a REFUSAL whose
+        # catalogued meaning is "dose state unknown or missing for the interval",
+        # sends a keeper whose dosing record is complete looking for a data
+        # problem that does not exist. The evidence gate already emitted the
+        # code that states the real cause, and it is that code -- one owner --
+        # which names `consumption` among the outputs it withholds.
+        c.computed = Computed.not_run()
+        c.codes = []
+        c.blocked_by_evidence = True
         return c
 
     estimate = p_selected * d_history - observed_slope
@@ -295,7 +320,34 @@ def _round_to(value: float, step: float, toward: float) -> float:
     return float(lo)
 
 
-def recommend(
+def recommend(**kw) -> Recommendation:
+    """`ALK-049`'s pipeline, then one normalisation the pipeline's early exits
+    would otherwise each have to repeat.
+
+    A HOLD **is** a command: it commands the current rate. So its delta is
+    `0.0`, its effect on the slope is `0.0`, and its predicted post slope is the
+    observed slope -- nothing changes, and that is a number, not an absence.
+    Leaving them `NOT_RUN` on the seven branches that exit early made the
+    commonest card in the product report five of its own fields as missing data,
+    and pushed them into the insufficiency umbrella on a tank with perfect
+    evidence.
+
+    Where `D_current` is unknown there is no command to describe and they stay
+    unknown, which is the one case the distinction is real.
+    """
+    r = _recommend(**kw)
+    if (
+        r.action == HOLD_CURRENT_DOSE
+        and r.current_dose is not None
+        and r.delta_dose is None
+    ):
+        r.delta_dose = 0.0
+        r.delta_effect = 0.0
+        r.predicted_post_slope = kw.get("observed_slope")
+    return r
+
+
+def _recommend(
     *,
     evidence: str,
     trajectory: str,

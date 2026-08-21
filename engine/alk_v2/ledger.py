@@ -68,7 +68,10 @@ class Reading:
 class Ledger:
     events: List[Event] = field(default_factory=list)
     readings: List[Reading] = field(default_factory=list)
-    problems: List[str] = field(default_factory=list)
+    #: What the ledger could not read, as `(reasonCode | None, payload | text)`.
+    #: Nothing is dropped silently: `engine.assess` turns every entry into a
+    #: visible reason code or a named line in the insufficiency umbrella.
+    problems: List[Any] = field(default_factory=list)
     #: Named here rather than silently tolerated: an event whose `kind` this
     #: engine does not implement is a visible gap, not an event that did not
     #: happen.
@@ -107,11 +110,11 @@ def build(events: List[Dict[str, Any]]) -> Ledger:
     prepared: List[Event] = []
     for item in events or []:
         if not isinstance(item, dict):
-            led.problems.append("an event is not an object")
+            led.problems.append((None, "an event in the ledger is not an object and was not read"))
             continue
         kind = item.get("kind")
         if not isinstance(kind, str):
-            led.problems.append("an event has no kind")
+            led.problems.append((None, "an event in the ledger states no kind and was not read"))
             continue
         if kind not in _TIME_FIELD:
             led.unhandled_kinds.append(kind)
@@ -165,11 +168,23 @@ def _readings(led: Ledger) -> List[Reading]:
         if e.kind != READING:
             continue
         if e.at is None:
-            led.problems.append("a READING carries no parseable measuredAt")
+            # Nothing is dropped silently: the engine records what it could not
+            # read so `engine.assess` can say so in a reason code. A keeper who
+            # entered four readings must never be told "2 clusters, need 3"
+            # with no account of where the other two went.
+            led.problems.append(
+                ("VALIDATION_TIMESTAMP_INVALID",
+                 {"enteredAt": e.get(_TIME_FIELD[READING], "UNKNOWN"),
+                  "readingId": e.event_id or "UNKNOWN"})
+            )
             continue
         value = e.get("rawValueDkh")
         if not kernel.finite(value):
-            led.problems.append("a READING carries no finite rawValueDkh")
+            led.problems.append(
+                ("VALIDATION_VALUE_NOT_FINITE",
+                 {"enteredValue": value if value is not None else "UNKNOWN",
+                  "readingId": e.event_id or f"R-{e.at.text}"})
+            )
             continue
         out.append(
             Reading(

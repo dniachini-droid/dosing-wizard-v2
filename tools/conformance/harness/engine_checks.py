@@ -160,6 +160,21 @@ def check_emitted_reason_codes(
     )
 
 
+#: Top-level members of `EngineResult` that are not outputs, and whose interior
+#: is therefore outside `INV-I4`'s sweep.
+#:
+#: * `capabilities[]` is the capability gate's own record, and
+#:   `ALK-V2-DATA-CONTRACT.md` §`CapabilityState` declares
+#:   `outcome: OK | DEGRADE | REFUSE | NOT_RUN` — so `NOT_RUN` there is a
+#:   **member of a closed vocabulary**, not the withheld marker that happens to
+#:   share its spelling. Reading it as withheld made this check demand that a
+#:   capability's own decision be explained by a gating code, which in turn
+#:   pushed engines into naming internal dotted paths on the keeper's card.
+#: * `reasonCodes[]` payloads quote other fields' states. A quotation of a
+#:   withheld output is not a second withheld output.
+_NOT_OUTPUTS = ("capabilities", "reasonCodes")
+
+
 def _withheld_fields(node: Any, path: str = "") -> List[str]:
     """Every field, at any depth, whose value is a withheld marker.
 
@@ -171,6 +186,8 @@ def _withheld_fields(node: Any, path: str = "") -> List[str]:
     if isinstance(node, dict):
         for k, v in node.items():
             p = f"{path}.{k}" if path else k
+            if not path and k in _NOT_OUTPUTS:
+                continue
             if isinstance(v, str) and v in WITHHELD_MARKERS:
                 out.append(p)
             else:

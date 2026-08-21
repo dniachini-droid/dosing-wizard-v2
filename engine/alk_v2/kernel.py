@@ -180,9 +180,12 @@ def dec(value: float) -> Decimal:
     pre-rounding and no epsilon. `Decimal(repr(x))` recovers the decimal the
     binary64 was parsed from, which is the value the keeper typed.
 
-    In scope: `ALK-005`'s repeat spread, `ALK-004`'s range edges, `ALK-003A`'s
-    outer bounds. Out of scope and unchanged: every predicate over a derived
-    quantity -- slopes, sigmas, caps -- which stays binary64.
+    In scope, and this is the rule's own closed enumeration rather than a
+    summary of it: `ALK-005`'s repeat spread, `ALK-004`'s range edges,
+    `ALK-003A`'s outer bounds, the safety-destination comparison, and
+    `ALK-ADVISORY-BOUNDARY-001`'s advisory floor and ceiling. Out of scope and
+    unchanged: every predicate over a derived quantity -- slopes, sigmas, caps
+    -- which stays binary64.
     """
     return Decimal(repr(float(value)))
 

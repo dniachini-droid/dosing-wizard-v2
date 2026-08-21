@@ -140,6 +140,17 @@ Phase 0 — Preserve and found V2
     boundary and speaks JSON; `ALK-V2-MODULE-DESIGN.md` still chooses no language, and
     `ROADMAP.md` Phase 1 is still unstarted. What exists is a conformant reference
     implementation of the domain, not the application.
+  - **It has had independent review in a fresh context, and one fix pass.**
+    `test-engineer`, then `normal-operation-reviewer`, then `jake` over both.
+    `normal-operation-reviewer`'s eleven findings were hand-traces; all eleven were
+    executed against the real engine and all eleven were confirmed. Thirteen findings
+    were fixed, the largest being that **one unmeasured water change used to stop the
+    engine answering permanently** (a confounder read as a state rather than `A7`'s
+    boundary), and that a **measured** water change was read as tank movement because
+    `ALK-033` normalization was not implemented — the engine recommended cutting the dose
+    on a tank whose consumption had not changed. Both are fixed. The full record,
+    including every finding recorded and left open, is
+    `docs/process/runs/2026-08-21-alk-v2-first-engine.md`.
 - No V2 application runtime exists — no persistence, no UI, no scheduler, no notifications.
 - No technical stack has been selected.
 

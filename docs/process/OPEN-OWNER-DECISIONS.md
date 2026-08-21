@@ -390,6 +390,72 @@ the uncertainty limitation. `WG-ALK-002` asserts exactly that pairing — `FALLI
 the two fields to collapse, which `ALK-VARIABLE-SEMANTICS-001` would forbid anyway.
 
 
+## OD-024 — What tank alkalinity does a water-change step subtract from?
+
+- **Raised:** 2026-08-21 · **By:** first-engine review pass · **Status:** OPEN
+- **Blocks:** nothing today. The engine implements `ALK-033` on the reading it took;
+  this asks whether canon should state the reading rather than leave it to be taken.
+
+**The question, in plain language**
+
+`ALK-033` gives the known-input step as `dA_WC = f * (A_replacement - A_tank)`. It states
+`f` and `A_replacement` — both are on the water-change event. It does not state
+`A_tank`: the tank's alkalinity *at the moment of the change*, which is almost never a
+moment anybody tested at.
+
+The engine uses **the last resolved testing episode at or before the event**, which is
+the only recorded fact available. The alternatives a reasonable implementer might have
+picked instead are the fitted value of the trend at that instant, or the nearest episode
+in either direction. On a tank falling 0.05 dKH/day and a change three days after the
+last test, the three answers differ by about 0.15 dKH — larger than the 0.10 dKH
+materiality floor the same rule uses to decide whether to normalize at all. So the
+choice can flip a step from normalized to not.
+
+Where no episode precedes the event the step is not computable at all, and the engine
+falls through to `ALK-WATERCHANGE-UNKNOWN-001` rather than interpolating a tank value it
+was never told.
+
+**Recommendation** — state `A_tank` in canon as the last resolved episode at or before
+the event, which is the only choice that reads a recorded fact rather than a derived
+one, and matches `ALK-034`'s treatment of a known correction. It would be wrong if the
+owner intends normalization to run against the trend's fitted value, which would make a
+Layer-2 output an input to a Layer-1 normalization and cross a boundary `DEC-003` keeps
+separate.
+
+
+## OD-025 — The reason-code catalogue has no code for "not built in this release"
+
+- **Raised:** 2026-08-21 · **By:** first-engine review pass · **Status:** OPEN
+- **Blocks:** nothing failing. It makes the settled tank's card read worse than the
+  engine's actual answer.
+
+**The question, in plain language**
+
+`INV-I4` requires every `NOT_RUN` / `WITHHELD` output to be named in the
+`affectedOutputs` of a `GATING` or `REFUSAL` reason code. The only catalogued `GATING`
+code that can name an arbitrary output is `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE`, whose
+declared meaning is *"insufficiency stated with what is missing"*.
+
+But some outputs are not withheld for want of evidence — they are withheld because this
+release does not build them: the safety return's sizing, the gated potency dispersion,
+the empirical bracket. On a tank with four clean readings, a complete dosing record and
+a confident recommendation, the engine must currently attach an **insufficiency** code to
+say so, and the keeper reads "insufficient data" beside a recommendation the engine is
+in fact sure of.
+
+These are two different statements about the world and the catalogue has one code for
+both. Scoping the sweep to actual outputs (this pass) took the list from eleven entries
+to four; the remaining four are all declared debt and cannot be removed without either
+a new code or a weaker invariant.
+
+**Recommendation** — add an `INFO`-severity `OUTPUT_NOT_IMPLEMENTED_IN_RELEASE` to the
+catalogue and let `INV-I4` accept it for outputs named as declared debt. It would be
+wrong if the owner reads declared debt as a form of insufficiency, in which case the
+right fix is to `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE`'s **wording**, not a new code.
+Either way this is a contract change and belongs to a governed reissue, not to an
+implementation pass.
+
+
 ## OD-008 — What is the assessment instant of a worked golden?
 
 - **Raised:** 2026-08-20 · **By:** executable-fixture-format run · **Status:** CLOSED — see `DEC-021` (2026-08-21)

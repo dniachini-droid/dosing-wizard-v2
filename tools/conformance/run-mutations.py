@@ -149,9 +149,16 @@ def _run_engine_arm(args):
         mutated = results_mod.failing_subject_ids(rep)
         new = mutated - baseline
         recovered = baseline - mutated
-        texts = _failure_texts(rep, new)
         declared = set(m.expect_red)
         declared_red = declared & new
+        # The mechanism must be named by a subject the mutation **declared**,
+        # not by whichever other subject happened to go red at the same time.
+        # Scanning all of `new` credited a mutation when unrelated subject B
+        # mentioned the field while declared subject A went red for its own
+        # reasons -- and a verification tool that mis-credits is worse than one
+        # that under-reports, because its report is what stops anyone looking
+        # again.
+        texts = _failure_texts(rep, declared_red if declared else new)
         mechanism_hit = (not m.expect_mechanism) or any(
             m.expect_mechanism in t for t in texts
         )
@@ -238,10 +245,11 @@ def main(argv=None) -> int:
         rep, mutated = _run(m.hooks, f"echo oracle + {m.mid}")
         new = mutated - baseline
         recovered = baseline - mutated
-        texts = _failure_texts(rep, new)
-
         declared = set(m.expect_red)
         declared_red = declared & new
+        # Same rule as the engine arm above: the mechanism is evidence only when
+        # a declared subject's own failure text names it.
+        texts = _failure_texts(rep, declared_red if declared else new)
         mechanism_hit = (not m.expect_mechanism) or any(
             m.expect_mechanism in t for t in texts
         )

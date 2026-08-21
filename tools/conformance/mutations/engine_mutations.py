@@ -530,7 +530,17 @@ ENGINE_MUTATIONS: List[Mutation] = [
             "actionable at all; a fourth would make the ordinary path unreachable "
             "on the cadence the canon itself recommends."
         ),
-        expect_red=["fixture:AD-RET-001", "fixture:AD-RET-003"],
+        # `WG-ALK-002` is named because it is the fixture that actually asserts
+        # `movementEvidence`; `AD-RET-001` and `AD-RET-003` go red too, but on
+        # their retest expectations rather than on the mechanism. Until the
+        # mechanism check was scoped to declared subjects this control was
+        # credited on `WG-ALK-002`'s text while declaring only the other two --
+        # a true result reached through a false record.
+        expect_red=[
+            "fixture:WG-ALK-002",
+            "fixture:AD-RET-001",
+            "fixture:AD-RET-003",
+        ],
         expect_mechanism="movementEvidence",
         hooks={"alk_v2.trajectory:MIN_ORDINARY_CLUSTERS": 4},
     ),

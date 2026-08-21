@@ -62,6 +62,7 @@ contract achievable: replay is calling `assess` again.
 | `kernel.py` | shared | instants, elapsed time, median/MAD/Theil-Sen/Sxx, exact-decimal comparison, `Computed<T>` |
 | `ledger.py` | L1 | the totally ordered event ledger; the configuration effective at `asOf` |
 | `observation.py` | L2 | testing episodes, their pooled clusters, independent selection, position |
+| — | — | *(`engine.py` owns segment selection, known-input normalization and result assembly; they read `observation` and are not a layer of their own)* |
 | `trajectory.py` | L4 | trend, uncertainty, supported slope, movement evidence, rapid, forecast |
 | `dosing.py` | L5/L7 | delivery basis, consumption, the maintenance pipeline |
 | `intervention.py` | L6 | the lifecycle around a dose change, and the immutable prediction snapshot |
@@ -112,6 +113,24 @@ with a reason code. None of them returns a plausible number.
 | `REASSESSING` detection | `NOT_RUN` — canon defines entry against an object `OI-POTENCYSNAP-001` says is undefined, and defines no exit at all |
 | `T_detect` and the return-plan arrival cadence | canonically `NOT_RUN`; reported in `candidatesNotRun[]` |
 | `READING_SERIES` expansion | not read. `OD-014` records that its expansion has no owner and says in terms not to write a fourth expander |
+| normalization **uncertainty** (Part II §9.4) | the known step is removed; its own uncertainty is not propagated into the point's effective uncertainty. Said once per assessment by `SEGMENT_NORMALIZATION_UNCERTAINTY_MODEL_UNAVAILABLE`, naming the events it applies to (`OI-NORMUNCERT-001`) |
+
+## Two things worth knowing before you read the segment code
+
+**A boundary is not a state.** An unknown correction, a recorded delivery
+anomaly and an unknown-replacement water change at or above the 5% break each
+*end* the analytical segment and start a clean one after it (`A7`, `ALK-033`).
+They are not confounders that persist. The first version of this engine read
+them as permanent, and one unmeasured water change stopped it answering for the
+rest of the tank's life — which is worth stating here because the two readings
+of `A7` look identical until you run one for sixty days.
+
+**A measured water change is a known step, not movement.** Where the
+replacement alkalinity was measured from the same batch — the only tier
+`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001` accepts — the step is computed
+and subtracted from the subsequent analytical points. Not doing so means the
+keeper who took extra trouble gets the *worse* answer: their water change reads
+as a rising trend and the engine recommends cutting their dose.
 
 ## Reading the source
 

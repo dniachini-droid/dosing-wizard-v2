@@ -19,6 +19,10 @@ than a plausible number: an unbuilt path is visibly unbuilt.
 
 from __future__ import annotations
 
+import json
+
+from dataclasses import replace
+
 from typing import Any, Dict, List, Optional
 
 from . import capability as cap_mod
@@ -29,11 +33,15 @@ from . import response as response_mod
 from . import trajectory as traj
 from .constants import (
     ADVISORY_OFFSET,
+    ALK_MATERIALITY_FLOOR,
+    ATTRIBUTION_HORIZON_DAYS,
     B_SAFETY,
     HOURS_PER_DAY,
     MAX_CONTROL_LOOKBACK_DAYS,
     POSTCHANGE_FIRST_TEST_HOURS,
     POSTCHANGE_SECOND_TEST_HOURS,
+    UNKNOWN_WC_ASSUMED_MISMATCH,
+    WC_UNKNOWN_BREAK_FRACTION,
 )
 from .kernel import Computed, Instant, clean, elapsed_days, parse_instant
 
@@ -51,6 +59,38 @@ UNSPECIFIED = "UNSPECIFIED"
 #: adapter stamps it -- so this is the set the engine deliberately uses when it
 #: has an output to explain.
 _UMBRELLA = "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE"
+
+#: Codes whose payload accumulates across one assessment rather than describing
+#: one entity. These, and only these, are merged into a single array entry by
+#: `_ordered`; everything else repeats once per entity it describes.
+#: Placeholder written by any code that carries `nextUsefulTestAt` before the
+#: retest scheduler has run. `X-INV-004` and `A46` give the scheduler sole
+#: ownership of next-test timing -- including against other parts of this
+#: engine -- so the value is filled in from its decision and never from `asOf`.
+#: Two answers to "when should I test again" in one result is the product
+#: disagreeing with itself.
+_SCHEDULER_FILLS = "__SCHEDULER__"
+
+#: The gates whose failure withholds the trend, and with it every inference
+#: that reads the trend. Each is `GATING` in the catalogue, so naming an output
+#: here satisfies `INV-I4` from the code that actually knows the cause.
+_EVIDENCE_GATES = frozenset({
+    "EVIDENCE_INSUFFICIENT_CLUSTERS",
+    "EVIDENCE_INSUFFICIENT_SPAN",
+    "EVIDENCE_INSUFFICIENT_POSTCHANGE_SPAN",
+    "EVIDENCE_ANOMALOUS_LATEST_CLUSTER",
+    "EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER",
+    "EVIDENCE_CONFOUNDED_HARD",
+    "SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION",
+    "SEGMENT_CONFOUNDED_UNKNOWN_DOSE_TIME",
+    "SEGMENT_WC_UNKNOWN_BOUNDARY",
+})
+
+_ACCUMULATING = frozenset({
+    _UMBRELLA,
+    "OUTPUT_HOLD_IS_A_RECOMMENDATION",
+    "OUTPUT_CONFIDENCE_UNSPECIFIED",
+})
 
 
 class Code:
@@ -118,23 +158,36 @@ def assess(
     led = ledger_mod.build(events)
     eps, excluded = observation.episodes(led)
 
+    # Nothing the keeper entered disappears without a word. A reading the engine
+    # could not parse is reported as the validation refusal it is, and an event
+    # kind this build does not implement is named rather than dropped -- a
+    # withheld conclusion is acceptable, a withheld conclusion whose cause is
+    # invisible is not.
+    unread: List[str] = []
+    for entry in led.problems:
+        code, detail = entry
+        if code is None:
+            unread.append(str(detail))
+        else:
+            codes.append(Code(code, asOf=as_of.text, **detail))
+    for kind in sorted(set(led.unhandled_kinds)):
+        if kind == ledger_mod.READING_SERIES:
+            continue
+        unread.append(
+            f"an event of kind {kind} is in the ledger and this build does not "
+            f"read it; nothing it records is in the assessment"
+        )
+
     if ledger_mod.READING_SERIES in led.unhandled_kinds:
         # `OD-014`: the expansion of `READING_SERIES` has no owner, two
         # implementations of it already exist in tooling, and the fixture format
         # says in terms *do not* resolve it by writing a fourth. So the engine
         # declines to read the shorthand rather than inventing a third owner of
         # one inference, and says so where a reader will see it.
-        codes.append(
-            Code(
-                _UMBRELLA,
-                missing=[
-                    "READING_SERIES expansion has no owner (OD-014); this engine "
-                    "does not expand the shorthand and the readings it carries are "
-                    "not in the assessment"
-                ],
-                currentValueDkh=UNKNOWN,
-                nextUsefulTestAt=as_of.text,
-            )
+        unread.append(
+            "READING_SERIES expansion has no owner (OD-014); this engine does "
+            "not expand the shorthand and the readings it carries are not in "
+            "the assessment"
         )
 
     for e in eps:
@@ -197,9 +250,20 @@ def assess(
     # the tank's behaviour under two different regimes and call the result its
     # trajectory. The 14-day cap applies on top, and is never extended because
     # evidence is sparse.
-    segment_eps, segment_codes = _segment(eps, led, as_of)
+    segment_eps, segment_codes, segment_start = _segment(eps, led, as_of, codes)
     for code, payload in segment_codes:
         codes.append(Code(code, **payload))
+
+    # 5b — NORMALISE KNOWN INPUTS ------------------------------------------
+    # `ALK-033`: a measured-same-batch water change is a known step, and its
+    # step is removed from the analytical series rather than being read as the
+    # tank moving. Without this the keeper who took the trouble to measure their
+    # new saltwater gets the *worse* answer -- their water change is reported as
+    # a rising trend and their dose is cut on a tank whose consumption never
+    # changed.
+    segment_eps, normalized = _normalize_known_inputs(
+        segment_eps, led, segment_start, as_of, codes
+    )
 
     # 6 — INDEPENDENCE ------------------------------------------------------
     accepted, not_accepted = observation.select_independent(segment_eps)
@@ -218,7 +282,7 @@ def assess(
         )
 
     # 5 — SEGMENT (the boundary causes this build observes) ----------------
-    hard_confounders = _hard_confounders(led, codes)
+    hard_confounders = _hard_confounders(led, codes, segment_start, as_of)
 
     # 7, 8, 9 — TREND, UNCERTAINTY, SUPPORT --------------------------------
     obs = traj.trend(accepted)
@@ -452,7 +516,18 @@ def assess(
             Code(c, **_maintenance_payload(
                 c, rec, obs, sup, cons, cfg, pos.position, ev.trajectory))
         )
-    codes.append(Code("OUTPUT_HOLD_IS_A_RECOMMENDATION", holdReasons=list(rec.codes)))
+    # Every hold names its cause. Four branches of the pipeline (`INSUFFICIENT`,
+    # `CONFOUNDED`, `EVIDENCE_ANOMALOUS`, unknown `D_current`) return a HOLD the
+    # pipeline itself does not code, because the cause was established upstream
+    # by the evidence gate. The causes exist in the array either way; what was
+    # missing is putting them in the field the card reads, which rendered "HOLD
+    # is a full recommendation, not a failure to answer" beside an empty list.
+    hold_reasons = list(rec.codes)
+    if rec.status in (dosing.HELD, dosing.WITHHELD_CAPABILITY):
+        for c in codes:
+            if c.code in _EVIDENCE_GATES and c.code not in hold_reasons:
+                hold_reasons.append(c.code)
+    codes.append(Code("OUTPUT_HOLD_IS_A_RECOMMENDATION", holdReasons=hold_reasons))
 
     # ALK-RETURN-ELIGIBLE-TRAJECTORY-001 — the offer's eligibility, which is a
     # trajectory fact rather than a plan. The plan itself is out of this build;
@@ -512,8 +587,16 @@ def assess(
         latest_episode_anomalous=latest_anomalous,
         safety_return_active=pos.outer_bound_state
         in (observation.BREACHED_LOW, observation.BREACHED_HIGH),
-        post_change_first_at_hours=None,
-        post_change_second_at_hours=None,
+        # `ALK-053` / `ALK-POSTCHANGE-RETEST-001`. After a confirmed dose change
+        # the keeper is in a post-change regime, not on the routine cadence: the
+        # first ordinary post-change test is ~48 h after the change and the
+        # second ~48 h after that. Both are stated as hours **from `asOf`**, so
+        # a candidate already in the past is submitted at zero rather than
+        # negative, and the scheduler -- the single owner -- picks between them
+        # and everything else. Leaving these unsubmitted told a keeper who had
+        # just changed their dose that they were on the routine 48-hour cadence,
+        # and left the audit list missing a candidate that applied.
+        **_post_change_hours(interventions, as_of),
     )
     for c in decision.codes:
         codes.append(Code(c, **_retest_payload(c, decision, sup, ev, as_of)))
@@ -549,20 +632,37 @@ def assess(
         return_plan_eligible=return_plan_eligible,
     )
 
+    # One owner for next-test timing. Every code that carries `nextUsefulTestAt`
+    # wrote a placeholder; the scheduler's decision fills all of them, so the
+    # reason payloads and `retest.recommendedAt` cannot disagree.
+    scheduled = result["retest"]["recommendedAt"]
+    for c in codes:
+        if c.payload.get("nextUsefulTestAt") == _SCHEDULER_FILLS:
+            c.payload["nextUsefulTestAt"] = scheduled
+
+    # The evidence gate is one cause with several consequences. Where it stopped
+    # the consumption estimate, the code that stated the cause is the code that
+    # names the withheld output -- rather than a second, differently-worded
+    # refusal from the consumption owner saying something untrue about the dose
+    # history.
+    if cons.blocked_by_evidence:
+        for c in codes:
+            if c.code in _EVIDENCE_GATES:
+                affected = c.payload.setdefault("affectedOutputs", [])
+                for name in ("consumption", "consumptionDkhPerDay"):
+                    if name not in affected:
+                        affected.append(name)
+
     # Every field the engine left `NOT_RUN` or `WITHHELD` must be named by a
     # gating or refusal code (`INV-I4`, schema invariant 8). Nothing is silently
     # absent; a withheld output is a designed state that carries its reason.
-    # Scanned over the assembled result *including* the reason-code array, because
-    # a payload that quotes another field's `NOT_RUN` state is a withheld marker
-    # too as far as `INV-I4`'s executable form is concerned, and naming it in the
-    # umbrella is both cheap and true: it refers to the same output.
     result["reasonCodes"] = _ordered(codes)
     unexplained = _unexplained_withheld(result, codes, withheld_outputs)
-    if unexplained:
+    if unexplained or unread:
         codes.append(
             Code(
                 _UMBRELLA,
-                missing=unexplained,
+                missing=unread + unexplained,
                 nextUsefulTestAt=result["retest"]["recommendedAt"],
                 currentValueDkh=pos.a_now if pos.a_now is not None else UNKNOWN,
             )
@@ -587,7 +687,7 @@ def assess(
 
 
 
-def _segment(eps, led, as_of):
+def _segment(eps, led, as_of, codes: List[Code]):
     """The most recent clean current-control segment — `A5`, `ALK-007`.
 
     Boundaries this build observes: the latest maintenance dose change at or
@@ -603,6 +703,8 @@ def _segment(eps, led, as_of):
     """
     codes = []
     start = None
+    pending = []
+
     changes = [
         e
         for e in led.of_kind("DOSE_CHANGE")
@@ -611,8 +713,9 @@ def _segment(eps, led, as_of):
     if changes:
         boundary = max(changes, key=lambda e: e.at.epoch_seconds)
         start = boundary.at
-        codes.append(
+        pending.append(
             (
+                boundary.at,
                 "SEGMENT_BOUNDARY_DOSE_CHANGE",
                 {
                     "doseStateId": boundary.event_id or f"IV-{boundary.at.text}",
@@ -620,11 +723,31 @@ def _segment(eps, led, as_of):
                 },
             )
         )
+
+    # `A7` and `ALK-033` say *boundary*, not a state the tank never leaves: an
+    # unknown correction, a recorded delivery anomaly and an unknown-replacement
+    # water change at or above the 5% break each end the pre-event segment and
+    # start a clean one after it. Treating them as permanent confounders instead
+    # -- which this engine did until this pass -- meant one unmeasured water
+    # change stopped the product answering for the rest of the tank's life.
+    for e, code, payload in _boundary_events(led, as_of, eps, codes):
+        pending.append((e.at, code, payload))
+        if start is None or e.at.epoch_seconds > start.epoch_seconds:
+            start = e.at
+
     cap = kernel.plus_hours(as_of, -MAX_CONTROL_LOOKBACK_DAYS * HOURS_PER_DAY)
-    if start is None or cap.epoch_seconds > start.epoch_seconds:
+    cap_binds = start is None or cap.epoch_seconds > start.epoch_seconds
+    if cap_binds:
         start = cap
     inside = [e for e in eps if e.at.epoch_seconds > start.epoch_seconds]
-    if len(inside) < len(eps):
+
+    # Only the boundary that actually selected the start is reported as the
+    # trim: naming the 14-day cap when a dose change did the trimming states
+    # something untrue about why the keeper's history is shorter than they think.
+    for at, code, payload in pending:
+        if at.epoch_seconds == start.epoch_seconds:
+            codes.append((code, payload))
+    if cap_binds and len(inside) < len(eps):
         codes.append(
             (
                 "SEGMENT_LOOKBACK_NOT_EXTENDED",
@@ -643,7 +766,7 @@ def _segment(eps, led, as_of):
             },
         )
     )
-    return inside, codes
+    return inside, codes, start
 
 
 def _potency_at(cfg):
@@ -731,29 +854,44 @@ def _ordered(codes: List[Code]) -> List[Dict[str, Any]]:
                 return i
         return len(_OWNER_ORDER)
 
-    # Codes are additive and several may be true at once, but one code may only
-    # appear once in the array. Where the same code was raised twice its
-    # payloads are **merged** rather than the second being dropped: the umbrella
-    # insufficiency code is raised once per withheld output, and keeping only
-    # the first would leave the others unnamed and `INV-I4` violated by an edit
-    # that looked like tidying.
+    # Codes are additive and several may be true at once. A code that describes
+    # **one entity** -- an episode, an intervention, a water change -- repeats
+    # once per entity, carrying that entity's own payload. Collapsing those to a
+    # single entry kept the first episode's id, value and time and silently
+    # dropped the other five, which contradicts the catalogue's own wording
+    # ("every episode holding at least one valid measurement resolves") and
+    # makes the audit record unable to support the replay `DEC-003` promises.
+    #
+    # The merge is kept for the handful of genuine **umbrella** codes, whose
+    # payload is a list that accumulates across the assessment: those are raised
+    # once per withheld output, and keeping only the first would leave the others
+    # unnamed and `INV-I4` violated by an edit that looked like tidying.
     merged: Dict[str, Code] = {}
-    order: List[str] = []
+    out_codes: List[Code] = []
+    seen: set = set()
     for c in codes:
-        if c.code not in merged:
-            merged[c.code] = Code(c.code, **dict(c.payload))
-            order.append(c.code)
+        if c.code in _ACCUMULATING:
+            if c.code not in merged:
+                merged[c.code] = Code(c.code, **dict(c.payload))
+                out_codes.append(merged[c.code])
+                continue
+            target = merged[c.code].payload
+            for key, value in c.payload.items():
+                if isinstance(value, list) and isinstance(target.get(key), list):
+                    for item in value:
+                        if item not in target[key]:
+                            target[key].append(item)
+                elif key not in target:
+                    target[key] = value
             continue
-        target = merged[c.code].payload
-        for key, value in c.payload.items():
-            if isinstance(value, list) and isinstance(target.get(key), list):
-                for item in value:
-                    if item not in target[key]:
-                        target[key].append(item)
-            elif key not in target:
-                target[key] = value
-    unique = [merged[k] for k in order]
-    indexed = list(enumerate(unique))
+        # Identical repeats of the same statement are still collapsed -- two
+        # copies of one fact are noise, not two facts.
+        fingerprint = (c.code, json.dumps(c.payload, sort_keys=True, default=str))
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        out_codes.append(c)
+    indexed = list(enumerate(out_codes))
     indexed.sort(key=lambda p: (rank(p[1]), p[0]))
     return [{"code": c.code, "payload": dict(c.payload)} for _, c in indexed]
 
@@ -775,6 +913,12 @@ def _uncertainty_payload(code: str, obs) -> Dict[str, Any]:
             "deltaDays": obs.times_days[-1] - obs.times_days[0],
             "sigmaS": obs.sigma_s,
         }
+    if code == "UNCERTAINTY_PAIRWISE_MAD_DIAGNOSTIC_ONLY":
+        # The catalogue declares `pairwiseSlopeMad`, and the card renders it
+        # under the words "the pairs disagree a lot with each other". Publishing
+        # `sigmaS` under that name is a different quantity with a different
+        # magnitude beside prose describing the other one.
+        return {"pairwiseSlopeMad": kernel.mad(obs.pairwise_slopes)}
     return {"sigmaS": obs.sigma_s}
 
 
@@ -785,10 +929,10 @@ def _evidence_payload(code: str, ev, obs, sup, as_of) -> Dict[str, Any]:
     }
     if code == "EVIDENCE_INSUFFICIENT_CLUSTERS":
         return {"have": ev.have_clusters, "need": 3, "windowDays": 14,
-                "nextUsefulTestAt": as_of.text}
+                "nextUsefulTestAt": _SCHEDULER_FILLS}
     if code == "EVIDENCE_INSUFFICIENT_SPAN":
         return {"haveDays": ev.have_span_days, "needDays": 4,
-                "nextUsefulTestAt": as_of.text}
+                "nextUsefulTestAt": _SCHEDULER_FILLS}
     if code in ("TRAJECTORY_FALLING", "TRAJECTORY_RISING"):
         return {
             "observedSlope": obs.slope,
@@ -1012,63 +1156,250 @@ def _retest_payload(code, decision, sup, ev, as_of) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _hard_confounders(led, codes: List[Code]) -> List[str]:
-    """Boundary and confounder causes the ledger states outright.
+def _wc_step(e, eps):
+    """`dA_WC = f * (A_replacement - A_tank)`, or `None` if not computable.
 
-    Only the ones the ledger *states* -- an unknown correction, an uncertain
-    dose-change effective time, an unknown-replacement water change at or above
-    the derived 5% break, a recorded delivery anomaly. The engine never creates
-    a confounder from an unexpected slope; `SHARED-CONSUMPTION-CONTEXT-001` makes
-    a consumption-context event a recorded fact and never an inference.
+    `A_tank` is the last resolved episode at or before the event -- the only
+    recorded fact available. Where the ledger holds no measurement before the
+    water change there is nothing to compute the step against, and the engine
+    does not interpolate one: an un-computable known step is handled as an
+    unknown one, which is a branch canon fully specifies. Whether canon should
+    instead name its own `A_tank` resolution is `OD-024`, recorded and left open.
+    """
+    fraction = e.get("changedFraction")
+    replacement = e.get("replacementAlkalinityDkh")
+    if not (kernel.finite(fraction) and kernel.finite(replacement)):
+        return None
+    before = [p for p in eps if p.at.epoch_seconds <= e.at.epoch_seconds]
+    if not before:
+        return None
+    return float(fraction) * (float(replacement) - float(before[-1].value_dkh))
+
+
+def _normalize_known_inputs(eps, led, start, as_of, codes: List[Code]):
+    """`ALK-033` / Part II §9 and §46 — remove known discrete steps.
+
+    A water change whose replacement alkalinity was measured from the same batch
+    is a **known** step, not a boundary and not tank movement:
+
+        A_norm(t) = A_raw(t) - sum of dA over the events at or before t
+
+    Only a *material* step is normalized -- `|dA_WC| >= 0.10` dKH, the Alk
+    working uncertainty floor. A sub-floor known step is left alone, because
+    subtracting a quantity smaller than the analytical noise adds arithmetic
+    without adding truth. Either way the raw measurement is preserved: this
+    builds a normalized *series* for the trend inference and does not rewrite
+    the episode record the position and the card read.
+    """
+    known = [
+        e
+        for e in led.of_kind("WATER_CHANGE")
+        if e.at is not None
+        and e.at.epoch_seconds > start.epoch_seconds
+        and e.at.epoch_seconds <= as_of.epoch_seconds
+        and _wc_replacement_known(e)
+    ]
+    if not known:
+        return eps, False
+    known.sort(key=lambda e: e.at.epoch_seconds)
+
+    steps = []
+    for e in known:
+        delta = _wc_step(e, eps)
+        if delta is None:
+            # Not computable; `_boundary_events` has already handled it as the
+            # unknown branch canon specifies.
+            continue
+        if abs(delta) < ALK_MATERIALITY_FLOOR:
+            codes.append(
+                Code("SEGMENT_WC_NEGLIGIBLE",
+                     waterChangeId=e.event_id or UNKNOWN,
+                     expectedStepDkh=clean(delta))
+            )
+            continue
+        steps.append((e.at, delta, e.event_id or f"WC-{e.at.text}"))
+        codes.append(
+            Code("SEGMENT_WC_MATERIAL_KNOWN_NORMALIZED",
+                 waterChangeId=e.event_id or UNKNOWN,
+                 expectedStepDkh=clean(delta))
+        )
+        codes.append(
+            Code("SEGMENT_NORMALIZED_WATER_CHANGE",
+                 waterChangeId=e.event_id or UNKNOWN,
+                 appliedStepDkh=clean(delta))
+        )
+
+    if not steps:
+        return eps, False
+
+    # Part II §9.4: the normalization carries its own uncertainty, and this
+    # build does not propagate it. Said once, naming the events it applies to.
+    codes.append(
+        Code("SEGMENT_NORMALIZATION_UNCERTAINTY_MODEL_UNAVAILABLE",
+             eventIds=[eid for _, _, eid in steps],
+             openIssue="OI-NORMUNCERT-001")
+    )
+
+    out = []
+    for p in eps:
+        total = sum(d for at, d, _ in steps if at.epoch_seconds <= p.at.epoch_seconds)
+        out.append(replace(p, value_dkh=clean(p.value_dkh - total)) if total else p)
+    return out, True
+
+
+def _wc_replacement_known(e) -> bool:
+    """`ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001`.
+
+    Only `MEASURED_SAME_BATCH` qualifies. Every other tier -- a configured salt
+    profile, a manufacturer nominal figure, an absent tier -- is treated as
+    unknown replacement alkalinity, because canon's own warning is that an
+    unverified salt label must not become a precise correction merely because a
+    formula exists.
+    """
+    return e.get("replacementAlkalinityDkh") is not None and (
+        e.get("replacementAlkalinityConfidence") == "MEASURED_SAME_BATCH"
+    )
+
+
+def _boundary_events(led, as_of, eps, codes: List[Code]):
+    """Events that **end** the analytical segment, in ledger order.
+
+    `A7` / `ALK-033` / Part II §13. Each yields `(event, code, payload)`. An
+    event after `asOf` is not read at all: a replay of an older assessment must
+    not be moved by something that had not happened yet (canon §64).
+    """
+    out = []
+    for e in led.of_kind("MANUAL_CORRECTION"):
+        if e.at is None or e.at.epoch_seconds > as_of.epoch_seconds:
+            continue
+        if e.get("actualVolumeMl") in (None, "UNKNOWN"):
+            out.append((e, "SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION", {
+                "correctionId": e.event_id or UNKNOWN,
+                "affectedOutputs": ["observedTrajectory", "consumption"],
+            }))
+    for e in led.of_kind("WATER_CHANGE"):
+        if e.at is None or e.at.epoch_seconds > as_of.epoch_seconds:
+            continue
+        fraction = e.get("changedFraction")
+        if _wc_replacement_known(e):
+            if _wc_step(e, eps) is not None:
+                continue
+            # Measured same batch, but the step is not computable from what was
+            # entered. Canon's own instruction is that a value that cannot drive
+            # normalization is treated as unknown replacement alkalinity, which
+            # is a fully specified branch; inventing a tank value is not.
+        elif e.get("replacementAlkalinityDkh") is not None:
+            codes.append(
+                Code("SEGMENT_WC_CONFIDENCE_TIER_NOT_NORMALIZABLE",
+                     waterChangeId=e.event_id or UNKNOWN,
+                     confidence=e.get("replacementAlkalinityConfidence", UNKNOWN),
+                     requiredConfidence="MEASURED_SAME_BATCH",
+                     ruleId="ALK-WATERCHANGE-NORMALIZATION-CONFIDENCE-001")
+            )
+        if not kernel.finite(fraction):
+            continue
+        if float(fraction) >= WC_UNKNOWN_BREAK_FRACTION:
+            out.append((e, "SEGMENT_WC_UNKNOWN_BOUNDARY", {
+                "waterChangeId": e.event_id or UNKNOWN,
+                "changedFraction": fraction,
+                "potentialStepDkh": float(fraction) * UNKNOWN_WC_ASSUMED_MISMATCH,
+                "affectedOutputs": ["observedTrajectory"],
+            }))
+        else:
+            codes.append(
+                Code("SEGMENT_WC_UNKNOWN_SUBFLOOR",
+                     waterChangeId=e.event_id or UNKNOWN,
+                     changedFraction=fraction,
+                     potentialStepDkh=float(fraction) * UNKNOWN_WC_ASSUMED_MISMATCH)
+            )
+    for e in led.of_kind("DELIVERY_ANOMALY"):
+        if e.at is None or e.at.epoch_seconds > as_of.epoch_seconds:
+            continue
+        out.append((e, "SEGMENT_BOUNDARY_DELIVERY_ANOMALY", {
+            "anomalyId": e.event_id or UNKNOWN,
+            "anomalyType": e.get("anomalyType", UNKNOWN),
+        }))
+    out.sort(key=lambda t: t[0].at.epoch_seconds)
+    return out
+
+
+def _hard_confounders(led, codes: List[Code], start, as_of) -> List[str]:
+    """Confounder causes the ledger states outright **inside the segment**.
+
+    Only the ones the ledger *states*, and only the ones that fall in
+    `(start, asOf]`. Anything earlier is on the far side of a boundary and is
+    not evidence about this segment; anything later has not happened yet. The
+    engine never creates a confounder from an unexpected slope;
+    `SHARED-CONSUMPTION-CONTEXT-001` makes a consumption-context event a
+    recorded fact and never an inference.
+
+    The boundary sources themselves are not listed here -- `_boundary_events`
+    ends the segment at them, and after that cut none of them is inside it. A
+    boundary that also confounded everything after it would be both, which is
+    how one water change used to silence the engine permanently.
     """
     found: List[str] = []
-    for e in led.of_kind("MANUAL_CORRECTION"):
-        if e.get("actualVolumeMl") in (None, "UNKNOWN") or e.at is None:
-            found.append("UNKNOWN_CORRECTION")
-            codes.append(
-                Code("SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION",
-                     correctionId=e.event_id or UNKNOWN,
-                     affectedOutputs=["observedTrajectory", "consumption"])
-            )
+
+    def inside(e) -> bool:
+        return (
+            e.at is not None
+            and e.at.epoch_seconds > start.epoch_seconds
+            and e.at.epoch_seconds <= as_of.epoch_seconds
+        )
+
     for e in led.of_kind("DOSE_CHANGE") + led.of_kind("DOSE_STATE"):
-        if e.get("effectiveAtConfidence") == "UNCERTAIN":
+        if inside(e) and e.get("effectiveAtConfidence") == "UNCERTAIN":
             found.append("UNCERTAIN_DOSE_TIME")
             codes.append(
                 Code("SEGMENT_CONFOUNDED_UNKNOWN_DOSE_TIME",
                      doseStateId=e.event_id or UNKNOWN,
                      affectedOutputs=["observedTrajectory", "consumption"])
             )
-    for e in led.of_kind("WATER_CHANGE"):
-        fraction = e.get("changedFraction")
-        known = e.get("replacementAlkalinityDkh") is not None and (
-            e.get("replacementAlkalinityConfidence") == "MEASURED_SAME_BATCH"
-        )
-        if not known and kernel.finite(fraction) and float(fraction) >= 0.05:
-            found.append("UNKNOWN_WATER_CHANGE")
-            codes.append(
-                Code("SEGMENT_WC_UNKNOWN_BOUNDARY",
-                     waterChangeId=e.event_id or UNKNOWN,
-                     changedFraction=fraction,
-                     potentialStepDkh=float(fraction) * 2.0,
-                     affectedOutputs=["observedTrajectory"])
-            )
     for e in led.of_kind("DELIVERY_ANOMALY"):
-        found.append("DELIVERY_ANOMALY")
-        codes.append(
-            Code("SEGMENT_BOUNDARY_DELIVERY_ANOMALY",
-                 anomalyId=e.event_id or UNKNOWN,
-                 anomalyType=e.get("anomalyType", UNKNOWN))
-        )
-        codes.append(
-            Code("DELIVERY_ANOMALY_RECORDED",
-                 anomalyId=e.event_id or UNKNOWN,
-                 anomalyType=e.get("anomalyType", UNKNOWN),
-                 fromAt=e.get("fromAt", UNKNOWN),
-                 toAt=e.get("toAt", UNKNOWN))
-        )
+        if e.at is not None and e.at.epoch_seconds <= as_of.epoch_seconds:
+            # Recorded as a fact wherever it falls; it is the *boundary* that
+            # scopes its analytical effect, not this record.
+            codes.append(
+                Code("DELIVERY_ANOMALY_RECORDED",
+                     anomalyId=e.event_id or UNKNOWN,
+                     anomalyType=e.get("anomalyType", UNKNOWN),
+                     fromAt=e.get("fromAt", UNKNOWN),
+                     toAt=e.get("toAt", UNKNOWN))
+            )
     for e in led.of_kind("CONSUMPTION_CONTEXT_EVENT"):
-        found.append("CONSUMPTION_CONTEXT_CHANGE")
+        if inside(e):
+            found.append("CONSUMPTION_CONTEXT_CHANGE")
     return found
+
+
+def _post_change_hours(interventions, as_of) -> Dict[str, Optional[float]]:
+    """The two `ALK-053` post-change candidates, in hours from `asOf`.
+
+    Measured from the latest confirmed dose change at or before `asOf`, and only
+    while that change is still inside the attribution horizon: a candidate for a
+    change three months ago is not a post-change regime, it is history. A
+    candidate whose moment has passed is submitted at `0.0` -- "as soon as you
+    can" -- because a negative offset would put the scheduler's own answer
+    before the instant it is answering at.
+    """
+    live = [
+        iv for iv in interventions
+        if iv.at.epoch_seconds <= as_of.epoch_seconds
+        and iv.days_since_start <= ATTRIBUTION_HORIZON_DAYS
+    ]
+    if not live:
+        return {"post_change_first_at_hours": None, "post_change_second_at_hours": None}
+    latest = max(live, key=lambda iv: iv.at.epoch_seconds)
+    elapsed_h = latest.days_since_start * HOURS_PER_DAY
+    first = max(0.0, POSTCHANGE_FIRST_TEST_HOURS - elapsed_h)
+    second = max(
+        0.0,
+        POSTCHANGE_FIRST_TEST_HOURS + POSTCHANGE_SECOND_TEST_HOURS - elapsed_h,
+    )
+    return {
+        "post_change_first_at_hours": first,
+        "post_change_second_at_hours": second,
+    }
 
 
 def _outer_bound_risk(fc: Dict[str, Any]) -> bool:
@@ -1114,10 +1445,19 @@ def _safety(pos, cfg, codes: List[Code], as_of) -> Any:
         "maintenanceEstimateStatus": "RESOLVED",
         "advisoryConfidenceWarning": NONE,
     }
+    # `ALK-DECIMAL-THRESHOLD-001`'s fifth row: the advisory boundary is a
+    # canonical threshold over exact decimals. Constructed in binary64,
+    # `8.2 - 1.0` is `7.199999999999999`, so a reading of exactly `7.2` -- the
+    # keeper's own one-decimal figure, on a one-decimal configuration canon
+    # itself calls plausible -- silently failed to raise the warning.
     if outer_min is not None:
-        state["advisoryFloorDkh"] = outer_min - ADVISORY_OFFSET
+        state["advisoryFloorDkh"] = float(
+            kernel.dec(outer_min) - kernel.dec(ADVISORY_OFFSET)
+        )
     if outer_max is not None:
-        state["advisoryCeilingDkh"] = outer_max + ADVISORY_OFFSET
+        state["advisoryCeilingDkh"] = float(
+            kernel.dec(outer_max) + kernel.dec(ADVISORY_OFFSET)
+        )
 
     withheld: List[str] = []
     if pos.outer_bound_state is None:
@@ -1131,7 +1471,7 @@ def _safety(pos, cfg, codes: List[Code], as_of) -> Any:
                  missing=["outerBoundState — no testing episode resolved "
                           "(OI-EPISODENOOBS-001; canon states no value for this state)"],
                  currentValueDkh=UNKNOWN,
-                 nextUsefulTestAt=as_of.text,
+                 nextUsefulTestAt=_SCHEDULER_FILLS,
                  affectedOutputs=["outerBoundState", "safety.outerBoundState"]))
 
     if pos.outer_bound_state == observation.BREACHED_LOW:
@@ -1162,7 +1502,7 @@ def _safety(pos, cfg, codes: List[Code], as_of) -> Any:
                     "and reported, the sized response is not"
                 ],
                 currentValueDkh=pos.a_now if pos.a_now is not None else UNKNOWN,
-                nextUsefulTestAt=as_of.text,
+                nextUsefulTestAt=_SCHEDULER_FILLS,
                 affectedOutputs=[
                     "temporarySafetyRateRecommendationMlPerDay",
                     "safetyCorrectionVolumeMl",
@@ -1177,8 +1517,13 @@ def _safety(pos, cfg, codes: List[Code], as_of) -> Any:
     if pos.a_now is not None:
         floor_v = state.get("advisoryFloorDkh")
         ceil_v = state.get("advisoryCeilingDkh")
-        beyond = (floor_v is not None and pos.a_now <= floor_v) or (
-            ceil_v is not None and pos.a_now >= ceil_v
+        a_now = kernel.dec(pos.a_now)
+        beyond = (
+            floor_v is not None
+            and a_now <= kernel.dec(outer_min) - kernel.dec(ADVISORY_OFFSET)
+        ) or (
+            ceil_v is not None
+            and a_now >= kernel.dec(outer_max) + kernel.dec(ADVISORY_OFFSET)
         )
         if beyond:
             state["advisoryConfidenceWarning"] = "ATTACHED"
@@ -1337,7 +1682,19 @@ _MARKERS = (NOT_RUN, WITHHELD, "UNRESOLVED")
 def _unexplained_withheld(
     result: Dict[str, Any], codes: List[Code], already: List[str]
 ) -> List[str]:
-    """Withheld fields no emitted code names, so the umbrella can name them."""
+    """Withheld **outputs** no emitted code names, so the umbrella can name them.
+
+    Two parts of the result are deliberately outside the sweep, because neither
+    is an engine output:
+
+    * `capabilities[]` is the capability gate's own record. `outcome: NOT_RUN`
+      there is a *finding about a capability*, already named by its own `M-n`
+      code — reading it as a withheld output made the umbrella fire on a tank
+      with perfect evidence and put `capabilities[1].outcome` on the keeper's
+      card as a thing that was missing.
+    * `reasonCodes[]` payloads quote other fields' states. A quotation of a
+      withheld output is not a second withheld output.
+    """
     named = set(already)
     for c in codes:
         for key in ("affectedOutputs", "missing"):
@@ -1363,5 +1720,12 @@ def _unexplained_withheld(
             for i, v in enumerate(node):
                 walk(v, f"{path}[{i}]")
 
-    walk(result, "")
+    for key, value in result.items():
+        if key in ("capabilities", "reasonCodes"):
+            continue
+        if isinstance(value, str) and value in _MARKERS:
+            if key not in named:
+                out.append(key)
+        else:
+            walk(value, key)
     return sorted(set(out))
