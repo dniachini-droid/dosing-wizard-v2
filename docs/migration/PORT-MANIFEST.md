@@ -5265,7 +5265,7 @@ Byte-identical to V1.
 | V1 source | `src/components/DosingWizard.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
-| Ported SHA-256 | `984a4cd56e2a55b6c8445c38af363e74dc423f9ec2f9ff4b82399c39f722f18c` |
+| Ported SHA-256 | `7e4a6607ddc8d251a00bf1f9f2bfaef974da1656c5c3aca8efeddb97edb04795` |
 | Differences | 2 |
 
 1. **chemistry removed — V1's alkalinity assessment block, correction panel and dose-state imports deleted; the imports are V2's engine-result readers and wording helpers**
@@ -5353,7 +5353,7 @@ Byte-identical to V1.
 2. **chemistry removed — the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes and the selected-parameter detail are V1's layout; everything inside is what V2's engine returned, including the potency estimator, which had no screen anywhere until now**
 
 ```diff
-@@ -52,229 +57,323 @@
+@@ -52,229 +57,336 @@
          </div>
  
          <div className="flex items-baseline gap-1">
@@ -5571,7 +5571,13 @@ Byte-identical to V1.
 +        <Row label="Evidence" value={sayEvidence(result.movementEvidence)} />
 +        {supported && typeof supported === "object" ? (
 +          <>
-+            <Fig label="Movement seen" v={observed?.slope ?? observed} decimals={4} unit={`${def.unit}/day`} />
++            {/* `observedTrajectory` is an object in the contract, not a
++                number; reading it as a fallback printed `[object Object]` on
++                the first run against the real engine. Its slope is the field
++                worth showing. */}
++            <Fig label="Movement seen"
++              v={observed && typeof observed === "object" ? observed.slope : observed}
++              decimals={4} unit={`${def.unit}/day`} />
 +            <Fig label="Movement supported" v={supported.slope} decimals={4} unit={`${def.unit}/day`} />
 +            {supported.limitedByUncertainty && (
 +              <Row label="Limited by" value={sayUncertaintyLimited()} tone="#A2621B" />
@@ -5591,7 +5597,7 @@ Byte-identical to V1.
 +        <Fig label="Delivery" v={cons.D} decimals={2} unit="mL/day" />
 +        <Fig label="Solution strength used" v={cons.P} decimals={4} unit={`${def.unit}/mL`} />
 +        {isPresent(cons.deliveryBasis) && (
-+          <Row label="Delivery worked out from" value={sayPayloadValue(cons.deliveryBasis) || "—"} />
++          <Row label="Delivery worked out from" value={sayPayloadValue(cons.deliveryBasis, "deliveryBasis") || "—"} />
 +        )}
 +      </Block>
 +
@@ -5602,15 +5608,19 @@ Byte-identical to V1.
 +        <Fig label="Recommended" v={dose.recommendedDoseMlPerDay ?? dose.recommendedDose} decimals={2} unit="mL/day" />
 +        <Fig label="Change" v={dose.deltaDoseMlPerDay ?? dose.deltaDose} decimals={2} unit="mL/day" />
 +        {isPresent(dose.maintenanceActionStatus) && (
-+          <Row label="Status" value={sayPayloadValue(dose.maintenanceActionStatus) || "—"} />
++          <Row label="Status" value={sayPayloadValue(dose.maintenanceActionStatus, "maintenanceActionStatus") || "—"} />
 +        )}
 +      </Block>
 +
 +      {/* WHAT WAS CAPPED, AND WHY */}
 +      {capped.length > 0 && (
 +        <Block title="What was capped, and why">
-+          {capped.map((c) => (
-+            <div key={c.code} className="py-1.5 border-t border-app first:border-0">
++          {/* Keyed by position, not by code. The engine can emit the same
++              reason code more than once in one result — `EPISODE_RESOLVED`
++              does, once per episode — and keying on the code silently drops
++              all but one of them. */}
++          {capped.map((c, i) => (
++            <div key={`${c.code}-${i}`} className="py-1.5 border-t border-app first:border-0">
 +              <div className="text-[12px] font-bold text-ink leading-relaxed">{sayReason(c.code)}</div>
 +              <div className="flex items-baseline justify-between gap-2 mt-1">
 +                <span className="text-[11px] font-bold text-ink2">
@@ -5640,7 +5650,7 @@ Byte-identical to V1.
 +            <Row label="Next useful test" value={fmtInstant(retest.nextUsefulTestAt)} />
 +          )}
 +          {isPresent(retest.decision) && (
-+            <Row label="Decision" value={sayPayloadValue(retest.decision) || "—"} />
++            <Row label="Decision" value={sayPayloadValue(retest.decision, "decision") || "—"} />
 +          )}
 +        </Block>
 +      )}
@@ -5648,12 +5658,15 @@ Byte-identical to V1.
 +      {/* EVERY REASON CODE, WITH ITS PAYLOAD */}
 +      {codes.length > 0 && (
 +        <Block title="Why it said that">
-+          {codes.map((c) => {
++          {codes.map((c, i) => {
 +            const pairs = Object.entries(c.payload || {})
-+              .map(([k, v]) => [sayPayloadKey(k), sayPayloadValue(v)])
++              /* The KEY travels with the value. Some payload keys carry engine
++                 output names rather than values, and only the key can say
++                 which — see `sayPayloadValue`. */
++              .map(([k, v]) => [sayPayloadKey(k), sayPayloadValue(v, k)])
 +              .filter(([k, v]) => k != null && v != null);
 +            return (
-+              <div key={c.code} className="py-2 border-t border-app first:border-0">
++              <div key={`${c.code}-${i}`} className="py-2 border-t border-app first:border-0">
 +                <div className="flex items-center gap-1.5 mb-0.5">
 +                  <span className="w-1.5 h-1.5 rounded-full shrink-0"
 +                    style={{ background: c.severity === "REFUSAL" ? "#C4285B" : c.severity === "GATING" ? "#A2621B" : "#45605F" }} />
@@ -5725,7 +5738,7 @@ Byte-identical to V1.
 +      <Fig label="From the bottle" v={theoretical} decimals={4} unit={`${def.unit}/mL`} />
 +      <Fig label="Being used" v={selected} decimals={4} unit={`${def.unit}/mL`} />
 +      {isPresent(pot.potencyConfidence ?? pot.confidence) && (
-+        <Row label="Confidence" value={sayPayloadValue(pot.potencyConfidence ?? pot.confidence) || "—"} />
++        <Row label="Confidence" value={sayPayloadValue(pot.potencyConfidence ?? pot.confidence, "potencyConfidence") || "—"} />
 +      )}
 +      {isPresent(pot.n) && <Fig label="Observations" v={pot.n} decimals={0} />}
 +      <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
@@ -6305,13 +6318,13 @@ Byte-identical to V1.
 | V1 source | `src/components/Setup.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
-| Ported SHA-256 | `fe531390b1efe7a1ce11ae8453f65448a950cd0496dc9bacde1dd7b4d4f27bca` |
+| Ported SHA-256 | `5fa3b251f1a7782af973564781ea453a0c526ac1ceb7c07f27671a98550c20ce` |
 | Differences | 1 |
 
 1. **chemistry removed — V1's Setup was 931 lines importing the magnesium gate, a settle-window function, kit-noise figures and a fourth correction calculator. All of it is deleted. What replaces it is the keeper's facts, dose changes above dosing setup, lighting changes, hidden notices, backup and the import, in the expandable card pattern the brief describes**
 
 ```diff
-@@ -1,931 +1,352 @@
+@@ -1,931 +1,360 @@
 -import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
 +import { useMemo, useState } from 'react'
@@ -6880,10 +6893,6 @@ Byte-identical to V1.
 -                      {delta != null && delta !== 0 && (
 -                        <span style={{ color: delta > 0 ? "#0B7C86" : "#A2621B" }}>
 -                          {" · "}{delta > 0 ? "up" : "down"} {Math.abs(delta).toFixed(1)} mL from {prior.ml}
--                        </span>
--                      )}
--                      {prior == null && " · first recorded"}
--                    </div>
 +        {newestFirst.length === 0 ? (
 +          <p className="text-[13px] text-ink2 font-medium">No dose changes recorded yet.</p>
 +        ) : (
@@ -6892,10 +6901,19 @@ Byte-identical to V1.
 +              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
 +                <div className="min-w-0 flex-1">
 +                  <div className="text-[13px] font-black text-ink truncate">
-+                    {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-+                    <span className="text-ink2 font-bold ml-1">
-+                      ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-+                    </span>
++                    {d.isStart ? (
++                      <>{fmtAmount(d.to)} mL/day</>
++                    ) : (
++                      <>
++                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
++                        <span className="text-ink2 font-bold ml-1">
++                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
+                         </span>
+-                      )}
+-                      {prior == null && " · first recorded"}
+-                    </div>
++                      </>
++                    )}
                    </div>
 -                  <DeleteButton onDelete={() => onDeleteDoseChange(d.id)} size={13} />
 -                </div>
@@ -6939,6 +6957,8 @@ Byte-identical to V1.
 -                    </div>
 +                  <div className="text-[11px] font-bold text-ink2">
 +                    {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
++                    {d.isStart ? " · where the record begins" : ""}
++                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
                    </div>
 -                  {onDeleteCorrection && (
 -                    <DeleteButton onDelete={() => onDeleteCorrection(c.id)} size={13}
@@ -7537,7 +7557,7 @@ Byte-identical to V1.
 | V1 source | `src/App.jsx` |
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
-| Ported SHA-256 | `834da6e1a9ab21f6ccbc0b75f5e419c5f04f158973abe878fae43669d2908c54` |
+| Ported SHA-256 | `550f534148583be7a44d465d09d0bba5513f68043492dd3d2d151aa7a905207d` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -7594,7 +7614,7 @@ Byte-identical to V1.
 +import { autoCompletions, computeSchedule, makeTask, TASK_KIND } from './store/schedule.js'
 +import { runAssessment, nowAsOf } from './assess.js'
 +import { nowIso } from './store/time.js'
-+import { onEngineState, warmUp } from './engine/client.js'
++import { ENGINE_STATE, onEngineState, warmUp } from './engine/client.js'
 +import { cardContent, cardStatusLine } from './present/card-content.js'
 +import { selectCard, instructsDoseChange } from './present/cards.js'
 +import { positionTone } from './present/position.js'
@@ -7664,7 +7684,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1149 +74,442 @@
+@@ -66,1149 +74,473 @@
    return out;
  }
  
@@ -8209,7 +8229,17 @@ Byte-identical to V1.
 -        loadKey("dose-log", []),
 -        loadKey("water-changes", []),
 -      ]);
--
++      await reload();
++      setLoaded(true);
++      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
++         it is started when the app is idle rather than blocking first paint:
++         logging a reading, browsing history and completing a task all work
++         before the engine has finished booting. */
++      warmUp();
++      assess();
++    })();
++  }, [reload, assess]);
+ 
 -      /* Is this a new device, or one that has been cleared? The two used to be
 -         indistinguishable — every marker below lives in the storage a clear
 -         erases, so their absence was read as "new install, seed away" and a
@@ -8224,7 +8254,12 @@ Byte-identical to V1.
 -        "light-seeded": lightSeeded, "strengths-fixed-v1": strengthsFixed,
 -      });
 -      setInstall(state);
--
++  /* ---- the record, in the shape the ported screens read ---------------- */
++  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
++  const readings = useMemo(() => readingsFrom(projection), [projection]);
++  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
++  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
+ 
 -      /* Readings are measurements somebody took, so nothing is seeded into
 -         them — a clean device starts empty. The marker is still written on the
 -         first run so the state of an install stays readable. */
@@ -8233,16 +8268,9 @@ Byte-identical to V1.
 -        await saveKey("readings", finalReadings);
 -        await saveKey("historical-seeded", true);
 -      }
-+      await reload();
-+      setLoaded(true);
-+      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
-+         it is started when the app is idle rather than blocking first paint:
-+         logging a reading, browsing history and completing a task all work
-+         before the engine has finished booting. */
-+      warmUp();
-+      assess();
-+    })();
-+  }, [reload, assess]);
++  const waterChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
  
 -      /* ICP panels are measurements too, and are seeded no more than readings
 -         are. */
@@ -8250,17 +8278,31 @@ Byte-identical to V1.
 -      if (!icpSeeded) {
 -        await saveKey("icp-seeded", true);
 -      }
-+  /* ---- the record, in the shape the ported screens read ---------------- */
-+  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
-+  const readings = useMemo(() => readingsFrom(projection), [projection]);
-+  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
-+  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
++  /* Dose CHANGES and the dose STATE the record starts from.
  
 -      /* Weekly water changes, seeded once and matched on date so anything
 -         already logged by hand is left alone.
-+  const waterChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
++     The import writes the first dose row of each parameter as a `DOSE_STATE` —
++     what was running when the record begins — and every later one as a
++     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
++     read as "no dose changes recorded" while the app was assessing against a
++     dose it had. A starting point has no delta and is shown as what it is. */
++  const doseChanges = useMemo(() => projection
++    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
++      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      time: r.event.time.localTime || null,
++      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
++      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
++      /* `fromMlPerDay` on an imported change is this app reading the previous
++         recorded row, not something the keeper wrote down. The import marks it,
++         and the list says so rather than presenting it as his figure. */
++      fromDerived: !!r.event.detail.fromMlPerDayDerived,
++      isStart: r.event.kind === KIND.DOSE_STATE,
++      parameter: r.event.parameter || "ALK",
++    })), [projection]);
  
 -         Not seeded at all on a device that has been cleared, or one the check
 -         above could not account for. The marker is still written, so declining
@@ -8283,15 +8325,11 @@ Byte-identical to V1.
 -        }
 -        await saveKey("wc-seeded", true);
 -      }
-+  const doseChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.DOSE_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({
-+      id: r.event.eventId,
-+      date: r.event.time.localDate,
-+      time: r.event.time.localTime || null,
-+      from: r.event.detail.fromMlPerDay,
-+      to: r.event.detail.toMlPerDay,
-+    })), [projection]);
++  const lightingChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
++      && r.event.detail.husbandryKind === "LIGHTING"
++      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
  
 -      let finalLighting = lg || [];
 -      if (!lightSeeded) {
@@ -8305,17 +8343,6 @@ Byte-identical to V1.
 -        }
 -        await saveKey("light-seeded", true);
 -      }
-+  const lightingChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-+      && r.event.detail.husbandryKind === "LIGHTING"
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
- 
--      /* Doses are seeded; product strengths are NOT, and must never be again.
--         A strength is a fact about the user's own bottle, so there is nothing
--         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
--         An unset strength is refused and named, the same as an unset net
--         volume (reef-chemistry.md §16, §12, §17).
 +  const icps = useMemo(() => projection
 +    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
 +    .map((r) => ({
@@ -8324,6 +8351,15 @@ Byte-identical to V1.
 +      note: r.event.detail.note,
 +      elements: r.event.detail.elements || {},
 +    })), [projection]);
+ 
+-      /* Doses are seeded; product strengths are NOT, and must never be again.
+-         A strength is a fact about the user's own bottle, so there is nothing
+-         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
+-         An unset strength is refused and named, the same as an unset net
+-         volume (reef-chemistry.md §16, §12, §17).
++  const scheduleView = useMemo(
++    () => computeSchedule(tasks, completions, todayStr(), remWindow),
++    [tasks, completions, remWindow]);
  
 -         Two blocks were removed here on 16 August, both of which wrote a
 -         default into storage and so would defeat the change entirely:
@@ -8346,9 +8382,13 @@ Byte-identical to V1.
 -        }
 -        await saveKey("tank-settings", finalSettings);
 -      }
-+  const scheduleView = useMemo(
-+    () => computeSchedule(tasks, completions, todayStr(), remWindow),
-+    [tasks, completions, remWindow]);
++  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
++  /* Why there is no engine result, when there is none. The states are
++     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
++     one this shell adds when the call itself threw. Null while the first
++     assessment is still running, which the screens render as "working it
++     out". */
++  /* WITH ONE CORRECTION, WHICH THE INTERFACE MAKES AND THE STORE DOES NOT.
  
 -      /* Test reminders exist from the start rather than needing to be created —
 -         the app already knows which parameters exist. Only the schedule is the
@@ -8377,13 +8417,13 @@ Byte-identical to V1.
 -      setCorrectionPlans(cplans || {});
 -      setCaPlan(cap || null);
 -      setMgPlan(mgp || null);
-+  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
-+  /* Why there is no engine result, when there is none. The states are
-+     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
-+     one this shell adds when the call itself threw. Null while the first
-+     assessment is still running, which the screens render as "working it
-+     out". */
-+  const assessmentState = assessment ? assessment.state : null;
++     `assess.js` reads the ledger, the configuration history and the engine's
++     own version stamps in a single `Promise.all`, inside the try whose catch
++     returns `STORAGE_UNAVAILABLE`. So when the engine cannot START — the
++     runtime is not vendored, or the worker fails — the failure arrives labelled
++     as an unreadable record, and the screen tells the keeper his history is
++     gone when it is sitting there intact. That is the worst thing this app can
++     say and the one thing it is not allowed to say wrongly.
  
 -      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
 -      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
@@ -8391,6 +8431,37 @@ Byte-identical to V1.
 -      setLoaded(true);
 -    })();
 -  }, []);
++     The engine client already reports its own state, and it is the authority on
++     whether the engine started. Where it says the engine failed, that is what
++     the screens say, whatever label came back with the assessment.
+ 
+-  /* A restore writes to storage directly, so mirror the merged result into
+-     state — otherwise the screen would keep showing the pre-restore data until
+-     the next reload. */
+-  const saveReminders = async (next) => {
+-    setReminders(next);
+-    await saveKey("reminders", next);
+-  };
++     The mislabelling itself is in `assess.js`, which is outside this port's
++     scope. Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */
++  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
++  const assessmentState = engineDown ? "ENGINE_FAILED" : assessment ? assessment.state : null;
+ 
+-  /* Recording a replacement retires every comparison made with the old kit. */
+-  const replaceKit = async (paramKey, date = todayStr()) => {
+-    const next = { ...kitChanges, [paramKey]: date };
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    const def = paramDefs.find((d) => d.key === paramKey);
+-    notify(`${def ? def.label : "Kit"} marked as replaced`);
+-  };
+-  const undoReplaceKit = async (paramKey) => {
+-    const next = { ...kitChanges };
+-    delete next[paramKey];
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    notify("Replacement removed");
+-  };
 +  /* One notice per parameter, from the engine, already worded — and filtered
 +     by what the keeper has put away. The identity and the signature are V1's
 +     mechanism over V2's reason codes: put one away and it comes back the
@@ -8401,45 +8472,6 @@ Byte-identical to V1.
 +    return findingHidden(c.notice, hiddenNotices) ? null : c.notice;
 +  }, [engineResult, assessmentState, hiddenNotices]);
  
--  /* A restore writes to storage directly, so mirror the merged result into
--     state — otherwise the screen would keep showing the pre-restore data until
--     the next reload. */
--  const saveReminders = async (next) => {
--    setReminders(next);
--    await saveKey("reminders", next);
-+  const dismissNotice = async (f) => {
-+    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice hidden");
-   };
--
--  /* Recording a replacement retires every comparison made with the old kit. */
--  const replaceKit = async (paramKey, date = todayStr()) => {
--    const next = { ...kitChanges, [paramKey]: date };
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    const def = paramDefs.find((d) => d.key === paramKey);
--    notify(`${def ? def.label : "Kit"} marked as replaced`);
-+  const restoreNotice = async (n) => {
-+    const next = { ...hiddenNotices };
-+    delete next[findingKey(n)];
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice shown again");
-   };
--  const undoReplaceKit = async (paramKey) => {
--    const next = { ...kitChanges };
--    delete next[paramKey];
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    notify("Replacement removed");
-+  const restoreAllNotices = async () => {
-+    await store.kvSet("hidden-notices", {});
-+    setHiddenNotices({});
-+    notify("All notices shown again");
-   };
- 
 -  const dismissFinding = async (f) => {
 -    const prev = dismissed[findingKey(f)];
 -    const times = (prev && typeof prev === "object" && prev.times ? prev.times : 0) + 1;
@@ -8448,7 +8480,12 @@ Byte-identical to V1.
 -    setDismissed(next);
 -    await saveKey("findings-dismissed", next);
 -    notify("Hidden — it'll return if this changes");
--  };
++  const dismissNotice = async (f) => {
++    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice hidden");
+   };
 -  /* A claim is put away by its own key rather than a finding id, because most
 -     claims are not findings — a drift or a parked pair is assembled from the
 -     readings themselves. */
@@ -8480,7 +8517,13 @@ Byte-identical to V1.
 -    notify(c.snoozeUntilTest
 -      ? "Put off \u2014 back after your next test"
 -      : "Hidden \u2014 it'll return if this changes");
--  };
++  const restoreNotice = async (n) => {
++    const next = { ...hiddenNotices };
++    delete next[findingKey(n)];
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice shown again");
+   };
 -  /* One note back, by its own key — restoring everything was the only option
 -     before, which made hiding a thing you had to be sure about. */
 -  /* Start a temporary correction: set the dose and record why, so every
@@ -8505,10 +8548,11 @@ Byte-identical to V1.
 -    await addDoseChange({ date: todayStr(), ml: offer.dose, element: key,
 -      note: `correction toward ${offer.aimPoint}` });
 -    notify(`${key} dose set to ${fmtAmount(offer.dose)} mL/day — correcting toward ${offer.aimPoint}`);
--  };
-+  const hiddenList = useMemo(
-+    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
-+    [hiddenNotices]);
++  const restoreAllNotices = async () => {
++    await store.kvSet("hidden-notices", {});
++    setHiddenNotices({});
++    notify("All notices shown again");
+   };
  
 -  /* Cancel: the dose goes back, the plan is deleted, and everything derived
 -     from it disappears with it. Nothing should survive a cancel. */
@@ -8522,6 +8566,10 @@ Byte-identical to V1.
 -    if (plan.returnDose != null) {
 -      await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
 -        note: "correction cancelled" });
++  const hiddenList = useMemo(
++    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
++    [hiddenNotices]);
++
 +  /* ---- writing ---------------------------------------------------------- */
 +
 +  /* A reading. Four elements went in, and the three things that follow are the
@@ -9169,7 +9217,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1250,8 +551,10 @@
+@@ -1250,8 +582,10 @@
                <Waves size={17} className="text-white" />
              </div>
              <div>
@@ -9187,7 +9235,7 @@ Byte-identical to V1.
 4. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1266,9 +569,17 @@
+@@ -1266,9 +600,17 @@
                );
              })}
            </nav>
@@ -9212,7 +9260,7 @@ Byte-identical to V1.
 5. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1275,49 +586,9 @@
+@@ -1275,49 +617,9 @@
          {/* Main */}
          <main className="flex-1 px-4 md:px-8 max-w-6xl"
            style={{
@@ -9267,7 +9315,7 @@ Byte-identical to V1.
 6. **data source rewired — every tab is wired to V2's store and the engine result, the tab set is five rather than six, and the Test tab carries the my-tests / ICP-panels toggle and All graphs**
 
 ```diff
-@@ -1335,105 +606,116 @@
+@@ -1335,105 +637,116 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -9466,7 +9514,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +739,96 @@
+@@ -1457,6 +770,96 @@
    );
  }
  

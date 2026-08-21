@@ -204,13 +204,21 @@ export function Setup({ config, onSaveConfig, paramDefs = [],
               <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-black text-ink truncate">
-                    {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-                    <span className="text-ink2 font-bold ml-1">
-                      ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-                    </span>
+                    {d.isStart ? (
+                      <>{fmtAmount(d.to)} mL/day</>
+                    ) : (
+                      <>
+                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
+                        <span className="text-ink2 font-bold ml-1">
+                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="text-[11px] font-bold text-ink2">
                     {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
+                    {d.isStart ? " · where the record begins" : ""}
+                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
                   </div>
                 </div>
                 <DeleteButton onDelete={() => onDeleteEvent(d.id)} confirmMessage="Dose change removed" />

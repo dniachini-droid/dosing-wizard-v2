@@ -207,14 +207,28 @@ export function ReefConsoleInner() {
     .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
     .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
 
+  /* Dose CHANGES and the dose STATE the record starts from.
+
+     The import writes the first dose row of each parameter as a `DOSE_STATE` —
+     what was running when the record begins — and every later one as a
+     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
+     read as "no dose changes recorded" while the app was assessing against a
+     dose it had. A starting point has no delta and is shown as what it is. */
   const doseChanges = useMemo(() => projection
-    .filter((r) => r.event.kind === KIND.DOSE_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
     .map((r) => ({
       id: r.event.eventId,
       date: r.event.time.localDate,
       time: r.event.time.localTime || null,
-      from: r.event.detail.fromMlPerDay,
-      to: r.event.detail.toMlPerDay,
+      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
+      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
+      /* `fromMlPerDay` on an imported change is this app reading the previous
+         recorded row, not something the keeper wrote down. The import marks it,
+         and the list says so rather than presenting it as his figure. */
+      fromDerived: !!r.event.detail.fromMlPerDayDerived,
+      isStart: r.event.kind === KIND.DOSE_STATE,
+      parameter: r.event.parameter || "ALK",
     })), [projection]);
 
   const lightingChanges = useMemo(() => projection
