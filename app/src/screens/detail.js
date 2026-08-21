@@ -47,7 +47,13 @@ export async function renderAssessmentDetail(ctx) {
     return screen;
   }
 
-  screen.append(renderAssessment(result, { readings: alkTrace(projected, result), config }));
+  screen.append(
+    renderAssessment(result, {
+      readings: alkTrace(projected, result),
+      config,
+      onOpenEntry: (eventId) => ctx.openEntry(eventId),
+    })
+  );
   screen.append(renderWorking(result));
   if (rec) screen.append(renderRecord(ctx, rec));
   screen.append(renderDeveloperView(result, rec));

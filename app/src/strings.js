@@ -815,6 +815,24 @@ export const STRINGS = Object.freeze({
   "history.emptyWindow": "Nothing recorded in this window.",
   "history.showAll": "Show every parameter",
   "history.everyEntry": "Every entry",
+  /* ======================================================================
+     THE INTERACTIVE CHART
+     ================================================================== */
+
+  "chart.hint": "Pinch to zoom · drag to pan · double-tap to reset",
+  "chart.reset": "Reset",
+  "chart.nothingHere": "Nothing in this part of the range.",
+  "chart.openEntry": "tap again to open it",
+  "chart.aria": ({ label, unit, n, from, fromDate, to, toDate }) =>
+    `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
+  "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
+
+  "err.chartNeedsLabel":
+    "A chart must be told which parameter it is drawing. This one was not, which is the defect carried over " +
+    "from the old app.",
+  "err.chartNeedsUnit":
+    "A chart must be told what unit it is drawing in. An empty unit is a real answer; leaving it out is not.",
+
   "history.legend.yourRange": ({ min, max, unit }) => `your range, ${min}–${max} ${unit}`,
   "history.legend.noTime": ({ n }) => `${n} with no time of day`,
   "history.legend.noZone": ({ n }) => `${n} with a time but no timezone`,
@@ -826,8 +844,8 @@ export const STRINGS = Object.freeze({
     `going into the tank between them is simply not written down, so how much the tank was using cannot be ` +
     `worked out from that period.`,
 
-  "history.chart.aria": ({ label, days, n }) =>
-    `${label} over the last ${days} days, ${n} observations.`,
+  "history.chart.aria": ({ label, unit, days, n }) =>
+    `${label} in ${unit || "no unit"}, over the last ${days} days, ${n} observations.`,
   "history.point.aria": ({ value, unit, date }) => `${value} ${unit} on ${date}`,
   "history.inertNote":
     "Logged and charted, not assessed. No range is shaded because there is no range for this parameter in " +

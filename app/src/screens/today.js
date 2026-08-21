@@ -147,6 +147,7 @@ export async function renderToday(ctx) {
         readings,
         config,
         onOpenDetail: () => ctx.go("assessment-detail"),
+        onOpenEntry: (eventId) => ctx.openEntry(eventId),
       })
     );
     screen.append(renderDeveloperView(engineResult, state.assessment.record));
@@ -1003,6 +1004,9 @@ function alkTrace(projected, engineResult) {
     .slice(-12)
     .map((r) => ({
       date: r.event.time.localDate,
+      /* Shown beside the value when the record has one, and absent when it
+         does not. There is no branch that supplies one. */
+      time: r.event.time.localTime || null,
       value: r.event.normalizedValue,
       eventId: r.event.eventId,
       /* Eligibility is a property of the record's time, and `time.js` owns the

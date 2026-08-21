@@ -34,7 +34,8 @@
    says it is doing so. It does not decide the window.
    ========================================================================= */
 
-import { h, svg } from "../ui/dom.js";
+import { h } from "../ui/dom.js";
+import { interactiveChart } from "../ui/chart.js";
 import { parameterDefs, KIND } from "../store/ledger.js";
 import { fmtShort, fmtDayName, fmtEventTime } from "../ui/format.js";
 import { addDays, hasExactInstant, todayLocal } from "../store/time.js";
@@ -356,100 +357,44 @@ function groupRepeats(points, minutes) {
   return out;
 }
 
+/* The chart is `ui/chart.js`'s, ported from V1. This function's whole job is
+   turning the projection into the shape it takes — which parameter, which
+   unit, which readings, which of them the engine can use, and where the
+   events fall. It computes no geometry and owns no gesture. */
 function chart(ctx, def, points, events, range, windowDays, boundary) {
-  const W = 296, H = 150, L = 26, R = 290, T = 14, B = 118;
-  const vals = points.map((p) => p.value);
-  const lo = Math.min(...vals, range ? range.min : Infinity);
-  const hi = Math.max(...vals, range ? range.max : -Infinity);
-  const span = hi - lo || 1;
-  const pad = span * 0.2;
-  const yMin = lo - pad, yMax = hi + pad;
+  const from = points[0].date;
+  const to = points[points.length - 1].date;
 
-  const t0 = Date.parse(points[0].date + "T00:00:00Z");
-  const t1 = Date.parse(points[points.length - 1].date + "T00:00:00Z");
-  const tspan = t1 - t0 || 86400000;
-  const x = (iso) => L + ((Date.parse(iso.slice(0, 10) + "T00:00:00Z") - t0) / tspan) * (R - L);
-  const y = (v) => B - ((v - yMin) / (yMax - yMin)) * (B - T);
-
-  const g = svg("svg", {
-    class: "chart c-" + def.tone,
-    viewBox: `0 0 ${W} ${H}`,
-    role: "img",
-    "aria-label": t("history.chart.aria", { label: def.label, days: windowDays, n: points.length }),
-  });
-
-  if (range) {
-    const yTop = y(range.max), yBot = y(range.min);
-    g.append(
-      svg("rect", { class: "range-fill", x: L, y: Math.min(yTop, yBot), width: R - L, height: Math.abs(yBot - yTop) }),
-      svg("line", { class: "range-edge", x1: L, y1: yTop, x2: R, y2: yTop }),
-      svg("line", { class: "range-edge", x1: L, y1: yBot, x2: R, y2: yBot }),
-      svg("text", { class: "axis", x: 1, y: yTop + 3.5 }, String(range.max)),
-      svg("text", { class: "axis", x: 1, y: yBot + 3.5 }, String(range.min))
-    );
-  }
-
-  /* Event markers, drawn behind the trace so the readings stay readable. */
+  const marks = [];
   for (const e of events) {
     const d = e.event.time.localDate;
-    if (d < points[0].date || d > points[points.length - 1].date) continue;
-    const px = x(d);
-    g.append(
-      svg("line", { class: "evline " + EVENT_MARKS[e.event.kind].cls, x1: px, y1: T, x2: px, y2: B }),
-      svg("polygon", { class: "evmark", points: `${px - 4},${T - 7} ${px + 4},${T - 7} ${px},${T - 1}` })
-    );
+    if (d < from || d > to) continue;
+    marks.push({ date: d, cls: EVENT_MARKS[e.event.kind].cls });
   }
 
-  /* ONE MARKER, ONE NOTE. The readings on either side of it are drawn exactly
-     alike, because the difference between them is a property of the period and
-     not of any single reading. */
-  if (boundary) {
-    const bx = x(boundary);
-    g.append(
-      svg("line", { class: "boundary", x1: bx, y1: T - 6, x2: bx, y2: B }),
-      svg("text", { class: "boundary-label", x: bx + 3, y: T - 1 }, t("history.boundary.mark"))
-    );
-  }
-
-  const eligible = points.filter((p) => p.eligible && !p.superseded);
-  if (eligible.length >= 2) {
-    g.append(
-      svg("path", {
-        class: "trace",
-        d: eligible.map((p, i) => `${i ? "L" : "M"}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(" "),
-      })
-    );
-  }
-
-  points.forEach((p, i) => {
-    const cls = p.superseded
-      ? "pt-excluded"
-      : !p.eligible
-        ? "pt-excluded"
-        : i === points.length - 1
-          ? "pt-last"
-          : "pt";
-    const c = svg("circle", {
-      class: cls + (p.members.length > 1 ? " pt-repeat" : ""),
-      cx: x(p.date),
-      cy: y(p.value),
-      r: i === points.length - 1 ? 4.5 : 4,
-      tabindex: "0",
-      role: "button",
-      "aria-label": t("history.point.aria", { value: p.value, unit: def.unit, date: fmtDayName(p.date) }),
-      onclick: () => ctx.openEntry(p.members[0].row.event.eventId),
-      onkeydown: (e) => {
-        if (e.key === "Enter" || e.key === " ") ctx.openEntry(p.members[0].row.event.eventId);
-      },
-    });
-    g.append(c);
+  const { node } = interactiveChart({
+    points: points.map((p) => ({
+      date: p.date,
+      /* Shown beside the value when the record has one. A record with no time
+         has none to show, and there is no branch here that supplies one. */
+      time: p.row.event.time.localTime || null,
+      value: p.value,
+      eligible: p.eligible,
+      superseded: p.superseded,
+      eventId: p.members[0].row.event.eventId,
+    })),
+    tone: def.tone,
+    /* The two the V1 component never received at any call site. */
+    label: def.label,
+    unit: def.unit,
+    decimals: def.decimals,
+    range,
+    events: marks,
+    boundary,
+    onPointTap: (p) => ctx.openEntry(p.eventId),
+    ariaLabel: t("history.chart.aria", { label: def.label, unit: def.unit, days: windowDays, n: points.length }),
   });
-
-  g.append(
-    svg("text", { class: "axis", x: L, y: 140 }, fmtShort(points[0].date)),
-    svg("text", { class: "axis", x: R, y: 140, "text-anchor": "end" }, fmtShort(points[points.length - 1].date))
-  );
-  return h("div", { class: "scroll-x" }, g);
+  return node;
 }
 
 function renderEntryList(ctx, points, def) {

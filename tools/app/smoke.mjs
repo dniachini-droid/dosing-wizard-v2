@@ -626,6 +626,164 @@ if (fs.existsSync(BACKUP)) {
   });
 }
 
+/* --------------------------------------------------------------------------
+   THE CHARTS ARE TOUCHABLE
+
+   `tests/app/` has no DOM, so this is where the gestures are actually driven.
+   ----------------------------------------------------------------------- */
+
+console.log("\nInteractive charts");
+
+async function pinch(sel, factor) {
+  /* Two fingers, moved apart or together, through real touch events. */
+  await page.evaluate(
+    ([selector, f]) => {
+      const el = document.querySelector(selector);
+      const r = el.getBoundingClientRect();
+      const cy = r.top + r.height / 2;
+      const mk = (x, y) => new Touch({ identifier: x, target: el, clientX: x, clientY: y });
+      const send = (type, touches) =>
+        el.dispatchEvent(
+          new TouchEvent(type, { touches, targetTouches: touches, changedTouches: touches, bubbles: true, cancelable: true })
+        );
+      const x1 = r.left + r.width * 0.35;
+      const x2 = r.left + r.width * 0.65;
+      send("touchstart", [mk(x1, cy), mk(x2, cy)]);
+      const mid = (x1 + x2) / 2;
+      send("touchmove", [mk(mid - ((mid - x1) * f), cy), mk(mid + ((x2 - mid) * f), cy)]);
+      send("touchend", []);
+    },
+    [sel, factor]
+  );
+  await page.waitForTimeout(250);
+}
+
+await step("History's chart zooms, and the reset appears", async () => {
+  await page.click("#tabbar .tab:has-text('History')");
+  await page.waitForSelector("h1:has-text('History')");
+  await page.waitForSelector(".chartplot .chart", { timeout: 15000 });
+
+  const hidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (!hidden) throw new Error("the reset is showing before anything is zoomed");
+
+  const before = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  await pinch(".chartplot", 3);
+  const after = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  if (after >= before) throw new Error(`zooming showed no fewer points: ${before} -> ${after}`);
+
+  const stillHidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (stillHidden) throw new Error("the reset did not appear after zooming");
+});
+
+await step("zooming does not alter a single reading", async () => {
+  const same = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const events = await createStore().ledger.allEvents();
+    return events.filter((e) => e.kind === "READING").map((e) => e.normalizedValue);
+  });
+  if (!same.length) throw new Error("no readings to check");
+  const drawn = await page.$$eval(".chartplot .chart .pt-hit", (n) => n.map((x) => x.getAttribute("aria-label")));
+  for (const label of drawn) {
+    const m = label.match(/([\d.]+)/);
+    if (!m) continue;
+    if (!same.some((v) => Math.abs(v - Number(m[1])) < 0.005)) {
+      throw new Error(`the chart shows ${m[1]}, which is not a value in the record`);
+    }
+  }
+});
+
+await step("the reset button restores the whole series", async () => {
+  const zoomed = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  await page.click(".chartreset");
+  await page.waitForTimeout(300);
+  const full = await page.$eval(".chartplot .chart", (g) => g.querySelectorAll(".pt, .pt-last, .pt-excluded").length);
+  if (full <= zoomed) throw new Error(`the reset did not restore the series: ${zoomed} -> ${full}`);
+  const hidden = await page.$eval(".chartreset", (b) => b.hidden);
+  if (!hidden) throw new Error("the reset is still showing after resetting");
+});
+
+await step("tapping a point reports THAT point's value and date", async () => {
+  /* Tapped where a specific point actually is, and checked against that
+     point's own label. With six months of readings the points are three units
+     apart in a 320-unit box, which is where per-point tap targets went wrong:
+     they overlapped eight deep and the tap went to a neighbour. */
+  const target = await page.evaluate(() => {
+    const g = document.querySelector(".chartplot .chart");
+    const hits = [...g.querySelectorAll(".pt-hit")];
+    const pick = hits[Math.floor(hits.length / 2)];
+    const box = g.getBoundingClientRect();
+    const vb = g.getAttribute("viewBox").split(/\s+/).map(Number);
+    const cx = Number(pick.getAttribute("cx"));
+    return {
+      label: pick.getAttribute("aria-label"),
+      clientX: box.left + ((cx - vb[0]) / vb[2]) * box.width,
+      clientY: box.top + box.height / 2,
+    };
+  });
+  await page.mouse.click(target.clientX, target.clientY);
+  await page.waitForTimeout(250);
+
+  const read = await page.innerText(".chartread");
+  if (!read.trim()) throw new Error("nothing was reported");
+  const value = target.label.match(/([\d.]+)/)[1];
+  if (!read.includes(value)) {
+    throw new Error(`tapped the point labelled "${target.label}" and the readout says "${read}"`);
+  }
+  if (!/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(read)) {
+    throw new Error(`the readout carries no date: "${read}"`);
+  }
+});
+
+await step("every chart names its parameter and its unit", async () => {
+  const labels = await page.$$eval(".chartplot .chart", (n) => n.map((x) => x.getAttribute("aria-label")));
+  if (!labels.length) throw new Error("no charts found");
+  for (const l of labels) {
+    if (!/Alkalinity|Calcium|Magnesium|Nitrate|Phosphate|Salinity|pH|Potassium/.test(l)) {
+      throw new Error(`a chart does not name its parameter: "${l}"`);
+    }
+    if (!/dKH|mg\/L|ppt|no unit/.test(l)) throw new Error(`a chart does not name its unit: "${l}"`);
+  }
+});
+
+await step("the moment's chart is interactive too", async () => {
+  /* The Today card's own chart needs an assessment, and the engine cannot
+     start in this sandbox — see the earlier failures, which are the same on an
+     unmodified tree. `CH-12` pins by source that the Today card draws the
+     ported chart. The moment renders without the engine, so its gestures are
+     driven here for real. */
+  await page.click("#tabbar .tab:has-text('Test Lab')");
+  await page.waitForSelector("h1:has-text('Test Lab')");
+  await page.click(".card .seg .opt:has-text('Now')");
+  const row = await page.$(".labrow:has-text('Alkalinity')");
+  await (await row.$(".labentry .input")).fill("8.85");
+  await (await row.$(".labentry .btn")).click();
+  await page.waitForSelector(".moment .rc-host .rc-chart", { timeout: 15000 });
+
+  const hint = await page.innerText(".moment .charthint");
+  if (!/Pinch to zoom/.test(hint)) throw new Error("the moment's chart offers no gestures");
+
+  const before = await page.$eval(".moment .rc-chart", (g) => g.getAttribute("viewBox"));
+  await pinch(".moment .rc-host", 3);
+  const after = await page.$eval(".moment .rc-chart", (g) => g.getAttribute("viewBox"));
+  if (before === after) throw new Error(`the moment's chart did not zoom: ${after}`);
+
+  /* Clicked at a point inside the chart's own box rather than at the element's
+     centre: the moment card is a small scrim and the centre of `.rc-chart`
+     can sit under the readout beneath it. */
+  const at = await page.$eval(".moment .rc-chart", (g) => {
+    const b = g.getBoundingClientRect();
+    return { x: b.left + b.width * 0.6, y: b.top + b.height * 0.35 };
+  });
+  await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(250);
+  const read = await page.innerText(".moment .chartread");
+  if (!read.trim()) throw new Error("tapping the moment's chart reported nothing");
+  if (!/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(read)) {
+    throw new Error(`the moment's readout carries no date: "${read}"`);
+  }
+  await page.evaluate(() => document.querySelectorAll(".moment, .sheetwrap").forEach((n) => n.remove()));
+});
+
 await browser.close();
 server.close();
 

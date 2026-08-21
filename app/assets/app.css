@@ -1441,6 +1441,88 @@ table.data tr.excluded td { color: var(--faint); }
 .chart .boundary-label { fill: var(--attention); font-size: var(--t-axis); font-family: var(--font); font-weight: var(--w-bold); }
 
 /* ============================================================================
+   THE INTERACTIVE CHART
+   ----------------------------------------------------------------------------
+   Ported from V1 `ZoomableChart.jsx`. `touch-action: none` on the plot is what
+   makes a pinch reach the chart at all — without it the browser takes the
+   gesture and scrolls the page, which is what "the chart cannot be zoomed"
+   looked like from the outside.
+   ========================================================================= */
+
+.chartwrap { margin: var(--sp-3) 0 0; }
+
+.chartplot {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  min-height: var(--chart-h);
+}
+.chartplot .chart { height: var(--chart-h); }
+
+/* One transparent surface takes every tap and resolves it to the nearest
+   point. Per-point discs overlapped at six months' density and handed the tap
+   to a neighbour. */
+.chart .pt-surface { fill: transparent; stroke: none; cursor: pointer; }
+
+/* The per-point handles are for a keyboard and a screen reader only: focusable,
+   and invisible to the pointer so they cannot steal the tap back. */
+.chart .pt-hit { fill: transparent; stroke: none; pointer-events: none; }
+
+/* And neither can the drawn dots. SVG hit-testing gives the event to the
+   topmost shape under the finger and does not pass it to a sibling beneath, so
+   a tap landing exactly ON a point hit the painted circle — which has no
+   handler — and nothing happened at all. The one place that is truest: tapping
+   a point did nothing, and tapping just beside it worked. */
+.chart .pt, .chart .pt-last, .chart .pt-excluded, .chart .trace,
+.chart .grid, .chart .range-fill, .chart .range-edge,
+.chart .evline, .chart .evmark, .chart .boundary { pointer-events: none; }
+.chart .pt-hit:focus-visible { outline: none; }
+.chart .pt-hit:focus-visible + circle,
+.chart circle.pt-selected { stroke-width: var(--chart-selected-w); }
+
+.chartread {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-height: var(--sp-5);
+  margin-top: var(--sp-2);
+}
+.chartread .v { font-size: var(--t-h2); font-weight: var(--w-heavy); letter-spacing: var(--ls-head); }
+.chartread .u { font-size: var(--t-micro); font-weight: var(--w-bold); color: var(--faint); }
+.chartread .d { font-size: var(--t-micro); font-weight: var(--w-semi); color: var(--grey); }
+.chartread .go { font-size: var(--t-micro); color: var(--faint); margin-left: auto; }
+
+.chartfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-1);
+}
+.charthint { font-size: var(--t-micro); color: var(--faint); font-weight: var(--w-semi); }
+.chartreset {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font);
+  font-size: var(--t-micro);
+  font-weight: var(--w-bold);
+  color: var(--alk);
+  cursor: pointer;
+}
+.chartreset[hidden] { display: none; }
+
+/* The moment's own chart, made touchable from outside the ported motion code
+   it is drawn by. */
+.rc-host { touch-action: none; position: relative; }
+.charthint.moment { display: block; text-align: center; margin-top: var(--sp-1); }
+/* A status line, never a control. It lays out directly beneath a chart that
+   the arrival animation paints ABOVE its own layout box, so without this it
+   sits over the chart and swallows the tap. */
+.chartread.moment { justify-content: center; min-height: var(--sp-5); pointer-events: none; }
+.charthint.moment { pointer-events: none; }
+
+/* ============================================================================
    TEST MODE
    ----------------------------------------------------------------------------
    The marker is a bar pinned above every screen, not a badge tucked into

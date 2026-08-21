@@ -34,6 +34,7 @@ const SUITES = [
   "test-suggestion.mjs",
   "test-testmode.mjs",
   "test-import.mjs",
+  "test-chart.mjs",
   "test-strings.mjs",
   "test-shell.mjs",
 ];

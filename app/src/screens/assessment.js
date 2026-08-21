@@ -17,7 +17,9 @@
    a point sits on screen and is not a fact about alkalinity.
    ========================================================================= */
 
-import { h, svg } from "../ui/dom.js";
+import { h } from "../ui/dom.js";
+import { interactiveChart } from "../ui/chart.js";
+import { parameterDef } from "../store/ledger.js";
 import { fmtShort, fmtTimeOfDay, fmtDayName } from "../ui/format.js";
 import { instructsDoseChange, selectCard, isAbsent, isPresent } from "../present/cards.js";
 import {
@@ -84,7 +86,12 @@ export function renderAssessment(result, { onOpenDetail, onOpenEntry, readings, 
     );
   }
 
-  if (readings && readings.length >= 2) box.append(renderTrace(readings, config, result));
+  /* The parameter's own identity, passed to the chart. V1's component never
+     received it at any call site — a recorded defect — so this one does, and
+     `interactiveChart` refuses without it. */
+  if (readings && readings.length >= 2) {
+    box.append(renderTrace(readings, config, result, parameterDef("ALK"), onOpenEntry));
+  }
 
   /* --- the six dimensions, kept separate ------------------------------- */
   box.append(h("p", { class: "seclabel" }, t("assessment.dimsLabel")), renderDims(result));
@@ -569,72 +576,53 @@ function renderPayload(payload) {
 }
 
 /* --- the trend trace -----------------------------------------------------
-   Pixel geometry. Not chemistry: it decides where a dot sits on a screen.
+   The chart is `ui/chart.js`'s, ported from V1 `ZoomableChart.jsx`. This
+   function turns the engine's own view of the readings into the shape it
+   takes and does nothing else: no geometry, no gesture, no arithmetic.
 
    The shaded band is the keeper's own configured target range, read from the
    configuration the engine resolved — not a band this file chose. Points the
    engine could not use are drawn hollow, so an excluded reading is visibly
-   present rather than silently missing. */
-function renderTrace(readings, config, result) {
-  const W = 296, H = 116, L = 20, R = 290, T = 14, B = 98;
-  const vals = readings.map((r) => r.value);
-  const lo = Math.min(...vals, config?.targetRangeMinDkh ?? Math.min(...vals));
-  const hi = Math.max(...vals, config?.targetRangeMaxDkh ?? Math.max(...vals));
-  const span = hi - lo || 1;
-  const pad = span * 0.22;
-  const yMin = lo - pad, yMax = hi + pad;
-  const x = (i) => L + (i / Math.max(1, readings.length - 1)) * (R - L);
-  const y = (v) => B - ((v - yMin) / (yMax - yMin)) * (B - T);
+   present rather than silently missing.
 
-  const g = svg("svg", {
-    class: "chart c-alk",
-    viewBox: `0 0 ${W} ${H}`,
-    role: "img",
-    "aria-label": traceLabel(readings, config),
+   The Today card is where the keeper looks most, and it was the one chart he
+   could not touch. It has the same gestures as every other now. */
+function renderTrace(readings, config, result, def, onOpenEntry) {
+  const range =
+    config?.targetRangeMinDkh != null && config?.targetRangeMaxDkh != null
+      ? { min: config.targetRangeMinDkh, max: config.targetRangeMaxDkh }
+      : null;
+
+  const { node } = interactiveChart({
+    points: readings.map((r) => ({
+      date: r.date,
+      time: r.time || null,
+      value: r.value,
+      eligible: r.eligible,
+      eventId: r.eventId,
+    })),
+    tone: def.tone,
+    /* Both required, and both absent at every V1 call site — the defect the
+       salvage inventory recorded against this component. */
+    label: def.label,
+    unit: def.unit,
+    decimals: def.decimals,
+    range,
+    /* `onOpenEntry` was accepted by this component and used by nothing, so a
+       point on the Today card could not be opened. It can now: a tap says what
+       the reading is, and a second tap on the same point opens it. */
+    onPointTap: onOpenEntry ? (p) => onOpenEntry(p.eventId) : null,
+    ariaLabel: traceLabel(readings, config),
   });
-
-  if (config?.targetRangeMinDkh != null && config?.targetRangeMaxDkh != null) {
-    const yTop = y(config.targetRangeMaxDkh), yBot = y(config.targetRangeMinDkh);
-    g.append(
-      svg("rect", { class: "range-fill", x: L, y: Math.min(yTop, yBot), width: R - L, height: Math.abs(yBot - yTop) }),
-      svg("line", { class: "range-edge", x1: L, y1: yTop, x2: R, y2: yTop }),
-      svg("line", { class: "range-edge", x1: L, y1: yBot, x2: R, y2: yBot }),
-      svg("text", { class: "axis", x: 1, y: yTop + 3.5 }, String(config.targetRangeMaxDkh)),
-      svg("text", { class: "axis", x: 1, y: yBot + 3.5 }, String(config.targetRangeMinDkh))
-    );
-  }
-
-  const d = readings.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(r.value).toFixed(1)}`).join(" ");
-  g.append(svg("path", { class: "trace", d }));
-
-  readings.forEach((r, i) => {
-    g.append(
-      svg("circle", {
-        class: r.eligible ? (i === readings.length - 1 ? "pt-last" : "pt") : "pt-excluded",
-        cx: x(i),
-        cy: y(r.value),
-        r: i === readings.length - 1 ? 4 : 3.4,
-      })
-    );
-  });
-
-  g.append(
-    svg("text", { class: "axis", x: L, y: 112 }, fmtShort(readings[0].date)),
-    svg("text", { class: "axis", x: R, y: 112, "text-anchor": "end" }, fmtShort(readings[readings.length - 1].date))
-  );
 
   const legend = h("div", { class: "legend" });
-  if (config?.targetRangeMinDkh != null) {
+  if (range) {
     legend.append(
       h(
         "span",
         null,
-        h("span", { class: "swatch", style: { background: "var(--alk-bg)" } }),
-        t("assessment.legend.range", {
-          min: config.targetRangeMinDkh,
-          max: config.targetRangeMaxDkh,
-          unit: "dKH",
-        })
+        h("span", { class: "swatch", style: { background: `var(--${def.tone}-bg)` } }),
+        t("assessment.legend.range", { min: range.min, max: range.max, unit: def.unit })
       )
     );
   }
@@ -648,7 +636,7 @@ function renderTrace(readings, config, result) {
       )
     );
   }
-  return h("div", null, g, legend);
+  return h("div", null, node, legend);
 }
 
 function traceLabel(readings, config) {

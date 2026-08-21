@@ -204,6 +204,15 @@
   --chart-event-dash:  3 4;
   --chart-range-alpha: 0.55;
   --chart-range-edge-alpha: 0.25;
+
+  /* --- The interactive chart -----------------------------------------------
+     Ported from V1 `ZoomableChart.jsx`. The hit radius is the one value that
+     is NOT V1's: V1 relied on Recharts' own `activeDot` proximity, and a bare
+     4px SVG circle is far below the ~44px a finger actually needs. The visible
+     dot stays small and a transparent disc behind it takes the tap. */
+  --chart-h:           190px;  /* the plot's own height, before the readout */
+  --chart-hit-r:       14;     /* SVG units — the transparent tap target */
+  --chart-selected-w:  2.5px;
 }
 
 /* ============================================================================

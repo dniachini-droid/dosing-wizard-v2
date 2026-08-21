@@ -50,6 +50,7 @@ const SHELL_FILES = [
   "./src/assess.js",
   "./src/ui/dom.js",
   "./src/ui/format.js",
+  "./src/ui/chart.js",
   "./src/store/index.js",
   "./src/store/db.js",
   "./src/store/time.js",

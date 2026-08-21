@@ -722,6 +722,7 @@ s.test("TM-23", "nothing outside the listed places reads the wall clock", () => 
     "./screens/tasks.js",
     "./screens/settings.js", /* exportedAt, and the export's filename */
     "./main.js",             /* water-change recordedAt written alongside a completion */
+    "./ui/chart.js",         /* the double-tap window — a gesture interval, not a moment in time */
     "./moments/present.js",  /* a DOM id, not a time */
     "./moments/moments.js",  /* ported V1 motion code, carried unchanged */
   ]);
