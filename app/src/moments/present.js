@@ -38,7 +38,7 @@ import { playMoments } from "./moments.js";
 import { daysBetween } from "../store/time.js";
 import { fmtDayName, fmtShort } from "../ui/format.js";
 import { isPresent } from "../present/cards.js";
-import { num, sayReason } from "../present/wording.js";
+import { num, sayReason, signed } from "../present/wording.js";
 import { t } from "../strings.js";
 
 function scrim(onClose) {
@@ -160,15 +160,15 @@ export function momentDoseExpectation({ from, to, snapshot, retest, onClose }) {
 
   const body = h("div", { class: "mbody stagger" });
 
-  if (snapshot && isPresent(snapshot.predictedPostSlopeDkhPerDay)) {
+  if (snapshot && isPresent(snapshot.predictedPostSlope)) {
     body.append(
       h("p", { class: "mhead" }, t("moment.dose.recordedExpect")),
       h(
         "p",
         { class: "body" },
-        t("moment.dose.expectation", { slope: num(snapshot.predictedPostSlopeDkhPerDay, 4) }) +
-          (isPresent(snapshot.expectedValueAtRetestDkh)
-            ? t("moment.dose.expectationValue", { value: num(snapshot.expectedValueAtRetestDkh, 2) })
+        t("moment.dose.expectation", { slope: num(snapshot.predictedPostSlope, 4) }) +
+          (isPresent(snapshot.expectedSlopeChange)
+            ? t("moment.dose.expectationValue", { value: signed(snapshot.expectedSlopeChange, 4) })
             : t("moment.dose.expectationEnd"))
       )
     );

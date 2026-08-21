@@ -132,16 +132,16 @@ export const MUTATIONS = [
     id: "AM-13",
     why: "a re-analysis overwrites the earlier record instead of becoming a new one",
     file: "app/src/store/assessments.js",
-    find: "    const sameAsOf = list.filter((r) => r.asOf === asOf).length;\n    const assessmentId = sameAsOf ? `ASSESS-${asOf}#${sameAsOf}` : `ASSESS-${asOf}`;",
-    replace: "    const assessmentId = `ASSESS-${asOf}`;",
+    find: "    let asOfOrdinal = list.filter((r) => r.asOf === asOf).length;",
+    replace: "    let asOfOrdinal = 0; return { stored: false, record: previous };",
     breaks: ["ASS-03"],
   },
   {
     id: "AM-14",
-    why: "an existing assessment id is silently overwritten rather than refused",
+    why: "an id is assumed free rather than claimed, so a new assessment writes straight over an existing record",
     file: "app/src/store/assessments.js",
-    find: "    if (await backend.get(ASSESSMENTS, rec.assessmentId)) {",
-    replace: "    if (false) {",
+    find: "    for (let tries = 0; (await backend.get(ASSESSMENTS, idFor(asOfOrdinal))) != null; tries += 1) {",
+    replace: "    for (let tries = 0; false; tries += 1) {",
     breaks: ["ASS-04"],
   },
   {
@@ -167,9 +167,9 @@ export const MUTATIONS = [
     why: "V1's shadowing defect, reintroduced: the ordinary dose-change row no longer excludes a safety breach, so two rows match one result",
     file: "app/src/present/cards.js",
     find:
-      '    id: "DOSE_CHANGE",\n    rank: 60,\n    when: (r) =>\n      !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&\n      action(r) === "SET_MAINTENANCE_DOSE" &&',
+      '    id: "DOSE_CHANGE",\n    rank: 60,\n    when: (r) =>\n      !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&\n      !withheld(r) &&\n      action(r) === "SET_MAINTENANCE_DOSE" &&',
     replace:
-      '    id: "DOSE_CHANGE",\n    rank: 60,\n    when: (r) =>\n      true &&\n      action(r) === "SET_MAINTENANCE_DOSE" &&',
+      '    id: "DOSE_CHANGE",\n    rank: 60,\n    when: (r) =>\n      true &&\n      !withheld(r) &&\n      action(r) === "SET_MAINTENANCE_DOSE" &&',
     breaks: ["CARD-02"],
   },
   {
@@ -260,7 +260,11 @@ export const MUTATIONS = [
     why: "a completion is given a fresh identity each time, so ticking twice on one day stacks two",
     file: "app/src/store/schedule.js",
     find: "      const id = `${taskId}|${date}`;",
-    replace: "      const id = `${taskId}|${date}|${completionSeq++}`;",
+    /* Reachable without help from production source. The variable this used to
+       increment was declared in `schedule.js` FOR this mutation and read by
+       nothing else — production code existing to make a test go red, which is
+       the wrong way round. */
+    replace: "      const id = `${taskId}|${date}|${Math.random()}`;",
     breaks: ["SCH-09"],
   },
   {
@@ -323,7 +327,7 @@ export const MUTATIONS = [
     id: "AM-35",
     why: "declining one suggestion silences the engine for every later one too",
     file: "app/src/store/suggestion.js",
-    find: "  if ((declined || []).includes(suggestion.at)) {",
+    find: "  if ((declined || []).includes(suggestionKey(suggestion))) {",
     replace: "  if ((declined || []).length > 0) {",
     breaks: ["SUG-13"],
   },
@@ -408,5 +412,151 @@ export const MUTATIONS = [
     find: '  "assessment.reco.dose": ({ direction, dose }) => `${direction} the dose to ${dose} mL/day`,',
     replace: '  "assessment.reco.dose": ({ direction, dose }) => `${direction} the dose mL/day ${dose}`,',
     breaks: ["STR-08"],
+  },
+  /* ---------------------------------------------------------------------
+     The fixes from the first review pass. Each of these reintroduces a defect
+     a reviewer actually found in this build, so the test that now catches it
+     is proved to be the thing that would have caught it.
+     ------------------------------------------------------------------- */
+  {
+    id: "AM-46",
+    why: "the hold row tests an action the engine never emits, so every hold falls to UNCLASSIFIED and the keeper is told not to act on the card",
+    file: "app/src/present/cards.js",
+    find: '      action(r) === "HOLD_CURRENT_DOSE" &&',
+    replace: '      action(r) === "HOLD" &&',
+    breaks: ["CARD-01", "CARD-08"],
+  },
+  {
+    id: "AM-47",
+    why: "the refusal row keys on the action again, which cannot distinguish a refusal from a hold because both are HOLD_CURRENT_DOSE",
+    file: "app/src/present/cards.js",
+    find: "const withheld = (r) => WITHHELD_STATUSES.includes(maintenanceStatus(r));",
+    replace: 'const withheld = (r) => action(r) === "REFUSE";',
+    breaks: ["CARD-01", "CARD-08"],
+  },
+  {
+    id: "AM-48",
+    why: "a present standing dose is read as an instruction, so a hold tells the keeper to change to the dose they are already on",
+    file: "app/src/present/cards.js",
+    find: '  return action(engineResult) === "SET_MAINTENANCE_DOSE" && isPresent(d?.recommendedDoseMlPerDay);',
+    replace: "  return isPresent(d?.recommendedDoseMlPerDay);",
+    breaks: ["CARD-09"],
+  },
+  {
+    id: "AM-49",
+    why: "a failed storage read reports as an empty tank, so an assessment is computed and stored from no history",
+    file: "app/src/store/db.js",
+    find: '    if (!r.ok) throw new Error(r.reason || t("err.notRead"));\n    return r.value || [];\n  },\n  async all(store) {',
+    replace: "    return r.ok ? r.value || [] : [];\n  },\n  async all(store) {",
+    breaks: ["ASS-12"],
+  },
+  {
+    id: "AM-50",
+    why: "the assessment runs on through a storage failure instead of stopping, and stores what it finds",
+    file: "app/src/assess.js",
+    find: '      state: "STORAGE_UNAVAILABLE",',
+    replace: '      state: "ASSESSED",',
+    breaks: ["ASS-08"],
+  },
+  {
+    id: "AM-51",
+    why: "a replay is handed today's configuration rather than the one the assessment named, so a settings change reads as the engine disagreeing with itself",
+    file: "app/src/store/config.js",
+    find: "    if (cut < 0) return null; /* Named a version this device does not hold. */\n    return h.slice(0, cut + 1)",
+    replace: "    if (cut < 0) return null; /* Named a version this device does not hold. */\n    return h.slice(0)",
+    breaks: ["ASS-09"],
+  },
+  {
+    id: "AM-52",
+    why: "a version the device does not hold is silently replaced by today's settings instead of refusing",
+    file: "app/src/store/config.js",
+    find: "    if (cut < 0) return null; /* Named a version this device does not hold. */",
+    replace: "    if (cut < 0) return h.map(({ schemaVersion, ...rest }) => rest);",
+    breaks: ["ASS-09"],
+  },
+  {
+    id: "AM-53",
+    why: "dedup compares the clock again, so every open of the app writes another stored assessment and the history becomes a launch counter",
+    file: "app/src/store/assessments.js",
+    find: "    if (previous && previous.answerprint === answerprint) {",
+    replace: "    if (previous && previous.fingerprint === fingerprint && previous.asOf === asOf) {",
+    breaks: ["ASS-10"],
+  },
+  {
+    id: "AM-55",
+    why: "records are ordered by their id as text rather than by when they were made",
+    file: "app/src/store/assessments.js",
+    find: "      if (a.asOf !== b.asOf) return a.asOf < b.asOf ? -1 : 1;\n      return (a.asOfOrdinal || 0) - (b.asOfOrdinal || 0);",
+    replace: "      return a.assessmentId < b.assessmentId ? -1 : 1;",
+    breaks: ["ASS-11"],
+  },
+  {
+    id: "AM-56",
+    why: "an accepted offer re-applies on every launch, pushing the keeper's own test further out each time so it never comes due",
+    file: "app/src/store/suggestion.js",
+    find: "  if ((applied || []).includes(suggestionKey(suggestion))) {",
+    replace: "  if (false) {",
+    breaks: ["SUG-17"],
+  },
+  {
+    id: "AM-57",
+    why: "any retest timing counts as an offer again, so a routine cadence tick raises a suggested-test row on every assessment",
+    file: "app/src/store/suggestion.js",
+    find: "  if (!SUGGESTION_REASON_CODES.includes(code)) return null;",
+    replace: "  if (code === null) return null;",
+    breaks: ["SUG-01"],
+  },
+  {
+    id: "AM-58",
+    why: "declining is keyed on the instant again, which is recomputed every run, so 'no thanks' is inert and the stored list grows without bound",
+    file: "app/src/store/suggestion.js",
+    find: "export function suggestionKey(suggestion) {\n  return `${suggestion.parameter}|${suggestion.date}`;",
+    replace: "export function suggestionKey(suggestion) {\n  return suggestion.at;",
+    breaks: ["SUG-13"],
+  },
+  {
+    id: "AM-59",
+    why: "a module drops off the precache list, so an offline open 404s it and the module graph fails to resolve",
+    file: "app/sw.js",
+    find: '  "./src/strings.js",\n',
+    replace: "",
+    breaks: ["SHELL-01"],
+  },
+  {
+    id: "AM-60",
+    why: "an engine value loses its wording and renders to the keeper as an absence instead of as what the engine said",
+    file: "app/src/strings.js",
+    find: '  "evidence.HIGH_CONFIDENCE": "A long clean run to work from",\n',
+    replace: "",
+    breaks: ["STR-06"],
+  },
+  /* NOT A MUTATION, AND WORTH SAYING WHY.
+
+     Four capability labels named a DIFFERENT capability's meaning, and no test
+     can catch that. `STR-06` checks every `M-1`..`M-13` renders as words and
+     is not the catch-all, which a wrong-but-plausible sentence passes. The
+     mapping from a capability id to a plain-English sentence is a translation,
+     and nothing in the repository holds both halves in a form that can be
+     compared automatically.
+
+     So this one is verified by eye against `ALK-V2-DATA-CONTRACT.md:844-856`,
+     and that is recorded in `docs/implementation/app/OPEN-ITEMS.md` rather
+     than papered over with a mutation that no test would catch.
+     ------------------------------------------------------------------- */
+  {
+    id: "AM-62",
+    why: "a dose event is allowed to omit how sure it is of its effective time, and the app asserts EXACT on the keeper's behalf",
+    file: "app/src/store/ledger.js",
+    find: '    if (c !== "EXACT" && c !== "UNCERTAIN") {',
+    replace: "    if (false) {",
+    breaks: ["LED-08"],
+  },
+  {
+    id: "AM-63",
+    why: "assessment writes stop being serialised, so two started in the same second collide on one id and one silently overwrites the other",
+    file: "app/src/store/assessments.js",
+    find: "    const run = writeQueue.then(fn, fn);",
+    replace: "    const run = Promise.resolve().then(fn);",
+    breaks: ["ASS-13"],
   },
 ];

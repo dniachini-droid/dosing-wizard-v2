@@ -124,7 +124,10 @@ await step("logs a series and the engine answers", async () => {
     const s = createStore();
     await s.ledger.append({
       kind: KIND.DOSE_STATE, time: exactInstant("2026-07-01", "09:00", 600), recordedAt: new Date().toISOString(),
-      detail: { doseMlPerDay: 9.0 },
+      /* Stated, not defaulted. `makeEvent` refuses a dose event that does not
+         say how sure it is of its effective time, so this seed says it the way
+         the dose-state form does. */
+      detail: { doseMlPerDay: 9.0, effectiveAtConfidence: "EXACT" },
     });
     const days = [["2026-08-12", 9.02], ["2026-08-14", 8.94], ["2026-08-16", 8.86], ["2026-08-18", 8.78]];
     for (const [d, v] of days) {
@@ -194,24 +197,54 @@ await step("Today names the date-only reading in plain words", async () => {
 });
 
 console.log("\nThe suggested test");
-await step("the suggestion offers replace or add, and names no other date", async () => {
-  await page.click("#tabbar .tab:has-text('Today')");
-  await page.waitForTimeout(800);
-  const txt = await page.innerText("#app");
-  if (!/suggests testing|Test alkalinity on/i.test(txt)) {
-    /* No dose change in this fixture, so the engine may not be suggesting.
-       Drive the prompt directly instead of asserting it is on screen. */
+/* A SUGGESTED TEST ONLY EXISTS AFTER A DOSE CHANGE.
+
+   `TASKS-AND-SCHEDULING.md:47` scopes it there, so these steps have to walk
+   the path a keeper actually walks: record the change, reassess, and take the
+   offer the engine then makes. This used to drive the sheet from a routine
+   cadence tick, which is not an offer and never was — the app raised one on
+   every assessment, and this smoke test agreed with it. */
+await step("a dose change produces a post-change retest, which IS an offer", async () => {
+  const made = await page.evaluate(async () => {
+    const { createStore } = await import("/app/src/store/index.js");
+    const { exactInstant, todayLocal, addDays } = await import("/app/src/store/time.js");
+    const { KIND } = await import("/app/src/store/ledger.js");
+    const { runAssessment, nowAsOf } = await import("/app/src/assess.js");
+    const { suggestionFrom } = await import("/app/src/store/suggestion.js");
+    const s = createStore();
+    const changedOn = addDays(todayLocal(), -1);
+    await s.ledger.append({
+      kind: KIND.DOSE_CHANGE,
+      time: exactInstant(changedOn, "09:00", new Date().getTimezoneOffset() * -1),
+      recordedAt: new Date().toISOString(),
+      detail: { fromMlPerDay: 9.0, toMlPerDay: 9.4, effectiveAtConfidence: "EXACT" },
+    });
+    const res = await runAssessment(s, nowAsOf());
+    const sug = suggestionFrom(res.engineResult);
+    return {
+      state: res.state,
+      code: res.engineResult?.retest?.selectedReasonCode ?? null,
+      has: !!sug,
+      date: sug?.date ?? null,
+    };
+  });
+  if (made.state !== "ASSESSED") throw new Error("the assessment did not run: " + made.state);
+  if (!made.has) {
+    throw new Error(`no offer after a dose change; the retest said ${made.code}`);
   }
+});
+
+await step("the suggestion offers replace or add, and names no other date", async () => {
   const shown = await page.evaluate(async () => {
-    const { suggestionFrom, resolve, PREFERENCE, SUGGESTION_STATE } =
-      await import("/app/src/store/suggestion.js");
+    const { suggestionFrom, resolve, PREFERENCE } = await import("/app/src/store/suggestion.js");
     const { createStore } = await import("/app/src/store/index.js");
     const s = createStore();
     const rec = await s.assessments.latest();
     const sug = suggestionFrom(rec.engineResult);
     const r = resolve({
       suggestion: sug, tasks: await s.tasks.tasks(), completions: await s.tasks.completions(),
-      today: new Date().toISOString().slice(0, 10), preference: PREFERENCE.ASK, declined: [], extras: [],
+      today: new Date().toISOString().slice(0, 10), preference: PREFERENCE.ASK,
+      declined: [], extras: [], applied: [],
     });
     return { has: !!sug, state: r.state };
   });
@@ -219,6 +252,18 @@ await step("the suggestion offers replace or add, and names no other date", asyn
   if (shown.state !== "ASK" && shown.state !== "ALREADY_SCHEDULED") {
     throw new Error("unexpected state " + shown.state);
   }
+});
+
+await step("a ROUTINE cadence is not offered as a suggested test", async () => {
+  /* The other half of the same rule, and the one that was wrong: a routine
+     tick must produce NO offer at all. */
+  const none = await page.evaluate(async () => {
+    const { suggestionFrom } = await import("/app/src/store/suggestion.js");
+    return suggestionFrom({
+      retest: { recommendedAt: "2026-09-01T09:00:00Z", selectedReasonCode: "RETEST_ROUTINE_CADENCE" },
+    });
+  });
+  if (none !== null) throw new Error("a routine cadence was offered as a suggestion");
 });
 
 await step("the prompt renders with both options and the why link", async () => {
@@ -231,8 +276,10 @@ await step("the prompt renders with both options and the why link", async () => 
     const sug = suggestionFrom(rec.engineResult);
     const r = resolve({
       suggestion: sug, tasks: [], completions: [],
-      today: new Date().toISOString().slice(0, 10), preference: PREFERENCE.ASK, declined: [], extras: [],
+      today: new Date().toISOString().slice(0, 10), preference: PREFERENCE.ASK,
+      declined: [], extras: [], applied: [],
     });
+    if (!r.suggestion) throw new Error("no suggestion to render a prompt for");
     window.__ctx = { store: s, state: { assessment: { engineResult: rec.engineResult } }, refresh() {} };
     openSuggestionSheet(window.__ctx, r);
   });

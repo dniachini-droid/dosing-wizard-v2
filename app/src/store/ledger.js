@@ -153,6 +153,30 @@ export function makeEvent({
   if (!time || !time.timeProvenance) throw new Error(t("err.eventNeedsTime"));
   if (!recordedAt) throw new Error(t("err.eventNeedsRecordedAt"));
 
+  /* A dose event must SAY how sure it is of when it took effect.
+
+     `ALK-V2-DATA-CONTRACT.md:250` marks `effectiveAtConfidence` `REQ`, and it
+     matters: `UNCERTAIN` confounds every straddling interval (`M-5`), which is
+     the difference between a response the engine will attribute and one it
+     will not. `toEngineEvents` used to supply `|| "EXACT"` for an absent
+     value, which asserts certainty the keeper never expressed — the same class
+     of defect as giving a date-only reading a midnight timestamp.
+
+     The fix is not a better default. It is that there is no default: the
+     caller states it, and an event that does not is refused here rather than
+     silently improved on the way out. */
+  if (kind === KIND.DOSE_STATE || kind === KIND.DOSE_CHANGE) {
+    const c = detail.effectiveAtConfidence;
+    if (c !== "EXACT" && c !== "UNCERTAIN") {
+      throw new Error(t("err.doseNeedsConfidence", { kind }));
+    }
+    if (c === "UNCERTAIN" && !(detail.effectiveAtEarliest && detail.effectiveAtLatest)) {
+      /* `REQ*` at contract line 251: UNCERTAIN without bounds gives the engine
+         nothing to resume a clean segment after. */
+      throw new Error(t("err.uncertainNeedsBounds"));
+    }
+  }
+
   const recordedMs = Date.parse(recordedAt);
   if (!Number.isFinite(recordedMs)) throw new Error(t("err.recordedAtNotInstant"));
 
@@ -352,6 +376,11 @@ export function toEngineEvents(projected) {
     if (e.kind === KIND.READING && e.parameter === "ALK") {
       out.push({
         kind: "READING",
+        /* The event id travels with the event. Without it the engine's own
+           problem reports name the reading as `UNKNOWN` (`ledger.py:177`),
+           which tells the keeper that ONE of their readings could not be used
+           and not which one. */
+        eventId: e.eventId,
         measuredAt: at || e.time.localDate,
         rawValueDkh: e.normalizedValue,
         timeProvenance: e.time.timeProvenance,
@@ -361,7 +390,7 @@ export function toEngineEvents(projected) {
         kind: "DOSE_STATE",
         programmedDoseMlPerDay: e.detail.doseMlPerDay,
         effectiveAt: eff,
-        effectiveAtConfidence: e.detail.effectiveAtConfidence || "EXACT",
+        effectiveAtConfidence: e.detail.effectiveAtConfidence,
       });
     } else if (e.kind === KIND.DOSE_CHANGE) {
       const ev = {
@@ -369,7 +398,7 @@ export function toEngineEvents(projected) {
         effectiveAt: eff,
         from: e.detail.fromMlPerDay,
         to: e.detail.toMlPerDay,
-        effectiveAtConfidence: e.detail.effectiveAtConfidence || "EXACT",
+        effectiveAtConfidence: e.detail.effectiveAtConfidence,
       };
       if (ev.effectiveAtConfidence === "UNCERTAIN") {
         ev.effectiveAtEarliest = e.detail.effectiveAtEarliest;

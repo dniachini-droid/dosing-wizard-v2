@@ -19,12 +19,12 @@
 
 import { h, svg } from "../ui/dom.js";
 import { fmtShort, fmtTimeOfDay, fmtDayName } from "../ui/format.js";
-import { selectCard, isAbsent, isPresent } from "../present/cards.js";
+import { instructsDoseChange, selectCard, isAbsent, isPresent } from "../present/cards.js";
 import {
   num,
   signed,
   sayAbsent,
-  sayAction,
+  sayVerb,
   sayCapability,
   sayConstraint,
   sayEvidence,
@@ -265,7 +265,9 @@ function renderRecommendation(r, card) {
   const cls = card === "SAFETY_RETURN" ? "reco is-safety" : card === "UNCLASSIFIED" ? "reco is-attention" : "reco";
   const box = h("div", { class: cls });
 
-  box.append(h("p", { class: "verb" }, d.action ? sayAction(d.action) : t("assessment.reco.none")));
+  box.append(
+    h("p", { class: "verb" }, d.action || card ? sayVerb(card, d.action) : t("assessment.reco.none"))
+  );
 
   if (card === "UNCLASSIFIED") {
     box.append(
@@ -294,7 +296,12 @@ function renderRecommendation(r, card) {
   const recommended = d.recommendedDoseMlPerDay;
   const current = d.currentDoseMlPerDay;
 
-  if (isPresent(recommended)) {
+  /* The same rule as Today's ranked row, for the same reason: a present
+     `recommendedDoseMlPerDay` on a hold is the standing dose, not a command.
+     Only `SET_MAINTENANCE_DOSE` instructs a change. */
+  const instructsChange = instructsDoseChange(r);
+
+  if (instructsChange) {
     const delta = d.deltaDoseMlPerDay;
     const direction = isPresent(delta)
       ? delta > 0
@@ -317,13 +324,19 @@ function renderRecommendation(r, card) {
           : ""
       )
     );
-  } else if (d.action === "HOLD") {
+  } else if (d.action === "HOLD_CURRENT_DOSE" && isPresent(recommended)) {
+    /* A hold IS a recommendation — the engine emits
+       `OUTPUT_HOLD_IS_A_RECOMMENDATION` to say so — and the dose it is holding
+       at is the substance of it. A capability refusal takes the same action
+       but withholds the dose, so it falls through to the branch below and is
+       named as a refusal rather than dressed as a hold. */
+    const holdingAt = isPresent(current) ? current : recommended;
     box.append(
       h("p", { class: "headline" }, t("assessment.reco.hold.head")),
       h(
         "p",
         { class: "detail" },
-        isPresent(current) ? t("assessment.reco.hold.staying", { dose: num(current, 1) }) : "",
+        t("assessment.reco.hold.staying", { dose: num(holdingAt, 1) }),
         t("assessment.reco.hold.body")
       )
     );

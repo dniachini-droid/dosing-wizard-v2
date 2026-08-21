@@ -66,13 +66,37 @@ export const PREFERENCE = Object.freeze({
 const PREFERENCE_KEY = "suggestedTestPreference";
 const DECLINED_KEY = "declinedSuggestions";
 const EXTRAS_KEY = "extraTests";
+const APPLIED_KEY = "appliedSuggestions";
 
 /* --- reading the engine's suggestion ------------------------------------
    The suggestion IS the engine's retest output. Nothing here decides a date. */
+/* WHICH RETEST TIMINGS ARE AN OFFER, AND WHICH ARE JUST THE CADENCE
+   -----------------------------------------------------------------
+   `TASKS-AND-SCHEDULING.md:47` scopes this precisely: "Separately, AFTER A
+   DOSE CHANGE the engine works out when a test would be informative and offers
+   it."
+
+   `retest.recommendedAt` is present on virtually every assessment, because
+   `ROUTINE_CADENCE` is a standing candidate in the engine's list
+   (`retest.py:58`). Treating any recommendedAt as an offer therefore raised a
+   "suggested test" row on every single assessment — including one that said
+   nothing more than "your usual gap between tests is two days", which is not
+   an offer and is not news.
+
+   These are the codes that mean a dose change is being observed. Listed as
+   data, from `retest.py:66-67`, so a code added later shows up as a suggestion
+   that is NOT raised, rather than silently widening what counts as one. */
+export const SUGGESTION_REASON_CODES = Object.freeze([
+  "RETEST_POST_CHANGE_FIRST",
+  "RETEST_POST_CHANGE_SECOND",
+]);
+
 export function suggestionFrom(engineResult) {
   const rt = engineResult?.retest;
   const at = rt?.recommendedAt;
   if (typeof at !== "string") return null;
+  const code = rt.selectedReasonCode || rt.reasonCode || null;
+  if (!SUGGESTION_REASON_CODES.includes(code)) return null;
   /* A refusal is not a suggestion. Testing for a "T" is not enough — the
      contract's own `NOT_RUN` contains one, which is exactly the kind of thing
      a shape test catches and a substring test does not. */
@@ -98,12 +122,30 @@ export const SUGGESTION_STATE = Object.freeze({
   DECLINED: "DECLINED",
 });
 
-export function resolve({ suggestion, tasks, completions, today, preference, declined, extras }) {
+export function resolve({ suggestion, tasks, completions, today, preference, declined, extras, applied }) {
   if (!suggestion) return { state: SUGGESTION_STATE.NONE };
   const day = today || todayLocal();
 
-  if ((declined || []).includes(suggestion.at)) {
+  if ((declined || []).includes(suggestionKey(suggestion))) {
     return { state: SUGGESTION_STATE.DECLINED, suggestion };
+  }
+
+  /* ONCE PER SUGGESTION, NOT ONCE PER RENDER.
+
+     A stored preference used to re-apply on every reassessment, and
+     `applyReplace` ADDS its shift to whatever shift is already on the task
+     (`adjustDays: (alkTask.adjustDays || 0) + shift`). So each time the keeper
+     opened the app, their own alkalinity test moved further out — and because
+     the engine recomputes the suggested instant from the current `asOf`, it
+     moved again the next time too. A test that is nudged forward on every
+     launch never comes due.
+
+     `TASKS-AND-SCHEDULING.md:107-110` lists "the engine silently moving a
+     keeper's scheduled test" first under WHAT THIS RULES OUT, and the honest
+     reading is that applying an accepted offer ONCE is what the keeper asked
+     for; applying it repeatedly is the thing that was ruled out. */
+  if ((applied || []).includes(suggestionKey(suggestion))) {
+    return { state: SUGGESTION_STATE.ALREADY_SCHEDULED, suggestion, appliedEarlier: true };
   }
 
   const alkTask = (tasks || []).find(
@@ -191,15 +233,47 @@ export async function applyAddExtra(store, { suggestion }) {
   return { applied: PREFERENCE.ADD_EXTRA, date: suggestion.date };
 }
 
+/* WHY THE DECLINED LIST IS NOT KEYED ON THE INSTANT
+   -------------------------------------------------
+   `retest.render()` computes `recommendedAt` as `asOf + selectedHours`
+   (`retest.py:288`), and `asOf` is a fresh instant on every assessment. So the
+   instant moves every time the app is opened, and a declined list keyed on it
+   never matched again: "No thanks" did nothing, and the stored list grew by an
+   entry per decline forever.
+
+   The DAY is what the keeper was actually offered and what they actually
+   declined. If the engine later proposes a different day, that is a new offer
+   and it is right to ask again. */
+export function suggestionKey(suggestion) {
+  return `${suggestion.parameter}|${suggestion.date}`;
+}
+
 export async function decline(store, suggestion) {
+  const key = suggestionKey(suggestion);
   const declined = (await store.kvGet(DECLINED_KEY)) || [];
-  if (!declined.includes(suggestion.at)) declined.push(suggestion.at);
-  await store.kvSet(DECLINED_KEY, declined);
-  return { declined: suggestion.at };
+  if (!declined.includes(key)) declined.push(key);
+  /* Bounded. A declined day in the past can never be offered again, so keeping
+     it is only growth. */
+  const cutoff = addDays(todayLocal(), -APP_ASK_EXPIRY_DAYS);
+  const live = declined.filter((k) => String(k).slice(-10) >= cutoff);
+  await store.kvSet(DECLINED_KEY, live);
+  return { declined: key };
 }
 
 async function recordAccepted(store, suggestion, how) {
   await store.kvSet("lastAcceptedSuggestion", { at: suggestion.at, how, on: new Date().toISOString() });
+  const key = suggestionKey(suggestion);
+  const applied = await readApplied(store);
+  if (!applied.includes(key)) {
+    applied.push(key);
+    const cutoff = addDays(todayLocal(), -APP_ASK_EXPIRY_DAYS);
+    await store.kvSet(APPLIED_KEY, applied.filter((k) => String(k).slice(-10) >= cutoff));
+  }
+}
+
+export async function readApplied(store) {
+  const list = await store.kvGet(APPLIED_KEY);
+  return Array.isArray(list) ? [...list] : [];
 }
 
 /* --- the preference ------------------------------------------------------

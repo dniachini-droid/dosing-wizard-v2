@@ -28,6 +28,7 @@ import { createStore } from "./store/index.js";
 import { runAssessment, nowAsOf } from "./assess.js";
 import { onEngineState, warmUp, ENGINE_STATE } from "./engine/client.js";
 import { todayLocal } from "./store/time.js";
+import { isPresent } from "./present/cards.js";
 import { KIND } from "./store/ledger.js";
 import { taskState } from "./store/schedule.js";
 import {
@@ -37,6 +38,7 @@ import {
   applyReplace,
   decline as declineSuggestion,
   readExtras,
+  readApplied,
   readPreference,
   resolve as resolveSuggestion,
   suggestionFrom,
@@ -177,7 +179,7 @@ const ctx = {
     momentIcpArrival({ count, onClose: () => ctx.go("testlab") });
   },
 
-  async completeTask(task, time, volume) {
+  async completeTask(task, time, volume, replacementAlkalinityDkh = null) {
     await store.tasks.complete({
       taskId: task.id,
       date: time.localDate,
@@ -190,11 +192,20 @@ const ctx = {
       const config = await store.config.current();
       const fraction = config?.netVolumeL ? Number(volume) / config.netVolumeL : null;
       if (fraction) {
+        const detail = { changedFraction: fraction, volumeL: Number(volume) };
+        if (replacementAlkalinityDkh != null) {
+          /* Same fields and same confidence value as the manual water-change
+             form. Recorded only when the keeper actually measured it — absent
+             stays absent, and the engine takes its own unknown-replacement
+             branch, which is the correct answer to "we do not know". */
+          detail.replacementAlkalinityDkh = replacementAlkalinityDkh;
+          detail.replacementAlkalinityConfidence = "MEASURED_SAME_BATCH";
+        }
         await store.ledger.append({
           kind: KIND.WATER_CHANGE,
           time,
           recordedAt: new Date().toISOString(),
-          detail: { changedFraction: fraction, volumeL: Number(volume) },
+          detail,
         });
       }
     }
@@ -204,7 +215,11 @@ const ctx = {
   async confirmDose(detail, answer) {
     if (answer === "UNKNOWN") return;
     if (answer === "NOT_MADE") {
-      await store.kvSet("declinedDose", detail.recommendedDoseMlPerDay);
+      /* Recorded against the ask that was asked, so the row goes away and
+         stays away. This used to write `declinedDose`, which nothing read: the
+         keeper answered "no" and was asked again on the next launch. */
+      await rememberDoseAsk(detail.recommendedDoseMlPerDay, { declined: true });
+      state.doseAsks = await store.kvGet("doseAsks");
       ctx.refresh();
       return;
     }
@@ -234,6 +249,17 @@ const ctx = {
 
 /* --- assessment ---------------------------------------------------------- */
 
+/* The app's memory of a dose-confirmation ask: the day it was first raised,
+   and whether it has been declined. Persisted, because an ask that only exists
+   for the lifetime of one render can neither expire nor be answered. */
+async function rememberDoseAsk(dose, patch) {
+  const asks = (await store.kvGet("doseAsks")) || {};
+  const key = String(dose);
+  asks[key] = { raisedOn: todayLocal(), ...asks[key], ...patch };
+  await store.kvSet("doseAsks", asks);
+  return asks;
+}
+
 let assessing = null;
 
 async function reassess() {
@@ -244,6 +270,15 @@ async function reassess() {
       state.assessment = res.state === "ASSESSED" ? res : null;
       state.suggestion = null;
 
+      if (res.state === "STORAGE_UNAVAILABLE") {
+        /* Named as what it is. Telling the keeper the engine failed when what
+           failed was reading their records sends them looking in the wrong
+           place, and showing them an empty tank would be a lie. */
+        state.storage = { ok: false, reason: res.error };
+        return;
+      }
+      state.storage = { ok: true, reason: null };
+
       const [tasks, completions, extras, preference, declined] = await Promise.all([
         store.tasks.tasks(),
         store.tasks.completions(),
@@ -252,6 +287,22 @@ async function reassess() {
         store.kvGet("declinedSuggestions"),
       ]);
       state.extras = extras;
+      state.doseAsks = (await store.kvGet("doseAsks")) || {};
+
+      /* Stamp the day an ask was FIRST raised, here rather than in a render.
+         `rememberDoseAsk` keeps an existing `raisedOn`, so this is idempotent:
+         the first launch that sees a recommendation sets the clock, and every
+         launch after it leaves the clock alone. That is what lets the ask
+         expire. */
+      const rec = state.assessment?.engineResult?.doseRecommendation;
+      if (
+        rec &&
+        isPresent(rec.recommendedDoseMlPerDay) &&
+        isPresent(rec.deltaDoseMlPerDay) &&
+        rec.deltaDoseMlPerDay !== 0
+      ) {
+        state.doseAsks = await rememberDoseAsk(rec.recommendedDoseMlPerDay, {});
+      }
       state.suggestionPreference = preference;
       state.declinedSuggestions = Array.isArray(declined) ? declined : [];
 
@@ -265,6 +316,7 @@ async function reassess() {
           preference,
           declined: state.declinedSuggestions,
           extras,
+          applied: await readApplied(store),
         });
 
         /* A stored preference applies itself. The keeper asked for that in so

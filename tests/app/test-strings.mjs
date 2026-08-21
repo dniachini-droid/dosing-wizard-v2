@@ -165,24 +165,73 @@ s.test("STR-05", "every declined state renders as words, with a reason", () => {
   ok(sayAbsent("SOMETHING_NEW").length > 0, "an unknown declined state still says something");
 });
 
+/* THE CLOSED VOCABULARIES, READ FROM THE CONTRACT RATHER THAN RETYPED.
+
+   This test used to carry hand-written value lists, and they were wrong in the
+   same way the code was wrong: `HOLD` where the contract says
+   `HOLD_CURRENT_DOSE`, `REFUSE` which is not a `RecommendationAction` at all,
+   and the reason-code spellings `PROVISIONAL_TWO_POINT` and `CONFOUNDED_HARD`
+   in place of the `MovementEvidence` values `PROVISIONAL` and `CONFOUNDED`.
+   A test written from the same misreading as the code confirms the misreading.
+
+   So the values are parsed out of `ALK-V2-DATA-CONTRACT.md`, which is where
+   they are declared. A value added to the contract now arrives here on its own
+   and fails until somebody writes the sentence. */
+function closedVocabulary(name) {
+  const md = fs.readFileSync(
+    path.join(ROOT, "docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md"),
+    "utf8"
+  );
+  /* Two spellings in the document: a `###` heading with the values beneath,
+     and an inline "`X` closed vocabulary: ..." run-on. Both are matched, and
+     finding neither is a failure rather than an empty list — an empty list
+     would make this test pass by checking nothing. */
+  const heading = new RegExp("### \`" + name + "\` — closed vocabulary\\s*\\n+([^#]+)");
+  const inline = new RegExp("\`" + name + "\`[^\\n]*closed vocabulary[^:]*:([\\s\\S]*?)\\n\\n");
+  const m = md.match(heading) || md.match(inline);
+  ok(m != null, `the contract declares a closed vocabulary for ${name}`);
+  const values = [...m[1].matchAll(/\`([A-Z][A-Z0-9_]*)\`/g)].map((x) => x[1]);
+  ok(values.length > 1, `${name} has values: ${values.join(", ")}`);
+  return values;
+}
+
 s.test("STR-06", "every engine enum the interface renders has a word for every value", () => {
   const cases = [
-    [sayPosition, ["IN_RANGE", "BELOW_RANGE", "ABOVE_RANGE", "UNKNOWN", "NOT_RUN"]],
-    [sayTrajectory, ["RISING", "FALLING", "STABLE", "UNCERTAIN", "NOT_RUN"]],
-    [sayEvidence, ["SUFFICIENT", "INSUFFICIENT", "PROVISIONAL_TWO_POINT", "CONFOUNDED_HARD", "ANOMALOUS", "UNCERTAINTY_LIMITED", "NOT_RUN"]],
+    [sayEvidence, closedVocabulary("MovementEvidence")],
+    [sayTrajectory, closedVocabulary("Trajectory")],
+    [sayPosition, closedVocabulary("Position")],
+    [sayAction, closedVocabulary("RecommendationAction")],
+    /* Not declared with the same phrase in the document, so these stay as
+       lists — and they are the ones to move next if the contract grows a
+       heading for them. */
     [sayOuter, ["WITHIN_BOUNDS", "BREACHED_LOW", "BREACHED_HIGH", "NOT_RUN", "UNKNOWN"]],
     [sayResponseClass, ["RESPONDING_AS_PREDICTED", "RESPONDING_MORE_THAN_PREDICTED", "RESPONDING_LESS_THAN_PREDICTED", "NO_DETECTABLE_RESPONSE", "NOT_ATTRIBUTABLE_SMALL_SIGNAL", "CONFOUNDED", "NOT_RUN", "NONE"]],
-    [sayAction, ["SET_MAINTENANCE_DOSE", "HOLD", "INSUFFICIENT_DATA", "REFUSE", "NOT_RUN"]],
   ];
   for (const [fn, values] of cases) {
     for (const v of values) {
       const said = fn(v);
       ok(said.length > 0, `${v} says something`);
       ok(!CONTRACT_SHAPED.test(said), `${v} does not render as its own identifier: "${said}"`);
+      ok(
+        !/^\u27e8missing string/.test(said),
+        `${v} has a sentence, rather than the missing-string marker: "${said}"`
+      );
+      /* The one that mattered: an engine value rendering as an ABSENCE. The
+         keeper's best evidence state used to read "Not recorded". */
+      ok(
+        said !== t("absent.notRecorded"),
+        `${v} is a value the engine stated, not an absence: "${said}"`
+      );
     }
   }
-  for (const id of ["M-1", "M-5", "M-11", "M-13"]) {
-    ok(!CONTRACT_SHAPED.test(sayCapability(id)), `${id} renders as words`);
+  /* Every capability the contract names, not a sample of four. Three of these
+     were labelled with a DIFFERENT capability's meaning, which the old
+     four-item spot check could not see. */
+  for (let i = 1; i <= 13; i += 1) {
+    const id = `M-${i}`;
+    const said = sayCapability(id);
+    ok(!CONTRACT_SHAPED.test(said), `${id} renders as words`);
+    ok(said !== t("capability.other"), `${id} has its own label rather than the catch-all`);
   }
   for (const c of ["ACTUATOR_ROUNDING", "RATE_RAIL", "LIQUID_GUARD"]) {
     ok(!CONTRACT_SHAPED.test(sayConstraint(c)), `${c} renders as words`);

@@ -13,7 +13,7 @@
 import { suite, eq, ok, deepEq, throws } from "./harness.mjs";
 import { createMemoryStore } from "../../app/src/store/index.js";
 import { EVENTS } from "../../app/src/store/db.js";
-import { ANNOTATION, KIND, sortLedger, toEngineEvents } from "../../app/src/store/ledger.js";
+import { ANNOTATION, KIND, makeEvent, sortLedger, toEngineEvents } from "../../app/src/store/ledger.js";
 import { dateOnly, exactInstant, PROVENANCE, assertProvenanceNotImproved } from "../../app/src/store/time.js";
 
 const s = suite("the event ledger");
@@ -330,5 +330,64 @@ s.test(
     );
   }
 );
+
+s.test("LED-08", "a dose event must say how sure it is of when it took effect", async () => {
+  /* `effectiveAtConfidence` is `REQ` (`ALK-V2-DATA-CONTRACT.md:250`) and it
+     decides something real: `UNCERTAIN` confounds every straddling interval
+     (`M-5`), which is the difference between a response the engine will
+     attribute and one it will not.
+
+     `toEngineEvents` used to supply `|| "EXACT"` when it was absent — the app
+     asserting certainty the keeper never expressed, which is the same class of
+     defect as giving a date-only reading a midnight timestamp. The fix is not
+     a better default: it is that an event without it cannot be made. */
+  const time = dateOnly("2026-08-20");
+  const recordedAt = "2026-08-20T09:00:00Z";
+
+  for (const kind of [KIND.DOSE_STATE, KIND.DOSE_CHANGE]) {
+    await throws(
+      () => makeEvent({ kind, time, recordedAt, ordinal: 0, detail: { doseMlPerDay: 12 } }),
+      "exact or uncertain",
+      `a ${kind} with no confidence is refused rather than defaulted`
+    );
+    await throws(
+      () => makeEvent({ kind, time, recordedAt, ordinal: 0, detail: { effectiveAtConfidence: "PROBABLY" } }),
+      "exact or uncertain",
+      `a ${kind} with a confidence outside the contract's two values is refused`
+    );
+    /* UNCERTAIN without its bounds gives the engine nothing to resume a clean
+       stretch of history after (`REQ*`, contract line 251). */
+    await throws(
+      () => makeEvent({ kind, time, recordedAt, ordinal: 0, detail: { effectiveAtConfidence: "UNCERTAIN" } }),
+      "earliest and a latest",
+      `a ${kind} that is UNCERTAIN without bounds is refused`
+    );
+
+    const ok1 = makeEvent({
+      kind, time, recordedAt, ordinal: 0,
+      detail: { doseMlPerDay: 12, effectiveAtConfidence: "EXACT" },
+    });
+    eq(ok1.detail.effectiveAtConfidence, "EXACT", `an explicit EXACT ${kind} is accepted`);
+
+    const ok2 = makeEvent({
+      kind, time, recordedAt, ordinal: 0,
+      detail: {
+        doseMlPerDay: 12,
+        effectiveAtConfidence: "UNCERTAIN",
+        effectiveAtEarliest: "2026-08-18T00:00:00Z",
+        effectiveAtLatest: "2026-08-20T00:00:00Z",
+      },
+    });
+    eq(ok2.detail.effectiveAtConfidence, "UNCERTAIN", `a bounded UNCERTAIN ${kind} is accepted`);
+  }
+
+  /* And the rule applies only where the contract puts it: a reading has no
+     effective-time confidence and must not be asked for one. */
+  const reading = makeEvent({
+    kind: KIND.READING, parameter: "ALK", normalizedValue: 8.4,
+    time, recordedAt, ordinal: 0,
+  });
+  eq(reading.kind, KIND.READING, "a reading is unaffected");
+});
 
 export default s;

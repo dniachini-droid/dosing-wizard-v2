@@ -28,11 +28,32 @@ export function nowAsOf() {
    `store` is the wired store; `asOf` is required. The caller decides when an
    assessment happens — this function never decides for itself. */
 export async function runAssessment(store, asOf) {
-  const [projected, configurationHistory, versions] = await Promise.all([
-    store.ledger.projection(),
-    store.config.forEngine(),
-    describe(),
-  ]);
+  /* READ THE RECORD FIRST, AND BELIEVE A FAILURE.
+
+     If the ledger cannot be read, there is no assessment to make. The one
+     thing that must not happen is the one that used to: a failed read
+     returning an empty list, the engine being asked what it makes of a tank
+     with no history, and the answer being STORED — a stamped, permanent,
+     false entry in the keeper's own record.
+
+     So a storage failure is its own state. It is not an engine failure and it
+     is not an empty tank, and nothing below this point runs. */
+  let projected, configurationHistory, versions;
+  try {
+    [projected, configurationHistory, versions] = await Promise.all([
+      store.ledger.projection(),
+      store.config.forEngine(),
+      describe(),
+    ]);
+  } catch (e) {
+    return {
+      state: "STORAGE_UNAVAILABLE",
+      engineResult: null,
+      record: null,
+      asOf,
+      error: e && e.message,
+    };
+  }
 
   if (!configurationHistory.length) {
     /* No configuration means the engine has nothing to resolve against. This
@@ -78,30 +99,61 @@ export async function replay(store, assessmentId) {
   const rec = await store.assessments.byId(assessmentId);
   if (!rec) return { state: "NOT_FOUND" };
 
-  const [projected, configurationHistory, versions] = await Promise.all([
+  const [projected, versions, configThen] = await Promise.all([
     store.ledger.projection(),
-    store.config.forEngine(),
     describe(),
+    /* The configuration the assessment NAMED, not the one in force today.
+       Canon §64's third condition. */
+    store.config.forEngineUpTo(rec.configVersionId),
   ]);
 
-  const keep = new Set(rec.inputEventIds);
-  const events = toEngineEvents(projected.filter((r) => keep.has(r.event.eventId)));
-  const engineResult = await callEngine({ events, configurationHistory, asOf: rec.asOf });
+  if (!configThen) {
+    /* The assessment names a configuration version this device does not hold.
+       That is a real answer — "this cannot be replayed here" — and it is not
+       the same as "the engine now disagrees". Replaying against today's
+       configuration instead would produce a difference and blame it on the
+       engine. */
+    return { state: "CONFIGURATION_UNAVAILABLE", record: rec, configVersionId: rec.configVersionId };
+  }
 
-  const sameVersions =
-    versions.engineVersion === rec.engineVersion && versions.canonVersion === rec.canonVersion;
+  const keep = new Set(rec.inputEventIds);
+  const kept = projected.filter((r) => keep.has(r.event.eventId));
+  const events = toEngineEvents(kept);
+  const engineResult = await callEngine({
+    events,
+    configurationHistory: configThen,
+    asOf: rec.asOf,
+  });
+
+  const sameEngineVersion = versions.engineVersion === rec.engineVersion;
+  const sameCanonVersion = versions.canonVersion === rec.canonVersion;
 
   return {
     state: "REPLAYED",
     record: rec,
     engineResult,
     identical: JSON.stringify(engineResult) === rec.fingerprint,
-    sameVersions,
+    /* Reported as three separate conditions rather than one boolean, so a
+       divergence names its own cause instead of being folded into "differs".
+       An engine upgrade, a canon reissue and a settings change are three
+       different explanations and the keeper is owed the right one. */
+    sameEngineVersion,
+    sameCanonVersion,
+    sameVersions: sameEngineVersion && sameCanonVersion,
+    replayedAgainstConfigVersionId: rec.configVersionId,
     versionsNow: versions,
-    /* How many of the named input events are still findable. An edit does not
-       remove an event — nothing does — but a superseded one drops out of the
-       current view, and that is exactly the case worth naming. */
-    inputEventsStillPresent: events.length,
+    /* How many of the named input events are still findable.
+
+       Counted over the SAME population that named them. `inputEventIds` is
+       every live row of the ledger; `toEngineEvents` keeps only the six kinds
+       the engine consumes. Comparing one against the other reported
+       "still present < named" on a perfectly intact ledger the moment it held
+       a note or a calcium reading — which the interface then showed the keeper
+       as "your history has changed". It had not. */
+    inputEventsStillPresent: kept.length,
     inputEventsNamed: rec.inputEventIds.length,
+    /* Kept separately, because "how much of this reached the engine" is a real
+       question and it is a different one. */
+    engineEventsReplayed: events.length,
   };
 }

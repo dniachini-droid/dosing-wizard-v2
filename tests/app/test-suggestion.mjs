@@ -25,6 +25,7 @@ import {
   readExtras,
   readPreference,
   rememberPreference,
+  readApplied,
   resolve,
   suggestionFrom,
 } from "../../app/src/store/suggestion.js";
@@ -33,12 +34,19 @@ const s = suite("the suggested test");
 
 const TODAY = "2026-08-20";
 
-const engineResult = (at = "2026-08-22T07:40:00+00:00") => ({
+/* A POST-CHANGE retest, which is the only kind that is an offer.
+
+   `TASKS-AND-SCHEDULING.md:47` scopes the suggested test to "after a dose
+   change". These fixtures used to carry `RETEST_SIGNAL_ACCUMULATION`, and the
+   tests passed — because the code accepted ANY `recommendedAt` as an offer and
+   so raised a "suggested test" row on every assessment the app ever ran,
+   including one whose whole content was the routine two-day cadence. */
+const engineResult = (at = "2026-08-22T07:40:00+00:00", code = "RETEST_POST_CHANGE_FIRST") => ({
   retest: {
     recommendedAt: at,
     earliestUsefulAt: at,
-    selectedReasonCode: "RETEST_SIGNAL_ACCUMULATION",
-    selectedAction: "SIGNAL_ACCUMULATION",
+    selectedReasonCode: code,
+    selectedAction: "TEST_AT",
   },
 });
 
@@ -61,7 +69,26 @@ s.test("SUG-01", "the suggestion IS the engine's retest output — nothing here 
   const sug = suggestionFrom(engineResult("2026-08-22T07:40:00+00:00"));
   eq(sug.date, "2026-08-22", "the day comes from the engine");
   eq(sug.at, "2026-08-22T07:40:00+00:00", "the instant is the engine's, unaltered");
-  eq(sug.reasonCode, "RETEST_SIGNAL_ACCUMULATION", "and so is the reason");
+  eq(sug.reasonCode, "RETEST_POST_CHANGE_FIRST", "and so is the reason");
+
+  /* THE ROUTINE CADENCE IS NOT AN OFFER. `ROUTINE_CADENCE` is a standing
+     candidate, so `recommendedAt` is present on nearly every assessment. If
+     that counted, the app would raise a "suggested test" row every time it was
+     opened, for the news that the usual gap between tests is the usual gap. */
+  eq(
+    suggestionFrom(engineResult("2026-08-22T07:40:00+00:00", "RETEST_ROUTINE_CADENCE")),
+    null,
+    "the routine cadence is not a suggestion"
+  );
+  eq(
+    suggestionFrom(engineResult("2026-08-22T07:40:00+00:00", "RETEST_SIGNAL_ACCUMULATION")),
+    null,
+    "nor is waiting for the signal to accumulate"
+  );
+  ok(
+    suggestionFrom(engineResult("2026-08-22T07:40:00+00:00", "RETEST_POST_CHANGE_SECOND")) !== null,
+    "the second post-change test IS an offer"
+  );
 
   /* A refusal is not a suggestion. */
   eq(suggestionFrom({ retest: { recommendedAt: "NOT_RUN" } }), null, "a NOT_RUN retest suggests nothing");
@@ -284,7 +311,26 @@ s.test("SUG-13", "a declined suggestion stays declined, and does not come back",
   await decline(store, suggestion);
 
   const declined = await store.kvGet("declinedSuggestions");
-  deepEq(declined, [suggestion.at], "the declined instant is remembered");
+  deepEq(declined, ["ALK|2026-08-22"], "the declined DAY is remembered, not the instant");
+
+  /* THE DEFECT THIS TEST EXISTS FOR.
+
+     The engine recomputes `recommendedAt` as `asOf + hours` on every
+     assessment, so the instant is different every time the app is opened. A
+     declined list keyed on the instant therefore never matched again: "No
+     thanks" was inert, and the list grew by one entry per decline forever.
+
+     So: the SAME offer, seen a few seconds later at a different instant, must
+     still be declined. */
+  const sameOfferLater = suggestionFrom(engineResult("2026-08-22T07:41:33+00:00"));
+  eq(
+    resolve({
+      suggestion: sameOfferLater, tasks: [alkTask()], completions: [], today: TODAY,
+      preference: PREFERENCE.ASK, declined, extras: [],
+    }).state,
+    SUGGESTION_STATE.DECLINED,
+    "the same day, offered again at a new instant, is still declined"
+  );
 
   const resolved = resolve({
     suggestion, tasks: [alkTask()], completions: [], today: TODAY,
@@ -337,6 +383,43 @@ s.test("SUG-16", "an extra that was never done stops being shown once it has age
 
   const recent = [{ id: "ALK|2026-08-18", parameter: "ALK", date: "2026-08-18" }];
   eq(outstandingExtras(recent, [], TODAY).length, 1, "a recent one is still outstanding");
+});
+
+s.test("SUG-17", "an accepted offer is applied ONCE, not once per app launch", async () => {
+  /* THE DEFECT. A stored REPLACE preference re-applied on every reassessment,
+     and `applyReplace` ADDS its shift to whatever is already on the task. So
+     each launch pushed the keeper's own alkalinity test further out, and
+     because the engine recomputes the suggested instant from the current
+     `asOf`, the target moved too. A test nudged forward on every launch never
+     comes due — the app quietly cancels the thing it exists to remind them
+     about. */
+  const store = createMemoryStore();
+  const task = alkTask();
+  await store.tasks.saveTask(task);
+  const suggestion = suggestionFrom(engineResult());
+
+  const first = resolve({
+    suggestion, tasks: [task], completions: [], today: TODAY,
+    preference: PREFERENCE.REPLACE, declined: [], extras: [], applied: [],
+  });
+  eq(first.state, SUGGESTION_STATE.APPLIED_BY_PREFERENCE, "the stored preference applies it");
+  await applyReplace(store, first);
+
+  const afterOnce = (await store.tasks.tasks())[0].adjustDays;
+  deepEq(await readApplied(store), ["ALK|2026-08-22"], "the offer is recorded as applied");
+
+  /* Open the app again. Same offer, same preference. */
+  const second = resolve({
+    suggestion, tasks: await store.tasks.tasks(), completions: [], today: TODAY,
+    preference: PREFERENCE.REPLACE, declined: [], extras: [],
+    applied: await readApplied(store),
+  });
+  eq(second.state, SUGGESTION_STATE.ALREADY_SCHEDULED, "the second time there is nothing to do");
+  eq(second.appliedEarlier, true, "and it says why");
+
+  /* And nothing moved. This is the assertion that would have caught it: the
+     shift after two resolutions equals the shift after one. */
+  eq((await store.tasks.tasks())[0].adjustDays, afterOnce, "the keeper's test did not move again");
 });
 
 export default s;

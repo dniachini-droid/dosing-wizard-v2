@@ -44,6 +44,7 @@
    into a nested shape twice. None of these decides anything: they are field
    access with a name. */
 const action = (r) => r?.doseRecommendation?.action ?? null;
+const maintenanceStatus = (r) => r?.doseRecommendation?.maintenanceActionStatus ?? null;
 const outer = (r) => r?.safety?.outerBoundState ?? r?.outerBoundState ?? null;
 const evidence = (r) => r?.movementEvidence ?? null;
 const response = (r) => r?.responseAssessment ?? null;
@@ -52,6 +53,27 @@ const responseClass = (r) =>
 const supported = (r) => r?.supportedTrajectory ?? null;
 const limitedByUncertainty = (r) =>
   typeof supported(r) === "object" && supported(r) ? !!supported(r).limitedByUncertainty : false;
+
+/* WHY THE REFUSAL CARD KEYS ON THE STATUS AND NOT ON THE ACTION
+   ------------------------------------------------------------
+   A capability refusal and an ordinary hold arrive as the SAME action. Both
+   are `HOLD_CURRENT_DOSE` (`dosing.py:472, 479, 590` set the status and leave
+   the action alone), because holding the current rate is what the engine does
+   in both cases — the difference is whether it could have said anything else.
+   `maintenanceActionStatus` is the field that carries that difference, and
+   `ALK-V2-DATA-CONTRACT.md:572` declares it for exactly this purpose:
+   `WITHHELD_LIQUID_GUARD` "is distinct from `HELD`".
+
+   So the refusal predicate reads the status. Keying it on the action cannot
+   work, and an earlier version of this table that tried to do so matched
+   nothing at all.
+
+   The two withheld statuses are listed rather than matched by prefix. A
+   status the contract adds later will therefore fall to `UNCLASSIFIED` and be
+   SEEN, instead of being swept into this card by a pattern that happened to
+   fit. That is the same reasoning as the closed vocabularies elsewhere. */
+const WITHHELD_STATUSES = Object.freeze(["WITHHELD_CAPABILITY", "WITHHELD_LIQUID_GUARD"]);
+const withheld = (r) => WITHHELD_STATUSES.includes(maintenanceStatus(r));
 
 /* A value the engine declined to produce. `NOT_RUN`, `WITHHELD` and `NONE` are
    real values in the contract, not absences — a screen that renders one as a
@@ -87,10 +109,12 @@ export const CARD_TABLE = Object.freeze([
     rank: 20,
     /* The engine has the evidence but cannot act, because something it needs
        to know is not recorded. Distinguished from INSUFFICIENT because the
-       answer is "tell me X", not "test again". */
-    when: (r) =>
-      !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
-      action(r) === "REFUSE",
+       answer is "tell me X", not "test again".
+
+       Read the note above `WITHHELD_STATUSES` for why this is a test of the
+       status. `REFUSE` is a capability outcome (`capability.py:24`) and is
+       never a `RecommendationAction`. */
+    when: (r) => !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") && withheld(r),
   },
   {
     id: "INSUFFICIENT",
@@ -99,6 +123,7 @@ export const CARD_TABLE = Object.freeze([
        still be concluded now. */
     when: (r) =>
       !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
+      !withheld(r) &&
       action(r) === "INSUFFICIENT_DATA",
   },
   {
@@ -110,7 +135,7 @@ export const CARD_TABLE = Object.freeze([
        declared; the wording rule lives with the wording. */
     when: (r) =>
       !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
-      action(r) !== "REFUSE" &&
+      !withheld(r) &&
       action(r) !== "INSUFFICIENT_DATA" &&
       responseClass(r) === "NOT_ATTRIBUTABLE_SMALL_SIGNAL",
   },
@@ -120,7 +145,7 @@ export const CARD_TABLE = Object.freeze([
     /* `WG-ALK-002`: the full card shows BOTH observed and supported slope. */
     when: (r) =>
       !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
-      action(r) !== "REFUSE" &&
+      !withheld(r) &&
       action(r) !== "INSUFFICIENT_DATA" &&
       responseClass(r) !== "NOT_ATTRIBUTABLE_SMALL_SIGNAL" &&
       (evidence(r) === "UNCERTAINTY_LIMITED" || limitedByUncertainty(r)),
@@ -130,6 +155,7 @@ export const CARD_TABLE = Object.freeze([
     rank: 60,
     when: (r) =>
       !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
+      !withheld(r) &&
       action(r) === "SET_MAINTENANCE_DOSE" &&
       responseClass(r) !== "NOT_ATTRIBUTABLE_SMALL_SIGNAL" &&
       !(evidence(r) === "UNCERTAINTY_LIMITED" || limitedByUncertainty(r)),
@@ -142,7 +168,8 @@ export const CARD_TABLE = Object.freeze([
        is a full card, not a quieter one. */
     when: (r) =>
       !(outer(r) === "BREACHED_LOW" || outer(r) === "BREACHED_HIGH") &&
-      action(r) === "HOLD" &&
+      !withheld(r) &&
+      action(r) === "HOLD_CURRENT_DOSE" &&
       responseClass(r) !== "NOT_ATTRIBUTABLE_SMALL_SIGNAL" &&
       !(evidence(r) === "UNCERTAINTY_LIMITED" || limitedByUncertainty(r)),
   },
@@ -161,6 +188,26 @@ export const CARD_TABLE = Object.freeze([
     fallback: true,
   },
 ]);
+
+/* DOES THIS RESULT INSTRUCT A CHANGE?
+
+   One owner, because two screens ask it and canon `MASTER RULE 1` says two
+   implementations that agree today are a defect rather than a coincidence.
+
+   `recommendedDoseMlPerDay` is PRESENT on results that recommend nothing at
+   all: canon puts `D_current` there on the insufficient, confounded,
+   anomalous, uncertainty-limited and stable branches (`dosing.py:386-388,
+   393-395, 400-402, 436-438, 446-448`) so a card can say what it is holding
+   against. Reading its presence as a command turned "not enough evidence to
+   size a dose" into "set the maintenance dose to 12.1 mL/day", and a hold into
+   "up 0.0 mL/day from 12.0".
+
+   `SET_MAINTENANCE_DOSE` is the one action in the contract's vocabulary that
+   means change it. */
+export function instructsDoseChange(engineResult) {
+  const d = engineResult?.doseRecommendation;
+  return action(engineResult) === "SET_MAINTENANCE_DOSE" && isPresent(d?.recommendedDoseMlPerDay);
+}
 
 /* Selection. Reads the table, in rank order, and returns the first match.
    Because the table is proved disjoint, "first" is a formality — but it is

@@ -155,3 +155,160 @@ for. Negative control `AM-42`.
 `TRAJECTORY_FALLING`, `UNCERTAINTY_LIMITED`, `MAINTENANCE_HOLD` — were never
 checked. Found by mutation `AM-40` staying green. Widened, and ten missing
 sentences were written as a result.
+
+---
+
+# Recorded in the first review pass (21 August 2026)
+
+`test-engineer`, `normal-operation-reviewer` and `jake` reviewed the build.
+Nineteen findings were classified BUG and most were fixed in the single pass
+the brief allows. What follows is what was **not** fixed, and why each was left.
+
+---
+
+## AI-007 — A satisfied post-change retest candidate never retires (ENGINE)
+
+**Where.** `engine/alk_v2/engine.py:1394-1398`.
+
+**What.** The `POST_CHANGE_FIRST` retest candidate is submitted at
+`max(0.0, 48 - elapsed_h)` for as long as the intervention sits inside the
+14-day attribution horizon. Once 48 hours have passed this is pinned at `0.0`
+and stays there, so `retest.py:255` returns `REPEAT_NOW` and the app tells the
+keeper to test **now**, every day, for roughly twelve days after a dose change
+— including on days they have just tested.
+
+**Why it is left.** Two reasons, either sufficient. It is engine code, which
+this build may not touch. And the rule it would need is not in canon:
+`normal-operation-reviewer` looked for a statement about whether a satisfied
+candidate retires and could not find one, and stopped rather than proposing a
+rule. `jake` agreed and routed it out.
+
+**What would close it.** An owner decision, then a governed canon reissue
+stating whether a post-change candidate retires once satisfied, then the
+engine change. Not an application fix at any point.
+
+**What the app does meanwhile.** Nothing that compounds it. `AI-008`'s fix
+means an accepted suggestion is applied once rather than on every launch, so
+the keeper's own schedule is no longer dragged forward by this each time the
+app is opened.
+
+---
+
+## AI-008 — The `DATE_ONLY` wire representation contradicts itself (CONTRACT)
+
+**Where.** `docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md:87` against §1's
+`Reading.measuredAt`.
+
+**What.** Line 87 says a `DATE_ONLY` reading is usable as the latest valid
+current value. `measuredAt` is a required `Instant`, and
+`kernel.parse_instant` (`kernel.py:74`) rejects any string without an offset —
+correctly, because that is what a required `Instant` means. So the app has two
+choices and both are wrong: send the date, and the engine records
+`VALIDATION_TIMESTAMP_INVALID` and drops the reading; or fabricate an instant,
+which §1 forbids "absolutely".
+
+The build sends the date, which is why a keeper who logs a reading from memory
+sees the app's own honest *"kept in your history; it cannot be used for the
+trend"* alongside the engine's *"a record carries a time that could not be
+read"*. Two accounts of one fact, and the second is untrue: the provenance was
+declared, not malformed.
+
+**What was fixed here.** Only the app's half that needed no ruling: the event
+id now travels with every engine event, so a problem the engine reports names
+the reading rather than calling it `UNKNOWN`.
+
+**Why the rest is left.** Choosing a wire representation for a date-only
+reading is a contract decision. Inventing one in the application would be the
+app deciding chemistry-adjacent behaviour, and would put a second owner beside
+the contract.
+
+**What would close it.** An owner ruling on how a `DATE_ONLY` reading is
+transmitted such that both contract statements can hold, then a reissue.
+
+---
+
+## AI-009 — Owner decisions surfaced by the review and not taken
+
+Recorded, not resolved. `jake` identified each as product policy rather than a
+defect, and `CLAUDE.md` requires these be surfaced rather than settled.
+
+1. **Setup asks for solution strength directly.** `potency.py:90-124`
+   (`ALK-014`) supports three routes to `selectedPotencyDkhPerMl`: a configured
+   figure, a manufacturer figure, or derivation from chemical +
+   `stockConcentrationGPerL` + `netVolumeL`. Setup offers only the first, so
+   the keeper must evaluate it themselves — and every dose recommendation
+   scales linearly in that number. Whether the other routes belong in setup is
+   a scope decision. (The plain defect alongside it — the heading said "four
+   facts" over five fields — **was** fixed.)
+
+2. **`M-2` and `M-3` are named as fixes the app cannot accept.**
+   `capability.py:81-91` reads `solutionContextId` and `deliveryContextId`;
+   neither `config.js` nor `settings.js` has a field for either, yet "What
+   would change this" prints them. Capturing them is a scope addition;
+   filtering unfixable items out of that list is a presentation change. Both
+   defensible; neither is the implementer's call.
+
+3. **What a remembered "Replace" means when the engine re-suggests.** That the
+   old behaviour compounded was mechanically wrong and is fixed. Whether a
+   remembered preference should reapply to a *new* suggested date, or be
+   treated as spent, `TASKS-AND-SCHEDULING.md` does not say.
+
+4. **The four canon-conformant-but-questionable observations** from
+   `normal-operation-reviewer`, restated here so they are not lost between "not
+   a bug" and "not my job". Each is canon applied faithfully producing an
+   outcome that may not be what the owner intended. None is a defect in this
+   build and none is proposed as a change:
+   - a weekly water change on the 77 L reference system makes it largely
+     unanalysable (the 5% break fraction against 3 clusters over ≥4 days);
+   - a single 0.2 dKH blip on three readings can size a dose reduction,
+     because the residual MAD is zero so the σ floor governs;
+   - the signal-accumulation retest can never be the selected candidate on a
+     slow drift, because the 48 h routine cadence is always sooner;
+   - the retest is measured from the assessment instant rather than from the
+     last test, and canon does not state which.
+
+   The reviewer's arithmetic behind the second was hand-traced without a shell
+   and is not independently confirmed here.
+
+---
+
+## AI-010 — Coverage this build does not have, stated plainly
+
+**The screen modules have not been audited against `DEC-003` / `X-INV-004`.**
+Roughly 4,400 lines across twelve screen modules. `DEC-003` and canon
+`X-INV-004` forbid any UI component computing chemistry, and no reviewer read
+those lines against that rule: `test-engineer` read them only at store call
+sites, `normal-operation-reviewer` traced specific sequences, and `jake` read
+what its sort turned on. `tools/app/check-strings.py` covers strings, not
+arithmetic. This is a stated gap in coverage rather than a finding, and it is
+the largest one.
+
+**The IndexedDB backend has no behavioural test.** `ASS-12` checks by source
+shape that its read methods raise rather than reporting a failure as absence.
+A source-shape check proves the throw is written, not that it fires. A real
+test needs a browser.
+
+**Replay determinism is not tested end to end.** `ASS-09` pins the reader that
+canon §64's configuration condition turns on, and `replay()` now reports its
+three conditions separately. But no test runs the engine twice and compares,
+because the engine needs Pyodide and the suite runs in Node. What should exist:
+store an assessment, replay it unchanged, then replay after a config append,
+after a correction to an input event, and after a simulated version bump,
+asserting each is reported as its own distinct cause.
+
+**The worker boundary is unverified.** Nothing checks that an `EngineResult`
+round-trips through the Pyodide worker losslessly, nor its timeout semantics.
+
+**The capability labels are checked by eye.** `STR-06` proves every `M-1`..`M-13`
+renders as words and is not the catch-all; it cannot prove a label names the
+*right* capability, which is exactly the defect that was found (four of them
+named a different capability's meaning). Verified against
+`ALK-V2-DATA-CONTRACT.md:844-856` by reading, and re-verified after the fix.
+There is no mutation for it, deliberately, because no test would catch one.
+
+**A dose is matched to a recommendation with an exact-equality tolerance.**
+`today.js` treats a recorded dose as answering a recommendation when it is
+within `1e-9`. A keeper who sets 2.49 against a 2.5 recommendation keeps the
+confirmation ask. Left open rather than fixed because choosing a tolerance is
+choosing a number that governs behaviour, and this build does not originate
+those.

@@ -33,6 +33,7 @@ const SUITES = [
   "test-schedule.mjs",
   "test-suggestion.mjs",
   "test-strings.mjs",
+  "test-shell.mjs",
 ];
 
 /* Run every suite from a given tree, and return {id -> error|null}. A fresh

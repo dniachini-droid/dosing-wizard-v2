@@ -89,6 +89,7 @@ export const STRINGS = Object.freeze({
   "today.title": "Today",
   "today.subtitle.none": "No tank details recorded yet",
   "today.subtitle.volume": ({ volume }) => `${volume} L net volume`,
+  "today.subtitle.assessedOn": ({ when, time }) => `assessed ${when} at ${time}`,
   "today.subtitle.assessed": ({ time }) => `assessed ${time}`,
   "today.subtitle.join": ({ parts }) => parts.join(" · "),
 
@@ -119,6 +120,7 @@ export const STRINGS = Object.freeze({
   "today.item.dose.up": "Up",
   "today.item.dose.down": "Down",
   "today.item.hold.title": "Hold the alkalinity dose where it is",
+  "today.item.hold.titleAt": ({ dose }) => `Hold the alkalinity dose at ${dose} mL/day`,
   "today.item.hold.detail": "A hold is the recommendation, not the absence of one.",
   "today.item.insufficient.title": "Not enough yet to size an alkalinity dose",
   "today.item.insufficient.detail": "The assessment says what is missing.",
@@ -134,6 +136,9 @@ export const STRINGS = Object.freeze({
   "today.task.dueToday": ({ last }) => `Due today. ${last}`,
   "today.task.lastDone": ({ date }) => `Last done ${date}.`,
   "today.task.never": "Never done.",
+  "today.task.replacementHint":
+    "Measuring your new saltwater once keeps the analysis running across the " +
+    "change. Without it the app has to treat this as a fresh start.",
   "today.task.readingNote":
     "Recording the reading is what completes the test — there is no separate tick to remember.",
   "today.task.choreNote":
@@ -187,6 +192,15 @@ export const STRINGS = Object.freeze({
     "This is the record as it was written. Correcting a reading afterwards does not change it — " +
     "a re-analysis is a new assessment with a new identity, and both stay.",
 
+  "today.storage.title": "Your records could not be read",
+  "today.storage.body":
+    "This device\u2019s storage did not answer, so the app cannot see your " +
+    "history right now. Nothing has been lost \u2014 it could not be read, " +
+    "which is not the same as being empty.",
+  "today.storage.safe":
+    "No assessment has been made or saved. An answer worked out from records " +
+    "the app could not read would be worse than no answer.",
+  "today.storage.what": ({ reason }) => `What the device said: ${reason}`,
   "today.engine.startingTitle": "Alkalinity",
   "today.engine.starting":
     "Working it out. The chemistry engine is starting up — this takes a few seconds the first time after an update.",
@@ -400,6 +414,15 @@ export const STRINGS = Object.freeze({
   "record.replaySame": "Run again on the same readings, the engine gives exactly the same answer.",
   "record.replayDiffers": ({ present, named }) =>
     `The answer differs. ${present} of ${named} of the entries it used are still current — an entry it used has probably been corrected since.`,
+  "record.replayNoConfig": ({ id }) =>
+    `This device no longer holds the settings this assessment used (${id}), so ` +
+    `it cannot be replayed here. The record itself is unchanged.`,
+  "record.replayEngine":
+    "It reads differently now because the engine has changed since. That is an " +
+    "upgrade, not a disagreement — the original record still says what it said.",
+  "record.replayCanon":
+    "It reads differently now because the chemistry rules have been reissued " +
+    "since. The original record still says what it said.",
   "record.replayVersion":
     "The answer differs, and so does the engine version. That is an upgrade, not a disagreement — " +
     "a replay only means the same thing on the same engine.",
@@ -445,8 +468,12 @@ export const STRINGS = Object.freeze({
   "time.opt.nowHint": "this is happening as you log it",
   "time.opt.exact": "Exact time",
   "time.opt.exactHint": "you know when, to the minute",
+  /* The hint said "with proof recorded" and the sheet asks for no proof. This
+     build has no importer and no field to record a proof in, so the label
+     described a capability that does not exist. It now says what the option
+     actually is. */
   "time.opt.reconstructed": "Worked out",
-  "time.opt.reconstructedHint": "with proof recorded",
+  "time.opt.reconstructedHint": "from something else you remember",
   "time.opt.local": "Clock time",
   "time.opt.localHint": "zone unsure",
   "time.opt.dateOnly": "Date only",
@@ -550,6 +577,16 @@ export const STRINGS = Object.freeze({
   "log.title": "Record something",
   "log.subtitle": "Everything the engine can read about your tank.",
   "log.record": "Record it",
+
+  "log.state.title": "What your doser is set to",
+  "log.state.why":
+    "Not a change — the rate your pump is running at now. Without it the app " +
+    "knows what your alkalinity is doing but not what is being put in, and it " +
+    "cannot size a dose at all.",
+  "log.state.dose": "Dose",
+  "log.state.doseHint": "In millilitres per day, as the pump is set.",
+  "log.state.uncertain": "I'm not sure exactly when it was set to this",
+  "log.state.needNumber": "Enter the dose as a number of millilitres per day.",
 
   "log.dose.title": "A dose change",
   "log.dose.why":
@@ -804,7 +841,7 @@ export const STRINGS = Object.freeze({
      ================================================================== */
 
   "setup.title": "Set up your tank",
-  "setup.subtitle": "Four facts the app cannot work out for itself.",
+  "setup.subtitle": "Five facts the app cannot work out for itself.",
   "setup.yourTank": "Your tank",
   "setup.save": "Save and start",
   "setup.saveExisting": "Save",
@@ -937,7 +974,12 @@ export const STRINGS = Object.freeze({
   "moment.dose.recordedExpect": "Recorded, with what to expect",
   "moment.dose.expectation": ({ slope }) =>
     `The engine expects alkalinity to drift at about ${slope} dKH/day after this change`,
-  "moment.dose.expectationValue": ({ value }) => `, reading near ${value} dKH when you next test.`,
+  /* The engine's snapshot carries `expectedSlopeChange` — how much the dose
+     change is expected to move the DRIFT — not a predicted reading. The
+     sentence used to promise a value at the next test, which the engine never
+     supplied and the app must not compute. */
+  "moment.dose.expectationValue": ({ value }) =>
+    `, a change of ${value} dKH/day on where it was heading.`,
   "moment.dose.expectationEnd": ".",
   "moment.dose.recorded": "Recorded",
   "moment.dose.noSnapshot":
@@ -992,6 +1034,12 @@ export const STRINGS = Object.freeze({
   "position.IN_RANGE": "In range",
   "position.BELOW_RANGE": "Below your target range",
   "position.ABOVE_RANGE": "Above your target range",
+  /* The two alert positions are in the contract's `Position` vocabulary and had
+     no wording, so a keeper in an alert state read "Not recorded" for where
+     their alkalinity actually was. Found by reading the vocabulary from the
+     contract instead of from a hand-written list. */
+  "position.ALERT_LOW": "Low enough to need attention now",
+  "position.ALERT_HIGH": "High enough to need attention now",
   "position.UNKNOWN": "Not known",
   "position.NOT_RUN": "Not worked out",
 
@@ -1003,6 +1051,11 @@ export const STRINGS = Object.freeze({
 
   "evidence.SUFFICIENT": "Enough to work from",
   "evidence.INSUFFICIENT": "Not enough yet",
+  "evidence.PROVISIONAL": "Only two tests — treat as provisional",
+  "evidence.HIGH_CONFIDENCE": "A long clean run to work from",
+  "evidence.CONFOUNDED": "Something got in the way",
+  /* The reason-code spellings, kept because the reason list renders them too.
+     They are not `MovementEvidence` values and never were. */
   "evidence.PROVISIONAL_TWO_POINT": "Only two tests — treat as provisional",
   "evidence.CONFOUNDED_HARD": "Something got in the way",
   "evidence.ANOMALOUS": "One result looks out of keeping with the rest",
@@ -1024,11 +1077,37 @@ export const STRINGS = Object.freeze({
   "response.NOT_RUN": "Not worked out",
   "response.NONE": "No dose change is being watched",
 
+  /* The contract's closed `RecommendationAction` vocabulary
+     (`ALK-V2-DATA-CONTRACT.md:577-582`), in full. Several of these belong to
+     safety returns and return plans, which this build does not implement — but
+     a value the engine can legally emit must have wording, or it reads on
+     screen as an absence. */
   "action.SET_MAINTENANCE_DOSE": "Set the maintenance dose",
-  "action.HOLD": "Hold the dose where it is",
+  "action.HOLD_CURRENT_DOSE": "Hold the dose where it is",
+  "action.NO_CHANGE": "No change",
   "action.INSUFFICIENT_DATA": "Not enough to size a dose",
-  "action.REFUSE": "Cannot advise yet",
+  "action.TEST_AGAIN": "Test again",
+  "action.REPEAT_TEST_NOW": "Repeat the test now",
+  "action.OFFER_RETURN_PLAN": "A staged return is available",
+  "action.START_RETURN_PLAN": "Start the staged return",
+  "action.CONTINUE_RETURN_PLAN": "Continue the staged return",
+  "action.STOP_RETURN_PLAN": "Stop the staged return",
+  "action.RETURN_TO_MAINTENANCE": "Go back to the maintenance dose",
+  "action.SAFETY_RETURN": "Bring it back safely",
+  "action.PAUSE_DOSING": "Pause dosing",
+  "action.VERIFY_DOSER": "Check the doser",
+  "action.VERIFY_SOLUTION": "Check the solution",
+  "action.VERIFY_CONFIGURATION": "Check the settings",
   "action.NOT_RUN": "Not worked out",
+
+  /* A verb the CARD supplies, overriding the action's own.
+
+     Only one card needs this, and it is the reason the override exists: on a
+     capability refusal the engine's action is `HOLD_CURRENT_DOSE`, the same
+     action as an ordinary hold. Printing "Hold the dose where it is" there
+     would tell the keeper the engine had affirmed their dose when what it
+     actually did was decline to size one. */
+  "verb.CAPABILITY_REFUSAL": "Cannot size a dose yet",
 
   "severity.GATING": "Limiting",
   "severity.REFUSAL": "Blocking",
@@ -1066,15 +1145,15 @@ export const STRINGS = Object.freeze({
   "capability.M-1": "A pump step size to round recommendations to",
   "capability.M-2": "Which solution and batch you are dosing",
   "capability.M-3": "How the dose is delivered",
-  "capability.M-4": "Records of one-off additions",
+  "capability.M-4": "The alkalinity of the water you change with",
   "capability.M-5": "The time a dose change took effect",
-  "capability.M-6": "Records of dosing problems",
+  "capability.M-6": "How much was actually delivered",
   "capability.M-7": "What was expected of a past dose change",
-  "capability.M-8": "The settings that applied at the time",
+  "capability.M-8": "An exact time on a reading",
   "capability.M-9": "Confirmation of the dose set on the pump",
   "capability.M-10": "Enough history to say what this tank normally needs",
   "capability.M-11": "Magnesium",
-  "capability.M-12": "Water change records",
+  "capability.M-12": "Settings dated from when they applied",
   "capability.M-13": "Provable times on readings",
   "capability.other": "Something the app needs",
 
@@ -1254,10 +1333,10 @@ export const STRINGS = Object.freeze({
   "candidate.POST_CHANGE_FIRST": "The first test after a dose change",
   "candidate.POST_CHANGE_SECOND": "The second test after a dose change",
   "candidate.RAPID_MOVEMENT": "The tank is moving quickly",
-  "candidate.SAFETY_RETURN": "A safety action is running",
+  "candidate.SAFETY_RETURN_ACTIVE": "A safety action is running",
   "candidate.HIGH_BREACH_FAILSAFE": "Above the safe upper limit",
   "candidate.REPEAT_NOW": "Repeat the last test now",
-  "candidate.RETURN_PLAN": "The return plan",
+  "candidate.RETURN_PLAN_EXPIRY": "The return plan",
   "candidate.DETECTABILITY": "Whether a change could be detected",
 
   /* The setting. It states what is actually happening rather than naming a
@@ -1316,6 +1395,13 @@ export const STRINGS = Object.freeze({
     "the original never had that precision and must not acquire it.",
   "err.unknownEventKind": ({ kind }) => `Unknown event kind: ${kind}`,
   "err.unknownAnnotation": ({ type }) => `Unknown annotation: ${type}`,
+  "err.doseNeedsConfidence": ({ kind }) =>
+    `A ${kind} event must say whether its effective time is exact or uncertain. ` +
+    `The app does not choose that on the keeper's behalf.`,
+  "err.uncertainNeedsBounds":
+    "An uncertain effective time needs an earliest and a latest, or there is " +
+    "nothing to resume a clean stretch of history after.",
+  "err.notRead": "Your records could not be read from this device\u2019s storage.",
   "err.eventNeedsTime": "Every event needs a time with a declared provenance.",
   "err.eventNeedsRecordedAt": "Every event needs a recorded time.",
   "err.recordedAtNotInstant": "The recorded time must be an instant.",
@@ -1323,6 +1409,9 @@ export const STRINGS = Object.freeze({
   "err.supersedeMissing": "Cannot supersede an event that is not in the record.",
   "err.annotateMissing": "Cannot annotate an event that is not in the record.",
   "err.idCollision": "Two records were given the same identity. Nothing was saved.",
+  "err.assessmentIdExhausted": ({ asOf }) =>
+    `Too many assessments were recorded at ${asOf} to give this one its own ` +
+    `identity. Nothing has been overwritten.`,
   "err.assessmentExists": ({ id }) => `Assessment ${id} already exists and is not rewritable.`,
   "err.configExists": ({ id }) => `${id} already exists and is not rewritable.`,
   "err.assessNeedsAsOf": "An assessment needs an explicit assessment time — the engine reads no clock.",

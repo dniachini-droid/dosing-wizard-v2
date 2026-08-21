@@ -71,6 +71,18 @@ export const sayOuter = (v) => fromNamespace("outer", v);
 export const sayResponseClass = (v) => fromNamespace("response", v);
 export const sayAction = (v) => fromNamespace("action", v);
 
+/* The verb a card shows.
+
+   Normally the engine's action IS the verb. The exception is the capability
+   refusal, which arrives as `HOLD_CURRENT_DOSE` — the same action as an
+   ordinary hold, because holding the current rate is what the engine does in
+   both cases. The card class is what distinguishes them, so where a card
+   declares its own verb, the card wins. */
+export function sayVerb(cardId, actionValue) {
+  if (cardId && has(`verb.${cardId}`)) return t(`verb.${cardId}`);
+  return sayAction(actionValue);
+}
+
 function fromNamespace(ns, v, fallback) {
   if (v == null) return fallback || t("absent.notRecorded");
   if (typeof v === "string" && has(`${ns}.${v}`)) return t(`${ns}.${v}`);

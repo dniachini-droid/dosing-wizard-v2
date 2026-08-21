@@ -103,6 +103,24 @@ export function createConfigStore(backend) {
     return (await history()).map(({ schemaVersion, ...rest }) => rest);
   }
 
+  /* The configuration history AS IT STOOD when a given version was current.
+
+     Canon §64 conditions deterministic replay on the same event ledger, the
+     same CONFIGURATION VERSIONS and the same engine/canon version. Replaying
+     against the configuration the keeper has today satisfies two of those
+     three: change the target range, replay an old assessment, and the engine
+     honestly returns a different answer, which the app then reports as the
+     engine disagreeing with itself.
+
+     Because the history is append-only and ids are issued in sequence, "as it
+     stood" is the prefix ending at that version. */
+  async function forEngineUpTo(configVersionId) {
+    const h = await history();
+    const cut = h.findIndex((c) => c.configVersionId === configVersionId);
+    if (cut < 0) return null; /* Named a version this device does not hold. */
+    return h.slice(0, cut + 1).map(({ schemaVersion, ...rest }) => rest);
+  }
+
   /* Which keeper facts are still missing. The setup screen renders this, and so
      does the assessment card when it has to explain why it cannot answer. */
   async function missingFacts() {
@@ -111,5 +129,5 @@ export function createConfigStore(backend) {
     return KEEPER_FACTS.filter((f) => c[f.key] == null || c[f.key] === "").map((f) => f.key);
   }
 
-  return { history, current, append, forEngine, missingFacts };
+  return { history, current, append, forEngine, forEngineUpTo, missingFacts };
 }

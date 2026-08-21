@@ -222,7 +222,9 @@ export function run(store, mode, fn) {
 export const idbBackend = {
   async get(store, key) {
     const r = await run(store, "readonly", (s) => s.get(key));
-    return r.ok ? r.value : undefined;
+    /* Same rule: `undefined` means "no such key", not "could not look". */
+    if (!r.ok) throw new Error(r.reason || t("err.notRead"));
+    return r.value;
   },
   async put(store, key, value) {
     const r = await run(store, "readwrite", (s) => s.put(value, key));
@@ -234,13 +236,29 @@ export const idbBackend = {
     if (!r.ok) throw new Error(r.reason || t("err.notRemoved"));
     return true;
   },
+  /* A FAILED READ IS NOT AN EMPTY TANK.
+
+     These two used to return `[]` when the read failed, which made a degraded
+     IndexedDB — storage pressure, an evicted origin, a corrupt store, an
+     aborted transaction — indistinguishable from a keeper who has never
+     logged anything. The consequence was not a blank screen: `projection()`
+     returned nothing, `toEngineEvents` returned nothing, and `runAssessment`
+     went on to call the engine and STORE a version-stamped assessment
+     computed from no history at all. A permanent, false entry in the keeper's
+     own record, written by the app, saying the engine had nothing to work
+     from on a day when it had everything.
+
+     `put` and `del` on this same object have always thrown. These now do too.
+     An empty array from here means empty; a failure raises. */
   async keys(store) {
     const r = await run(store, "readonly", (s) => s.getAllKeys());
-    return r.ok ? r.value || [] : [];
+    if (!r.ok) throw new Error(r.reason || t("err.notRead"));
+    return r.value || [];
   },
   async all(store) {
     const r = await run(store, "readonly", (s) => s.getAll());
-    return r.ok ? r.value || [] : [];
+    if (!r.ok) throw new Error(r.reason || t("err.notRead"));
+    return r.value || [];
   },
   async health() {
     const conn = await db();

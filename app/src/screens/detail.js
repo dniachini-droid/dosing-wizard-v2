@@ -203,15 +203,24 @@ function renderRecord(ctx, rec) {
           onclick: async () => {
             out.textContent = t("record.replaying");
             const r = await replay(ctx.store, rec.assessmentId);
+            if (r.state === "CONFIGURATION_UNAVAILABLE") {
+              return void (out.textContent = t("record.replayNoConfig", { id: r.configVersionId }));
+            }
             if (r.state !== "REPLAYED") return void (out.textContent = t("record.replayMissing"));
+            /* Each cause named separately. A replay that differs because the
+               engine changed is a different fact from one that differs because
+               a reading was corrected, and running them together as "differs"
+               tells the keeper nothing they can act on. */
             out.textContent = r.identical
               ? t("record.replaySame")
-              : r.sameVersions
-                ? t("record.replayDiffers", {
-                    present: r.inputEventsStillPresent,
-                    named: r.inputEventsNamed,
-                  })
-                : t("record.replayVersion");
+              : !r.sameEngineVersion
+                ? t("record.replayEngine")
+                : !r.sameCanonVersion
+                  ? t("record.replayCanon")
+                  : t("record.replayDiffers", {
+                      present: r.inputEventsStillPresent,
+                      named: r.inputEventsNamed,
+                    });
           },
         },
         t("record.replay")

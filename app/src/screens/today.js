@@ -20,14 +20,14 @@
    ========================================================================= */
 
 import { h } from "../ui/dom.js";
-import { addDays, daysBetween, todayLocal } from "../store/time.js";
+import { addDays, daysBetween, hasExactInstant, todayLocal } from "../store/time.js";
 import { fmtDayName, fmtRelative, fmtShort, fmtTimeOfDay } from "../ui/format.js";
 import { buildAttention } from "../present/attention.js";
 import { computeSchedule } from "../store/schedule.js";
 import { renderAssessment, renderDeveloperView } from "./assessment.js";
 import { logReading, timeControl } from "./entry.js";
 import { parameterDefs, parameterDef, KIND } from "../store/ledger.js";
-import { isPresent, selectCard } from "../present/cards.js";
+import { instructsDoseChange, isPresent, selectCard } from "../present/cards.js";
 import { sayCapability, sayParameterMid, num } from "../present/wording.js";
 import { t } from "../strings.js";
 import { ENGINE_STATE } from "../engine/client.js";
@@ -111,7 +111,7 @@ export async function renderToday(ctx) {
   /* --- today ------------------------------------------------------------ */
   const engineResult = state.assessment?.engineResult || null;
   const recordNotices = buildRecordNotices(projected);
-  const pendingConfirmation = findPendingConfirmation(projected, engineResult, today);
+  const pendingConfirmation = findPendingConfirmation(projected, engineResult, today, state.doseAsks);
   /* The four kinds the specification names, gathered here and ordered by
      `attention.js`. The suggestion arrives already resolved against the
      keeper's own schedule; nothing on this screen resolves it. */
@@ -130,7 +130,13 @@ export async function renderToday(ctx) {
   screen.append(renderAttentionList(ctx, items, day));
 
   /* --- the assessment ---------------------------------------------------- */
-  if (state.engine.state === ENGINE_STATE.FAILED) {
+  if (state.storage && state.storage.ok === false) {
+    /* Ahead of the engine states, because it is a different failure with a
+       different remedy, and because the one thing that must never appear here
+       is a confident assessment computed from records that could not be
+       read. */
+    screen.append(renderStorageFailed(state.storage.reason));
+  } else if (state.engine.state === ENGINE_STATE.FAILED) {
     screen.append(renderEngineFailed(state.engine.error));
   } else if (!engineResult) {
     screen.append(renderEngineStarting(state.engine.state));
@@ -155,7 +161,22 @@ export async function renderToday(ctx) {
 function subtitle(config, latest) {
   const parts = [];
   if (config?.netVolumeL != null) parts.push(t("today.subtitle.volume", { volume: config.netVolumeL }));
-  if (latest?.asOf) parts.push(t("today.subtitle.assessed", { time: fmtTimeOfDay(latest.asOf) }));
+  if (latest?.asOf) {
+    /* A TIME ON ITS OWN IS ONLY HONEST IF IT IS TODAY'S.
+
+       This showed the time of day and nothing else, whatever day the
+       assessment was from. So when the engine failed to start — no network for
+       the runtime, an offline cold cache — the header read "assessed 08:05"
+       beside a card saying the engine could not run, and 08:05 was three days
+       ago. A stale answer presented as a current one, at exactly the moment
+       something else had already gone wrong. */
+    const day = latest.asOf.slice(0, 10);
+    parts.push(
+      day === todayLocal()
+        ? t("today.subtitle.assessed", { time: fmtTimeOfDay(latest.asOf) })
+        : t("today.subtitle.assessedOn", { when: fmtShort(day), time: fmtTimeOfDay(latest.asOf) })
+    );
+  }
   return parts.length ? t("today.subtitle.join", { parts }) : t("today.subtitle.none");
 }
 
@@ -222,10 +243,28 @@ function renderAssessmentItem(ctx, it, rank) {
   const card = selectCard(r);
   let title, detail;
 
+  /* WHY THE ACTION IS TESTED AND NOT THE PRESENCE OF A DOSE
+     -------------------------------------------------------
+     `recommendedDoseMlPerDay` is PRESENT on results that recommend no change
+     at all. Canon puts `D_current` in that field on the insufficient,
+     confounded, anomalous, uncertainty-limited and stable branches
+     (`dosing.py:386-388, 393-395, 400-402, 436-438, 446-448`) so the card can
+     say what it is holding AGAINST. It is a statement of the standing dose,
+     not an instruction.
+
+     An earlier version of this function tested `isPresent(recommendedDose)`
+     first, and so told the keeper to "set the maintenance dose to 12.0
+     mL/day, up 0.0 from 12.0" on a hold, and to set a dose on a day whose own
+     assessment card said there was not enough evidence to size one. Reading a
+     standing value as a command is `PRC-005`'s second clause exactly.
+
+     `SET_MAINTENANCE_DOSE` is the one action that means "change it". */
+  const instructsChange = instructsDoseChange(r);
+
   if (card === "SAFETY_RETURN") {
     title = t("today.item.safety.title");
     detail = t("today.item.safety.detail");
-  } else if (isPresent(d.recommendedDoseMlPerDay)) {
+  } else if (instructsChange) {
     title = t("today.item.dose.title", { dose: num(d.recommendedDoseMlPerDay, 1) });
     detail = isPresent(d.deltaDoseMlPerDay)
       ? t("today.item.dose.detail", {
@@ -234,8 +273,12 @@ function renderAssessmentItem(ctx, it, rank) {
           from: num(d.currentDoseMlPerDay, 1),
         })
       : t("today.item.dose.detailPlain");
-  } else if (d.action === "HOLD") {
-    title = t("today.item.hold.title");
+  } else if (card === "HOLD") {
+    /* Named with the dose it is holding, because "hold" on its own does not
+       tell the keeper what they are holding at. */
+    title = isPresent(d.currentDoseMlPerDay)
+      ? t("today.item.hold.titleAt", { dose: num(d.currentDoseMlPerDay, 1) })
+      : t("today.item.hold.title");
     detail = t("today.item.hold.detail");
   } else if (card === "INSUFFICIENT") {
     title = t("today.item.insufficient.title");
@@ -337,6 +380,39 @@ function renderTaskItem(ctx, it, rank, day) {
     const input = task.needsVolume
       ? h("input", { class: "input", inputmode: "decimal", "aria-label": "Volume" })
       : null;
+
+    /* THE ALKALINITY OF THE WATER GOING IN.
+
+       An unknown-replacement water change at or above the break fraction ends
+       the analytical stretch of history (`ALK-WATERCHANGE-UNKNOWN-001`). On a
+       tank of ordinary size a routine weekly change clears that, so completing
+       this task week after week reset the analysis week after week — and the
+       app never mentioned that measuring the new saltwater once would prevent
+       it.
+
+       The measured path already existed, at `logentry.js`'s water-change form,
+       reachable only by NOT using the task the app itself put in the list. The
+       keeper's own route was silently the worse one. Same fields, same
+       confidence value, offered where the work actually happens. */
+    const measured = task.needsVolume ? h("input", { type: "checkbox" }) : null;
+    const replacement = task.needsVolume
+      ? h("input", { class: "input", inputmode: "decimal", "aria-label": t("log.water.replacement") })
+      : null;
+    const replacementRow = task.needsVolume
+      ? h(
+          "div",
+          { class: "field", hidden: true },
+          h("span", { class: "flabel" }, t("log.water.replacement")),
+          h("div", { class: "row" }, replacement, h("span", { class: "suffix" }, "dKH")),
+          h("p", { class: "hint" }, t("today.task.replacementHint"))
+        )
+      : null;
+    if (measured) {
+      measured.addEventListener("change", () => {
+        replacementRow.hidden = !measured.checked;
+      });
+    }
+
     const tc = timeControl({ initialDate: day });
     const msg = h("p", { class: "hint" });
     const btn = h(
@@ -350,13 +426,24 @@ function renderTaskItem(ctx, it, rank, day) {
             msg.textContent = when.why;
             return;
           }
-          await ctx.completeTask(task, when.time, input ? input.value : null);
+          let replacementDkh = null;
+          if (measured && measured.checked) {
+            const v = Number(replacement.value);
+            if (!Number.isFinite(v)) {
+              msg.textContent = t("log.water.needReplacement");
+              return;
+            }
+            replacementDkh = v;
+          }
+          await ctx.completeTask(task, when.time, input ? input.value : null, replacementDkh);
         },
       },
       "Log"
     );
     body.append(
       h("div", { class: "row" }, input, input ? h("span", { class: "suffix" }, task.unit || "L") : null, btn),
+      measured ? h("label", { class: "field" }, measured, t("log.water.measured")) : null,
+      replacementRow,
       tc.node,
       msg,
       h(
@@ -623,9 +710,12 @@ async function renderDayPast(store, day, assessmentsForDay, projected) {
             h(
               "span",
               { class: "kv-v" },
-              isPresent(d.recommendedDoseMlPerDay)
+              /* Same rule as the live row above: only `SET_MAINTENANCE_DOSE`
+                 is a change. A stored hold said "hold", however present its
+                 dose field is. */
+              instructsDoseChange(r)
                 ? t("today.past.saidDose", { dose: num(d.recommendedDoseMlPerDay, 1) })
-                : d.action === "HOLD"
+                : d.action === "HOLD_CURRENT_DOSE"
                   ? t("today.past.saidHold")
                   : t("today.past.saidNothing")
             )
@@ -669,6 +759,24 @@ function eventWords(e) {
     HUSBANDRY: t("log.event.husbandry"),
     NOTE: t("log.event.note"),
   }[e.kind] || e.kind;
+}
+
+/* --- storage as a designed state ------------------------------------------
+
+   A read that fails is not an empty tank, and it is not an engine fault. It
+   gets its own panel saying so, because the two have different remedies and
+   sending the keeper to the wrong one wastes their evening. */
+function renderStorageFailed(reason) {
+  return h(
+    "section",
+    { class: "card is-attention" },
+    h("div", { class: "card-head" }, h("h2", null, t("today.storage.title"))),
+    h("div", { class: "card-body" },
+      h("p", null, t("today.storage.body")),
+      h("p", null, t("today.storage.safe")),
+      reason ? h("p", { class: "meta" }, t("today.storage.what", { reason })) : null
+    )
+  );
 }
 
 /* --- engine states as designed states ------------------------------------ */
@@ -837,7 +945,10 @@ function buildRecordNotices(projected) {
    sitting in the list forever. On expiry the app carries on treating the dose
    as unconfirmed, which is what it was doing all along, so nothing the engine
    reads changes. */
-function findPendingConfirmation(projected, engineResult, today) {
+/* `doseAsks` is the app's memory of this ask: when it was FIRST raised, and
+   whether the keeper has answered "no". Both have to be persisted, because
+   both are facts about a conversation that spans app launches. */
+function findPendingConfirmation(projected, engineResult, today, doseAsks) {
   if (!engineResult) return null;
   const d = engineResult.doseRecommendation || {};
   if (!isPresent(d.recommendedDoseMlPerDay)) return null;
@@ -852,13 +963,34 @@ function findPendingConfirmation(projected, engineResult, today) {
   );
   if (answered) return null;
 
-  const raisedOn = engineResult.assessmentAsOf ? engineResult.assessmentAsOf.slice(0, 10) : today;
+  /* WHEN THIS ASK WAS RAISED — not when this assessment ran.
+
+     `assessmentAsOf` is recomputed every time the app is opened, so anchoring
+     `raisedOn` to it made `askIsLive` permanently true and put
+     `APP_ASK_EXPIRY_DAYS` out of reach. The specification is explicit that an
+     unanswered ask "must not sit in the list forever … it expires quietly
+     after a reasonable interval" (`TASKS-AND-SCHEDULING.md:20-22`), and this
+     one never did.
+
+     The ask is identified by the dose it is about, so that is the key. */
+  const key = String(d.recommendedDoseMlPerDay);
+  const remembered = (doseAsks || {})[key];
+
+  /* "No, I didn't." Answering must end the conversation. It used to write a
+     value nothing ever read, so the row came back unchanged and the keeper was
+     asked the same question again on the next launch. */
+  if (remembered && remembered.declined) return null;
+
+  const raisedOn = remembered ? remembered.raisedOn : today;
   if (!askIsLive({ raisedOn }, today)) return null;
 
   return {
     recommendedDoseMlPerDay: d.recommendedDoseMlPerDay,
     currentDoseMlPerDay: d.currentDoseMlPerDay,
     raisedOn,
+    /* Told to the caller so the first sighting can be recorded. Nothing is
+       written from inside a render. */
+    firstSeen: !remembered,
   };
 }
 
@@ -873,11 +1005,17 @@ function alkTrace(projected, engineResult) {
       date: r.event.time.localDate,
       value: r.event.normalizedValue,
       eventId: r.event.eventId,
-      /* Eligibility is a property of the record's time provenance, which the
-         contract states and the engine enforces. The app reads the provenance
-         it stored; it does not re-derive eligibility from a rule of its own. */
-      eligible: r.event.time.timeProvenance === "EXACT_ABSOLUTE" ||
-        r.event.time.timeProvenance === "RECONSTRUCTED_WITH_PROVENANCE",
+      /* Eligibility is a property of the record's time, and `time.js` owns the
+         test. This line used to check the PROVENANCE ALONE, while History
+         checked provenance AND the presence of an instant — so one reading was
+         drawn as an included point on the assessment chart and as an excluded
+         one on History, in the same app, on the same day.
+
+         `hasExactInstant` is the right test of the two: an elapsed-time
+         calculation needs an instant, not a label saying one could exist, and
+         the engine rejects a time it cannot parse (`kernel.parse_instant`).
+         One owner, per canon `MASTER RULE 1`. */
+      eligible: hasExactInstant(r.event.time),
     }));
 }
 

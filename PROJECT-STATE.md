@@ -175,10 +175,29 @@ Phase 0 — Preserve and found V2
     design of 21 August 2026 and is implemented: completion-anchored scheduling, four
     kinds of item in one list, and a suggested test that is accepted or declined rather
     than moved.
-  - **62 application checks and 45 negative controls, all caught.** The engine's own gate
+  - **75 application checks and 61 negative controls, all caught.** The engine's own gate
     is byte-identical to before this work. The full record is
-    `docs/process/runs/2026-08-21-application-build-one.md`; six items recorded and left
+    `docs/process/runs/2026-08-21-application-build-one.md`; ten items recorded and left
     open are in `docs/implementation/app/OPEN-ITEMS.md`.
+  - **It has been reviewed once, and the review found a blocker.** `test-engineer`,
+    `normal-operation-reviewer` and `jake` reviewed the build; `jake` classified
+    nineteen findings as BUG and none as already covered. The most serious was that the
+    card table tested for two action strings the engine never emits — the contract's
+    vocabulary is `HOLD_CURRENT_DOSE`, not `HOLD`, and `REFUSE` is a capability outcome
+    rather than a `RecommendationAction`. Both rows were unreachable, so **every hold**
+    — the commonest thing the product will ever say, and what a settled tank gets —
+    rendered as "this build has no card for what the engine returned". It passed the
+    tests because the test corpus was written from the same misreading as the code.
+    Alongside it: Today read a standing dose as an instruction to change it, and there
+    was no screen anywhere that could record what the keeper's doser is set to, which
+    withheld every dose recommendation permanently. All three are fixed, with the
+    contract's own closed vocabularies now read from the contract rather than retyped,
+    and card disjointness and totality proved over the full ~5,000-shape cross-product
+    with a test that fails if any row becomes unreachable.
+  - **Two defects were found by running it rather than by reading it.** The browser
+    smoke run caught an assessment-id collision under concurrent writes — a
+    check-then-act race that silently overwrote a stored assessment, walking through
+    the guard written to prevent exactly that. Assessment writes are now serialised.
 - **A technical stack now exists in fact for the client**, and is deliberately small: no
   framework, no bundler, no build step, no dependency outside the Python runtime above.
   It is not a decision about the server half, which remains unstarted and unselected.
@@ -228,7 +247,7 @@ When application code eventually begins, the intended first runtime scope is:
 
 ## Next major step
 
-Independent review of the application build, then the owner's decisions on the six items
+A second independent review of the application build, then the owner's decisions on the ten items
 in `docs/implementation/app/OPEN-ITEMS.md`. The server half of the architecture —
 accounts, sync, notifications, billing — remains unstarted and unselected; nothing in the
 application forecloses it, and `docs/research/TECHNICAL-ARCHITECTURE-DOSSIER.md` remains

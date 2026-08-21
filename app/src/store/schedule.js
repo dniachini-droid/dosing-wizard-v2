@@ -186,12 +186,6 @@ export function autoCompletions(tasks, completions, parameter, date) {
   return out;
 }
 
-/* Only the mutation arm reads this: `AM-28` replaces the completion id with
-   one that carries a counter, to prove `SCH-09` would catch a completion that
-   stacks. It is declared here so the mutation is a one-line source change
-   rather than a rewrite. */
-let completionSeq = 0;
-
 export function createTaskStore(backend) {
   return {
     async tasks() {

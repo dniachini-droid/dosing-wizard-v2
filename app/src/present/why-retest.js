@@ -78,11 +78,32 @@ export function whyRetestRows(engineResult) {
    the keeper can see that the chosen day won against named alternatives. */
 export function whyRetestCandidates(engineResult) {
   const rt = engineResult?.retest || {};
-  const selected = rt.selectedAction;
+
+  /* WHICH ONE WON, AND WHY IT IS MATCHED ON THE INSTANT.
+
+     This compared `candidateClass` against `selectedAction`. They are
+     different vocabularies — `ROUTINE_CADENCE`, `POST_CHANGE_FIRST`,
+     `SIGNAL_ACCUMULATION` on one side (`retest.py:48-59`), `ROUTINE`,
+     `TEST_AT`, `REPEAT_NOW` on the other (`retest.py:33-35`) — so nothing was
+     ever marked as the winner, in the one view whose whole purpose is to show
+     that the chosen day beat named alternatives.
+
+     Matching on the class would mean holding a copy of the engine's own
+     class-to-code map here, which is a second owner of it — and it would be
+     wrong as well as duplicated, because that map is not uniform
+     (`RETURN_PLAN_EXPIRY` maps to `RETEST_RETURN_PLAN_ASSESSMENT`).
+
+     The engine computes the chosen instant as `asOf + selectedHours` and each
+     candidate's as `asOf + its own hours` (`retest.py:103, 288`), so the
+     winner is the candidate whose instant IS the recommended one. That is a
+     comparison of two values the engine supplied, and it duplicates nothing.
+     A tie shows as two marks, which is truthful — the engine reports ties in
+     `tiedReasonCodes` for the same reason. */
+  const chosenAt = typeof rt.recommendedAt === "string" ? rt.recommendedAt : null;
   return (Array.isArray(rt.candidateTimes) ? rt.candidateTimes : []).map((c) => ({
     id: c.candidateClass,
     label: t(`candidate.${c.candidateClass}`),
-    selected: c.candidateClass === selected,
+    selected: chosenAt != null && c.included !== false && c.at === chosenAt,
     included: c.included !== false,
     at: typeof c.at === "string" ? c.at : null,
     hours: isPresent(c.approxHours) ? num(c.approxHours, 0) : null,

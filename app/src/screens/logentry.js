@@ -34,6 +34,7 @@ export function renderLogEntry(ctx) {
     )
   );
 
+  screen.append(doseStateForm(ctx));
   screen.append(doseChangeForm(ctx));
   screen.append(waterChangeForm(ctx));
   screen.append(manualCorrectionForm(ctx));
@@ -72,6 +73,78 @@ function formCard(title, why, fields, onSave, saveLabel) {
 
 function field(label, control, hint) {
   return h("div", { class: "field" }, h("span", { class: "flabel" }, label), control, hint ? h("p", { class: "hint" }, hint) : null);
+}
+
+/* THE STANDING DOSE
+   -----------------
+   "Here is what my doser is set to" — not a change, a statement of the
+   current setting.
+
+   This form exists because without it the app could not be told the standing
+   dose at all. A keeper arriving with an established doser has no dose CHANGE
+   to record: they did not change anything, they just have a pump running at
+   some rate. With no `DOSE_STATE` and no `DOSE_CHANGE`, `delivery()` returns
+   `NOT_RUN`, `d_current` is `None`, and every dose recommendation is withheld
+   permanently. The engine's own comment at `dosing.py:150-154` calls that
+   ledger "the commonest first-run ledger there is".
+
+   The only workaround without this form was to invent a dose change from a
+   dose the keeper had never used — fabricating history to unblock an
+   analysis, which is the one thing this project will not do. */
+function doseStateForm(ctx) {
+  const dose = h("input", { class: "input", inputmode: "decimal", "aria-label": t("log.state.dose") });
+  const tc = timeControl({ initialDate: todayLocal() });
+
+  /* Same explicit question as the dose-change form, and for the same reason:
+     `effectiveAtConfidence` is `REQ` and the app may not decide it for the
+     keeper. Unchecked is not a default — it is the answer "yes, from then". */
+  const uncertain = h("input", { type: "checkbox", id: "ds-uncertain" });
+  const earliest = h("input", { class: "input", type: "datetime-local", "aria-label": t("log.dose.earliest") });
+  const latest = h("input", { class: "input", type: "datetime-local", "aria-label": t("log.dose.latest") });
+  const window = h(
+    "div",
+    { class: "field", hidden: true },
+    h("span", { class: "flabel" }, t("log.dose.between")),
+    h("div", { class: "inline" }, earliest, latest),
+    h("p", { class: "hint" }, t("log.dose.betweenHint"))
+  );
+  uncertain.addEventListener("change", () => { window.hidden = !uncertain.checked; });
+
+  let msgRef;
+  const { card, msg } = formCard(
+    t("log.state.title"),
+    t("log.state.why"),
+    [
+      field(t("log.state.dose"), dose, t("log.state.doseHint")),
+      tc.node,
+      h("label", { class: "field" }, uncertain, t("log.state.uncertain")),
+      window,
+    ],
+    async () => {
+      const when = tc.read();
+      if (!when.ok) { msgRef.textContent = when.why; return false; }
+      const v = Number(dose.value);
+      if (!Number.isFinite(v) || v < 0) { msgRef.textContent = t("log.state.needNumber"); return false; }
+      const detail = {
+        doseMlPerDay: v,
+        effectiveAtConfidence: uncertain.checked ? "UNCERTAIN" : "EXACT",
+      };
+      if (uncertain.checked) {
+        if (!earliest.value || !latest.value) { msgRef.textContent = t("log.dose.needWindow"); return false; }
+        detail.effectiveAtEarliest = new Date(earliest.value).toISOString();
+        detail.effectiveAtLatest = new Date(latest.value).toISOString();
+      }
+      await ctx.store.ledger.append({
+        kind: KIND.DOSE_STATE,
+        time: when.time,
+        recordedAt: new Date().toISOString(),
+        detail,
+      });
+      return true;
+    }
+  );
+  msgRef = msg;
+  return card;
 }
 
 function doseChangeForm(ctx) {
