@@ -14,13 +14,12 @@
    ========================================================================= */
 
 import { h } from "../ui/dom.js";
-import { addDays, daysBetween, isoLocalDate, parseLocalDate, todayLocal } from "../store/time.js";
+import { daysBetween, isoLocalDate, todayLocal } from "../store/time.js";
 import { computeSchedule, intervalLabel, makeTask, projectOccurrences, TASK_KIND } from "../store/schedule.js";
 import { fmtDayName, fmtShort } from "../ui/format.js";
 import { openSheet, timeControl } from "./entry.js";
 import { parameterDefs, parameterDef, KIND } from "../store/ledger.js";
 import { sayReason, sayParameterMid } from "../present/wording.js";
-import { isPresent } from "../present/cards.js";
 import { t } from "../strings.js";
 import {
   PREFERENCE,

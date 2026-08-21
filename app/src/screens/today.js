@@ -28,7 +28,7 @@ import { renderAssessment, renderDeveloperView } from "./assessment.js";
 import { logReading, timeControl } from "./entry.js";
 import { parameterDefs, parameterDef, KIND } from "../store/ledger.js";
 import { isPresent, selectCard } from "../present/cards.js";
-import { sayCapability, sayParameterMid, sayReason, num } from "../present/wording.js";
+import { sayCapability, sayParameterMid, num } from "../present/wording.js";
 import { t } from "../strings.js";
 import { ENGINE_STATE } from "../engine/client.js";
 import { SUGGESTION_STATE, outstandingExtras, askIsLive } from "../store/suggestion.js";

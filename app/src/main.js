@@ -28,15 +28,14 @@ import { createStore } from "./store/index.js";
 import { runAssessment, nowAsOf } from "./assess.js";
 import { onEngineState, warmUp, ENGINE_STATE } from "./engine/client.js";
 import { todayLocal } from "./store/time.js";
-import { KIND, SOURCE, parameterDef } from "./store/ledger.js";
-import { computeSchedule, taskState } from "./store/schedule.js";
+import { KIND } from "./store/ledger.js";
+import { taskState } from "./store/schedule.js";
 import {
   PREFERENCE,
   SUGGESTION_STATE,
   applyAddExtra,
   applyReplace,
   decline as declineSuggestion,
-  outstandingExtras,
   readExtras,
   readPreference,
   resolve as resolveSuggestion,
@@ -44,7 +43,7 @@ import {
 } from "./store/suggestion.js";
 import { t } from "./strings.js";
 
-import { renderToday, alkTrace } from "./screens/today.js";
+import { renderToday } from "./screens/today.js";
 import { renderTestLab } from "./screens/testlab.js";
 import { renderTasks, openSuggestionSheet } from "./screens/tasks.js";
 import { renderHistory } from "./screens/history.js";
