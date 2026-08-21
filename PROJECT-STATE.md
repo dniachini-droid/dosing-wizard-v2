@@ -151,8 +151,56 @@ Phase 0 — Preserve and found V2
     on a tank whose consumption had not changed. Both are fixed. The full record,
     including every finding recorded and left open, is
     `docs/process/runs/2026-08-21-alk-v2-first-engine.md`.
-- No V2 application runtime exists — no persistence, no UI, no scheduler, no notifications.
-- No technical stack has been selected.
+- **A V2 application exists**, under `app/`, and is installable on a phone. It is
+  the interface the 24-screen mockups describe, over the engine above.
+  - **The application runs the engine itself, not a copy of it.** `engine/alk_v2/*.py`
+    is loaded unmodified into CPython compiled to WebAssembly. A JavaScript port would
+    have been a second owner of every threshold in the canon, which `MASTER RULE 1`
+    calls a defect rather than a coincidence. The runtime is fetched and hash-verified
+    by `tools/app/vendor-runtime.py`, not committed — the script is committed and the
+    12 MB artefact is not, on the same principle as `mockups/build-single-file.py`.
+  - **Storage is local-first and append-only.** Nothing is overwritten: a correction is
+    a new event pointing at the one it replaces; a suspect mark is an annotation. Time
+    provenance has two constructors and no third, and a date-only record has no instant
+    field at all. Assessments are stored records with engine, canon and configuration
+    version stamps and the identity of every input event, from the first commit.
+  - **No UI component computes chemistry.** Card selection is an ordered predicate table
+    over `EngineResult` fields, and a test proves at most one row matches any result —
+    the property V1's first-match wizard lacked. `NOT_RUN`, `WITHHELD` and `NONE` render
+    as designed states with a reason.
+  - **Every user-facing string lives in `app/src/strings.js`**, including a sentence for
+    every reason code the engine can emit. `tools/app/check-strings.py` fails on any
+    prose literal elsewhere.
+  - `docs/implementation/app/TASKS-AND-SCHEDULING.md` is the owner's approved scheduling
+    design of 21 August 2026 and is implemented: completion-anchored scheduling, four
+    kinds of item in one list, and a suggested test that is accepted or declined rather
+    than moved.
+  - **75 application checks and 61 negative controls, all caught.** The engine's own gate
+    is byte-identical to before this work. The full record is
+    `docs/process/runs/2026-08-21-application-build-one.md`; ten items recorded and left
+    open are in `docs/implementation/app/OPEN-ITEMS.md`.
+  - **It has been reviewed once, and the review found a blocker.** `test-engineer`,
+    `normal-operation-reviewer` and `jake` reviewed the build; `jake` classified
+    nineteen findings as BUG and none as already covered. The most serious was that the
+    card table tested for two action strings the engine never emits — the contract's
+    vocabulary is `HOLD_CURRENT_DOSE`, not `HOLD`, and `REFUSE` is a capability outcome
+    rather than a `RecommendationAction`. Both rows were unreachable, so **every hold**
+    — the commonest thing the product will ever say, and what a settled tank gets —
+    rendered as "this build has no card for what the engine returned". It passed the
+    tests because the test corpus was written from the same misreading as the code.
+    Alongside it: Today read a standing dose as an instruction to change it, and there
+    was no screen anywhere that could record what the keeper's doser is set to, which
+    withheld every dose recommendation permanently. All three are fixed, with the
+    contract's own closed vocabularies now read from the contract rather than retyped,
+    and card disjointness and totality proved over the full ~5,000-shape cross-product
+    with a test that fails if any row becomes unreachable.
+  - **Two defects were found by running it rather than by reading it.** The browser
+    smoke run caught an assessment-id collision under concurrent writes — a
+    check-then-act race that silently overwrote a stored assessment, walking through
+    the guard written to prevent exactly that. Assessment writes are now serialised.
+- **A technical stack now exists in fact for the client**, and is deliberately small: no
+  framework, no bundler, no build step, no dependency outside the Python runtime above.
+  It is not a decision about the server half, which remains unstarted and unselected.
 
 ---
 
@@ -199,8 +247,11 @@ When application code eventually begins, the intended first runtime scope is:
 
 ## Next major step
 
-Complete the documentation-only founding package, then research and decide the technical
-architecture for a paid offline-capable PWA before scaffolding application code.
+A second independent review of the application build, then the owner's decisions on the ten items
+in `docs/implementation/app/OPEN-ITEMS.md`. The server half of the architecture —
+accounts, sync, notifications, billing — remains unstarted and unselected; nothing in the
+application forecloses it, and `docs/research/TECHNICAL-ARCHITECTURE-DOSSIER.md` remains
+research rather than a decision.
 
 ---
 

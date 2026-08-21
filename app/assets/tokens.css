@@ -1,0 +1,402 @@
+/* ============================================================================
+   DOSING WIZARD V2 — DESIGN TOKENS
+   ----------------------------------------------------------------------------
+   This is the single source of appearance for every build-one mockup screen.
+   Every colour, radius, shadow, type size, weight, letter-spacing and spacing
+   step used anywhere in these screens is declared here and nowhere else.
+
+   Two rules hold this together:
+
+     1. No other file may contain a literal colour, radius, shadow or type
+        size. `app.css` and the screens reference these variables only.
+     2. Parameter colour is IDENTITY. State colour is amber and red. A
+        parameter's own colour never signals a state, and a state colour is
+        never used as a parameter's identity.
+
+   Changing how the app looks is editing this file.
+   ========================================================================= */
+
+:root {
+
+  /* --- Ground and surfaces ------------------------------------------------
+     Cards sit on a pale warm-green ground and carry a subtle top-to-bottom
+     gradient rather than a flat white fill. */
+
+  --ground:            #EDF2F1;
+  --card-top:          #FFFFFF;
+  --card-bottom:       #F5F9F7;
+  --card-gradient:     linear-gradient(180deg, var(--card-top) 0%, var(--card-bottom) 100%);
+
+  --border:            #DFE8E5;   /* card and control edges */
+  --hairline:          #EBF1EF;   /* internal dividers, gridlines */
+
+  --inset:             #F2F7F5;   /* recessed panels inside a card */
+  --inset-deep:        #E8EFEC;   /* recessed panel, one step deeper */
+
+  /* --- Ink ---------------------------------------------------------------- */
+
+  --ink:               #0C1D1A;   /* values, headings */
+  --grey:              #566966;   /* body copy, secondary labels */
+  --faint:             #8DA09B;   /* metadata, units in small type, captions */
+
+  /* --- Parameter identity -------------------------------------------------
+     Icon tint and header tint only. Never a state signal. */
+
+  --alk:               #0D8078;
+  --alk-bg:            #E1F2EF;
+
+  --ca:                #B45F35;
+  --ca-bg:             #FAEBE1;
+
+  --mg:                #6B57AC;
+  --mg-bg:             #EEEAF9;
+
+  --no3:               #43804B;
+  --no3-bg:            #E6F3E7;
+
+  --po4:               #AB4180;
+  --po4-bg:            #FAE8F3;
+
+  --sal:               #2A6CAE;
+  --sal-bg:            #E4EFFA;
+
+  /* --- State ---------------------------------------------------------------
+     Pills, markers and notices only. Amber is attention; red is safety and
+     outer-bound breach. There is no third state colour: a refusal is rendered
+     with structure and neutral ink, not with alarm. */
+
+  --attention:         #B4761E;
+  --attention-bg:      #FCF2E0;
+
+  --safety:            #C2432E;
+  --safety-bg:         #FCE9E5;
+
+  /* Neutral state chip — used for NOT_RUN / WITHHELD / NONE, which are
+     designed outputs and must not read as errors. */
+  --neutral-chip:      #566966;
+  --neutral-chip-bg:   #E8EFEC;
+
+  /* --- Radii ------------------------------------------------------------- */
+
+  --r-card:            22px;
+  --r-panel:           17px;
+  --r-inner:           12px;
+  --r-field:           14px;
+  --r-chip:            999px;
+  --r-swatch:          3px;    /* legend swatches */
+
+  /* --- Shadow layers -------------------------------------------------------
+     Depth is four layers: a tight edge shadow, a mid lift, a wide soft shadow
+     beneath, and a white inner highlight along the top edge. */
+
+  --sh-edge:           0 0 0 1px rgba(12, 29, 26, 0.045);
+  --sh-lift:           0 2px 5px rgba(12, 29, 26, 0.055);
+  --sh-soft:           0 18px 36px -20px rgba(12, 29, 26, 0.32);
+  --sh-highlight:      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+  --shadow-card:       var(--sh-edge), var(--sh-lift), var(--sh-soft), var(--sh-highlight);
+  --shadow-raised:     var(--sh-edge), 0 1px 3px rgba(12, 29, 26, 0.05), var(--sh-highlight);
+  --shadow-inset:      inset 0 1px 2px rgba(12, 29, 26, 0.05);
+  --shadow-bar:        0 -10px 24px -14px rgba(12, 29, 26, 0.30);
+
+  /* --- Type ---------------------------------------------------------------
+     System stack only. Nothing is downloaded. */
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, "Noto Sans", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+
+  --t-hero:            44px;   /* the one big number on a screen */
+  --t-value:           30px;   /* card values */
+  --t-tile:            25px;   /* inert tile values */
+  --t-h1:              23px;   /* screen title */
+  --t-h2:              17px;   /* card heading */
+  --t-h3:              14px;   /* section heading, uppercase */
+  --t-body:            15px;
+  --t-small:           13px;
+  --t-micro:           11px;
+  --t-code:            11.5px;
+  --t-nano:            8px;    /* the "Later" flag on the disabled Tools tab */
+  --t-axis:            9px;    /* chart axis labels */
+
+  --lh-tight:          1.15;
+  --lh-body:           1.5;
+
+  --ls-hero:           -0.05em;
+  --ls-value:          -0.04em;
+  --ls-head:           -0.02em;
+  --ls-caps:           0.08em;   /* uppercase section labels */
+
+  --w-regular:         400;
+  --w-medium:          500;
+  --w-semi:            600;
+  --w-bold:            700;
+  --w-heavy:           800;
+
+  /* --- Spacing ------------------------------------------------------------ */
+
+  --sp-1:              4px;
+  --sp-2:              8px;
+  --sp-3:              12px;
+  --sp-4:              16px;
+  --sp-5:              20px;
+  --sp-6:              28px;
+  --sp-7:              36px;
+  --sp-8:              48px;
+
+  --gutter:            16px;   /* screen side padding */
+  --card-pad:          18px;
+  --stack:             14px;   /* gap between cards */
+
+  /* --- Layout ------------------------------------------------------------- */
+
+  --screen-max:        460px;  /* mobile first; caps on a wide window */
+  --tabbar-h:          62px;
+
+  /* Fixed component dimensions */
+  --sz-mark:           30px;   /* parameter identity mark, picker icon column */
+  --sz-rank:           22px;   /* attention-list rank chip */
+  --sz-ord:            24px;   /* constraint ordinal column */
+  --sz-swatch:         10px;   /* legend swatch */
+  --sz-steprail:       4px;    /* setup progress rail */
+  --sz-dot:            8px;    /* inert tile dot */
+  --sz-spark:          30px;   /* tile sparkline height */
+
+  /* --- Motion --------------------------------------------------------------
+     The trace animates left to right on load and event markers appear as the
+     line reaches them. Every one of these collapses to 0 under
+     prefers-reduced-motion (see app.css). */
+
+  --motion-trace:      1100ms;
+  --motion-ease:       cubic-bezier(0.35, 0, 0.15, 1);
+  --motion-fade:       260ms;
+
+  /* --- Chart geometry ----------------------------------------------------- */
+
+  --chart-trace-w:     2.25px;
+  --chart-point-r:     3.4px;
+  --chart-grid-dash:   1 4;
+  --chart-event-dash:  3 4;
+  --chart-range-alpha: 0.55;
+}
+
+/* ============================================================================
+   EXTENSION — V1 SURFACES IN THIS VISUAL LANGUAGE
+   ----------------------------------------------------------------------------
+   Everything below was added when the V1 application salvage inventory
+   (`docs/migration/V1-APPLICATION-SALVAGE.md`) was carried into this screen
+   set. The block above is unchanged: nothing here restyles what PR #6
+   established, it only adds what the new surfaces need.
+
+   The motion values in particular are NOT new design work. They were tuned by
+   hand in V1 and are transcribed here from V1 source at commit
+   `9276a2ca254e88d19e0f02dced42a1b896499780`, file and line named against each
+   group. They live here so a duration can be retuned by editing one number.
+   ========================================================================= */
+
+:root {
+
+  /* --- Additional surfaces ------------------------------------------------
+     A calendar grid and a checklist need one step more contrast than a card
+     interior, without introducing a new hue. */
+
+  --grid-line:         #E4EDEA;   /* calendar cell edges */
+  --today-ring:        #0D8078;   /* the current day on the calendar */
+  --done-ink:          #43804B;   /* a completed mark — the same green as NO3 identity,
+                                     used here as "done", never as a parameter */
+  --done-bg:           #E6F3E7;
+  --suggest-bg:        #F4F1FB;   /* the engine's suggestion — visibly not the user's own */
+  --suggest-edge:      #6B57AC;
+
+  /* --- Additional radii and sizes ----------------------------------------- */
+
+  --r-sheet:           26px;   /* bottom sheet */
+  --r-cell:            9px;    /* calendar day cell */
+
+  --sz-cell:           40px;   /* calendar day cell minimum height */
+  --sz-daydot:         5px;    /* per-day indicator dot */
+  --sz-step:           34px;   /* day-stepper arrow button */
+  --sz-gear:           32px;   /* settings gear in the top bar */
+  --sz-check:          22px;   /* test-lab checklist tick */
+  --sz-progress:       6px;    /* checklist progress rail */
+  --sz-star:           14px;   /* a completion star */
+  --sz-star-latest:    19px;   /* the most recent one, larger */
+
+  --sheet-scrim:       rgba(12, 29, 26, 0.45);
+  --sh-sheet:          0 -24px 60px -20px rgba(12, 29, 26, 0.35);
+
+  /* ==========================================================================
+     MOMENT A — THE READING ARRIVES ON ITS OWN HISTORY
+     --------------------------------------------------------------------------
+     Ported from V1 `src/components/ReadingConfirmation.jsx` (the driver) and
+     `src/styles/base.css` (the landing effects). The single progress value is
+     the fix that stopped the travelling dot running ahead of its own line:
+     three independent animations — a CSS dash, an SVG motion path and a JS
+     timer — could never stay in step.
+
+     `--ma-travel-*` are read by `moments.js` through getComputedStyle, so this
+     file remains the one place a duration is changed.
+     ====================================================================== */
+
+  /* Sequence. Strictly ordered: the chart lands, its scale fades in, the dot
+     falls onto the first point, and only then does the travel begin.
+     ReadingConfirmation.jsx:487-489, base.css:39-43. */
+  --ma-chart-in:       460ms;
+  --ma-chart-ease:     cubic-bezier(.2, 1.3, .4, 1);
+  --ma-scale-in:       340ms;
+  --ma-scale-delay:    300ms;
+  --ma-drop-in:        440ms;
+  --ma-drop-delay:     900ms;
+  --ma-drop-ease:      cubic-bezier(.3, 1.4, .5, 1);
+
+  /* The travel itself. ReadingConfirmation.jsx:490 — `DURATION = 4600,
+     DELAY = 1340`; :497 — eased `1 - Math.pow(1 - t, 2.4)` so it sets off
+     briskly and settles onto the final reading. */
+  --ma-travel-delay:   1340ms;
+  --ma-travel-dur:     4600ms;
+  --ma-travel-exp:     2.4;
+
+  /* A reading's dot lights as the head passes it. ReadingContext.jsx:161. */
+  --ma-point-fade:     200ms;
+  --ma-point-ease:     ease-out;
+
+  /* Landing. base.css:17-21, 49-53. */
+  --ma-pop-dot:        620ms;
+  --ma-pop-ease:       cubic-bezier(.3, 1.5, .45, 1);
+  --ma-ring:           1100ms;
+  --ma-ring-ease:      cubic-bezier(.2, .7, .3, 1);
+  --ma-ring2-delay:    260ms;
+
+  /* A single quiet acknowledgement when the reading lands inside the band.
+     Once — confirmation, not celebration. base.css:57-58. */
+  --ma-band-hit:       900ms;
+
+  /* The value settles with a light sweeping across it. base.css:201-214.
+     `--ma-sheen-clear` is ReadingConfirmation.jsx:478 — the class is removed
+     1250ms after landing, or the gradient stays clipped to the text forever. */
+  --ma-value-pulse:    700ms;
+  --ma-sheen:          1100ms;
+  --ma-sheen-clear:    1250ms;
+
+  /* The card's contents arrive in order, so the eye is led from the result to
+     the reasoning. base.css:62-63; delays ReadingConfirmation.jsx:551,555. */
+  --ma-rise:           420ms;
+  --ma-rise-ease:      cubic-bezier(.2, .8, .3, 1);
+  --ma-stagger-1:      260ms;
+  --ma-stagger-2:      380ms;
+
+  /* Auto-dismiss. ReadingConfirmation.jsx:438 — `AUTO_SECONDS = 15`. Touching
+     the card stops it, so it only closes itself once you have moved on. */
+  --ma-autoclose:      15s;
+
+  /* Geometry, transcribed from ReadingContext.jsx. The viewBox is
+     ReadingConfirmation.jsx:464 — `readingGeometry(def, series, 260, 108, 12)`;
+     AXIS is ReadingContext.jsx:36. */
+  --ma-w:              260;
+  --ma-h:              108;
+  --ma-pad:            12;
+  --ma-axis:           34;
+  --ma-band-pad:       0.22;   /* ReadingContext.jsx:31 — vertical breathing room */
+  --ma-tick-gap:       11;     /* ReadingContext.jsx:76 — labels closer than this are dropped */
+  --ma-series-max:     11;     /* ReadingContext.jsx:15 — prior readings kept */
+
+  --ma-glow-blur:      3.4;    /* ReadingContext.jsx:96 */
+  --ma-head-blur:      3;      /* ReadingContext.jsx:99 */
+  --ma-glow-w:         4.5px;  /* ReadingContext.jsx:140 */
+  --ma-glow-alpha:     0.45;
+  --ma-line-w:         2.6px;  /* ReadingContext.jsx:143 */
+  --ma-point-r:        2.6;    /* ReadingContext.jsx:162 */
+  --ma-point-alpha:    0.55;
+  --ma-head-r:         8;      /* ReadingContext.jsx:171 */
+  --ma-head-alpha:     0.5;
+  --ma-head-core-r:    3.4;    /* ReadingContext.jsx:172 */
+  --ma-ring-r:         4;      /* ReadingContext.jsx:179-182 */
+  --ma-ring-w:         2px;
+  --ma-ring2-w:        1.5px;
+  --ma-new-halo-r:     9;      /* ReadingContext.jsx:184 */
+  --ma-new-halo-a:     0.18;
+  --ma-new-r:          4.8;    /* ReadingContext.jsx:185 */
+  --ma-new-core-r:     1.9;    /* ReadingContext.jsx:186 */
+  --ma-area-alpha:     0.26;   /* ReadingContext.jsx:102 */
+  --ma-band-alpha:     0.09;   /* base.css:22 — @keyframes bandIn */
+  --ma-band-peak:      0.26;   /* base.css:57 — @keyframes bandHit */
+
+  /* ==========================================================================
+     MOMENT B — THE DOSE EXPECTATION
+     --------------------------------------------------------------------------
+     Ported from V1 `src/components/DoseExpectation.jsx` (`DoseChangePopup`).
+     A dose change is a prediction as much as an action; the expectation is
+     stated before the next reading arrives.
+     ====================================================================== */
+
+  /* Two phases. DoseExpectation.jsx:26 — `setPhase(1)` at 420ms, `setPhase(2)`
+     at 900ms: the new figure lands, then the expectation unfolds under it. */
+  --mb-phase-1:        420ms;
+  --mb-phase-2:        900ms;
+
+  /* Stagger of the unfolded block. DoseExpectation.jsx:69,77,105,112,116. */
+  --mb-stagger-1:      0ms;
+  --mb-stagger-2:      150ms;
+  --mb-stagger-3:      300ms;
+  --mb-stagger-4:      450ms;
+  --mb-stagger-5:      560ms;
+
+  /* DoseExpectation.jsx:19 — `AUTO = 14`. */
+  --mb-autoclose:      14s;
+
+  /* ==========================================================================
+     MOMENT C — TASK COMPLETION
+     --------------------------------------------------------------------------
+     Ported from V1 `src/components/TaskCompletion.jsx` (`TaskDonePopup`).
+     Shows the run of completions and the ACTUAL intervals between them, which
+     is often not the interval that was set. Shown without comment.
+     ====================================================================== */
+
+  /* The stars light one at a time, most recent last, so the run reads left to
+     right. TaskCompletion.jsx:39 — `380 + i * 110`. */
+  --mc-star-base:      380ms;
+  --mc-star-step:      110ms;
+  --mc-star-pop:       420ms;
+  --mc-star-ease:      cubic-bezier(.3, 1.5, .45, 1);
+  --mc-star-delay:     40ms;    /* TaskCompletion.jsx:80 — per-star animation delay */
+  --mc-star-max:       12;      /* TaskCompletion.jsx:22 — twelve at most, so it stays a glance */
+
+  /* One day of interval, as bar height. The gap chart is data drawn to scale;
+     this is the scale. */
+  --mc-gap-unit:       2px;
+
+  /* TaskCompletion.jsx:89,93,102,115,119. */
+  --mc-stagger-1:      260ms;
+  --mc-stagger-2:      380ms;
+  --mc-stagger-3:      500ms;
+  --mc-stagger-4:      620ms;
+  --mc-stagger-5:      740ms;
+
+  /* TaskCompletion.jsx:15 — `AUTO_SECONDS = 10`. */
+  --mc-autoclose:      10s;
+
+  /* ==========================================================================
+     THE ICP ARRIVAL
+     --------------------------------------------------------------------------
+     Ported from V1 `src/components/IcpConfirmation.jsx`. The elements count in
+     so the size of the panel registers before the detail does.
+     ====================================================================== */
+
+  /* IcpConfirmation.jsx:60 — `DUR = 1400, DELAY = 420`; :66 eased
+     `1 - Math.pow(1 - t, 2.6)`; :69 detail follows 260ms after the count. */
+  --md-count-delay:    420ms;
+  --md-count-dur:      1400ms;
+  --md-count-exp:      2.6;
+  --md-detail-delay:   260ms;
+
+  /* IcpConfirmation.jsx:16 — `AUTO_SECONDS = 16`. */
+  --md-autoclose:      16s;
+
+  /* --- Sheet motion -------------------------------------------------------
+     New. A bottom sheet rises; it has no V1 ancestor to inherit from, so it
+     borrows the rise curve the moments already use. */
+
+  --sheet-in:          280ms;
+  --sheet-ease:        cubic-bezier(.2, .8, .3, 1);
+}

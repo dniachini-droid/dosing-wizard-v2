@@ -5,3 +5,9 @@ __pycache__/
 # `python3 mockups/build-single-file.py`; the script is committed, the artefact
 # is not, so the two can never drift apart.
 mockups/dosing-wizard-v2-mockups.html
+
+# The Python runtime the application uses to run the engine in a browser.
+# Fetched and hash-verified by `python3 tools/app/vendor-runtime.py`; the
+# script is committed, the 12 MB artefact is not, on the same principle as the
+# single-file mockup build above.
+app/vendor/pyodide/
