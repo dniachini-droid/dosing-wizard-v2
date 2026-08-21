@@ -17,3 +17,7 @@ app/vendor/pyodide/
 # would put a second copy of the application in the repository, which is the
 # drift this whole approach exists to prevent.
 deploy/
+
+# The zipped deploy tree, for a drag-and-drop host. Derived from the tree,
+# which is derived from the source. Rebuilt in two commands.
+*.zip
