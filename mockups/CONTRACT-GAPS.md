@@ -496,3 +496,62 @@ code it replaced.
 
 **What would close it.** An owner for the user-facing wording, with the same discipline
 the codes have: one sentence per code, versioned with it, checked against it.
+
+---
+
+## Gap 24 — A reef keeper's parameter list is longer than the contract's
+
+**Where it shows.** `08-test-lab.html`, which sets out to be *every parameter on one screen*
+for a testing session.
+
+**What the contract provides.** `Reading.parameter` is a closed vocabulary. Gap 1 already
+records that calcium, magnesium, nitrate, phosphate and salinity have nowhere to live. This
+is the further problem: **pH, temperature and specific gravity are not on that list either**,
+and a keeper testing at the tank does not sort their results by which ones the engine has an
+opinion about.
+
+The Test Lab originally carried a pH row. It was removed, because a screen that offers to
+record something the app cannot hold is a promise the app breaks on the next screen.
+
+**What would close it.** A decision on whether the app records parameters it will never
+analyse. The recording and the analysing are separate questions, and only the second one is
+answered.
+
+---
+
+## Gap 25 — Nothing distinguishes a state the engine cannot reach from one it will not answer
+
+**Where it shows.** `02-today-d-refusal.html`, and the whole of this rebuild's dealings with
+retired codes.
+
+**What is new.** The refusal screen in PR #6 was built on `CAPABILITY_ACTUATOR_INCREMENT_REQUIRED`.
+Owner decision 23 retired it and replaced it with **nothing at all** — the state cannot arise,
+because the application never commands a pump. The screen was rebuilt on a refusal that is
+live (a missing solution strength, which genuinely blocks the dKH→mL conversion).
+
+**The gap the episode exposes** is that a screen set has no way to tell, from the catalogue
+alone, that a code it renders has stopped being reachable. A retired code and a live one look
+identical in a payload table. The mistake was invisible for a whole PR and was found by
+reading, not by any check.
+
+**What would close it.** A machine-readable list of live codes that a screen set can be
+checked against, in the way `check-plain-english.py` checks visible strings. The catalogue's
+retired tables are prose, and prose is what got missed.
+
+---
+
+## Gap 26 — The severity words are contract values that happen to be English
+
+**Where it shows.** Every notice list.
+
+**What is new.** Owner decision 9 bans reason-code identifiers from visible strings. The four
+severity values are `REFUSAL`, `SAFETY`, `GATING`, `INFO`. Three of them are ordinary English
+words and are rendered verbatim; only `GATING` needed translating, and became *Limiting*.
+
+That is defensible and it is also unexamined: the set is one decision away from either
+translating all four or admitting that three are the user-facing words. It currently does
+neither deliberately.
+
+**What would close it.** A decision on whether the severity vocabulary is contract-internal
+or user-facing. This is small, and it is exactly the kind of thing that is settled cheaply now
+and expensively later.

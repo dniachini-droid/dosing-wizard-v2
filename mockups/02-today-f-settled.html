@@ -70,8 +70,8 @@
       </div>
       <div class="dim">
         <dt>Which way it is going</dt>
-        <dd>Steady
-          <span class="why">Six tests over twelve days. What movement there is, is smaller than the test kit can resolve.</span>
+        <dd>Too small to call
+          <span class="why">Six tests over twelve days lean very slightly down. Take the uncertainty off and nothing is left, so the app will not call it a fall &mdash; and will not call it steady either.</span>
         </dd>
       </div>
       <div class="dim">
@@ -97,7 +97,7 @@
       <div class="slopebox">
         <span class="lbl">What that supports</span>
         <span class="n">0.0000</span>
-        <span class="sub">dKH per day &mdash; nothing survives the uncertainty</span>
+        <span class="sub">dKH per day, after the uncertainty is taken off</span>
       </div>
     </div>
 
@@ -114,35 +114,48 @@
       <summary>
         <span class="lbl">Why it says that</span>
         <span class="sevcount">
-          <span class="pill pill-neutral">6 info</span>
+          <span class="pill pill-attention">2 limiting</span>
+          <span class="pill pill-neutral">7 info</span>
         </span>
         <span class="chev"></span>
       </summary>
       <ul class="notice-list">
         <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">The readings lean down very slightly. Subtracting the uncertainty leaves nothing, so this is reported as too small to call &mdash; never as steady.</span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0079</b> &nbsp; <span class="k">uncertainty allowance subtracted</span> <b>0.0079</b> &nbsp; <span class="k">days covered</span> <b>12.00</b> &nbsp; <span class="k">separate tests</span> <b>6</b></span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-GATING sev">Limiting</span>
+          <span class="say">The dose is left alone for that reason and no other.</span>
+          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0079</b> &nbsp; <span class="k">uncertainty allowance subtracted</span> <b>0.0079</b></span>
+        </li>
+
+        <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">Steady is a conclusion, not an absence of one. The readings lean down very slightly; subtracting the uncertainty leaves nothing to act on.</span>
-          <span class="payload"><span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">uncertainty in that drift</span> <b>0.0079</b> &nbsp; <span class="k">drift we can stand behind</span> <b>0.0000</b></span>
+          <span class="say">Leaving the dose alone is a full recommendation, not a failure to answer.</span>
+          <span class="payload"><span class="k">why it is held</span> <b>the lean is smaller than its own uncertainty</b></span>
         </li>
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
           <span class="say">The ordinary minimum is comfortably met, so this is not a provisional answer.</span>
-          <span class="payload"><span class="k">separate tests</span> <b>6</b> &nbsp; <span class="k">days covered</span> <b>12.00</b> &nbsp; <span class="k">separate tests needed</span> <b>3</b></span>
+          <span class="payload"><span class="k">separate tests</span> <b>6</b> &nbsp; <span class="k">days covered</span> <b>12.00</b></span>
         </li>
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
           <span class="say">The stretch of history used runs from the last dose change to this morning, with no water change big enough to break it.</span>
-          <span class="payload"><span class="k">from</span> <b>9 Aug 2026, 19:12</b> &nbsp; <span class="k">to</span> <b>20 Aug 2026, 07:40</b> &nbsp; <span class="k">days covered</span> <b>12.00</b></span>
+          <span class="payload"><span class="k">from</span> <b>9 Aug 2026, 19:12</b> &nbsp; <span class="k">to</span> <b>20 Aug 2026, 07:40</b> &nbsp; <span class="k">days covered</span> <b>12.00</b> &nbsp; <span class="k">furthest back we look (days)</span> <b>14</b></span>
         </li>
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
           <span class="say">What your tank uses each day, worked out from what goes in and what the level actually did.</span>
-          <span class="payload"><span class="k">the tank uses</span> <b>0.6214</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b></span>
+          <span class="payload"><span class="k">the tank uses</span> <b>0.6214</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0040</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
           <span class="say">Strength per millilitre comes from the recipe you entered, not from watching your tank.</span>
-          <span class="payload"><span class="k">solution strength</span> <b>100 g/L</b> &nbsp; <span class="k">net water volume</span> <b>77</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b></span>
+          <span class="payload"><span class="k">chemical</span> <b>sodium carbonate</b> &nbsp; <span class="k">solution strength</span> <b>100 g/L</b> &nbsp; <span class="k">net water volume</span> <b>77</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b></span>
         </li>
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
@@ -205,29 +218,39 @@
       this vocabulary.</p>
       <ul class="notice-list">
         <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">TRAJECTORY_UNCERTAINTY_LIMITED</span>
+          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0040</b> &nbsp; <span class="k">sigmaS</span> <b>0.0079</b> &nbsp; <span class="k">supportSubtraction</span> <b>0.0079</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b> &nbsp; <span class="k">independentClusters</span> <b>6</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-GATING sev">Gating</span>
+          <span class="code">MAINTENANCE_HOLD_UNCERTAINTY_LIMITED</span>
+          <span class="payload"><span class="k">S_observed</span> <b>&minus;0.0040</b> &nbsp; <span class="k">sigmaS</span> <b>0.0079</b> &nbsp; <span class="k">supportSubtraction</span> <b>0.0079</b></span>
+        </li>
+        <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">TRAJECTORY_STEADY</span>
-          <span class="payload"><span class="k">observedSlope</span> <b>&minus;0.0040</b> &nbsp; <span class="k">sigmaS</span> <b>0.0079</b> &nbsp; <span class="k">supportedSlope</span> <b>0.0000</b></span>
+          <span class="code">OUTPUT_HOLD_IS_A_RECOMMENDATION</span>
+          <span class="payload"><span class="k">holdReasons</span> <b>[TRAJECTORY_UNCERTAINTY_LIMITED]</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">EVIDENCE_SUFFICIENT</span>
-          <span class="payload"><span class="k">independentClusters</span> <b>6</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b> &nbsp; <span class="k">clustersNeeded</span> <b>3</b></span>
+          <span class="payload"><span class="k">independentClusters</span> <b>6</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">SEGMENT_SELECTED</span>
-          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0809</b> &nbsp; <span class="k">startAt</span> <b>2026-08-09T19:12Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b></span>
+          <span class="payload"><span class="k">segmentId</span> <b>SEG-77A-0809</b> &nbsp; <span class="k">startAt</span> <b>2026-08-09T19:12Z</b> &nbsp; <span class="k">endAt</span> <b>2026-08-20T07:40Z</b> &nbsp; <span class="k">spanDays</span> <b>12.00</b> &nbsp; <span class="k">lookbackCapDays</span> <b>14</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">CONSUMPTION_ESTIMATED</span>
-          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6214</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b></span>
+          <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6214</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0040</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">POTENCY_SELECTED_THEORETICAL</span>
-          <span class="payload"><span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b> &nbsp; <span class="k">theoreticalDkhPerMl</span> <b>0.0686</b></span>
+          <span class="payload"><span class="k">chemical</span> <b>SODIUM_CARBONATE</b> &nbsp; <span class="k">concentrationGPerL</span> <b>100</b> &nbsp; <span class="k">netVolumeL</span> <b>77</b> &nbsp; <span class="k">theoreticalDkhPerMl</span> <b>0.0686</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>

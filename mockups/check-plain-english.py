@@ -68,6 +68,31 @@ def visible_text(html: str) -> str:
     return body
 
 
+# --- literal phrases, for the blind spots the structural patterns cannot see -
+#
+# A contract state name that is one ordinary word ("WITHHELD"), an enum with the
+# underscore taken out ("Uncertainty limited"), a canon symbol ("P x D") and a
+# word canon forbids outright ("safe") all read as ordinary prose to the
+# patterns above. Each entry below was a real leak found by reading the screens.
+
+BANNED_PHRASES = [
+    # Part IX-006 forbids these two words about values, in terms.
+    (r'\b(un)?safe\b',                    'IX-006 forbids the words "safe" and "unsafe"'),
+    # Contract state names used verbatim as visible labels.
+    (r'\bWITHHELD\b',                     'contract state name'),
+    (r'\bUncertainty[ -]limited\b',       'enum value with the underscore removed'),
+    (r'\bsupported (slope|trajectory|shortfall)\b',
+                                          'canon variable in visible prose'),
+    (r'\bobserved slope\b',               'canon variable in visible prose'),
+    (r'\bevidence state\b',               'contract vocabulary'),
+    (r'\bprediction object\b',            'contract vocabulary'),
+    # Canon symbols. Guarded so ordinary prose containing a capital P is safe.
+    (r'\bP\s*(?:&times;|\u00d7|\*)\s*D\b',   'canon symbols for potency and dose'),
+    (r'\bS_(?:observed|supported)\b',     'canon variable'),
+]
+BANNED = [(re.compile(pat, re.I), why) for pat, why in BANNED_PHRASES]
+
+
 def check(path: pathlib.Path):
     text = visible_text(path.read_text())
     found = []
@@ -78,12 +103,22 @@ def check(path: pathlib.Path):
             if hit in ALLOWED:
                 continue
             found.append((what, hit))
+    # A screen may name a forbidden word in order to state the rule against it.
+    # Quoted mentions are use-mention, not use.
+    mentions = re.sub(r'(?:\u201c|&ldquo;)(?:(?!\u201d|&rdquo;).){0,40}(?:\u201d|&rdquo;)',
+                      " ", text)
+    for pattern, why in BANNED:
+        for hit in pattern.findall(mentions):
+            hit = hit if isinstance(hit, str) else "".join(hit)
+            found.append((why, hit.strip() or pattern.pattern))
     return found
 
 
 def main() -> int:
     failures = 0
     for path in sorted(HERE.glob("*.html")):
+        if path.name == "dosing-wizard-v2-mockups.html":
+            continue   # generated bundle; its sources are checked individually
         found = check(path)
         if found:
             failures += 1
@@ -93,8 +128,7 @@ def main() -> int:
     if failures:
         print("\n%d file(s) show contract vocabulary outside a developer view." % failures)
         return 1
-    print("Clean: no reason code, canon marker or canon variable name is visible "
-          "outside a developer view.")
+    print("Clean: no reason code, canon marker, canon variable name, contract state\nname or forbidden word is visible outside a developer view.")
     return 0
 
 

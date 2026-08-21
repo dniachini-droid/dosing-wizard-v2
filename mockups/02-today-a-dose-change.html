@@ -197,11 +197,11 @@
       <div class="dim">
         <dt>Which way it is going</dt>
         <dd>Falling
-          <span class="why">Supported slope is below zero, so the fall is large enough to act on.</span></dd>
+          <span class="why">The fall is bigger than its own uncertainty, so it is large enough to act on.</span></dd>
       </div>
       <div class="dim">
         <dt>How much is known</dt>
-        <dd>Sufficient
+        <dd>Enough to work from
           <span class="why">5 independent tests over 8.00 days. Minimum is 3 over 4 days.</span></dd>
       </div>
       <div class="dim">
@@ -250,7 +250,7 @@
       <p class="detail">
         Up from 9.0&nbsp;mL/day. That adds 0.0206&nbsp;dKH/day, which should leave alkalinity
         drifting down at about 0.0194&nbsp;dKH/day rather than 0.0400 &mdash; deliberately short
-        of flat, because the supported slope is conservative.
+        of flat, because the app only acts on the part of the fall it can stand behind.
       </p>
     </div>
     <p class="inert-note">This is what is recommended. The app cannot see your pump and does not claim the change has been made.</p>
@@ -261,7 +261,7 @@
       <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Sat 22 Aug, 07:40</span></div>
       <div class="kv-row"><span class="kv-k">Earliest useful</span><span class="kv-v">Fri 21 Aug, 07:40</span></div>
       <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Routine cadence, nothing unusual in play</span></div>
-      <div class="kv-row"><span class="kv-k">Latest safe</span><span class="kv-v is-absent">Not set &mdash; no rule</span></div>
+      <div class="kv-row"><span class="kv-k">Latest the app will let it slip</span><span class="kv-v is-absent">Not set<span class="sub">the scheduler picks an earliest, never a deadline</span></span></div>
     </div>
 
     <!-- ---------- ordered, severity-graded notice list ---------- -->
@@ -285,7 +285,7 @@
 
         <li class="notice rows-2">
           <span class="pill sev-GATING sev">Limiting</span>
-          <span class="say">The scheduler cannot bring a test forward because alkalinity is heading toward a boundary: the margin that would trigger it has no value for alkalinity.</span>
+          <span class="say">At this drift the lower outer bound is about six weeks away, so testing sooner for that reason is not what the next test is for.</span>
           <span class="payload"><span class="k">days to the outer bound at this drift</span> <b>42.5</b></span>
         </li>
 
@@ -351,13 +351,13 @@
 
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">What the tank uses per day, from the mass balance. Uses the observed slope, never the supported one.</span>
+          <span class="say">What the tank uses per day, from the mass balance. Uses what your tests actually show, never the reduced figure the app acts on.</span>
           <span class="payload"><span class="k">the tank uses</span> <b>0.6576</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0400</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
 
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">The dose change that the supported shortfall justifies.</span>
+          <span class="say">The dose change that the shortfall we can stand behind justifies.</span>
           <span class="payload"><span class="k">current dose</span> <b>9.0</b> &nbsp; <span class="k">recommended dose</span> <b>9.3</b> &nbsp; <span class="k">change</span> <b>+0.3</b> &nbsp; <span class="k">drift we can stand behind</span> <b>&minus;0.0198</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">drift expected after the change</span> <b>&minus;0.0194</b></span>
         </li>
 
@@ -369,7 +369,7 @@
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">No overall confidence label is shown, because there is no rule for calculating one. The evidence facts above are shown instead.</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
         </li>
 
       </ul>
@@ -514,9 +514,9 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-GATING sev">Gating</span>
-          <span class="code">RETEST_BOUNDARY_MARGIN_UNAVAILABLE</span>
-          <span class="say">The scheduler cannot bring a test forward because alkalinity is heading toward a boundary: the margin that would trigger it has no value for alkalinity.</span>
-          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+          <span class="code">RETEST_FORECAST_BOUNDARY_RISK</span>
+          <span class="say">At this drift the lower outer bound is about six weeks away, so testing sooner for that reason is not what the next test is for.</span>
+          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">T_boundaryDays</span> <b>41.5</b> &nbsp; <span class="k">boundSide</span> <b>LOWER</b> &nbsp; <span class="k">recommendedAt</span> <b>2026-10-01T07:40Z</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
@@ -598,9 +598,9 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
-          <span class="say">No overall confidence label is shown, because there is no rule for calculating one. The evidence facts above are shown instead.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>5</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0158</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
         </li>
       </ul>
     </div>

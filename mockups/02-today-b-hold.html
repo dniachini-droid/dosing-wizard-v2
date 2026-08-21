@@ -140,7 +140,7 @@
       </div>
       <div class="dim is-attention">
         <dt>How much is known</dt>
-        <dd>Uncertainty limited<span class="why">3 tests over 4.00 days &mdash; enough to look, not enough to separate the lean from the noise.</span></dd>
+        <dd>Too small to call<span class="why">3 tests over 4.00 days &mdash; enough to look, not enough to separate the lean from the noise.</span></dd>
       </div>
       <div class="dim">
         <dt>What is running</dt>
@@ -191,7 +191,7 @@
       <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v">9.0 mL/day<span class="sub">unchanged &mdash; held</span></span></div>
     </div>
     <p class="inert-note">
-      The 9.22 figure is arithmetic from the observed slope. It is not the recommendation, and
+      The 9.22 figure is arithmetic from what your tests show. It is not the recommendation, and
       the engine will not move the dose to it without supported evidence.
     </p>
 
@@ -199,7 +199,7 @@
     <div class="kv">
       <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Sat 22 Aug, 07:40</span></div>
       <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">Routine cadence, nothing unusual in play</span></div>
-      <div class="kv-row"><span class="kv-k">Latest safe</span><span class="kv-v is-absent">Not set &mdash; no rule</span></div>
+      <div class="kv-row"><span class="kv-k">Latest the app will let it slip</span><span class="kv-v is-absent">Not set<span class="sub">the scheduler picks an earliest, never a deadline</span></span></div>
     </div>
 
     <details class="notices">
@@ -274,7 +274,7 @@
 
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">What the tank uses per day. Uses the observed slope, never the supported one.</span>
+          <span class="say">What the tank uses per day. Uses what your tests actually show, never the reduced figure the app acts on.</span>
           <span class="payload"><span class="k">the tank uses</span> <b>0.6326</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0150</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
 
@@ -292,12 +292,12 @@
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">There is no rule for how soon a repeat test stops being useful, so no earliest limit was applied.</span>
+          <span class="say">A repeat sooner than 24 hours cannot tell you anything new, so that is the earliest the app will suggest one.</span>
         </li>
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
         </li>
 
         <li class="notice rows-1">
@@ -450,7 +450,7 @@
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">CONSUMPTION_ESTIMATED</span>
-          <span class="say">What the tank uses per day. Uses the observed slope, never the supported one.</span>
+          <span class="say">What the tank uses per day. Uses what your tests actually show, never the reduced figure the app acts on.</span>
           <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6326</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0150</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
         </li>
         <li class="notice rows-3">
@@ -467,15 +467,15 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">RETEST_MINIMUM_INTERVAL_UNAVAILABLE</span>
-          <span class="say">There is no rule for how soon a repeat test stops being useful, so no earliest limit was applied.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+          <span class="code">RETEST_SIGNAL_FLOOR_APPLIED</span>
+          <span class="say">A repeat sooner than 24 hours cannot tell you anything new, so that is the earliest the app will suggest one.</span>
+          <span class="payload"><span class="k">rawTSignalHours</span> <b>6.6</b> &nbsp; <span class="k">flooredHours</span> <b>24</b> &nbsp; <span class="k">sSupportedDkhPerDay</span> <b>0.0000</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>3</b> &nbsp; <span class="k">spanDays</span> <b>4.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0354</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>

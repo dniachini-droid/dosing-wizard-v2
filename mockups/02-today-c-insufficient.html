@@ -139,7 +139,7 @@
       </div>
       <div class="dim is-attention">
         <dt>How much is known</dt>
-        <dd>Insufficient<span class="why">2 tests over 3.00 days. The minimum is 3 tests over 4 days.</span></dd>
+        <dd>Not enough yet<span class="why">2 tests over 3.00 days. The minimum is 3 tests over 4 days.</span></dd>
       </div>
       <div class="dim">
         <dt>What is running</dt>
@@ -195,7 +195,7 @@
     <div class="kv">
       <div class="kv-row"><span class="kv-k">Recommended</span><span class="kv-v">Fri 21 Aug, 07:40</span></div>
       <div class="kv-row"><span class="kv-k">Why</span><span class="kv-v">To reach the minimum this app will act on</span></div>
-      <div class="kv-row"><span class="kv-k">Latest safe</span><span class="kv-v is-absent">Not set &mdash; no rule</span></div>
+      <div class="kv-row"><span class="kv-k">Latest the app will let it slip</span><span class="kv-v is-absent">Not set<span class="sub">the scheduler picks an earliest, never a deadline</span></span></div>
     </div>
 
     <details class="notices">
@@ -288,12 +288,12 @@
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">There is no rule for how much movement a test needs to show before it is worth taking, so that candidate was not calculated.</span>
+          <span class="say">There is no movement the app can stand behind yet, so there is nothing for it to wait to accumulate. That is why the next test is set by building evidence instead.</span>
         </li>
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
         </li>
 
       </ul>
@@ -463,15 +463,15 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">RETEST_CONFIDENCE_BUILDING_POLICY_UNAVAILABLE</span>
-          <span class="say">There is no rule for how much movement a test needs to show before it is worth taking, so that candidate was not calculated.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+          <span class="code">RETEST_SIGNAL_ACCUMULATION_NOT_RUN</span>
+          <span class="say">There is no movement the app can stand behind yet, so there is nothing for it to wait to accumulate. That is why the next test is set by building evidence instead.</span>
+          <span class="payload"><span class="k">sSupportedDkhPerDay</span> <b>0.0000</b> &nbsp; <span class="k">movementEvidence</span> <b>INSUFFICIENT</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>2</b> &nbsp; <span class="k">spanDays</span> <b>2.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0707</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
         </li>
       </ul>
     </div>

@@ -85,7 +85,7 @@
     </div>
 
     <div class="callout quiet">
-      <strong>Derived from the above, not stored:</strong> the aim point a return plan heads
+      <strong>Worked out by the engine from the above, not stored:</strong> the aim point a return plan heads
       for is the middle of your target range &mdash; 8.90&nbsp;dKH. The safety destination is
       the outer bound plus a fixed 0.20&nbsp;dKH buffer &mdash; 7.20 low, 10.80 high. You never
       set these directly, and they move when you edit the ranges.
@@ -182,17 +182,19 @@
       unknown &mdash; it is not treated as once a day.</p>
     </div>
 
-    <div class="refusal">
-      <span class="state">If the step size is left empty</span>
-      <p>This one is the sharpest refusal in the app. The engine can still work out the dose it
-      wants; it will not turn that into a number to set, and it will not pick a step size for
-      you. There is no assumed default.</p>
+    <div class="refusal quiet">
+      <span class="state">If this is left empty</span>
+      <p>Nothing is held back. This app never drives your pump &mdash; it tells you a number and
+      you set it &mdash; so a rounding step is about <strong>legibility</strong> and nothing
+      else. Leave it blank and you get the figure at full precision.</p>
       <div class="kv">
-        <div class="kv-row"><span class="kv-k">Final dose in mL/day</span><span class="kv-v is-absent">Withheld<span class="sub">the app will not guess what your pump can actually do</span></span></div>
-        <div class="kv-row"><span class="kv-k">The unrounded figure</span><span class="kv-v">Still shown</span></div>
-        <div class="kv-row"><span class="kv-k">One-off safety corrections</span><span class="kv-v">Still given<span class="sub">a one-off volume does not need the step size</span></span></div>
+        <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v">Still given<span class="sub">at full precision, e.g. 9.288 mL/day</span></span></div>
+        <div class="kv-row"><span class="kv-k">Rounded to something tidier</span><span class="kv-v is-absent">Not done<span class="sub">nothing to round to</span></span></div>
+        <div class="kv-row"><span class="kv-k">One-off safety corrections</span><span class="kv-v">Still given</span></div>
       </div>
-      <p style="margin-top:var(--sp-3)"><a class="fix" href="02-today-d-refusal.html">See what that looks like on the Today screen &rarr;</a></p>
+      <p class="hint" style="margin-top:var(--sp-3)">The sharpest refusal in the app is not
+      here &mdash; it is a missing solution strength, on the previous step.
+      <a class="fix" href="02-today-d-refusal.html">See what that looks like on Today &rarr;</a></p>
     </div>
   </section>
 

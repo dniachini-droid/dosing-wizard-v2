@@ -145,6 +145,26 @@
       <span style="color:var(--safety)"><span class="rule"></span>Safety destination 7.20&nbsp;dKH</span>
     </div>
 
+    <!-- ---------- observed AND supported slope ---------- -->
+    <div class="slopepair">
+      <div class="slopebox">
+        <span class="lbl">What your tests show</span>
+        <span class="n">&minus;0.1683</span>
+        <span class="sub">dKH/day, straight from the readings</span>
+      </div>
+      <div class="slopebox">
+        <span class="lbl">What&rsquo;s certain enough to act on</span>
+        <span class="n">&minus;0.1397</span>
+        <span class="sub">dKH/day, after the uncertainty is taken off</span>
+      </div>
+    </div>
+    <p class="inert-note">
+      The second number is the first with measurement uncertainty subtracted
+      (0.1683 &minus; 1.28&nbsp;&times;&nbsp;0.0223). It is the one the return below is sized
+      from &mdash; being below the outer range does not let the app act on more of the fall
+      than it can stand behind.
+    </p>
+
     <p class="seclabel">Where this stands</p>
     <dl class="dims">
       <div class="dim is-safety">
@@ -153,11 +173,11 @@
       </div>
       <div class="dim is-attention">
         <dt>Which way it is going</dt>
-        <dd>Falling<span class="why">&minus;0.1683&nbsp;dKH/day observed. Steady, not sudden &mdash; the rapid-movement test did not fire.</span></dd>
+        <dd>Falling fast<span class="why">&minus;0.1683&nbsp;dKH/day from the readings, &minus;0.1397 after uncertainty. Steady, not sudden &mdash; the rapid-movement test did not fire.</span></dd>
       </div>
       <div class="dim">
         <dt>How much is known</dt>
-        <dd>Sufficient<span class="why">4 independent tests over 6.00 days.</span></dd>
+        <dd>Enough to work from<span class="why">4 independent tests over 6.00 days.</span></dd>
       </div>
       <div class="dim is-safety">
         <dt>What is running</dt>
@@ -236,7 +256,7 @@
 
         <li class="notice rows-2">
           <span class="pill sev-SAFETY sev">Safety</span>
-          <span class="say">An urgent temporary return is in progress.</span>
+          <span class="say">An urgent temporary return has been recommended and the lock on dose changes is on. Whether you have made it is not something the app knows.</span>
           <span class="payload"><span class="k">movement wanted</span> <b>0.38</b> &nbsp; <span class="k">correction volume</span> <b>5.5</b></span>
         </li>
 
@@ -323,7 +343,7 @@
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
         </li>
 
       </ul>
@@ -416,7 +436,7 @@
         <li class="notice rows-3">
           <span class="pill sev-SAFETY sev">Safety</span>
           <span class="code">SAFETY_RETURN_ACTIVE</span>
-          <span class="say">An urgent temporary return is in progress.</span>
+          <span class="say">An urgent temporary return has been recommended and the lock on dose changes is on. Whether you have made it is not something the app knows.</span>
           <span class="payload"><span class="k">interventionId</span> <b>IV-0820-S</b> &nbsp; <span class="k">desiredMovementDkh</span> <b>0.38</b> &nbsp; <span class="k">correctionVolumeMl</span> <b>5.5</b></span>
         </li>
         <li class="notice rows-3">
@@ -505,9 +525,9 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>4</b> &nbsp; <span class="k">spanDays</span> <b>6.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0286</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
         </li>
       </ul>
     </div>

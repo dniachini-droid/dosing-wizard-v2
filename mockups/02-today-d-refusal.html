@@ -29,7 +29,7 @@
 
   <div class="mockup-note">
     <b>Variant D &mdash; a capability refusal.</b> Identical readings to variant A. One setup
-    datum is missing, so the final dose figure is withheld. Everything the missing datum does
+    datum is missing, so the dose in millilitres is held back. Everything the missing datum does
     not touch is still reported at full strength. A refusal is a designed output with a
     reason code, not an error screen.
   </div>
@@ -40,7 +40,7 @@
       <li><a class="attention-item" href="01-setup.html">
         <span class="rank">1</span>
         <span>
-          <span class="t">Tell the app the smallest amount your pump can change by</span>
+          <span class="t">Tell the app how strong your alkalinity solution is</span>
           <span class="d">Without it, no dose can be turned into a number to set. Everything else still runs.</span>
         </span>
       </a></li>
@@ -48,7 +48,7 @@
         <span class="rank">2</span>
         <span>
           <span class="t">The dose it wants is 9.29&nbsp;mL/day</span>
-          <span class="d">Shown unrounded, because it cannot be rounded to a setting your pump can actually take.</span>
+          <span class="d">Shown in dKH, because there is nothing to turn it into millilitres with.</span>
         </span>
       </a></li>
       <li>
@@ -153,7 +153,7 @@
       </div>
       <div class="dim">
         <dt>How much is known</dt>
-        <dd>Sufficient<span class="why">5 independent tests over 8.00 days.</span></dd>
+        <dd>Enough to work from<span class="why">5 independent tests over 8.00 days.</span></dd>
       </div>
       <div class="dim">
         <dt>What is running</dt>
@@ -183,27 +183,29 @@
     </div>
 
     <div class="refusal">
-      <span class="state">WITHHELD &middot; dose recommendation</span>
-      <h3>The dose figure is being held back</h3>
-      <p><strong>What is missing:</strong> your pump&rsquo;s smallest step &mdash; the smallest
-      change in mL/day it can actually be set to. It has never been recorded for this tank.</p>
-      <p><strong>Why that stops the number:</strong> the engine can work out the dose it wants,
-      but it cannot turn that into a setting your pump can make without knowing the step size.
-      It will not pick a step size for you, and there is no assumed default.</p>
-      <p><a class="fix" href="01-setup.html#step4">Add your pump&rsquo;s smallest step &rarr;</a></p>
+      <span class="state">No dose figure &middot; and here is why</span>
+      <h3>The app cannot put this in millilitres</h3>
+      <p><strong>What is missing:</strong> how strong your alkalinity solution is. The recipe
+      behind it &mdash; which chemical, and how many grams per litre &mdash; has never been
+      recorded for this tank.</p>
+      <p><strong>Why that stops the number:</strong> every millilitre has to be worth some
+      amount of dKH before millilitres mean anything. Without that, the app knows exactly how
+      much alkalinity your tank is short of, and has no way to say how much liquid that is.
+      It will not guess a strength, and there is no assumed default.</p>
+      <p><a class="fix" href="01-setup.html#step3">Add your solution&rsquo;s strength &rarr;</a></p>
       <div class="stillknown">
         <p style="margin-bottom:var(--sp-2)"><strong>What is known anyway:</strong></p>
         <div class="kv">
           <div class="kv-row"><span class="kv-k">Alkalinity</span><span class="kv-v">8.70 dKH<span class="sub">in the target range</span></span></div>
-          <div class="kv-row"><span class="kv-k">Trajectory</span><span class="kv-v">Falling<span class="sub">&minus;0.0400 dKH/day observed</span></span></div>
+          <div class="kv-row"><span class="kv-k">Which way it is going</span><span class="kv-v">Falling<span class="sub">&minus;0.0400 dKH/day observed</span></span></div>
           <div class="kv-row"><span class="kv-k">Your tank uses</span><span class="kv-v">0.6576 dKH/day</span></div>
-          <div class="kv-row"><span class="kv-k">The dose the engine wants</span><span class="kv-v">9.288 mL/day<span class="sub">before rounding to your pump</span></span></div>
-          <div class="kv-row"><span class="kv-k">Which is a change of</span><span class="kv-v">+0.288 mL/day<span class="sub">from 9.0</span></span></div>
-          <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v is-absent">Withheld</span></div>
+          <div class="kv-row"><span class="kv-k">How much more alkalinity a day it needs</span><span class="kv-v">+0.0198 dKH/day<span class="sub">the shortfall the app can stand behind</span></span></div>
+          <div class="kv-row"><span class="kv-k">Recommended dose</span><span class="kv-v is-absent">No figure<span class="sub">nothing to convert it with</span></span></div>
         </div>
         <p class="inert-note" style="margin-top:var(--sp-3)">
-          The 9.288 figure is shown because it is real and calculable. It is not a setting:
-          it is the answer before your pump&rsquo;s limits are applied.
+          The dKH figure is shown because it is real and calculable: it comes from your
+          readings and needs nothing about your solution. It is the whole answer, in the only
+          unit the app can honestly give it in today.
         </p>
       </div>
     </div>
@@ -218,9 +220,9 @@
       <summary>
         <span class="lbl">Why the engine said this</span>
         <span class="sevcount">
-          <span class="pill sev-REFUSAL">1 refusal</span>
+          <span class="pill sev-REFUSAL">2 refusals</span>
           <span class="pill pill-attention">2 limiting</span>
-          <span class="pill pill-neutral">13 info</span>
+          <span class="pill pill-neutral">12 info</span>
         </span>
         <span class="chev"></span>
       </summary>
@@ -228,7 +230,13 @@
 
         <li class="notice rows-1">
           <span class="pill sev-REFUSAL sev">Refusal</span>
-          <span class="say">No final maintenance dose in mL/day without the pump&rsquo;s smallest step. Slopes and the unrounded candidate are still emitted. There is no 0.1 default.</span>
+          <span class="say">No dose in millilitres without a solution strength, because there is nothing to convert dKH into millilitres with. The shortfall in dKH is still given, and so is everything the readings alone can say.</span>
+        </li>
+
+        <li class="notice rows-2">
+          <span class="pill sev-REFUSAL sev">Refusal</span>
+          <span class="say">The shortfall is still stated in dKH, because that part needs nothing about your solution.</span>
+          <span class="payload"><span class="k">how much more alkalinity a day it needs</span> <b>0.0198 dKH</b></span>
         </li>
 
         <li class="notice rows-2">
@@ -239,8 +247,8 @@
 
         <li class="notice rows-2">
           <span class="pill sev-GATING sev">Limiting</span>
-          <span class="say">Boundary risk cannot bring a test forward: the margin that would trigger it has no value for alkalinity.</span>
-          <span class="payload"><span class="k">days to the outer bound at this drift</span> <b>42.5</b></span>
+          <span class="say">At this drift the lower outer bound is about six weeks away, so testing sooner for that reason is not what the next test is for.</span>
+          <span class="payload"><span class="k">days to the outer bound at this drift</span> <b>42.5</b> &nbsp; <span class="k">days before it that a test would be wanted</span> <b>41.5</b> &nbsp; <span class="k">which bound</span> <b>lower</b></span>
         </li>
 
         <li class="notice rows-1">
@@ -298,14 +306,14 @@
 
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">What the tank uses per day. Unaffected by the missing pump setting.</span>
+          <span class="say">What the tank uses per day, in dKH. Unaffected by the missing strength.</span>
           <span class="payload"><span class="k">the tank uses</span> <b>0.6576</b> &nbsp; <span class="k">each millilitre gives</span> <b>0.0686</b> &nbsp; <span class="k">dose</span> <b>9.0</b> &nbsp; <span class="k">measured drift</span> <b>&minus;0.0400</b> &nbsp; <span class="k">how the dose is delivered</span> <b>a confirmed pump schedule</b></span>
         </li>
 
         <li class="notice rows-2">
           <span class="pill sev-INFO sev">Info</span>
           <span class="say">The app is not learning your solution&rsquo;s real strength from results. Off by design in this build.</span>
-          <span class="payload"><span class="k">what the app still needs</span> <b>which batch of solution, which pump setup, and the confirmed rate before and after each change</b></span>
+          <span class="payload"><span class="k">what the app still needs</span> <b>a recorded solution strength to measure against, then which batch, which pump setup, and the confirmed rate before and after each change</b></span>
         </li>
 
         <li class="notice rows-2">
@@ -316,7 +324,7 @@
 
         <li class="notice rows-1">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
         </li>
 
       </ul>
@@ -399,8 +407,15 @@
       <ul class="notice-list">
         <li class="notice rows-3">
           <span class="pill sev-REFUSAL sev">Refusal</span>
-          <span class="code">CAPABILITY_ACTUATOR_INCREMENT_REQUIRED</span>
-          <span class="say">No final maintenance dose in mL/day without the pump&rsquo;s smallest step. Slopes and the unrounded candidate are still emitted. There is no 0.1 default.</span>
+          <span class="code">POTENCY_THEORETICAL_INPUTS_UNAVAILABLE</span>
+          <span class="say">No dose in millilitres without a solution strength, because there is nothing to convert dKH into millilitres with. The shortfall in dKH is still given, and so is everything the readings alone can say.</span>
+          <span class="payload"><span class="k">missingFields</span> <b>[chemical, concentrationGPerL]</b></span>
+        </li>
+        <li class="notice rows-3">
+          <span class="pill sev-REFUSAL sev">Refusal</span>
+          <span class="code">POTENCY_REQUIRED</span>
+          <span class="say">A dKH&rarr;mL conversion is unsupported without a valid potency. The required movement is still stated.</span>
+          <span class="payload"><span class="k">requiredMovementDkh</span> <b>0.0198</b></span>
           <span class="payload"><span class="k">continuousActionCandidate</span> <b>9.288</b></span>
         </li>
         <li class="notice rows-3">
@@ -411,15 +426,15 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-GATING sev">Gating</span>
-          <span class="code">RETEST_BOUNDARY_MARGIN_UNAVAILABLE</span>
-          <span class="say">Boundary risk cannot bring a test forward: the margin that would trigger it has no value for alkalinity.</span>
-          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">openIssue</span> <b>OI-RETEST-001</b></span>
+          <span class="code">RETEST_FORECAST_BOUNDARY_RISK</span>
+          <span class="say">At this drift the lower outer bound is about six weeks away, so testing sooner for that reason is not what the next test is for.</span>
+          <span class="payload"><span class="k">T_outerDays</span> <b>42.5</b> &nbsp; <span class="k">T_boundaryDays</span> <b>41.5</b> &nbsp; <span class="k">boundSide</span> <b>LOWER</b> &nbsp; <span class="k">recommendedAt</span> <b>2026-10-01T07:40Z</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">PRESENTATION_INFORM_AND_PROCEED</span>
           <span class="say">Name the unresolved issue, give the advice that is still valid, and do not lock the keeper out.</span>
-          <span class="payload"><span class="k">unresolvedIssue</span> <b>ACTUATOR_INCREMENT_ABSENT</b></span>
+          <span class="payload"><span class="k">unresolvedIssue</span> <b>POTENCY_ABSENT</b></span>
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
@@ -472,7 +487,7 @@
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
           <span class="code">CONSUMPTION_ESTIMATED</span>
-          <span class="say">What the tank uses per day. Unaffected by the missing pump setting.</span>
+          <span class="say">What the tank uses per day, in dKH. Unaffected by the missing strength.</span>
           <span class="payload"><span class="k">consumptionDkhPerDay</span> <b>0.6576</b> &nbsp; <span class="k">P</span> <b>0.0686</b> &nbsp; <span class="k">D</span> <b>9.0</b> &nbsp; <span class="k">S_observed</span> <b>&minus;0.0400</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b></span>
         </li>
         <li class="notice rows-3">
@@ -489,9 +504,9 @@
         </li>
         <li class="notice rows-3">
           <span class="pill sev-INFO sev">Info</span>
-          <span class="code">OUTPUT_CONFIDENCE_DERIVATION_UNAVAILABLE</span>
-          <span class="say">No overall confidence label, because no rule exists for calculating one.</span>
-          <span class="payload"><span class="k">openIssue</span> <b>OI-CONFIDENCE-001</b></span>
+          <span class="code">OUTPUT_CONFIDENCE_UNSPECIFIED</span>
+          <span class="say">No numeric confidence label. That is a decided answer, not a missing rule &mdash; no such number exists and none may be invented. The evidence facts above stand in its place.</span>
+          <span class="payload"><span class="k">independentClusters</span> <b>5</b> &nbsp; <span class="k">spanDays</span> <b>8.00</b> &nbsp; <span class="k">sigmaS</span> <b>0.0158</b> &nbsp; <span class="k">confounders</span> <b>[]</b> &nbsp; <span class="k">potencyConfidence</span> <b>THEORETICAL</b> &nbsp; <span class="k">deliveryBasis</span> <b>CONFIRMED_PROGRAMMED_SCHEDULE</b> &nbsp; <span class="k">ruleId</span> <b>ALK-CONFIDENCE-OUTPUT-001</b></span>
         </li>
       </ul>
     </div>
