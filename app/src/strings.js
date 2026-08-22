@@ -2957,12 +2957,14 @@ export const STRINGS = Object.freeze({
   "reason.RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE":
     "Return-plan timing has no rule yet, so it was not considered.",
 
+  /* No observer. It says what is missing from the record and what it would
+     take to supply it, which is the only thing the keeper can do with it. */
   "reason.CAPABILITY_SOLUTION_CONTEXT_MISSING":
-    "The app has not been told which solution and batch you are dosing.",
+    "Which solution you are dosing is not on record. Setting its strength in Setup supplies it.",
   "reason.CAPABILITY_DELIVERY_CONTEXT_MISSING":
     "The app has not been told how the dose is delivered.",
   "reason.CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED":
-    "The dose currently set on the pump has not been confirmed.",
+    "The dose your pump is running is not confirmed. Entering it in Setup confirms it.",
   "reason.CAPABILITY_HISTORICAL_BRACKET_UNAVAILABLE":
     "There is not enough history to say what this tank normally needs.",
   "reason.CAPABILITY_MAGNESIUM_STATE_UNKNOWN": "Magnesium is not tracked in this build.",

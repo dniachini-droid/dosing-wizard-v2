@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
+import { sayReason } from "../../app/src/present/wording.js";
 import {
   boxes, correctionPanel, learnerLimits, potencyBox, potencyProvenance, reasonRows, recommendation,
   spanInWords, statusParts, whyPanel, working,
@@ -236,15 +237,32 @@ s.test("DOS-07b", "a limit on the potency learner is not shown as a limit on the
   eq(codes.length, 1, `only the one genuine limit survives: ${codes.join(", ")}`);
   eq(codes[0], "TRAJECTORY_UNCERTAINTY_LIMITED", "and it is the one about the dose");
 
-  /* Not discarded — moved. The estimator's own box states them beside the
-     estimate they limit. */
+  /* Not discarded — moved. The estimator's own box states beside the estimate
+     they limit the ones the KEEPER CAN DO SOMETHING ABOUT, and only those.
+
+     ROUND FIVE, OWNER FINDING 10. He read all four of these for the third round
+     running. Two of them are not his to act on and never will be: delivery
+     context, because this build does pump-delivered maintenance dosing and
+     nothing else so Setup never asks — a line reporting an unasked question as
+     unanswered, removed twice and back twice — and the calibration snapshot,
+     which is the application describing a gap in its own specification. */
   const limits = learnerLimits(result).map((r) => r.code);
-  ok(limits.includes("CAPABILITY_DELIVERY_CONTEXT_MISSING"),
-    "delivery context is stated by the potency box instead");
+  ok(!limits.includes("CAPABILITY_DELIVERY_CONTEXT_MISSING"),
+    "delivery method is not reported as missing, because it is never asked for");
+  ok(!limits.includes("POTENCY_CALIBRATION_SNAPSHOT_UNAVAILABLE"),
+    "and neither is a rule the specification has not written yet");
   ok(limits.includes("CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED"),
-    "and so is the programmed dose state");
+    "the programmed dose state is stated, because he can confirm it");
+  ok(limits.includes("CAPABILITY_SOLUTION_CONTEXT_MISSING"),
+    "and so is the solution, because he can state it");
   ok(!limits.includes("TRAJECTORY_UNCERTAINTY_LIMITED"),
     "a real dose limit is not swallowed by the potency box");
+
+  /* And none of the survivors talks about the software. */
+  for (const code of limits) {
+    const said = sayReason(code);
+    ok(!/\bthe app\b/i.test(said), `no observer in "${said}"`);
+  }
 });
 
 s.test("DOS-07c", "what your pump is set to is never named as missing by the learner's own row", () => {

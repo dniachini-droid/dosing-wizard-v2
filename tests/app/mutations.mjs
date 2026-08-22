@@ -2608,4 +2608,21 @@ export const MUTATIONS = [
     breaks: ["SC-10"],
   },
 
+  {
+    id: "AM-R47",
+    why: "delivery method is reported as missing again — an unasked question reported as unanswered, which the owner has now read for the third round running (finding 10)",
+    file: "app/src/present/dosing-tab.js",
+    find: '    if (!LEARNER_ONLY.has(c.code) || !KEEPER_CAN_ACT.has(c.code) || seen.has(c.code)) continue;',
+    replace: "    if (!LEARNER_ONLY.has(c.code) || seen.has(c.code)) continue;",
+    breaks: ["DOS-07b"],
+  },
+  {
+    id: "AM-R48",
+    why: "\"the app has not been told\" returns to a sentence the keeper reads, on a screen that is sizing his dose correctly",
+    file: "app/src/strings.js",
+    find: '    "The dose your pump is running is not confirmed. Entering it in Setup confirms it.",',
+    replace: '    "The app has not been told the dose currently set on the pump.",',
+    breaks: ["DOS-07b"],
+  },
+
 ];

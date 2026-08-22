@@ -1000,6 +1000,32 @@ const SAYS_NOTHING = new Set([
   "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE",
 ]);
 
+/* OWNER FINDING 10 — WHICH OF THESE THE KEEPER IS ACTUALLY SHOWN.
+
+   Round four stopped these appearing under "what's holding this back", which
+   was right: they are `INFO`, they gate the potency LEARNER and they hold up
+   no dose. They still reached the screen, inside Show working, and the owner
+   read all four for the third round running.
+
+   Two of them are not his to act on and never will be:
+
+     · DELIVERY CONTEXT. This build does pump-delivered maintenance dosing and
+       nothing else. There is no question to answer, so Setup does not ask one —
+       and a line reporting that an unasked question is unanswered has been
+       removed twice and come back twice. It is named here so it cannot come
+       back a fourth time by accident.
+
+     · THE CALIBRATION SNAPSHOT. "There is no rule yet for the record a strength
+       calibration would be measured against" is the application talking about
+       a gap in its own specification. True, and none of the keeper's business.
+
+   The two that remain are things he can do something about, and they leave the
+   list the moment he does. */
+const KEEPER_CAN_ACT = new Set([
+  "CAPABILITY_SOLUTION_CONTEXT_MISSING",
+  "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED",
+]);
+
 /* Read by the potency box, which shows what the learner could not do beside
    the estimate it could not make. Exported so there is ONE list and the two
    surfaces cannot drift apart. */
@@ -1008,7 +1034,7 @@ export function learnerLimits(result) {
   const seen = new Set();
   const out = [];
   for (const c of result.reasonCodes || []) {
-    if (!LEARNER_ONLY.has(c.code) || seen.has(c.code)) continue;
+    if (!LEARNER_ONLY.has(c.code) || !KEEPER_CAN_ACT.has(c.code) || seen.has(c.code)) continue;
     seen.add(c.code);
     out.push({ code: c.code, severity: c.severity, payload: c.payload || {}, count: 1 });
   }
