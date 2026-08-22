@@ -14,6 +14,10 @@ import { rowsFor, untimedCount } from '../lib/adapt.js'
 import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 import { taskState } from '../store/schedule.js'
 import { cardContent } from '../present/card-content.js'
+import { recommendation } from '../present/dosing-tab.js'
+import { isOutOfRange, positionTone } from '../present/position.js'
+import { sayPosition } from '../present/wording.js'
+import { t } from '../strings.js'
 import { describeRows } from '../present/spread.js'
 
 /* ---------------------------------- Dashboard ---------------------------------- */
@@ -37,13 +41,58 @@ import { describeRows } from '../present/spread.js'
    screen reads fields off it without deciding anything.
 
    All of it is in `docs/migration/PORT-OMISSIONS.md`. */
+/* The one conclusion, at dashboard length.
+
+   It holds no rule of its own: which sentence applies is `recommendation()`'s
+   answer and which words describe a position is `sayPosition()`'s, both of
+   which the Dosing tab reads from too. This picks WHICH of the two to show and
+   how much of it, and that is all it does. */
+export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen }) {
+  const def = paramDefs.find((d) => d.assessed);
+  if (!def || !engineResult) return null;
+
+  const rows = rowsFor(readings, def.key);
+  const rec = recommendation(engineResult, rows.length);
+  const position = engineResult.position;
+  const outOfRange = isOutOfRange(position);
+
+  /* A recommendation to change the dose is the strongest thing this app says,
+     so it wins. An out-of-range level is next. Nothing else reaches here: a
+     hold on a tank sitting in range is not news, and a strip that is always
+     full is a strip nobody reads. */
+  const headline = rec && rec.suggestedDose != null ? rec.head
+    : outOfRange ? sayPosition(position)
+    : null;
+  if (!headline) return null;
+
+  const tone = positionTone(position);
+  return (
+    <button onClick={onOpen} disabled={!onOpen}
+      className="w-full text-left rounded-xl p-3 mb-4 border-2 active:opacity-80"
+      style={{ background: tone + "10", borderColor: tone + "44" }}>
+      <div className="text-[10px] font-extrabold uppercase tracking-wide mb-0.5" style={{ color: tone }}>
+        {def.label}
+      </div>
+      <div className="text-[14px] font-black text-ink leading-snug">{headline}</div>
+      {rec && rec.suggestedDose != null && outOfRange && (
+        <div className="text-[12px] font-bold text-ink2 mt-0.5">{sayPosition(position)}</div>
+      )}
+      {onOpen && (
+        <div className="text-[11px] font-extrabold mt-1" style={{ color: tone }}>
+          {t("dashboard.notice.open")}
+        </div>
+      )}
+    </button>
+  );
+}
+
 export function Dashboard({ latestByParam, readings, paramDefs,
   saveRange, resetRange, customRanges, chartEvents, config,
   engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
   onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
   remWindow = 14, setRemWindow = () => {},
   onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-  onAddReading = null, waterChanges = [], episodes = null }) {
+  onAddReading = null, waterChanges = [], episodes = null, onGoDosing = null }) {
 
   const [calOpen, setCalOpen] = useState(false);
 
@@ -89,6 +138,26 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           upcoming item, each of which takes its reading in place. V1's own
           note on why: "going to another tab to type one number was the most
           repeated friction in the app." */}
+      {/* OWNER FINDINGS 13 AND 23 — THE STRONGEST THING THE APP HAS TO SAY,
+          WHERE THE KEEPER IS ACTUALLY LOOKING.
+
+          "A keeper opens this on the home screen at 7am with a coffee in the
+          other hand. He expects to be told. He should not have to go looking."
+
+          The dose recommendation lived on the Dosing tab and nowhere else, so
+          the app's most important conclusion was reachable only by opening a
+          tab he had no reason to open. It is here now, above the grid, in the
+          same words at a shorter length — one owner, `recommendation()`, which
+          the Dosing tab also renders.
+
+          And where there is no dose conclusion, an out-of-range parameter says
+          so here rather than only on its own card (finding 23). The rule that
+          the strip is ABSENT when the engine has no conclusion still holds; it
+          should simply be rare, and it was not rare because nothing but a dose
+          change could ever fill it. */}
+      <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
+        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} />
+
       <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
         onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
         paramDefs={paramDefs} onAddReading={onAddReading} />
@@ -176,7 +245,7 @@ export function Dashboard({ latestByParam, readings, paramDefs,
    `docs/migration/PORT-OMISSIONS.md` records all of it. */
 export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
   chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-  onCorrectReading = null, onDeleteReading = null, episodes = null }) {
+  onCorrectReading = null, onDeleteReading = null, episodes = null, engineResult = null }) {
   /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
      no way to correct a mistyped reading anywhere in the build. */
   const [fixing, setFixing] = useState(null);
@@ -283,6 +352,17 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
               V2's wording: the engine's own reason code, worded by the strings
               file. Expandable, because the strip has room for a line and the
               engine often has more than a line to say. */}
+          {/* FINDING 13's third surface. The same conclusion the dashboard strip
+              and the Dosing tab carry, above everything else on this sheet —
+              because a keeper who taps a parameter's card is asking about that
+              parameter, and the app's answer about it should not be one tab
+              away. Only for the parameter the engine assesses; the others have
+              no conclusion to carry. */}
+          {def.assessed && (
+            <DosingNotice engineResult={engineResult} assessmentState={null}
+              paramDefs={[def]} readings={readings} onOpen={onGoDosing} />
+          )}
+
           {notice && (
             <div className="rounded-xl p-3 mb-4"
               style={{ background: notice.tone + "10", border: `1px solid ${notice.tone}33` }}>

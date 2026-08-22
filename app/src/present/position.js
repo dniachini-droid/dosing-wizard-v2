@@ -99,3 +99,18 @@ export function positionWord(position) {
   if (!knownPosition(position)) return null;
   return has(`positionShort.${position}`) ? t(`positionShort.${position}`) : null;
 }
+
+/* Is the tank outside the keeper's range?
+
+   The engine's own position vocabulary lives here and in the rest of
+   `present/`, and nowhere else — `PORT-02` scans for it. A component asking
+   `position !== "IN_RANGE"` would be an interface file testing a contract
+   value, which is the shape `DEC-003` and `X-INV-004` forbid: today it is a
+   comparison, tomorrow it is a comparison plus a threshold.
+
+   It decides nothing about chemistry. The engine has already said where the
+   level sits; this reports whether that answer is one worth putting in front
+   of the keeper unprompted (owner finding 23). */
+export function isOutOfRange(position) {
+  return !!position && position !== "IN_RANGE" && position !== "UNKNOWN";
+}

@@ -41,8 +41,27 @@ import { t, has } from "../strings.js";
 /* Records the ledger's own fold says are not what happened. `SUSPECT` is NOT
    here: the keeper flagging a reading is not a statement that it did not
    occur, the engine still receives it, and a screen that hid it would be
-   showing him a different history from the one being assessed. */
-const NOT_WHAT_HAPPENED = new Set(["SUPERSEDED", "INVALID"]);
+   showing him a different history from the one being assessed.
+
+   OWNER FINDING 2 — `INVALID` IS GONE FROM THIS SET AND FROM THE APPLICATION.
+
+   It was the last trace of the supersede model that owner decision 32
+   replaced. The fold produces `CURRENT`, `SUPERSEDED` and `SUSPECT` and
+   nothing else — `ledger.js` says so in as many words — so every
+   `state !== "INVALID"` in the app was a comparison that could not fail, and
+   eight of them were written across five files. Harmless today; misleading to
+   the next person, who reads them as evidence that a record can be marked
+   invalid and goes looking for the surface that does it. There is none, and
+   `PORT-24` pins that there never will be.
+
+   One predicate, exported, so the rule has one owner rather than eight
+   spellings of it. */
+const NOT_WHAT_HAPPENED = new Set(["SUPERSEDED"]);
+
+/* Is this row a record of something that happened? */
+export function isLive(row) {
+  return !!row && !NOT_WHAT_HAPPENED.has(row.state);
+}
 
 /* The step an input should move by, derived from where the parameter is
    rounded for display rather than invented. `decimals: 2` gives `0.01`. V1

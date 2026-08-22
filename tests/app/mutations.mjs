@@ -93,7 +93,11 @@ export const MUTATIONS = [
     id: "AM-05",
     why: "a reading the keeper flagged as suspect is quietly withheld from the engine, which puts an eligibility rule in the interface",
     file: "app/src/store/ledger.js",
-    find: '    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;',
+    /* Re-anchored: the dead INVALID comparison went with owner finding 2 —
+       the fold has produced only CURRENT, SUPERSEDED and SUSPECT since decision
+       32, so `state !== "INVALID"` was a test that could not fail. The rule
+       this guards is unchanged. */
+    find: '    if (row.state === "SUPERSEDED") continue;',
     replace: '    if (row.state !== "CURRENT") continue;',
     breaks: ["LED-06"],
   },
@@ -224,8 +228,11 @@ export const MUTATIONS = [
     id: "AM-P40",
     why: "the estimator says nothing at all when it has no measurement yet, so the box goes blank rather than saying what it is waiting for",
     file: "app/src/present/dosing-tab.js",
-    find: "  if (learned == null) {\n    return { ...base, state: \"notYet\", offersChoice: false };\n  }",
-    replace: "  if (learned == null) {\n    return null;\n  }",
+    /* Re-anchored: owner finding 12 split this branch in two — an estimate
+       that exists without confidence now has its own sentence, and only the
+       genuinely-nothing-yet case reaches `notYet`. */
+    find: "    return { ...base, state: \"notYet\", offersChoice: false };\n  }",
+    replace: "    return null;\n  }",
     breaks: ["DOS-10b"],
   },
   {
@@ -1825,7 +1832,8 @@ export const MUTATIONS = [
     id: "AM-175b",
     why: "a superseded dose record draws the boundary, so a correction moves where analysis is said to begin",
     file: "app/src/store/import-v1.js",
-    find: '    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;\n    const e = r.event;\n    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;',
+    /* Re-anchored: the dead INVALID comparison went with owner finding 2. */
+    find: '    if (r.state === "SUPERSEDED") continue;\n    const e = r.event;\n    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;',
     replace: "    const e = r.event;\n    if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;",
     breaks: ["IMP-42"],
   },

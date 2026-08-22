@@ -308,7 +308,7 @@ export async function doseContext(store) {
   let dose = null;
   let at = null;
   for (const r of projected) {
-    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
+    if (r.state === "SUPERSEDED") continue;
     const e = r.event;
     if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
     const key = `${e.time.localDate} ${e.time.localTime || (e.time.absoluteInstant ? e.time.absoluteInstant.slice(11, 16) : "00:00")}`;

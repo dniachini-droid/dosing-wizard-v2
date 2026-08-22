@@ -898,7 +898,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
 | V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
-| Ported SHA-256 | `43a72abca3dedb60bb87c10983137871b5b8f027b56e4661154eeef97cc166e1` |
+| Ported SHA-256 | `e8b6a275bc2d0d0706f68290c9ec87b4c78112350cf61a852dc291775f1313f0` |
 | Differences | 12 |
 
 1. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
@@ -1487,7 +1487,7 @@ Byte-identical to V1.
 9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -647,7 +365,7 @@
+@@ -647,14 +365,38 @@
      for (const l of taskLog || []) {
        if (!l.date) continue;
        (map[l.date] = map[l.date] || []).push({
@@ -1495,13 +1495,47 @@ Byte-identical to V1.
 +        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
        });
      }
++    /* OWNER FINDING 3 — WHY 25 WATER CHANGES WERE ON THE CHARTS AND NOWHERE
++       ELSE.
++
++       This folded a water change into a day that already had a task completion
++       on it, and did nothing at all where there was none. The owner's imported
++       history holds 25 water changes and no completion matching any of them, so
++       every one of them was skipped here — while the charts, which read the
++       ledger directly, drew all 25. He was looking at markers for events he
++       could not find, could not check and could not delete.
++
++       They are real: the import wrote 25 `WATER_CHANGE` events, and they came
++       from his own V1 backup. So they belong on the calendar, as themselves. */
      for (const w of waterChanges || []) {
+-      const day = map[w.date];
+-      if (!day) continue;
++      if (!w.date) continue;
++      const day = (map[w.date] = map[w.date] || []);
+       const row = day.find((x) => x.taskId === "waterchange");
+-      if (row) row.detail = `${w.litres}L`;
++      if (row) { row.detail = `${w.litres}L`; continue; }
++      day.push({
++        id: w.id,
++        label: t("water.label"),
++        taskId: "waterchange",
++        date: w.date,
++        detail: `${w.litres}L`,
++        done: true,
++        /* A ledger event rather than a task completion, so the caller deletes
++           the right thing. The calendar's trash used to remove the TICK on
++           every row it drew, whatever the row actually was. */
++        eventId: w.id,
++      });
+     }
+     return map;
+   }, [taskLog, waterChanges, reminders]);
 ```
 
 10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -756,11 +474,15 @@
+@@ -756,11 +498,15 @@
            ) : (
              <div className="space-y-1">
                {(byDay[picked] || []).map((it) => (
@@ -1523,7 +1557,7 @@ Byte-identical to V1.
 11. **defect fixed — owner finding 22: the Tasks sheet was overflow-hidden with no height limit, so on a short viewport its lower half was rendered off the bottom with nothing to scroll. It takes the one sheet rule now, like every other sheet.**
 
 ```diff
-@@ -803,12 +525,13 @@
+@@ -803,12 +549,13 @@
  
  /* The calendar as an overlay, so it can be reached from the dashboard without
     losing your place. */
@@ -1545,7 +1579,7 @@ Byte-identical to V1.
 12. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -821,7 +544,7 @@
+@@ -821,7 +568,7 @@
          </div>
          <div className="px-4 pb-4">
            <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
@@ -3570,8 +3604,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `c48cecb59afe6219f8b4ccb3bd37f8033df1d1aec52eb6e4ed3a6cdaf417f028` |
 | V1 blob | `0358527fbc2eab1a0b244e928861d8c9bde826e5` |
-| Ported SHA-256 | `7e377dc7d6ebd6a70d94aba3ff563323a7a90d3b5d70dec07e343e552d402540` |
-| Differences | 15 |
+| Ported SHA-256 | `5c29866b9290f2b14e5c64cab6c1ecfa9c5ffd270c5b05808014e7e8bfb8a909` |
+| Differences | 16 |
 
 1. **data source rewired — imports repointed onto V2's task store and application clock; V1's stability engine, narrative engine and analytics deleted**
 
@@ -3741,10 +3775,31 @@ Byte-identical to V1.
      </div>
 ```
 
-10. **data source rewired — the needs-doing rows read V2's task vocabulary**
+10. **data source rewired — the beyond-the-window sentence reads V2's task label**
 
 ```diff
-@@ -196,18 +196,18 @@
+@@ -181,7 +181,14 @@
+           </button>
+         ) : <span />}
+         <div className="flex gap-1">
+-          {[7, 14, 30].map((d) => (
++          {/* OWNER FINDING 4 — "the calendar shows only the last two weeks".
++
++              The calendar itself does not: it walks back month by month and
++              holds the whole record. This panel does, and it is what he was
++              reading — 14 days by default, and nothing here reached past 30, so
++              six months of imported task history had no window wide enough to
++              show it. The calendar is one tap away and is named below. */}
++          {[7, 14, 30, 90].map((d) => (
+             <button key={d} onClick={() => setWindowDays(d)}
+               className="rounded-lg px-2 py-1 text-[11px] font-extrabold border-2"
+               style={{ borderColor: windowDays === d ? "#0B7C86" : "#E3ECEA",
+```
+
+11. **data source rewired — the needs-doing rows read V2's task vocabulary**
+
+```diff
+@@ -196,18 +203,18 @@
          <div className="mb-3">
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Needs doing</div>
            {view.actionable.map((s) => (
@@ -3770,10 +3825,10 @@ Byte-identical to V1.
                {/* Snooze stays as a one-tap shortcut; anything more than that
 ```
 
-11. **data source rewired — the needs-doing snooze and reschedule actions read V2's task id**
+12. **data source rewired — the needs-doing snooze and reschedule actions read V2's task id**
 
 ```diff
-@@ -214,8 +214,8 @@
+@@ -214,8 +221,8 @@
                    opens the same sheet the calendar uses, so there is one way to
                    change a schedule however you got here. */}
                <div className="mt-1.5 flex items-center gap-1.5">
@@ -3786,10 +3841,10 @@ Byte-identical to V1.
            ))}
 ```
 
-12. **data source rewired — the coming-up rows read V2's task vocabulary**
+13. **data source rewired — the coming-up rows read V2's task vocabulary**
 
 ```diff
-@@ -226,20 +226,20 @@
+@@ -226,20 +233,20 @@
          <div className="mb-3">
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Coming up</div>
            {view.upcoming.map((s) => (
@@ -3818,10 +3873,10 @@ Byte-identical to V1.
                </div>
 ```
 
-13. **data source rewired — the recently-done rows key on V2's task id**
+14. **data source rewired — the recently-done rows key on V2's task id**
 
 ```diff
-@@ -252,7 +252,7 @@
+@@ -252,7 +259,7 @@
          <div>
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Recently done</div>
            {view.recent.map((s) => (
@@ -3832,24 +3887,28 @@ Byte-identical to V1.
                    <Check size={12} /> {s.doneToday ? "today" : fmtShort(s.lastDone)}
 ```
 
-14. **data source rewired — the beyond-the-window sentence reads V2's task label**
+15. **defect fixed — owner finding 4: nothing here reached past 30 days, so six months of imported task history had no window wide enough to show it, and the panel did not say the calendar holds the rest.**
 
 ```diff
-@@ -274,7 +274,7 @@
+@@ -274,8 +281,11 @@
        <p className="text-[11px] text-ink2 font-medium mt-2.5 pt-2.5 border-t border-app leading-relaxed">
          Showing what's due and what was done within {windowDays} days.
          {view.later.length > 0
 -          ? ` ${view.later.length} further ${view.later.length === 1 ? "reminder falls" : "reminders fall"} beyond that — next is ${view.later[0].rem.label.toLowerCase()} on ${fmtShort(view.later[0].due)}.`
 +          ? ` ${view.later.length} further ${view.later.length === 1 ? "reminder falls" : "reminders fall"} beyond that — next is ${view.later[0].task.label.toLowerCase()} on ${fmtShort(view.later[0].due)}.`
            : " Nothing falls outside it."}
++        {/* Where the rest of it is. This window is a window; the calendar is
++            the record, and it walks back as far as the record goes. */}
++        {" "}The calendar holds the whole history.
        </p>
      </Card>
+   );
 ```
 
-15. **chemistry removed — `StabilityStrip`, `ScoreBreakdown`, `SnoozeSheet`, `Briefing` and `OverviewCard` deleted: the tank assessment score, the headline sentence and the stability grading, all computed inside presentation components**
+16. **chemistry removed — `StabilityStrip`, `ScoreBreakdown`, `SnoozeSheet`, `Briefing` and `OverviewCard` deleted: the tank assessment score, the headline sentence and the stability grading, all computed inside presentation components**
 
 ```diff
-@@ -283,413 +283,31 @@
+@@ -283,413 +293,31 @@
  
  
  /* ===========================================================================
@@ -4286,8 +4345,6 @@ Byte-identical to V1.
 -}
 ```
 
----
-
 ### `app/src/components/Dashboard.jsx`
 
 | | |
@@ -4296,13 +4353,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `f27dda4ab31e07a37924a41b0d7868e04b090f33cacc164511e09f952fdf87a7` |
+| Ported SHA-256 | `24ef932b0fde733d67cc4d8c1d939e251f0f2cdb987cef8841e7b75e2bb75e26` |
 | Differences | 11 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
 ```diff
-@@ -1,160 +1,126 @@
+@@ -1,160 +1,195 @@
  import { useEffect, useMemo, useState } from 'react'
 -import { Btn, FindingList, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 +import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
@@ -4332,6 +4389,10 @@ Byte-identical to V1.
 +import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 +import { taskState } from '../store/schedule.js'
 +import { cardContent } from '../present/card-content.js'
++import { recommendation } from '../present/dosing-tab.js'
++import { isOutOfRange, positionTone } from '../present/position.js'
++import { sayPosition } from '../present/wording.js'
++import { t } from '../strings.js'
 +import { describeRows } from '../present/spread.js'
  
  /* ---------------------------------- Dashboard ---------------------------------- */
@@ -4393,25 +4454,30 @@ Byte-identical to V1.
 -    else if (onGoTab) onGoTab(dest.tab, dest.key);
 -  };
 +   All of it is in `docs/migration/PORT-OMISSIONS.md`. */
-+export function Dashboard({ latestByParam, readings, paramDefs,
-+  saveRange, resetRange, customRanges, chartEvents, config,
-+  engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
-+  onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
-+  remWindow = 14, setRemWindow = () => {},
-+  onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-+  onAddReading = null, waterChanges = [], episodes = null }) {
++/* The one conclusion, at dashboard length.
  
 -  /* The last 30 days of each parameter, so the gauge can show where it has been
 -     rather than only where it is. */
-   const [calOpen, setCalOpen] = useState(false);
+-  const [calOpen, setCalOpen] = useState(false);
 -  const [snoozing, setSnoozing] = useState(null);
++   It holds no rule of its own: which sentence applies is `recommendation()`'s
++   answer and which words describe a position is `sayPosition()`'s, both of
++   which the Dosing tab reads from too. This picks WHICH of the two to show and
++   how much of it, and that is all it does. */
++export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen }) {
++  const def = paramDefs.find((d) => d.assessed);
++  if (!def || !engineResult) return null;
  
 -  /* How many times this parameter's suggestion has already been put off. */
 -  const snoozeCountFor = (key) => {
 -    const e = (dismissedNotes || {})[`dose|${key}`];
 -    return e && typeof e === "object" && e.times ? e.times : 0;
 -  };
--
++  const rows = rowsFor(readings, def.key);
++  const rec = recommendation(engineResult, rows.length);
++  const position = engineResult.position;
++  const outOfRange = isOutOfRange(position);
+ 
 -  /* The sheet appears the first time, and again once putting this off has
 -     become a habit. Everywhere else the snooze is immediate — a dialog in
 -     front of a cheap, reversible action only teaches people to dismiss
@@ -4423,7 +4489,46 @@ Byte-identical to V1.
 -    if (c.snoozeUntilTest && (!explained || count >= 2)) setSnoozing({ claim: c, count, el });
 -    else onDismissNote(c);
 -  };
--
++  /* A recommendation to change the dose is the strongest thing this app says,
++     so it wins. An out-of-range level is next. Nothing else reaches here: a
++     hold on a tank sitting in range is not news, and a strip that is always
++     full is a strip nobody reads. */
++  const headline = rec && rec.suggestedDose != null ? rec.head
++    : outOfRange ? sayPosition(position)
++    : null;
++  if (!headline) return null;
+ 
++  const tone = positionTone(position);
++  return (
++    <button onClick={onOpen} disabled={!onOpen}
++      className="w-full text-left rounded-xl p-3 mb-4 border-2 active:opacity-80"
++      style={{ background: tone + "10", borderColor: tone + "44" }}>
++      <div className="text-[10px] font-extrabold uppercase tracking-wide mb-0.5" style={{ color: tone }}>
++        {def.label}
++      </div>
++      <div className="text-[14px] font-black text-ink leading-snug">{headline}</div>
++      {rec && rec.suggestedDose != null && outOfRange && (
++        <div className="text-[12px] font-bold text-ink2 mt-0.5">{sayPosition(position)}</div>
++      )}
++      {onOpen && (
++        <div className="text-[11px] font-extrabold mt-1" style={{ color: tone }}>
++          {t("dashboard.notice.open")}
++        </div>
++      )}
++    </button>
++  );
++}
++
++export function Dashboard({ latestByParam, readings, paramDefs,
++  saveRange, resetRange, customRanges, chartEvents, config,
++  engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
++  onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
++  remWindow = 14, setRemWindow = () => {},
++  onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
++  onAddReading = null, waterChanges = [], episodes = null, onGoDosing = null }) {
++
++  const [calOpen, setCalOpen] = useState(false);
++
    /* A short tail per parameter for the card sparklines — computed once here
       rather than filtering the whole log inside each of eight cards. */
    const sparkRowsByParam = useMemo(() => {
@@ -4472,14 +4577,33 @@ Byte-identical to V1.
 -        claims={briefing} readings={readings} paramDefs={paramDefs} onGoTo={goTo}
 -        onDismissNote={requestDismiss} hiddenCount={hiddenNotes} onRestoreNotes={onRestoreNotes}
 -        onRestoreOneNote={onRestoreOneNote} snoozeHint={snoozeHint} />
--
--      {/* Directly after the assessment: only what needs doing now. */}
--      <TodayPanel view={reminderView} onOpenTest={onOpenTest}
--        onComplete={onCompleteReminder} onNudge={onNudgeReminder} onPickTask={setSheetId}
 +      {/* The due bar. Collapsed to one line, expanding into a row per due or
 +          upcoming item, each of which takes its reading in place. V1's own
 +          note on why: "going to another tab to type one number was the most
 +          repeated friction in the app." */}
++      {/* OWNER FINDINGS 13 AND 23 — THE STRONGEST THING THE APP HAS TO SAY,
++          WHERE THE KEEPER IS ACTUALLY LOOKING.
+ 
+-      {/* Directly after the assessment: only what needs doing now. */}
+-      <TodayPanel view={reminderView} onOpenTest={onOpenTest}
+-        onComplete={onCompleteReminder} onNudge={onNudgeReminder} onPickTask={setSheetId}
++          "A keeper opens this on the home screen at 7am with a coffee in the
++          other hand. He expects to be told. He should not have to go looking."
++
++          The dose recommendation lived on the Dosing tab and nowhere else, so
++          the app's most important conclusion was reachable only by opening a
++          tab he had no reason to open. It is here now, above the grid, in the
++          same words at a shorter length — one owner, `recommendation()`, which
++          the Dosing tab also renders.
++
++          And where there is no dose conclusion, an out-of-range parameter says
++          so here rather than only on its own card (finding 23). The rule that
++          the strip is ABSENT when the engine has no conclusion still holds; it
++          should simply be rare, and it was not rare because nothing but a dose
++          change could ever fill it. */}
++      <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
++        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} />
++
 +      <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
 +        onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
          paramDefs={paramDefs} onAddReading={onAddReading} />
@@ -4543,7 +4667,7 @@ Byte-identical to V1.
 2. **data source rewired — the reminders panel and calendar read V2's schedule view, tasks and completions**
 
 ```diff
-@@ -162,33 +128,24 @@
+@@ -162,33 +197,24 @@
        </div>
  
        <SectionTitle eyebrow="Schedule" title="Reminders" />
@@ -4593,7 +4717,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -195,13 +152,44 @@
+@@ -195,13 +221,44 @@
    );
  }
  
@@ -4622,7 +4746,7 @@ Byte-identical to V1.
 +   `docs/migration/PORT-OMISSIONS.md` records all of it. */
 +export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
 +  chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-+  onCorrectReading = null, onDeleteReading = null, episodes = null }) {
++  onCorrectReading = null, onDeleteReading = null, episodes = null, engineResult = null }) {
 +  /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
 +     no way to correct a mistyped reading anywhere in the build. */
 +  const [fixing, setFixing] = useState(null);
@@ -4647,7 +4771,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — a cleared range is described as cleared rather than reverted to a default, because this build ships no default range**
 
 ```diff
-@@ -215,7 +203,7 @@
+@@ -215,7 +272,7 @@
  
    const revert = async () => {
      await onResetRange(def.key);
@@ -4661,7 +4785,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +210,35 @@
+@@ -222,36 +279,35 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4723,7 +4847,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +247,68 @@
+@@ -260,91 +316,79 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4808,6 +4932,17 @@ Byte-identical to V1.
 +              V2's wording: the engine's own reason code, worded by the strings
 +              file. Expandable, because the strip has room for a line and the
 +              engine often has more than a line to say. */}
++          {/* FINDING 13's third surface. The same conclusion the dashboard strip
++              and the Dosing tab carry, above everything else on this sheet —
++              because a keeper who taps a parameter's card is asking about that
++              parameter, and the app's answer about it should not be one tab
++              away. Only for the parameter the engine assesses; the others have
++              no conclusion to carry. */}
++          {def.assessed && (
++            <DosingNotice engineResult={engineResult} assessmentState={null}
++              paramDefs={[def]} readings={readings} onOpen={onGoDosing} />
++          )}
++
 +          {notice && (
              <div className="rounded-xl p-3 mb-4"
 -              style={{ background: dose.tone + "10", border: `1px solid ${dose.tone}33` }}>
@@ -4868,7 +5003,7 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +317,9 @@
+@@ -353,7 +397,9 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
@@ -4884,7 +5019,7 @@ Byte-identical to V1.
 8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -360,7 +326,9 @@
+@@ -360,7 +406,9 @@
                  <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
                </button>
              </div>
@@ -4900,7 +5035,7 @@ Byte-identical to V1.
 9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +346,16 @@
+@@ -378,10 +426,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -4924,7 +5059,7 @@ Byte-identical to V1.
 10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -395,20 +369,19 @@
+@@ -395,20 +449,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -4953,7 +5088,7 @@ Byte-identical to V1.
 11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -417,280 +390,139 @@
+@@ -417,280 +470,139 @@
            </div>
  
            {rows.length === 0 ? (
@@ -6013,7 +6148,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `44d947281ae494c5b9370e44dac371e416de62339eb60d28b26bb0d6c93366d0` |
+| Ported SHA-256 | `17226b404a667bd33637e58ce36b94419087b4d17f3ef56dd2494f4850d821a8` |
 | Differences | 3 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
@@ -6179,7 +6314,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +82,497 @@
+@@ -88,203 +82,501 @@
    );
  }
  
@@ -6581,6 +6716,10 @@ Byte-identical to V1.
 +    learned: box.learned == null ? "—" : fmtPotency(box.learned),
 +    entered: fmtPotency(box.entered),
 +    accepted: fmtPotency(box.entered),
++    /* The engine's own observed figure, for the state where it has read a
++       strength but not gathered enough to be confident in one (finding 12). */
++    observed: box.observed == null ? "—" : fmtPotency(box.observed),
++    count: box.observations,
 +  };
 +
 +  return (
@@ -8809,7 +8948,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `0f0b14490b1ead143d0bf7624d1e4749606ef57a7deb2c39ced71d1b934b214c` |
+| Ported SHA-256 | `4dcec737fc78a781097610639c0f21c83cbcf7eeed5d757f5bc02598b90c162c` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -8857,7 +8996,7 @@ Byte-identical to V1.
 +import { onStorageError, onToast, notify } from './lib/storage.js'
 +import { watchViewport } from './lib/viewport.js'
 +import {
-+  chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
++  chartEventsFrom, isLive, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 +} from './lib/adapt.js'
 +import {
 +  correctReading, deleteRecord,
@@ -8952,7 +9091,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +89,725 @@
+@@ -66,1155 +89,740 @@
    return out;
  }
  
@@ -9487,7 +9626,7 @@ Byte-identical to V1.
 -    await saveKey("custom-ranges", next);
 -  };
 +  const waterChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
 +    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
  
 -  useEffect(() => { onStorageError((m) => setStorageMsg(m)); }, []);
@@ -9515,7 +9654,7 @@ Byte-identical to V1.
 +     dose it had. A starting point has no delta and is shown as what it is. */
 +  const doseChanges = useMemo(() => projection
 +    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++      && isLive(r))
 +    .map((r) => ({
 +      id: r.event.eventId,
 +      date: r.event.time.localDate,
@@ -9621,14 +9760,13 @@ Byte-identical to V1.
 -      }
 +  const lightingChanges = useMemo(() => projection
 +    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-+      && r.event.detail.husbandryKind === "LIGHTING"
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++      && r.event.detail.husbandryKind === "LIGHTING" && isLive(r))
 +    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
  
 -      /* Weekly water changes, seeded once and matched on date so anything
 -         already logged by hand is left alone.
 +  const icps = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .filter((r) => r.event.kind === KIND.ICP_PANEL && isLive(r))
 +    .map((r) => ({
 +      id: r.event.eventId,
 +      date: r.event.time.localDate,
@@ -10178,16 +10316,14 @@ Byte-identical to V1.
  
 -  const updateReminder = async (id, patch) => {
 -    await saveReminders(reminders.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+-  };
 +  /* Something the keeper recorded on his calendar, taken back off it (owner
 +     finding 16). A completion is the task store's own record rather than a
 +     ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
 +     act is the same one and the keeper is told the same way. */
 +  const deleteCompletion = async (item) => {
-+    if (!item || !item.taskId || !item.date) return;
-+    await store.tasks.uncomplete(item.taskId, item.date);
-+    await reload();
-+    notify(t("delete.done.entry"));
-   };
++    if (!item) return;
++    /* OWNER FINDING 9's REAL CAUSE, AND ITS OTHER HALF.
  
 -  /* Nudging shifts only the next occurrence. The one after it is scheduled from
 -     the actual completion, so this never permanently skews the rhythm. */
@@ -10201,6 +10337,40 @@ Byte-identical to V1.
 -    await updateReminder(id, { dueOverride: iso, dueReason: "manual", adjustDays: 0 });
 -    const r = reminders.find((x) => x.id === id);
 -    notify(`${r ? r.label : "Task"} moved to ${fmtShort(iso)}`);
+-  };
++       Every row this calendar draws used to be deleted the same way — as a task
++       COMPLETION. That is right for a tick and wrong for anything else, and it
++       is why the owner deleted what he believed was a reading five times and it
++       never went: the tick came off, the due list noticed, and the reading was
++       never touched.
+ 
+-  const setReminderInterval = async (id, days) => {
+-    if (!isFinite(days) || days < 1) return;
+-    /* Changing the rhythm also releases any one-off move, or the new interval
+-       would appear to do nothing until the pinned date passed. */
+-    await updateReminder(id, { intervalDays: days, dueOverride: null, dueReason: null });
+-    notify(`Now ${intervalLabel(days).toLowerCase()}`);
++       A row now says which kind of record it is. A ledger event goes through the
++       one delete path, which takes the event, its annotations and every
++       assessment that read it; a tick is uncompleted. Nothing guesses. */
++    if (item.eventId) {
++      await deleteRecordById(item.eventId, t("delete.done.waterChange"));
++      return;
++    }
++    if (!item.taskId || !item.date) return;
++    await store.tasks.uncomplete(item.taskId, item.date);
++    await reload();
++    notify(t("delete.done.entry"));
+   };
+ 
+-  const skipReminder = async (id) => {
+-    const r = reminders.find((x) => x.id === id);
+-    if (!r) return;
+-    const st = reminderState(r, taskLog, todayStr());
+-    /* Skipping moves to the next occurrence rather than marking it done, so
+-       the history stays honest about what was actually tested. */
+-    await updateReminder(id, { dueOverride: addDays(st.due, r.intervalDays), dueReason: "skipped", adjustDays: 0 });
+-    notify(`Skipped — next ${fmtShort(addDays(st.due, r.intervalDays))}`);
 +  /* ---- the schedule ----------------------------------------------------- */
 +  const markDone = async (taskId, date = todayStr(), detail = null) => {
 +    const task = tasks.find((t) => t.id === taskId);
@@ -10217,44 +10387,17 @@ Byte-identical to V1.
 +    });
    };
  
--  const setReminderInterval = async (id, days) => {
--    if (!isFinite(days) || days < 1) return;
--    /* Changing the rhythm also releases any one-off move, or the new interval
--       would appear to do nothing until the pinned date passed. */
--    await updateReminder(id, { intervalDays: days, dueOverride: null, dueReason: null });
--    notify(`Now ${intervalLabel(days).toLowerCase()}`);
-+  const addTask = async (spec) => {
-+    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
-+    await store.tasks.saveTask(task);
-+    await reload();
-+    notify("Task added");
-   };
- 
--  const skipReminder = async (id) => {
--    const r = reminders.find((x) => x.id === id);
--    if (!r) return;
--    const st = reminderState(r, taskLog, todayStr());
--    /* Skipping moves to the next occurrence rather than marking it done, so
--       the history stays honest about what was actually tested. */
--    await updateReminder(id, { dueOverride: addDays(st.due, r.intervalDays), dueReason: "skipped", adjustDays: 0 });
--    notify(`Skipped — next ${fmtShort(addDays(st.due, r.intervalDays))}`);
-+  const updateTask = async (id, patch) => {
-+    const task = tasks.find((t) => t.id === id);
-+    if (!task) return;
-+    await store.tasks.saveTask({ ...task, ...patch });
-+    await reload();
-   };
- 
 -  /* Kept for the existing +1 day controls. */
 -  const nudgeReminder = async (id, days) => {
 -    const r = reminders.find((x) => x.id === id);
 -    if (!r) return;
 -    const st = reminderState(r, taskLog, todayStr());
 -    await setReminderDue(id, addDays(st.due, days));
-+  const deleteTask = async (id) => {
-+    await store.tasks.removeTask(id);
++  const addTask = async (spec) => {
++    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
++    await store.tasks.saveTask(task);
 +    await reload();
-+    notify("Task deleted");
++    notify("Task added");
    };
  
 -  const completeReminder = async (id, date = todayStr()) => {
@@ -10276,15 +10419,11 @@ Byte-identical to V1.
 -        history,
 -      });
 -    }
-+  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
-+     made against. `schedule.js` owns that rule; this passes the anchor. */
-+  const nudgeTask = async (id, days) => {
++  const updateTask = async (id, patch) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
-+    const st = scheduleView.states.find((s) => s.task.id === id);
-+    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
++    await store.tasks.saveTask({ ...task, ...patch });
 +    await reload();
-+    notify("Moved to tomorrow");
    };
  
 -  const applyRestore = (merged) => {
@@ -10301,6 +10440,37 @@ Byte-identical to V1.
 -    if (merged["kit-changes"]) setKitChanges(merged["kit-changes"]);
 -    if (merged["findings-dismissed"]) setDismissed(merged["findings-dismissed"]);
 -    if (merged["correction-plans"]) setCorrectionPlans(merged["correction-plans"]);
++  const deleteTask = async (id) => {
++    await store.tasks.removeTask(id);
++    await reload();
++    notify("Task deleted");
+   };
+ 
+-  /* Reminders replaced the old task list, so anything that used to look up a
+-     task name reads from there instead. Kept under the same name so the CSV
+-     export and due-list code didn't need rewriting. */
+-  const allTasks = useMemo(
+-    () => reminders.map((r) => ({ id: r.id, label: r.label, freqDays: r.intervalDays, builtin: r.builtin })),
+-    [reminders]);
++  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
++     made against. `schedule.js` owns that rule; this passes the anchor. */
++  const nudgeTask = async (id, days) => {
++    const task = tasks.find((t) => t.id === id);
++    if (!task) return;
++    const st = scheduleView.states.find((s) => s.task.id === id);
++    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
++    await reload();
++    notify("Moved to tomorrow");
++  };
+ 
+-  const latestByParam = useMemo(() => {
+-    const map = {};
+-    for (const def of paramDefs) {
+-      const rows = readings.filter((r) => r.param === def.key).sort(byNewest);
+-      map[def.key] = rows[0] || null;
+-    }
+-    return map;
+-  }, [readings, paramDefs]);
 +  const setTaskDue = async (id, date) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
@@ -10310,24 +10480,8 @@ Byte-identical to V1.
 +    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + shift, adjustAnchor: st ? st.lastDone ?? null : null });
 +    await reload();
 +    notify(`Moved to ${fmtShort(date)}`);
-   };
++  };
  
--  /* Reminders replaced the old task list, so anything that used to look up a
--     task name reads from there instead. Kept under the same name so the CSV
--     export and due-list code didn't need rewriting. */
--  const allTasks = useMemo(
--    () => reminders.map((r) => ({ id: r.id, label: r.label, freqDays: r.intervalDays, builtin: r.builtin })),
--    [reminders]);
--
--  const latestByParam = useMemo(() => {
--    const map = {};
--    for (const def of paramDefs) {
--      const rows = readings.filter((r) => r.param === def.key).sort(byNewest);
--      map[def.key] = rows[0] || null;
--    }
--    return map;
--  }, [readings, paramDefs]);
--
 -  const [remWindow, setRemWindow] = useState(14);
 -  const reminderView = useMemo(
 -    () => computeReminders(reminders, taskLog, todayStr(), remWindow),
@@ -10721,7 +10875,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +835,26 @@
+@@ -1242,21 +850,26 @@
          }
        `}</style>
  
@@ -10758,7 +10912,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +864,35 @@
+@@ -1266,59 +879,35 @@
                );
              })}
            </nav>
@@ -10843,7 +10997,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +909,127 @@
+@@ -1335,105 +924,129 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10880,7 +11034,8 @@ Byte-identical to V1.
 +              onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval}
 +              onSkipTask={skipTask} onUpdateTask={updateTask}
 +              onAddReading={addReading}
-+              onCorrectReading={fixReading} onDeleteReading={dropReading} />
++              onCorrectReading={fixReading} onDeleteReading={dropReading}
++              onGoDosing={() => setTab("dosing")} />
            )}
 +
            {tab === "log" && (
@@ -11043,6 +11198,7 @@ Byte-identical to V1.
 -              dose={(doseStates || []).find((d) => d.key === modalParam) || null}
 +              isCustom={!modalDef.assessed && modalDef.hasRange}
 +              chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
++              engineResult={engineResult}
 +              onAddReading={addReading}
 +              notice={noticeFor(modalDef)}
                onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />
@@ -11053,7 +11209,7 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +1036,10 @@
+@@ -1440,10 +1053,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -11071,7 +11227,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +1053,96 @@
+@@ -1457,6 +1070,96 @@
    );
  }
  

@@ -941,7 +941,7 @@ async function ledgerDoses(store) {
   const out = {};
   const at = {};
   for (const row of projected) {
-    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;
+    if (row.state === "SUPERSEDED") continue;
     const e = row.event;
     if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
     const parameter = e.parameter || "ALK";
@@ -1004,7 +1004,7 @@ function iso(ms) {
 export function firstDoseDate(projected) {
   let first = null;
   for (const r of projected || []) {
-    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
+    if (r.state === "SUPERSEDED") continue;
     const e = r.event;
     if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
     if ((e.parameter || "ALK") !== "ALK") continue;

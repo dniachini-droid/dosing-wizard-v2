@@ -362,6 +362,10 @@ function PotencyBox({ box, onAccept, onKeep }) {
     learned: box.learned == null ? "—" : fmtPotency(box.learned),
     entered: fmtPotency(box.entered),
     accepted: fmtPotency(box.entered),
+    /* The engine's own observed figure, for the state where it has read a
+       strength but not gathered enough to be confident in one (finding 12). */
+    observed: box.observed == null ? "—" : fmtPotency(box.observed),
+    count: box.observations,
   };
 
   return (

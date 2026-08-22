@@ -181,7 +181,14 @@ export function RemindersPanel({ view, windowDays, setWindowDays, onOpenTest, on
           </button>
         ) : <span />}
         <div className="flex gap-1">
-          {[7, 14, 30].map((d) => (
+          {/* OWNER FINDING 4 — "the calendar shows only the last two weeks".
+
+              The calendar itself does not: it walks back month by month and
+              holds the whole record. This panel does, and it is what he was
+              reading — 14 days by default, and nothing here reached past 30, so
+              six months of imported task history had no window wide enough to
+              show it. The calendar is one tap away and is named below. */}
+          {[7, 14, 30, 90].map((d) => (
             <button key={d} onClick={() => setWindowDays(d)}
               className="rounded-lg px-2 py-1 text-[11px] font-extrabold border-2"
               style={{ borderColor: windowDays === d ? "#0B7C86" : "#E3ECEA",
@@ -276,6 +283,9 @@ export function RemindersPanel({ view, windowDays, setWindowDays, onOpenTest, on
         {view.later.length > 0
           ? ` ${view.later.length} further ${view.later.length === 1 ? "reminder falls" : "reminders fall"} beyond that — next is ${view.later[0].task.label.toLowerCase()} on ${fmtShort(view.later[0].due)}.`
           : " Nothing falls outside it."}
+        {/* Where the rest of it is. This window is a window; the calendar is
+            the record, and it walks back as far as the record goes. */}
+        {" "}The calendar holds the whole history.
       </p>
     </Card>
   );

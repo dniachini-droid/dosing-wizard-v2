@@ -238,7 +238,6 @@ export const STRINGS = Object.freeze({
 
   "today.state.superseded": "replaced by a later entry",
   "today.state.suspect": "you marked this suspect",
-  "today.state.invalid": "you marked this invalid",
 
   /* ======================================================================
      THE ASSESSMENT CARD
@@ -540,7 +539,6 @@ export const STRINGS = Object.freeze({
   "entry.state.current": "current",
   "entry.state.superseded": "replaced by a later entry, and kept",
   "entry.state.suspect": "you marked this suspect",
-  "entry.state.invalid": "you marked this invalid",
 
   "entry.dateOnly.head": "This entry has a date and no time.",
   "entry.dateOnly.body":
@@ -576,7 +574,6 @@ export const STRINGS = Object.freeze({
   "entry.mark.suspect": "Mark it suspect",
   "entry.mark.suspectTitle": "Mark this suspect",
   "entry.mark.unsuspect": "Remove the suspect mark",
-  "entry.mark.invalid": "Mark it invalid",
   "entry.mark.invalidTitle": "Mark this invalid",
   "entry.mark.suspectBody":
     "The entry stays exactly as it is and stays in the record. The mark is recorded alongside it, with today's date.",
@@ -1228,8 +1225,6 @@ export const STRINGS = Object.freeze({
   "dosing.working.excluded.noTime": ({ date }) =>
     `The ${date} reading wasn't used — it has a date but no time of day, so the gap to the next one ` +
     `isn't a known length of time. It stays in your history.`,
-  "dosing.working.excluded.invalid": ({ date }) =>
-    `The ${date} reading wasn't used — you marked it invalid.`,
   "dosing.working.excluded.beforeChange": ({ date }) =>
     `Readings before ${date} weren't used — the dose changed then, and the stretch starts clean.`,
   "dosing.working.excluded.confounded": ({ from, to }) =>
@@ -1396,6 +1391,28 @@ export const STRINGS = Object.freeze({
     `Not enough yet to check your solution against your tank. That needs readings either side of a ` +
     `dose change big enough to read the response from. Until then every figure here is built on the ` +
     `${entered} dKH per mL you entered.`,
+
+  /* OWNER FINDING 12 — AN ESTIMATE EXISTS BUT CONFIDENCE DOES NOT.
+
+     The state the box had no wording for, and the reason it contradicted its
+     own Show working. Four things, in the owner's own order: what the tank's
+     response suggests, what he entered, what would settle it, and which figure
+     is being used in the meantime.
+
+     It does NOT say the two figures are "close". How close is close enough is a
+     threshold, thresholds about strength are the canon's, and there is none for
+     this. Both numbers are stated side by side and the keeper can see the gap
+     for himself. */
+  "dosing.potency.observedOnly": ({ observed, entered }) =>
+    `Your tank's response so far suggests the real strength may be around ${observed} dKH per mL, `
+    + `against the ${entered} you entered. One dose change is not enough to be sure — a few more `
+    + `readings, and your next dose change, will settle it. Until then every figure here uses the `
+    + `strength you entered.`,
+  "dosing.potency.observedOnlyMany": ({ observed, entered, count }) =>
+    `Your tank's response so far suggests the real strength may be around ${observed} dKH per mL, `
+    + `against the ${entered} you entered. ${count} dose changes have been read and that is still `
+    + `not enough to be sure — a few more readings, and your next dose change, will settle it. `
+    + `Until then every figure here uses the strength you entered.`,
 
   /* An estimate exists and is not settled enough to act on. It is still shown
      — hiding a figure the app holds is how the keeper stops trusting the box —
@@ -1595,6 +1612,11 @@ export const STRINGS = Object.freeze({
   "setup.edit": "Edit",
   "setup.volume": "Net water volume",
   "setup.volumeUnit": "litres",
+
+  /* A water change, named where it appears on its own rather than folded
+     into a task that happened to share its day (owner finding 3). */
+  "dashboard.notice.open": "Open dosing",
+  "water.label": "Water change",
 
   "testlab.showReadings": ({ parameter }) => `Show every ${parameter} reading`,
   "testlab.hideReadings": ({ parameter }) => `Hide the ${parameter} readings`,

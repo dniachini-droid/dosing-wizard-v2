@@ -15,7 +15,7 @@ import { todayStr, fmtShort } from './lib/dates.js'
 import { onStorageError, onToast, notify } from './lib/storage.js'
 import { watchViewport } from './lib/viewport.js'
 import {
-  chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
+  chartEventsFrom, isLive, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
   correctReading, deleteRecord,
@@ -253,7 +253,7 @@ export function ReefConsoleInner() {
   const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
 
   const waterChanges = useMemo(() => projection
-    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
     .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
 
   /* Dose CHANGES and the dose STATE the record starts from.
@@ -265,7 +265,7 @@ export function ReefConsoleInner() {
      dose it had. A starting point has no delta and is shown as what it is. */
   const doseChanges = useMemo(() => projection
     .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
-      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+      && isLive(r))
     .map((r) => ({
       id: r.event.eventId,
       date: r.event.time.localDate,
@@ -303,12 +303,11 @@ export function ReefConsoleInner() {
 
   const lightingChanges = useMemo(() => projection
     .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-      && r.event.detail.husbandryKind === "LIGHTING"
-      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+      && r.event.detail.husbandryKind === "LIGHTING" && isLive(r))
     .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
 
   const icps = useMemo(() => projection
-    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+    .filter((r) => r.event.kind === KIND.ICP_PANEL && isLive(r))
     .map((r) => ({
       id: r.event.eventId,
       date: r.event.time.localDate,
@@ -523,7 +522,23 @@ export function ReefConsoleInner() {
      ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
      act is the same one and the keeper is told the same way. */
   const deleteCompletion = async (item) => {
-    if (!item || !item.taskId || !item.date) return;
+    if (!item) return;
+    /* OWNER FINDING 9's REAL CAUSE, AND ITS OTHER HALF.
+
+       Every row this calendar draws used to be deleted the same way — as a task
+       COMPLETION. That is right for a tick and wrong for anything else, and it
+       is why the owner deleted what he believed was a reading five times and it
+       never went: the tick came off, the due list noticed, and the reading was
+       never touched.
+
+       A row now says which kind of record it is. A ledger event goes through the
+       one delete path, which takes the event, its annotations and every
+       assessment that read it; a tick is uncompleted. Nothing guesses. */
+    if (item.eventId) {
+      await deleteRecordById(item.eventId, t("delete.done.waterChange"));
+      return;
+    }
+    if (!item.taskId || !item.date) return;
     await store.tasks.uncomplete(item.taskId, item.date);
     await reload();
     notify(t("delete.done.entry"));
@@ -926,7 +941,8 @@ export function ReefConsoleInner() {
               onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval}
               onSkipTask={skipTask} onUpdateTask={updateTask}
               onAddReading={addReading}
-              onCorrectReading={fixReading} onDeleteReading={dropReading} />
+              onCorrectReading={fixReading} onDeleteReading={dropReading}
+              onGoDosing={() => setTab("dosing")} />
           )}
 
           {tab === "log" && (
@@ -1028,6 +1044,7 @@ export function ReefConsoleInner() {
               onClose={() => setModalParam(null)} onSaveRange={saveRange} onResetRange={resetRange}
               isCustom={!modalDef.assessed && modalDef.hasRange}
               chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
+              engineResult={engineResult}
               onAddReading={addReading}
               notice={noticeFor(modalDef)}
               onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />

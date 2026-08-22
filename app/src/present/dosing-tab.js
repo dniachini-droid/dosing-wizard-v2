@@ -545,6 +545,40 @@ export function potencyBox(result, config = null) {
   };
 
   if (learned == null) {
+    /* OWNER FINDING 12 — THE BOX CONTRADICTED ITS OWN WORKING.
+
+       "Not enough yet to check your solution against your tank" sat directly
+       above a Show working that read "…which puts the strength at 0.0702 dKH
+       per mL". Both were true and together they read as a lie: the engine had
+       OBSERVED a strength and had not gathered enough to be CONFIDENT in one,
+       and the box only had wording for the second.
+
+       Canon needs three observations from two interventions before it will
+       learn a figure. So one dose change genuinely produces an observation and
+       genuinely produces no learned strength, and the honest sentence names
+       both — which is more useful than refusing to show a number the app has
+       already worked out.
+
+       The observation is READ, not computed. `observedPotencyDkhPerMl` is the
+       engine's own figure for that dosing period; nothing here averages,
+       weights or combines them, because combining observations into a strength
+       is exactly what the learner does and it has one owner. Where there are
+       several, the most recent is named and the count is stated. */
+    const observed = [...observations]
+      .filter((o) => num(o.observedPotencyDkhPerMl) != null)
+      .pop();
+    if (observed) {
+      return {
+        ...base,
+        /* One reading of the tank's response, or several — the same four things
+           said, with the count named where there is more than one. Two keys
+           rather than a branch inside one, so every value a sentence declares
+           is a value that sentence renders. */
+        state: observations.length > 1 ? "observedOnlyMany" : "observedOnly",
+        observed: num(observed.observedPotencyDkhPerMl),
+        offersChoice: false,
+      };
+    }
     return { ...base, state: "notYet", offersChoice: false };
   }
 

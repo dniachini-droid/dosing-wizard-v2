@@ -576,7 +576,7 @@ export function happenedBy(time, asOf) {
 export function toEngineEvents(projected, asOf = null) {
   const out = [];
   for (const row of projected) {
-    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;
+    if (row.state === "SUPERSEDED") continue;
     if (!happenedBy(row.event.time, asOf)) continue;
     const e = row.event;
     const at = e.time.absoluteInstant || null;

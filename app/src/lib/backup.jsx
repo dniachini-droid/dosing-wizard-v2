@@ -368,11 +368,35 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
         id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
       });
     }
+    /* OWNER FINDING 3 — WHY 25 WATER CHANGES WERE ON THE CHARTS AND NOWHERE
+       ELSE.
+
+       This folded a water change into a day that already had a task completion
+       on it, and did nothing at all where there was none. The owner's imported
+       history holds 25 water changes and no completion matching any of them, so
+       every one of them was skipped here — while the charts, which read the
+       ledger directly, drew all 25. He was looking at markers for events he
+       could not find, could not check and could not delete.
+
+       They are real: the import wrote 25 `WATER_CHANGE` events, and they came
+       from his own V1 backup. So they belong on the calendar, as themselves. */
     for (const w of waterChanges || []) {
-      const day = map[w.date];
-      if (!day) continue;
+      if (!w.date) continue;
+      const day = (map[w.date] = map[w.date] || []);
       const row = day.find((x) => x.taskId === "waterchange");
-      if (row) row.detail = `${w.litres}L`;
+      if (row) { row.detail = `${w.litres}L`; continue; }
+      day.push({
+        id: w.id,
+        label: t("water.label"),
+        taskId: "waterchange",
+        date: w.date,
+        detail: `${w.litres}L`,
+        done: true,
+        /* A ledger event rather than a task completion, so the caller deletes
+           the right thing. The calendar's trash used to remove the TICK on
+           every row it drew, whatever the row actually was. */
+        eventId: w.id,
+      });
     }
     return map;
   }, [taskLog, waterChanges, reminders]);
