@@ -48,7 +48,7 @@
    ========================================================================= */
 
 import { KIND, SOURCE, PARAMETERS } from "./ledger.js";
-import { dateOnly, exactInstant, localZone } from "./time.js";
+import { assignedDayInstant, dateOnly, exactInstant, localOffsetMinutes, localZone } from "./time.js";
 import { t } from "../strings.js";
 
 /* Spellings accepted for each parameter. The keys are the store's own; the
@@ -192,9 +192,18 @@ export function parseSeries(text) {
    itself rather than passed in from the device's offset today, because a date
    six months away can sit on the other side of a daylight-saving change. */
 export function timeFor(row) {
-  return row.time
-    ? exactInstant(row.date, row.time, undefined, localZone())
-    : dateOnly(row.date);
+  /* OWNER DECISION 33: a READING with no time is assigned 09:00. Seeded data
+     goes through the same rule as imported and hand-entered data, because a
+     seed that produced records the rest of the app cannot produce would be
+     testing something the app does not do — including the rule's own limit.
+     A seeded dose line with no time still gets no time, for the reason
+     `store/import-v1.js` `timeFor` sets out at length. */
+  if (row.time) return exactInstant(row.date, row.time, undefined, localZone());
+  if (row.kind !== KIND.READING) return dateOnly(row.date);
+  return assignedDayInstant(row.date, localOffsetMinutes(new Date()), {
+    appliedAt: new Date().toISOString(),
+    zoneId: localZone(),
+  });
 }
 
 /* --- planning ------------------------------------------------------------

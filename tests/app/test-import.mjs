@@ -146,15 +146,54 @@ async function importInto(store, doc, opts = {}) {
    1. Provenance never improves. The rule with no second chance.
    ---------------------------------------------------------------------- */
 
-s.test("IMP-01", "a reading with no time in the file gets a record with no time in it", async () => {
+s.test("IMP-01", "a reading with no time in the file is assigned 09:00, and says so", async () => {
+  /* OWNER DECISION 33, replacing the rule this test used to pin. A reading
+     carrying only a date is assigned 09:00 and is a fully timed reading for
+     every purpose thereafter — the owner's 325 date-only readings become
+     analytically eligible, which is the whole point of the decision.
+
+     What has NOT changed is that the assignment is recorded. The rule it
+     overrides exists because a fabricated time is afterwards indistinguishable
+     from a real one, and the `reconstruction` block is what keeps them
+     distinguishable. Every clause below is that half of it. */
   const store = createMemoryStore();
   await importInto(store, backup());
   const events = await store.ledger.allEvents();
 
-  const dateOnly = events.find((e) => e.kind === KIND.READING && e.time.localDate === "2026-05-04");
-  eq(dateOnly.time.timeProvenance, PROVENANCE.DATE_ONLY, "it is date-only");
-  eq("absoluteInstant" in dateOnly.time, false, "with no instant on it at all — not null, absent");
-  eq("localTime" in dateOnly.time, false, "and no time of day either");
+  const assigned = events.find((e) => e.kind === KIND.READING && e.time.localDate === "2026-05-04");
+  eq(assigned.time.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE, "it is a timed reading now");
+  eq(assigned.time.localTime, "09:00", "at the assigned hour");
+  eq(assigned.time.absoluteInstant, "2026-05-04T09:00:00+10:00", "with an instant the engine can measure from");
+
+  ok(assigned.time.reconstruction, "and the assignment travels on the record");
+  eq(assigned.time.reconstruction.assignedTimeOfDay, "09:00", "naming the hour that was supplied");
+  eq(assigned.time.reconstruction.assumed, true, "marked as an assumption");
+  eq(assigned.time.reconstruction.statedByKeeper, false, "and as something nobody stated");
+});
+
+s.test("IMP-01b", "the assignment is readings only — a dose keeps its uncertainty about when it took effect", async () => {
+  /* The limit of owner decision 33, and it is load-bearing. The decision names
+     READINGS. A dose change's `effectiveAtConfidence` is derived from whether
+     the hour is known and the engine measures the whole response window from
+     that instant, so assigning 09:00 to a dose dated 11 August would turn
+     UNCERTAIN into EXACT and assert that the pump was reprogrammed at nine in
+     the morning. Nobody said that, and the owner did not decide it. */
+  const doc = backup();
+  doc.data["dose-log"].push({ id: "d0", date: "2026-08-09", ml: 9.5, element: "alkalinity", note: "" });
+  const store = createMemoryStore();
+  await importInto(store, doc);
+  const events = await store.ledger.allEvents();
+
+  const untimedDoses = events.filter(
+    (e) => (e.kind === KIND.DOSE_STATE || e.kind === KIND.DOSE_CHANGE)
+      && e.time.timeProvenance === PROVENANCE.DATE_ONLY
+  );
+  ok(untimedDoses.length > 0, `there is an untimed dose to check: ${untimedDoses.length}`);
+  for (const e of untimedDoses) {
+    eq(e.time.localTime, undefined, "no hour was assigned to it");
+    eq(e.time.absoluteInstant, undefined, "and no instant was built from one");
+    eq(e.detail.effectiveAtConfidence, "UNCERTAIN", "so it still says it does not know when it took effect");
+  }
 });
 
 s.test("IMP-02", "a reading with a time keeps it, gets one assumed offset, and says the offset was assumed", async () => {
@@ -178,16 +217,24 @@ s.test("IMP-02", "a reading with a time keeps it, gets one assumed offset, and s
   eq(timed.time.reconstruction.basis, ASSUMPTION.DEVICE_ZONE, "and where it came from");
 });
 
-s.test("IMP-03", "no DATE-ONLY record gains a time, and every timed one is built the same way", async () => {
-  /* The blanket form of IMP-01 and IMP-02, over every record of every kind.
-     Written as a sweep rather than as three separate checks because the
-     failure this guards against is a NEW kind of record acquiring one — a
-     water change, an ICP panel, a dose — and a per-kind check would not cover
-     the kind nobody thought of. */
+s.test("IMP-03", "a time is either the file's, or assigned and declared — never quietly acquired", async () => {
+  /* The blanket form of IMP-01, IMP-01b and IMP-02, over every record of every
+     kind. Written as a sweep rather than as per-kind checks because the failure
+     it guards against is a NEW kind of record acquiring a time — a water
+     change, an ICP panel, a dose — and a per-kind check would not cover the
+     kind nobody thought of.
+
+     Owner decision 33 changed what the sweep asserts and not what it is for.
+     Before, no record could carry a time the file did not give. Now a READING
+     may, and only if the record says the hour was assigned, says nobody stated
+     it, and names the hour. Everything else is unchanged. */
   const store = createMemoryStore();
   await importInto(store, backup());
   const events = await store.ledger.allEvents();
   ok(events.length >= 9, `there is something to check: ${events.length}`);
+
+  const fileTimes = new Map();
+  for (const r of backup().data.readings) fileTimes.set(`READING|${r.date}|${r.value}`, r.time || null);
 
   for (const e of events) {
     ok(
@@ -203,21 +250,34 @@ s.test("IMP-03", "no DATE-ONLY record gains a time, and every timed one is built
       eq(e.time.localTime, undefined, `${e.kind} on ${e.time.localDate} has no time of day at all`);
       eq(e.time.absoluteInstant, undefined, `${e.kind} on ${e.time.localDate} has no instant either`);
       eq(e.time.reconstruction, undefined, `${e.kind} on ${e.time.localDate} had nothing assumed for it`);
-    } else {
-      ok(e.time.localTime, `${e.kind} on ${e.time.localDate} kept the time the file gave it`);
-      eq(e.time.offsetMinutes, 600, `${e.kind} on ${e.time.localDate} got the SAME offset as every other`);
-      eq(e.time.reconstruction.assumed, true, `${e.kind} on ${e.time.localDate} says its offset was assumed`);
-      eq(e.time.reconstruction.statedByKeeper, false, `and that nobody stated it`);
+      continue;
+    }
+    ok(e.time.localTime, `${e.kind} on ${e.time.localDate} carries a time of day`);
+    ok(e.time.reconstruction, `${e.kind} on ${e.time.localDate} says what was assumed for it`);
+    eq(e.time.reconstruction.statedByKeeper, false, "nothing here is recorded as something the keeper said");
+    /* ONE offset reaches every record that has one — the assumed offset, not
+       UTC. The tank does not travel, so applying the same offset to all of them
+       leaves every elapsed interval between them exact; substituting UTC moves
+       the whole run and lands any local time near midnight on the wrong day. */
+    eq(e.time.offsetMinutes, 600, `${e.kind} on ${e.time.localDate} carries the one assumed offset`);
+    ok(/[+-]\d\d:\d\d$/.test(String(e.time.absoluteInstant)),
+      `${e.kind} on ${e.time.localDate} writes its instant with that offset rather than as UTC`);
+
+    /* The one that matters: a record carrying an hour the file did not give
+       must say the hour was assigned, and only a READING may do it. */
+    const stated = e.kind === KIND.READING
+      ? fileTimes.get(`READING|${e.time.localDate}|${e.normalizedValue}`)
+      : "(not checked here)";
+    if (e.kind === KIND.READING && !stated) {
+      eq(e.kind, KIND.READING, "only a reading may be given an hour it was not told");
+      eq(e.time.reconstruction.assignedTimeOfDay, "09:00",
+        `${e.kind} on ${e.time.localDate} names the hour that was supplied`);
+    } else if (e.kind === KIND.READING) {
+      eq(e.time.localTime, stated, `${e.kind} on ${e.time.localDate} kept the time the file gave it`);
+      eq(e.time.reconstruction.assignedTimeOfDay, undefined,
+        `${e.kind} on ${e.time.localDate} claims nothing was assigned about its hour`);
     }
   }
-
-  /* And the arithmetic: exactly as many records carry a time as there are rows
-     in the file with one. Not one more. */
-  const doc = backup();
-  const rowsWithTime =
-    doc.data.readings.filter((r) => r.time).length + doc.data["dose-log"].filter((r) => r.time).length;
-  const recordsWithTime = events.filter((e) => e.time.localTime).length;
-  eq(recordsWithTime, rowsWithTime, "no record gained a time the file did not give it");
 });
 
 s.test("IMP-04", "the two constructors are the only way a time is built", () => {
@@ -634,24 +694,28 @@ s.test("IMP-20", "every imported reading is offered to the engine with its true 
 
   const readings = sent.filter((e) => e.kind === "READING");
   eq(readings.length, 3, "all three alkalinity readings are sent");
+  /* Under owner decision 33 every reading reaches the engine with an instant,
+     which is the decision's whole purpose: the one that carried only a date is
+     no longer set aside from the trend. It still travels with the provenance
+     that says the hour was assigned. */
   ok(
-    readings.some((r) => r.timeProvenance === PROVENANCE.DATE_ONLY),
-    "the date-only one is sent, with its provenance"
+    readings.every((r) => r.timeProvenance === PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE),
+    `every reading is sent as a timed one: ${readings.map((r) => r.timeProvenance).join(", ")}`
   );
   ok(
-    readings.some((r) => r.timeProvenance === PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE),
-    "and so is the timed one, with its own"
+    readings.every((r) => r.measuredAt && /[+Z]/.test(String(r.measuredAt))),
+    "each with an instant the engine can measure elapsed time from"
   );
-  /* A date-only reading's `measuredAt` is the calendar day and carries no
-     offset, because there is no instant to send and inventing one is the whole
-     thing this module refuses to do. A timed one carries the offset that was
-     assumed, so the engine can compute an elapsed interval from it. */
   for (const r of readings) {
-    if (r.timeProvenance === PROVENANCE.DATE_ONLY) {
-      ok(!/[+Z]/.test(String(r.measuredAt)), `no offset was invented for ${r.measuredAt}`);
-    } else {
-      ok(/[+-]\d\d:\d\d$/.test(String(r.measuredAt)), `${r.measuredAt} carries the offset it was given`);
-    }
+    ok(/[+-]\d\d:\d\d$/.test(String(r.measuredAt)), `${r.measuredAt} carries the offset it was given`);
+  }
+
+  /* A kind the decision does NOT cover still reaches the engine with no
+     instant, and the app still refuses to invent one for it. */
+  const untimedDose = sent.find((e) => e.kind === "DOSE_STATE" && e.effectiveAtConfidence === "UNCERTAIN");
+  if (untimedDose) {
+    ok(untimedDose.effectiveAtEarliest && untimedDose.effectiveAtLatest,
+      "an uncertain dose sends the bounds rather than an invented instant");
   }
 });
 
@@ -671,15 +735,36 @@ s.test("IMP-21", "the report the keeper reads counts exactly what the import wri
   eq(written.readings, described.total, "as many readings written as the report promised");
 
   const stored = events.filter((e) => e.kind === KIND.READING);
+  /* Under owner decision 33 the report's `dateOnly` count is no longer a count
+     of DATE_ONLY records — every one of those readings is written with 09:00
+     assigned. It is the count of readings the FILE gave no time for, which is
+     what the keeper will be told at import, and `assignedTimeOfDay` names it
+     for what it now is. Both are checked against the record, because a report
+     that counted one thing while the write did another is worse than no
+     report: the keeper agreed to something that did not happen. */
+  eq(
+    stored.filter((e) => e.time.reconstruction && e.time.reconstruction.assignedTimeOfDay).length,
+    described.assignedTimeOfDay,
+    "exactly as many readings carry an assigned hour as the report said"
+  );
+  eq(described.dateOnly, described.assignedTimeOfDay, "and that is the same set the report calls date-only");
   eq(
     stored.filter((e) => e.time.timeProvenance === PROVENANCE.DATE_ONLY).length,
-    described.dateOnly,
-    "and exactly as many of them are date-only as it said"
+    0,
+    "no reading is left without a time at all"
+  );
+  /* `withTime` is what the FILE stated, so it is compared against the readings
+     whose hour the file actually gave — not against every reading that now
+     carries one. */
+  eq(
+    stored.filter((e) => e.time.localTime && !(e.time.reconstruction || {}).assignedTimeOfDay).length,
+    described.withTime,
+    "and exactly as many carry a time the file stated"
   );
   eq(
     stored.filter((e) => e.time.localTime).length,
-    described.withTime,
-    "and exactly as many carry a time"
+    described.withTime + described.assignedTimeOfDay,
+    "with every reading carrying a time once the assignment is counted"
   );
   /* The report counts readings AND doses, so the comparison is against all
      the events, not just the readings picked out above. */
@@ -787,11 +872,13 @@ s.test("IMP-24", "an hour daylight saving skipped or repeated is imported like a
     ok(row.time.absoluteInstant, `${date} has an instant like every other row`);
   }
 
-  /* And the report counts them, because they are not a special case. */
+  /* And the report counts them, because they are not a special case. Every
+     reading now has an instant — the ones the file timed and, under owner
+     decision 33, the ones it did not — plus each dose the file timed. */
   const described = describePlan(planImport(doc, { assumption: ASSUMED }), ASSUMED);
   eq(
     described.exactElapsedAvailable,
-    described.withTime + doc.data["dose-log"].filter((r) => r.time).length,
+    described.withTime + described.assignedTimeOfDay + doc.data["dose-log"].filter((r) => r.time).length,
     "every timed row is counted as having an instant, none set aside"
   );
 });

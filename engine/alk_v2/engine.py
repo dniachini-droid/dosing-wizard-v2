@@ -777,15 +777,41 @@ def _potency_at(cfg):
 
     The prediction snapshot needs the potency **in force at the dose change**,
     not the one in force now. In this build the learner is gated, so the figure
-    at every instant is the configured one and the configuration history resolves
-    it. When the gate opens, this is the one function that has to learn to walk
-    the pool as it stood then -- which is why the intervention module takes it as
-    an argument rather than importing the learner.
+    at every instant is the theoretical-or-configured one and the configuration
+    history resolves it. When the gate opens, this is the one function that has
+    to learn to walk the pool as it stood then -- which is why the intervention
+    module takes it as an argument rather than importing the learner.
+
+    IT ASKS `potency.theoretical`. IT DOES NOT READ A CONFIG FIELD ITSELF.
+
+    It used to return `cfg.num("selectedPotencyDkhPerMl")` directly, which is a
+    second implementation of "what is this solution's strength" -- and a weaker
+    one, because `ALK-014`'s owner also derives the figure from `chemical` and
+    `stockConcentrationGPerL` when no potency is configured.
+
+    The consequence was not a wrong number. It was silence. A keeper who states
+    his solution as grams per litre -- the form a keeper who mixes his own soda
+    ash actually holds -- configures no `selectedPotencyDkhPerMl` at all, so this
+    returned `None`, `_snapshot` returned `NO_POTENCY_AT_PREDICTION`, and every
+    dose change he ever made came back
+    `LEGACY_PREDICTION_SNAPSHOT_UNAVAILABLE`. The response classifier never ran.
+    The six classes, the three gates and the whole "did that dose change work?"
+    layer were unreachable for him, while the SAME configuration sized his doses
+    correctly through `potency.theoretical` two modules away.
+
+    `MASTER RULE 1`: one owner for each inference. Two implementations that agree
+    today are a defect, not a coincidence -- and these two did not even agree
+    today.
+
+    No threshold, band edge, rail or equation changes here. Where a potency is
+    configured, `theoretical` returns it unchanged and this function returns
+    exactly what it returned before.
     """
 
     def at(_instant):
+        value, _codes = potency_mod.theoretical(cfg)
         return (
-            cfg.num("selectedPotencyDkhPerMl"),
+            value,
             cfg.get("solutionContextId", "UNKNOWN"),
             "THEORETICAL_ONLY",
         )

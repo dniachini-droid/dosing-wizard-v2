@@ -217,7 +217,37 @@ export function createAssessmentStore(backend) {
     return { stored: true, record: rec };
   }
 
-  return { record, all, latest, forDay, byId };
+  /* EVERY ASSESSMENT THAT READ A DELETED RECORD GOES WITH IT — owner decision 34.
+
+     "Assessments that used a deleted reading go with it. They describe a past
+     that no longer exists."
+
+     `inputEventIds` is what makes this answerable at all. It was written so that
+     "replay this assessment" could actually be done (canon §64 conditions replay
+     on the event ledger); it turns out to be exactly the index needed to answer
+     the opposite question — which stored answers depended on this record.
+
+     There is no tombstone and nothing is annotated. An assessment that read the
+     deleted event is removed, and the app's next run produces the answer the
+     remaining record supports. Nothing anywhere says a deletion happened, which
+     is what the owner asked for.
+
+     A note on what this does NOT do. It does not touch assessments that merely
+     ran LATER than the deleted record — only those that actually read it. An
+     assessment made before the reading existed never depended on it, and
+     deleting it would be destroying a true record of what the app said at a
+     moment when the reading genuinely was not there. */
+  async function forgetEvent(eventId) {
+    const forgotten = [];
+    for (const rec of await all()) {
+      if (!Array.isArray(rec.inputEventIds) || !rec.inputEventIds.includes(eventId)) continue;
+      await backend.del(ASSESSMENTS, rec.assessmentId);
+      forgotten.push(rec.assessmentId);
+    }
+    return forgotten;
+  }
+
+  return { record, all, latest, forDay, byId, forgetEvent };
 }
 
 /* The application may read a clock. The domain may not (`INV-A2`), and does

@@ -13,8 +13,10 @@
 
 import { suite, eq, ok } from "./harness.mjs";
 import {
-  boxes, potencySentence, reasonRows, recommendation, spanInWords, statusParts, working,
+  boxes, learnerLimits, potencyBox, potencyProvenance, reasonRows, recommendation,
+  spanInWords, statusParts, whyPanel, working,
 } from "../../app/src/present/dosing-tab.js";
+import { t } from "../../app/src/strings.js";
 
 const s = suite("the dosing tab");
 
@@ -183,7 +185,11 @@ s.test("DOS-06", "a span of days renders in plain English, never as a raw decima
   }
 });
 
-s.test("DOS-07", "an INFO code that carries no calculation never reaches the screen", () => {
+s.test("DOS-07", "no No-effect row reaches the screen, and no learner-only limit does either", () => {
+  /* Finding 8, the owner's own reasoning: an INFO code "by definition changed
+     nothing", so none of them appears. What a keeper wants from the ones that
+     carried arithmetic is already in `working()`, as a sentence beside the
+     figure it produced — DOS-09 pins that it is still there. */
   const rows = reasonRows(FALLING);
   const codes = rows.map((r) => r.code);
   for (const narration of [
@@ -192,10 +198,70 @@ s.test("DOS-07", "an INFO code that carries no calculation never reaches the scr
   ]) {
     ok(!codes.includes(narration), `${narration} is the engine narrating itself and is dropped`);
   }
-  /* And the ones that DO carry arithmetic a keeper can check are kept. */
-  for (const keeps of ["CONSUMPTION_ESTIMATED", "UNCERTAINTY_FLOOR_APPLIED", "TRAJECTORY_FALLING"]) {
-    ok(codes.includes(keeps), `${keeps} carries a calculation and is kept`);
+  /* The three the owner named by their wording, all INFO, all now gone. */
+  for (const named of [
+    "SEGMENT_SELECTED",                    /* "the stretch of history using this assessment" */
+    "DELIVERY_BASIS_PROGRAMMED_SCHEDULE",  /* "your confirmed pump schedule was used" */
+    "POTENCY_SELECTED_THEORETICAL",        /* "strength per millilitre comes from your recipe" */
+  ]) {
+    ok(!codes.includes(named), `${named} is a No-effect row and is not shown`);
   }
+  ok(rows.every((r) => r.severity !== "INFO"), "no INFO row survives at all");
+});
+
+s.test("DOS-07b", "a limit on the potency learner is not shown as a limit on the dose", () => {
+  /* Finding 7. All three were shown to the owner as "Limited this" on a screen
+     that was correctly sizing his dose from the strength and dose he had
+     entered. Each declares `potency.learnedPotencyDkhPerMl` as the only output
+     it touches — they limit the learner and nothing else. */
+  const result = {
+    ...FALLING,
+    reasonCodes: [
+      { code: "CAPABILITY_SOLUTION_CONTEXT_MISSING", severity: "GATING", payload: {} },
+      { code: "CAPABILITY_DELIVERY_CONTEXT_MISSING", severity: "GATING", payload: {} },
+      { code: "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED", severity: "GATING", payload: {} },
+      { code: "POTENCY_CALIBRATION_SNAPSHOT_UNAVAILABLE", severity: "GATING", payload: {} },
+      { code: "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE", severity: "GATING", payload: {} },
+      { code: "TRAJECTORY_UNCERTAINTY_LIMITED", severity: "GATING", payload: {} },
+    ],
+  };
+  const codes = reasonRows(result).map((r) => r.code);
+  eq(codes.length, 1, `only the one genuine limit survives: ${codes.join(", ")}`);
+  eq(codes[0], "TRAJECTORY_UNCERTAINTY_LIMITED", "and it is the one about the dose");
+
+  /* Not discarded — moved. The estimator's own box states them beside the
+     estimate they limit. */
+  const limits = learnerLimits(result).map((r) => r.code);
+  ok(limits.includes("CAPABILITY_DELIVERY_CONTEXT_MISSING"),
+    "delivery context is stated by the potency box instead");
+  ok(limits.includes("CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED"),
+    "and so is the programmed dose state");
+  ok(!limits.includes("TRAJECTORY_UNCERTAINTY_LIMITED"),
+    "a real dose limit is not swallowed by the potency box");
+});
+
+s.test("DOS-07c", "what your pump is set to is never named as missing by the learner's own row", () => {
+  /* The owner entered 8.8 mL/day and was told "what your pump is set to" was
+     one of two things missing. `CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED`
+     is `capability.py:149`, a hard-coded NOT_RUN emitted on every assessment. */
+  const lines = whyPanel({
+    reasonCodes: [
+      { code: "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED", severity: "GATING", payload: {} },
+    ],
+    retest: { recommendedAt: "2026-08-24T09:00:00+10:00" },
+  });
+  ok(!lines.join(" ").includes("what your pump is set to"),
+    `the learner's row does not claim the pump dose is missing: "${lines.join(" ")}"`);
+
+  /* The consumption owner's own refusal still does, because that one IS a
+     statement that there is no dose history to work from. */
+  const real = whyPanel({
+    reasonCodes: [
+      { code: "CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE", severity: "BLOCKING", payload: {} },
+    ],
+  });
+  ok(real.join(" ").includes("what your pump is set to"),
+    `a genuine absence is still named: "${real.join(" ")}"`);
 });
 
 s.test("DOS-08", "identical reason codes collapse to one row with a count", () => {
@@ -205,13 +271,14 @@ s.test("DOS-08", "identical reason codes collapse to one row with a count", () =
   const episodes = rows.filter((r) => r.code === "EPISODE_RESOLVED");
   eq(episodes.length, 0, "and this one is pure process narration, so it is dropped entirely");
 
-  /* The collapsing itself, on a code that IS kept. */
+  /* The collapsing itself, on a code that IS kept — a GATING one, now that no
+     INFO code reaches this list. */
   const twice = reasonRows({
     ...FALLING,
     reasonCodes: [
-      { code: "CONSUMPTION_ESTIMATED", severity: "INFO", payload: { P: 1 } },
-      { code: "CONSUMPTION_ESTIMATED", severity: "INFO", payload: { P: 1 } },
-      { code: "CONSUMPTION_ESTIMATED", severity: "INFO", payload: { P: 1 } },
+      { code: "TRAJECTORY_UNCERTAINTY_LIMITED", severity: "GATING", payload: { P: 1 } },
+      { code: "TRAJECTORY_UNCERTAINTY_LIMITED", severity: "GATING", payload: { P: 1 } },
+      { code: "TRAJECTORY_UNCERTAINTY_LIMITED", severity: "GATING", payload: { P: 1 } },
     ],
   });
   eq(twice.length, 1, "three of one code is one row");
@@ -231,25 +298,136 @@ s.test("DOS-09", "the working shows the arithmetic, and every figure in it is th
   ok(!/4\.99|\d\.\d{5,}/.test(text), "and no raw precision anywhere in it");
 });
 
-s.test("DOS-10", "the potency estimator is a sentence, and does not promise a check this build cannot run", () => {
-  const gated = potencySentence(FALLING);
-  ok(/0\.0692/.test(gated), `it names the figure in use: "${gated}"`);
-  ok(/switched off by design/.test(gated),
-    "and says the check is off rather than implying it arrives with more data");
+/* The estimator's own fixture. Synthetic, and it says so: two dose changes
+   read, both eligible, the pool settled — the state the owner's tank reaches
+   after he has changed his dose twice. The figures are the shape the engine
+   produces, not measurements of anybody's tank. */
+const withPotency = (over) => ({
+  ...FALLING,
+  potency: {
+    selectedPotencyDkhPerMl: 0.0692,
+    learnedPotencyDkhPerMl: 0.0740,
+    potencyConfidence: "CALIBRATED",
+    potencyLearningState: "CAPABILITY_GATED",
+    potencyObservations: [
+      { observationId: "POB-IV-2026-06-20T08:00:00+10:00", eligibility: "ELIGIBLE",
+        observedPotencyDkhPerMl: 0.0738, deltaDoseMlPerDay: 1.5, deltaSlopeDkhPerDay: 0.1107 },
+      { observationId: "POB-IV-2026-07-15T08:00:00+10:00", eligibility: "ELIGIBLE",
+        observedPotencyDkhPerMl: 0.0742, deltaDoseMlPerDay: -1.3, deltaSlopeDkhPerDay: -0.0965 },
+    ],
+    ...(over.potency || {}),
+  },
+  reasonCodes: over.reasonCodes || [
+    { code: "POTENCY_DISCREPANCY_BAND", severity: "INFO", payload: { band: "MEANINGFUL" } },
+  ],
+});
 
-  const learned = potencySentence({
-    ...FALLING,
-    potency: {
-      selectedPotencyDkhPerMl: 0.0692,
-      learnedPotencyDkhPerMl: 0.0707,
-      potencyLearningState: "ACTIVE",
-      potencyObservations: [{}, {}],
-    },
-    reasonCodes: [{ code: "POTENCY_DISCREPANCY_BAND", severity: "INFO", payload: { band: "AGREES" } }],
+const RECIPE = Object.freeze({ recommendationPrecisionMlPerDay: 0.1, chemical: "NA2CO3", stockConcentrationGPerL: 101 });
+
+s.test("DOS-10", "the estimator observes while gated, and never substitutes silently", () => {
+  /* Finding 13. The gate is what makes "never substitutes silently" true: the
+     learner observes and pools while gated, and `selectedPotency` stays the
+     keeper's figure however good the pool. The box shows what it WOULD have
+     concluded; only the keeper moves the number. */
+  const box = potencyBox(withPotency({}), RECIPE);
+  eq(box.entered, 0.0692, "the figure in use is the keeper's");
+  eq(box.learned, 0.0740, "and the measured one is shown beside it");
+  eq(box.eligible, 2, "built on the observations the engine called eligible");
+  ok(box.offersChoice, "and because the engine is confident, the keeper is offered the choice");
+  eq(box.state, "stronger", "with the recipe named, because the app holds one");
+});
+
+s.test("DOS-10b", "nothing to estimate from yet says so, and offers no choice", () => {
+  const box = potencyBox(FALLING, RECIPE);
+  eq(box.state, "notYet", "it is waiting");
+  eq(box.learned, null, "with no measured figure to show");
+  eq(box.offersChoice, false, "and nothing to decide");
+  ok(/readings either side of a dose change/.test(t("dosing.potency.notYet", { entered: "0.0692" })),
+    "and it says what it is waiting for, rather than 'not enough data'");
+});
+
+s.test("DOS-10c", "the choice is offered only where the ENGINE is confident, and only where they disagree", () => {
+  /* Two thresholds this file must not own. "Confident enough to act on" is
+     `ALK-POTENCY-CONFIDENCE-001`'s ladder — the states at which canon itself
+     would move `selectedPotency`. "Do these agree" is `ALK-021`, emitted as
+     `POTENCY_DISCREPANCY_BAND`. Neither is a percentage compared here. */
+  for (const confidence of ["THEORETICAL_ONLY", "EXPLORATORY", "PROVISIONAL", "UNRESOLVED"]) {
+    const box = potencyBox(withPotency({ potency: { potencyConfidence: confidence } }), RECIPE);
+    eq(box.offersChoice, false, `${confidence} is below the bar canon sets, so no choice is offered`);
+    eq(box.state, "notConfident", `${confidence} says so rather than going quiet`);
+  }
+  for (const confidence of ["CALIBRATED", "STRONGLY_CALIBRATED"]) {
+    const box = potencyBox(withPotency({ potency: { potencyConfidence: confidence } }), RECIPE);
+    ok(box.offersChoice, `${confidence} is the bar canon sets, so the choice is offered`);
+  }
+
+  /* Confident, and they agree. No choice, because there is nothing to choose. */
+  const agreeing = potencyBox(withPotency({
+    reasonCodes: [{ code: "POTENCY_DISCREPANCY_BAND", severity: "INFO", payload: { band: "BROADLY_CONSISTENT" } }],
+  }), RECIPE);
+  eq(agreeing.state, "agrees", "it says they agree closely");
+  eq(agreeing.offersChoice, false, "and asks the keeper nothing");
+});
+
+s.test("DOS-10d", "it never claims a recipe the app does not hold", () => {
+  /* A keeper who typed a dKH/mL figure straight in has no recipe for his
+     solution to be stronger than. Same rule as
+     `dosing.working.uses.potencyFrom`. */
+  const stated = potencyBox(withPotency({}), { recommendationPrecisionMlPerDay: 0.1 });
+  eq(stated.state, "strongerStated", "so the sentence compares against the figure he entered");
+  ok(/than the figure you entered/.test(t("dosing.potency.strongerStated", { learned: "0.0740", entered: "0.0692" })),
+    "and says exactly that");
+  ok(/than the recipe suggests/.test(t("dosing.potency.stronger", { learned: "0.0740", entered: "0.0692" })),
+    "while the recipe form is kept for where there is one");
+});
+
+s.test("DOS-10e", "an accepted figure carries its provenance, and a kept one carries its own", () => {
+  /* "Provenance is shown wherever the figure appears — in Setup and on the
+     Dosing tab." One reader, so the two surfaces cannot describe the same
+     number differently. */
+  const accepted = potencyProvenance({
+    selectedPotencyDkhPerMl: 0.0707,
+    potencyDecision: { accepted: true, learned: 0.0707, on: "2026-08-22" },
   });
-  ok(/0\.0707/.test(learned) && /0\.0692/.test(learned), `both figures: "${learned}"`);
-  ok(/two dosing periods/.test(learned) || /2 dosing periods/.test(learned),
-    "and how many periods it is built on");
+  eq(accepted.key, "dosing.potency.fromMeasured", "an accepted figure says it was measured");
+  eq(accepted.value, 0.0707, "and names it");
+  ok(/measured from your tank's response, accepted/.test(
+    t(accepted.key, { value: "0.0707", date: "22 Aug" })), "in the owner's own words");
+
+  const kept = potencyProvenance({
+    selectedPotencyDkhPerMl: 0.0692,
+    potencyDecision: { accepted: false, learned: 0.0740, on: "2026-08-22" },
+  });
+  eq(kept.key, "dosing.potency.fromKept", "a kept figure says it was kept, which is also a decision he made");
+
+  eq(potencyProvenance({ selectedPotencyDkhPerMl: 0.0692 }), null,
+    "and a keeper who has never been asked is told nothing, because there is nothing to tell");
+});
+
+s.test("DOS-10f", "it keeps watching after acceptance, and asks again if it learns something different", () => {
+  /* "The estimator keeps watching after acceptance. If it later learns
+     something different and is confident, it asks again." */
+  const moved = potencyBox(withPotency({}), {
+    ...RECIPE,
+    potencyDecision: { accepted: true, learned: 0.0707, on: "2026-08-22" },
+  });
+  ok(moved.asksAgain, "the estimate has moved since he decided, so it asks again");
+  ok(moved.offersChoice, "and offers the choice again");
+
+  const unchanged = potencyBox(withPotency({}), {
+    ...RECIPE,
+    potencyDecision: { accepted: true, learned: 0.0740, on: "2026-08-22" },
+  });
+  eq(unchanged.asksAgain, false, "an estimate that has not moved does not ask him the same question twice");
+});
+
+s.test("DOS-10g", "the working shows the arithmetic behind the estimate, and every figure in it is the engine's", () => {
+  const box = potencyBox(withPotency({}), RECIPE);
+  const text = box.working.join(" ");
+  ok(/0\.0738/.test(text), `each dose change it read: "${text.slice(0, 120)}"`);
+  ok(/0\.0742/.test(text), "including the second one");
+  ok(/0\.0740/.test(text), "and the pooled figure");
+  ok(/0\.0692/.test(text), "against the one the keeper entered");
 });
 
 export default s;

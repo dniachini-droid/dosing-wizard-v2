@@ -1162,6 +1162,11 @@ export const STRINGS = Object.freeze({
     `${supported} dKH a day. Only that second figure sizes a dose change.`,
   /* Pre-empts the keeper who works out first-minus-last and gets a different
      number. The counts ("n=10, 45 pairwise slopes") are method trivia and go. */
+  /* The drift, with what it was drawn from. Finding 14: a bare "0.00" tells a
+     keeper nothing about how much history stands behind it. */
+  "dosing.working.movement.drawnFrom": ({ observed, n, span }) =>
+    `Your readings drift ${observed} dKH a day, across ${n} readings over approximately ${span}.`,
+
   "dosing.working.movement.method":
     "The drift is the middle of every pair of your readings, so one odd result cannot drag it.",
   "dosing.working.movement.floor": ({ scatter, floor }) =>
@@ -1234,14 +1239,209 @@ export const STRINGS = Object.freeze({
   "dosing.pill.blocking": "Stopped this",
 
   /* ---- correction in progress ------------------------------------------ */
-  "dosing.correction.title": "Correction in progress",
+  /* ---- the change you made, and what came of it ------------------------
+     Replaces the old "correction in progress" panel. That panel had one thing
+     to say — a date — and `retest.recommendedAt` returns the assessment
+     instant itself once a test is due, so on the day the keeper tested it told
+     him the next useful test was that day (finding 12).
+
+     The engine has known the answer all along: `responseAssessment`
+     classification, `classificationIsTerminal`, and `postClusters`. Every
+     string below is a sentence for a state the engine named. None of them
+     counts readings, compares anything to a minimum or decides when enough has
+     happened — `AWAITING_FORMAL_POST_SLOPE` is the engine saying that, not a
+     sentence here working it out (canon `X-INV-004`).
+
+     The panel is one strip, read top to bottom:
+         title · body (the change) · state · next test · new dose · close
+     Only the state line changes between states, and every state has one. */
+
+  /* Was "Correction in progress", which is false the moment the engine
+     reaches a terminal class — and four of the eight states below are terminal
+     on arrival. The title has to survive "the change worked" and "this cannot
+     be graded" as comfortably as it survives the waiting, so it names the
+     subject and says nothing about status. Status is the state line's job. */
+  "dosing.correction.title": "The change you made",
+
+  /* The old body ended "...and the app is watching what alkalinity does next",
+     which is a status claim inside the line that names the change. It is wrong
+     in every terminal state and it duplicated the state line in the rest, so
+     it has gone. This line now does one thing: says what was changed, when. */
   "dosing.correction.body": ({ date, from, to }) =>
-    `You changed the dose on ${date}, from ${from} to ${to} mL/day, and the app is watching what ` +
-    `alkalinity does next.`,
+    `You changed the dose on ${date}, from ${from} to ${to} mL/day.`,
+
   "dosing.correction.ends":
     "This ends on its own — when the dose settles, or when a new change starts a new one. " +
     "There is nothing here to cancel.",
+
+  /* ---- the state line, one per `state` the presenter returns ------------ */
+
+  "dosing.correction.waiting":
+    "Nothing has been tested since, so there is nothing to read yet.",
+
+  /* Two forms, and both are needed: `postClusters` is only in the payload of
+     `AWAITING_FORMAL_POST_SLOPE`. `AWAITING_DETECTABILITY` and `INCONCLUSIVE`
+     map to this same state and carry no count, so `posts` arrives null and the
+     plain form is what renders. A count invented to fill it would be a number
+     the engine did not give. */
+  "dosing.correction.tooEarly": ({ posts }) =>
+    posts === 1
+      ? "Still too early to say — one test in since the change."
+      : `Still too early to say — ${posts} tests in since the change.`,
+  "dosing.correction.tooEarlyPlain": "Still too early to say.",
+
+  /* `EXPECTED` says the response matched the prediction the app made at the
+     moment of the change. It does not say the dose now matches consumption —
+     that is the recommendation's statement, and it is made on this tab by the
+     hold. This sentence claims the first and not the second. */
+  "dosing.correction.worked":
+    "The change worked. Alkalinity moved by about as much as the app predicted, " +
+    "so there is nothing more to watch here.",
+
+  "dosing.correction.partial":
+    "It moved alkalinity the right way, but not as far as the change predicted.",
+
+  /* `OVER_RESPONSE` — the response was larger than predicted. That is not the
+     same thing as alkalinity crossing your range, which is the separate
+     overshoot event and has its own line elsewhere on the card. The sentence
+     stays on the response so the two are not read as one. */
+  "dosing.correction.overshot":
+    "Alkalinity moved further than the change predicted.",
+
+  "dosing.correction.noMovement":
+    "The readings since show no movement the app can tell apart from ordinary " +
+    "test variation.",
+
+  "dosing.correction.wrongWay":
+    "Alkalinity has gone the opposite way to the change.",
+
+  /* One sentence, and it must not leave the keeper waiting. Every state
+     mapped here is terminal — confounded, interrupted, the change time not
+     known, too little evidence before the change, or a signal smaller than the
+     scatter it would have to be read out of. More readings genuinely cannot
+     rescue any of them, and the second clause is there to say so. */
+  "dosing.correction.cannotTell":
+    "This change cannot be graded, and more readings will not change that.",
+
+  /* ---- the next test, in its two forms ---------------------------------- */
+
   "dosing.correction.nextTest": ({ date }) => `The next useful test is ${date}.`,
+
+  /* THE FIX, and the reason this one is a plain string and not a function of
+     a date. When a test is already due the engine submits the assessment
+     instant itself, so any date rendered here is today's — which is exactly
+     what told the keeper on 22 August that the next useful test was 22 August,
+     after he had tested. Taking no argument makes rendering a date here
+     impossible rather than merely discouraged. */
+  "dosing.correction.nextTestNow": "The next useful test is due now.",
+
+  /* ---- what to do about a conclusion ------------------------------------ */
+
+  /* Offered on `partial` and `overshot`, where the engine has already sized a
+     different dose from what actually happened. */
+  "dosing.correction.newDose": ({ dose }) =>
+    `The app has a new dose for you, sized from what actually happened: ${dose} mL/day.`,
+
+  /* Shown only on a terminal panel. Not "Close": what is being put away is the
+     conclusion, not the box — delete the reading the conclusion rested on and
+     the engine reclassifies, the signature stops matching and this panel comes
+     back saying what it said before. "Done with this" is true of that; "Close"
+     would imply the keeper had disposed of something permanent.
+     `dosing.correction.ends` belongs to the non-terminal panel and is not
+     shown next to this control — it says there is nothing here to cancel. */
+  "dosing.correction.close": "Done with this",
+
+  /* ---- the potency estimator ------------------------------------------- */
+
+  "dosing.potency.title": "Your solution's real strength",
+
+  /* Nothing to estimate from yet. Says what it is waiting for rather than
+     "not enough data": the keeper can supply a dose change and readings either
+     side of it, and cannot supply "more data". */
+  "dosing.potency.notYet": ({ entered }) =>
+    `Not enough yet to check your solution against your tank. That needs readings either side of a ` +
+    `dose change big enough to read the response from. Until then every figure here is built on the ` +
+    `${entered} dKH per mL you entered.`,
+
+  /* An estimate exists and is not settled enough to act on. It is still shown
+     — hiding a figure the app holds is how the keeper stops trusting the box —
+     but no buttons are offered beside it, and the sentence says which way that
+     will resolve rather than leaving it hanging. */
+  "dosing.potency.notConfident": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered. That is not settled enough to act on yet, so the app is still using ` +
+    `your figure. More dose changes will either confirm it or move it.`,
+
+  /* Owner-approved wording, from finding 13, as written. */
+  "dosing.potency.agrees": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered. That agrees closely.`,
+
+  /* Owner-approved wording, from finding 13, as written — and it names a
+     recipe, so it may only be used where the app actually holds one. Where the
+     keeper typed a dKH per mL figure straight in there is no recipe to be
+     stronger than, and the `...Stated` pair is what renders there. Same rule as
+     `dosing.working.uses.potencyFrom`. */
+  "dosing.potency.stronger": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered — your solution is stronger than the recipe suggests.`,
+  "dosing.potency.weaker": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered — your solution is weaker than the recipe suggests.`,
+  "dosing.potency.strongerStated": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered — your solution is stronger than the figure you entered.`,
+  "dosing.potency.weakerStated": ({ learned, entered }) =>
+    `Your tank's response puts the real effect at about ${learned} dKH per mL, against the ` +
+    `${entered} you entered — your solution is weaker than the figure you entered.`,
+
+  /* The box's disclosure control reuses `dosing.reco.showWorking`. One label
+     for one affordance — a second key reading "Show working" is two owners of
+     one word waiting to drift apart. */
+
+  /* Owner-approved labels, from finding 13, as written. Both name what they
+     do to the figure the app uses, so neither can be read as the safe one. */
+  "dosing.potency.useMeasured": "Use the measured strength",
+  "dosing.potency.keepEntered": "Keep the strength I entered",
+
+  /* Provenance, wherever the figure in use is shown — Setup and the Dosing
+     tab both. A box value, so "dKH/mL" rather than the prose "dKH per mL". */
+  "dosing.potency.fromMeasured": ({ value, date }) =>
+    `${value} dKH/mL — measured from your tank's response, accepted ${date}`,
+  /* Its counterpart, and it earns its place: once the keeper has been shown a
+     measurement and has chosen his own figure over it, "the figure you entered
+     at setup" is no longer the whole truth about where it came from. Keeping
+     is a decision he made on a date, and it is recorded as one. */
+  "dosing.potency.fromKept": ({ value, date }) =>
+    `${value} dKH/mL — the figure you entered, kept on ${date}`,
+
+  "dosing.potency.accepted":
+    "The app is now using the measured strength. The figure you entered stays in your settings " +
+    "history, and every assessment already saved keeps the figure it actually used.",
+
+  /* The estimator has moved since the keeper accepted a figure. It asks
+     rather than updating: the accepted figure is his, and an app that quietly
+     rewrote it would make the provenance line above a lie. */
+  "dosing.potency.asksAgain": ({ learned, accepted }) =>
+    `Your tank's response has moved on since you accepted a measured strength. It now puts the real ` +
+    `effect at about ${learned} dKH per mL, against the ${accepted} in use. You can take the new ` +
+    `figure or stay on the one you accepted.`,
+
+  /* The working behind the estimate. Each line is one dose change the learner
+     read, and the arithmetic is the engine's own: how much the dose moved, how
+     much the tank's drift moved with it, and the strength that implies. */
+  "dosing.potency.working.observation": ({ date, delta, slope, potency }) =>
+    `Your dose moved ${delta} mL/day and the drift moved ${slope} dKH a day with it, ` +
+    `which puts the strength at ${potency} dKH per mL.`,
+  "dosing.potency.working.pooled": ({ n, potency }) =>
+    `Across ${n} dose changes the middle figure is ${potency} dKH per mL.`,
+  "dosing.potency.working.against": ({ learned, entered }) =>
+    `${learned} measured, against ${entered} entered.`,
+
+  /* What the learner could not do, stated beside the estimate it limits rather
+     than in the dose working, where the owner met all three as "Limited this"
+     on a screen that was sizing his dose correctly (finding 7). */
+  "dosing.potency.limitsHead": "What is holding this back",
 
   "dosing.graph.7": "7 days",
   "dosing.graph.14": "14 days",
@@ -1263,24 +1463,45 @@ export const STRINGS = Object.freeze({
   "correct.dateOnlyNote":
     "This reading has a date and no time of day, so the corrected one will not have a time either. "
     + "Fixing a number is not new information about when it was taken.",
-  "correct.audit":
-    "Your original stays in the record, marked as replaced. Nothing is erased — the app can always "
-    + "show what was first entered, and what you changed it to.",
   "correct.save": "Save the correction",
   "correct.saved": "Reading corrected",
   "correct.deleteHead": "Or take it out of your results",
+  /* Owner decision 34: it is deleted, so the sentence says deleted. The
+     previous wording promised the record kept it — "it stops counting" — which
+     was true of the annotation this replaced and is a lie about what now
+     happens. */
   "correct.deleteBody":
     "Use this where the reading should never have been recorded at all — a test you botched, or one "
-    + "you entered twice. It stops counting towards anything: charts, statistics and the engine.",
-  "correct.delete": "Take it out",
+    + "you entered twice.",
+  "correct.delete": "Delete this reading",
   "correct.deleted": "Reading taken out",
-  "correct.deleteAudit":
-    "It stays in your record, marked as one that should not have been counted. It is not erased.",
   "correct.cancel": "Leave it as it is",
   "correct.readingsHead": "Your readings",
   "correct.tapToFix": "Tap any reading to fix it or take it out.",
-  "correct.superseded": "replaced",
-  "correct.invalid": "not counted",
+  /* ---- deleting a record, and it is deleted ---------------------------
+     Owner decision 34. There is no "marked invalid" anywhere any more, so
+     there is no wording for one either — `correct.superseded` and
+     `correct.invalid` were badges for two states nothing can now produce.
+
+     The confirmation asks plainly and names the act. It does not ask "are you
+     sure", which invites a reflex rather than a decision, and it does not
+     promise the record can be got back, because it cannot. */
+  "delete.confirm.reading": "Delete this reading? It will be gone, and everything is worked out again without it.",
+  "delete.confirm.dose": "Delete this dose change? It will be gone, and everything is worked out again without it.",
+  "delete.confirm.entry": "Delete this entry? It will be gone, and everything is worked out again without it.",
+  "delete.confirm.yes": "Delete it",
+  "delete.confirm.no": "Keep it",
+
+  /* The dark pill at the bottom, after the fact. Names what went, because the
+     keeper may have several kinds of record on one screen. */
+  "delete.done.reading": "Alkalinity reading deleted.",
+  "delete.done.readingOf": ({ parameter }) => `${parameter} reading deleted.`,
+  "delete.done.dose": "Dose change deleted.",
+  "delete.done.waterChange": "Water change deleted.",
+  "delete.done.entry": "Entry deleted.",
+
+  "delete.aria.reading": ({ date }) => `Delete the reading from ${date}`,
+  "delete.aria.entry": "Delete this entry",
 
   /* ---- the dosing section: one fact, three ways of saying it ------------
      Grams per litre of soda ash and dKH per millilitre are the same fact in

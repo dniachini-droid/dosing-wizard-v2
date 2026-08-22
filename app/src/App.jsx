@@ -17,13 +17,14 @@ import {
   chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
-  correctReading, markInvalid,
+  correctReading, deleteRecord,
   recordDoseChange, recordDoseState, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
   recordReading, recordWaterChange,
 } from './lib/record.js'
 import { createStore } from './store/index.js'
 import { MODE, applyClock, currentMode, storeForMode } from './store/mode.js'
 import { TestMode, TestModeMarker } from './components/TestMode.jsx'
+import { POTENCY_FORM } from './store/config.js'
 import { KIND } from './store/ledger.js'
 import { autoCompletions, computeSchedule, makeTask, TASK_KIND } from './store/schedule.js'
 import { runAssessment, nowAsOf } from './assess.js'
@@ -166,6 +167,14 @@ export function ReefConsoleInner() {
   const [tasks, setTasks] = useState([]);
   const [completions, setCompletions] = useState([]);
   const [hiddenNotices, setHiddenNotices] = useState({});
+  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
+
+     A single string: the correction panel's signature, which is the
+     intervention and the class the engine reached on it. Delete the reading the
+     conclusion rested on, the engine reclassifies from what remains, the
+     signature stops matching and the panel is back — which is owner finding
+     16's worked example, and it needs no record that a deletion happened. */
+  const [correctionDismissed, setCorrectionDismissed] = useState(null);
 
   /* ---- what the engine said ------------------------------------------- */
   const [assessment, setAssessment] = useState(null);
@@ -189,18 +198,20 @@ export function ReefConsoleInner() {
      screen ever renders from a copy of the record that the record has since
      moved past. */
   const reload = useCallback(async () => {
-    const [proj, cfg, ts, cs, hidden] = await Promise.all([
+    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
       store.ledger.projection(),
       store.config.current(),
       store.tasks.tasks(),
       store.tasks.completions(),
       store.kvGet("hidden-notices"),
+      store.kvGet("correction-dismissed"),
     ]);
     setProjection(proj);
     setConfig(cfg);
     setTasks(ts);
     setCompletions(cs);
     setHiddenNotices(hidden || {});
+    setCorrectionDismissed(correction || null);
   }, [store]);
 
   /* Ask the engine. Every write that could change the answer calls this, and
@@ -319,6 +330,11 @@ export function ReefConsoleInner() {
     setHiddenNotices(next);
     notify("Notice shown again");
   };
+  const dismissCorrection = async (signature) => {
+    await store.kvSet("correction-dismissed", signature);
+    setCorrectionDismissed(signature);
+  };
+
   const restoreAllNotices = async () => {
     await store.kvSet("hidden-notices", {});
     setHiddenNotices({});
@@ -380,13 +396,25 @@ export function ReefConsoleInner() {
     assess();
   };
 
-  const dropReading = async (eventId) => {
-    try { await markInvalid(store, eventId); }
-    catch (e) { setStorageMsg(e && e.message); return; }
+  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 34.
+
+     The record is gone: the event, its annotations, and every assessment that
+     read it. `deleteRecord` owns all three so that no caller can do one and
+     forget another. What each caller supplies is the sentence the keeper sees,
+     because "Alkalinity reading deleted" and "Dose change deleted" are the same
+     act on different records and he is entitled to be told which. */
+  const deleteRecordById = async (eventId, said) => {
+    try {
+      const { removed } = await deleteRecord(store, eventId);
+      if (!removed) return false;
+    } catch (e) { setStorageMsg(e && e.message); return false; }
     await reload();
-    notify(t("correct.deleted"));
+    notify(said || t("correct.deleted"));
     assess();
+    return true;
   };
+
+  const dropReading = (eventId) => deleteRecordById(eventId, t("delete.done.reading"));
 
   /* The dose the keeper says his pump is running now. Stage 1 established, by
      measurement, that the engine had no readable record of this at all on a
@@ -439,11 +467,7 @@ export function ReefConsoleInner() {
     return true;
   };
 
-  const deleteEvent = async (eventId) => {
-    await markInvalid(store, eventId);
-    await reload();
-    assess();
-  };
+  const deleteEvent = (eventId, said = null) => deleteRecordById(eventId, said);
 
   /* ---- the schedule ----------------------------------------------------- */
   const markDone = async (taskId, date = todayStr(), detail = null) => {
@@ -533,6 +557,44 @@ export function ReefConsoleInner() {
     notify("Saved");
     assess();
   };
+
+  /* ACCEPTING THE MEASURED STRENGTH — finding 13, and the keeper's act.
+
+     "If accepted it writes into configuration as a new version, exactly as if
+     typed. The dose is then sized from it." So this goes through `saveConfig`
+     like every other setting: a new configuration version, effective now, with
+     every assessment already stored still naming the version it actually used.
+
+     `potencyDecision` records WHICH way he decided, what the estimate was when
+     he decided it, and on what day. Three things follow from it and none would
+     work without all three:
+
+       · the provenance line — "measured from your tank's response, accepted 22
+         Aug" — which is a different sentence from "the figure you entered";
+       · the estimator asking AGAIN if it later learns something different,
+         which it can only know by comparing against the figure he was shown;
+       · keeping being a decision rather than an absence of one. A keeper who
+         has looked at a measurement and chosen his own number has told the app
+         something, and the box must stop asking him the same question.
+
+     It is application bookkeeping about a setting, not a setting the engine
+     reads, so it is stripped on the way to the engine like `potencyStatedAs`
+     beside it. */
+  const decidePotency = async (learned, accepted) => {
+    const values = {
+      potencyDecision: { accepted, learned, on: todayStr() },
+    };
+    if (accepted) {
+      values.selectedPotencyDkhPerMl = learned;
+      values.potencyStatedValue = learned;
+      values.potencyStatedAs = POTENCY_FORM.DKH_PER_ML;
+    }
+    await saveConfig(values);
+    notify(accepted ? t("dosing.potency.accepted") : "Keeping the strength you entered");
+  };
+
+  const acceptPotency = (learned) => decidePotency(learned, true);
+  const keepPotency = (learned) => decidePotency(learned, false);
 
   const saveRange = async (key, min, max) => {
     const def = paramDefs.find((d) => d.key === key);
@@ -773,6 +835,9 @@ export function ReefConsoleInner() {
 
           {tab === "dosing" && (
             <DosingWizard paramDefs={paramDefs} engineResult={engineResult}
+              asOf={assessment && assessment.asOf ? assessment.asOf : null}
+              correctionDismissed={correctionDismissed} onDismissCorrection={dismissCorrection}
+              onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
               config={config} readings={readings} chartEvents={chartEvents}

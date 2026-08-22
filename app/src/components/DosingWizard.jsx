@@ -4,10 +4,10 @@ import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 import { fmtDate } from '../lib/dates.js'
-import { fmtQty } from '../lib/format.js'
+import { fmtPotency, fmtQty } from '../lib/format.js'
 import { positionTone } from '../present/position.js'
 import {
-  PILL, boxes, potencySentence, reasonRows, recommendation, spanInWords,
+  PILL, boxes, correctionPanel, potencyBox, reasonRows, recommendation, spanInWords,
   statusParts, whyPanel, working,
 } from '../present/dosing-tab.js'
 import { sayPayloadKey, sayPayloadValue, sayReason } from '../present/wording.js'
@@ -198,32 +198,64 @@ function ShowWorking({ result, config, canExplain }) {
    app determines the dose has settled, or when a new dose change starts a new
    one — and the panel says so rather than offering to undo a thing that
    already happened. */
-function CorrectionInProgress({ result }) {
-  const iv = result && result.activeIntervention;
-  if (!iv || typeof iv !== "object") return null;
-  const at = iv.actualStartTime || iv.effectiveAt;
-  if (!at) return null;
+/* THE CHANGE YOU MADE, AND WHAT CAME OF IT.
 
-  const from = typeof iv.fromMlPerDay === "number" ? fmtQty(iv.fromMlPerDay, "mlPerDay") : null;
-  const to = typeof iv.toMlPerDay === "number" ? fmtQty(iv.toMlPerDay, "mlPerDay") : null;
-  const next = result.retest && result.retest.recommendedAt;
+   Finding 12. It renders `correctionPanel()`'s output and holds no rule: which
+   state applies, whether the engine has finished with it, and whether a test is
+   due now are all decided in `present/dosing-tab.js` from what the engine said.
+   This component chooses a sentence per state and draws a button. */
+function CorrectionPanel({ result, asOf, dismissed, onDismiss }) {
+  const p = correctionPanel(result, asOf);
+  if (!p) return null;
+  if (p.canDismiss && dismissed === p.signature) return null;
+
+  const stateLine =
+    p.state === "tooEarly"
+      ? (p.posts != null ? t("dosing.correction.tooEarly", { posts: p.posts })
+                         : t("dosing.correction.tooEarlyPlain"))
+      : t(`dosing.correction.${p.state}`);
 
   return (
     <Panel className="mb-3">
       <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.correction.title")}</h4>
-      {from && to && (
+      {p.from != null && p.to != null && (
         <p className="text-[12px] text-ink font-medium leading-relaxed">
-          {t("dosing.correction.body", { date: fmtDate(String(at).slice(0, 10)), from, to })}
+          {t("dosing.correction.body", {
+            date: fmtDate(p.changedOn),
+            from: fmtQty(p.from, "mlPerDay"),
+            to: fmtQty(p.to, "mlPerDay"),
+          })}
         </p>
       )}
-      {next && (
+
+      <p className="text-[12px] text-ink font-bold leading-relaxed mt-1">{stateLine}</p>
+
+      {/* The next test, and never as a date the keeper has already met. */}
+      {!p.terminal && p.nextTest && (
         <p className="text-[12px] text-ink font-medium leading-relaxed mt-1">
-          {t("dosing.correction.nextTest", { date: fmtDate(String(next).slice(0, 10)) })}
+          {p.nextTest.now
+            ? t("dosing.correction.nextTestNow")
+            : t("dosing.correction.nextTest", { date: fmtDate(String(p.nextTest.at).slice(0, 10)) })}
         </p>
       )}
-      <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-1.5">
-        {t("dosing.correction.ends")}
-      </p>
+
+      {p.offersNewDose && (
+        <p className="text-[12px] text-ink font-medium leading-relaxed mt-1">
+          {t("dosing.correction.newDose", { dose: fmtQty(p.recommendedDose, "mlPerDay") })}
+        </p>
+      )}
+
+      {p.canDismiss ? (
+        <button
+          onClick={() => onDismiss && onDismiss(p.signature)}
+          className="w-full mt-2.5 rounded-xl py-2 text-[12px] font-extrabold text-teal-brand border-2 border-app">
+          {t("dosing.correction.close")}
+        </button>
+      ) : (
+        <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-1.5">
+          {t("dosing.correction.ends")}
+        </p>
+      )}
     </Panel>
   );
 }
@@ -259,9 +291,95 @@ function DosingChart({ def, rows, chartEvents }) {
   );
 }
 
+/* YOUR SOLUTION'S REAL STRENGTH — finding 13, owner-approved.
+
+   Renders `potencyBox()` and holds no rule: which sentence applies, whether the
+   estimate is confident enough to act on and whether the two figures agree are
+   all decided in `present/dosing-tab.js` from what the engine said.
+
+   THE TWO BUTTONS ARE THE WHOLE POINT AND THEY ARE NEVER PRE-PRESSED. Neither
+   is styled as the safe one, because neither is: the keeper's own figure may be
+   right and so may the tank's. Where the box does not offer them, nothing has
+   changed and nothing needs his attention. */
+function PotencyBox({ box, onAccept, onKeep }) {
+  const [open, setOpen] = useState(false);
+  const args = {
+    learned: box.learned == null ? "—" : fmtPotency(box.learned),
+    entered: fmtPotency(box.entered),
+    accepted: fmtPotency(box.entered),
+  };
+
+  return (
+    <Panel>
+      <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.potency.title")}</h4>
+
+      <p className="text-[12px] text-ink font-medium leading-relaxed">
+        {box.asksAgain ? t("dosing.potency.asksAgain", args) : t(`dosing.potency.${box.state}`, args)}
+      </p>
+
+      {/* Where the figure in use came from, once there is more than one place
+          it could have come from. The same line Setup shows. */}
+      {box.provenance && (
+        <p className="text-[11px] font-bold text-teal-brand leading-relaxed mt-1.5">
+          {t(box.provenance.key, {
+            value: fmtPotency(box.provenance.value),
+            date: fmtDate(box.provenance.date),
+          })}
+        </p>
+      )}
+
+      {box.working.length > 0 && (
+        <div className="mt-2">
+          <button onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
+            {t("dosing.reco.showWorking")}
+            {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+          {open && (
+            <div className="mt-2 rounded-xl border border-app p-3">
+              {box.working.map((line, i) => (
+                <p key={i} className="text-[12px] text-ink font-medium leading-relaxed mb-1 last:mb-0">
+                  {line}
+                </p>
+              ))}
+              {box.limits.length > 0 && (
+                <div className="mt-3">
+                  <h5 className="text-[12px] font-black text-ink mb-1">{t("dosing.potency.limitsHead")}</h5>
+                  {box.limits.map((r) => (
+                    <p key={r.code} className="text-[12px] text-ink2 font-medium leading-relaxed mb-1 last:mb-0">
+                      {sayReason(r.code)}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {box.offersChoice && (
+        <div className="flex gap-2 mt-3">
+          <button
+            className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-white bg-teal-brand"
+            onClick={() => onAccept && onAccept(box.learned)}>
+            {t("dosing.potency.useMeasured")}
+          </button>
+          <button
+            className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-teal-brand border-2 border-app"
+            onClick={() => onKeep && onKeep(box.learned)}>
+            {t("dosing.potency.keepEntered")}
+          </button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ---- the tab ------------------------------------------------------------ */
 export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
-  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null }) {
+  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
+  asOf = null, correctionDismissed = null, onDismissCorrection = null,
+  onAcceptPotency = null, onKeepPotency = null }) {
 
   const KEYS = ["ALK", "CA", "MG"];
   const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -276,7 +394,7 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
   const status = assessed ? statusParts(engineResult) : null;
   const rec = assessed ? recommendation(engineResult, rows.length) : null;
   const three = assessed ? boxes(engineResult) : null;
-  const potency = assessed ? potencySentence(engineResult) : null;
+  const potency = assessed ? potencyBox(engineResult, config) : null;
 
   return (
     <div>
@@ -326,7 +444,8 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
             </p>
           </Panel>
 
-          <CorrectionInProgress result={engineResult} />
+          <CorrectionPanel result={engineResult} asOf={asOf}
+            dismissed={correctionDismissed} onDismiss={onDismissCorrection} />
 
           {/* THE RECOMMENDATION. The most important thing on the screen, and it
               reads as sentences. */}
@@ -358,13 +477,9 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
             </div>
           )}
 
-          {/* THE POTENCY ESTIMATOR, its own box below everything, as a
-              sentence rather than four labelled figures. */}
+          {/* THE POTENCY ESTIMATOR, its own box below everything (finding 13). */}
           {potency && (
-            <Panel>
-              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.potency.title")}</h4>
-              <p className="text-[12px] text-ink font-medium leading-relaxed">{potency}</p>
-            </Panel>
+            <PotencyBox box={potency} onAccept={onAcceptPotency} onKeep={onKeepPotency} />
           )}
         </>
       )}

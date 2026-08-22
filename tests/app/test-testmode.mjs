@@ -351,7 +351,7 @@ s.test("TM-08b", "a clear that could not clear is reported as a failure, not as 
    Bulk entry never gives a record a time it was not given.
    ---------------------------------------------------------------------- */
 
-s.test("TM-09", "a seeded line with no time produces a record with no time in it", async () => {
+s.test("TM-09", "a seeded reading with no time is assigned 09:00, and a seeded dose is not", async () => {
   const store = createMemoryStore(TEST_DB_NAME);
   const { rows, problems } = parseSeries(
     ["2026-03-01 alk 8.6", "2026-03-03 09:15 alk 8.4"].join("\n")
@@ -362,10 +362,24 @@ s.test("TM-09", "a seeded line with no time produces a record with no time in it
   eq(s0.dateOnly, 1, "one is date-only");
   eq(s0.withTime, 1, "one carries a time");
 
+  /* OWNER DECISION 33. A seeded READING with no time is assigned 09:00 like an
+     imported or hand-entered one — a seed that produced records the rest of the
+     app cannot produce would be testing something the app does not do. */
   const t0 = timeFor(rows[0]);
-  eq(t0.timeProvenance, PROVENANCE.DATE_ONLY, "the line with no time is date-only");
-  eq("absoluteInstant" in t0, false, "and has no instant on it at all — not null, absent");
-  eq("localTime" in t0, false, "and no time of day either");
+  eq(t0.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE, "the reading with no time is given one");
+  eq(t0.localTime, "09:00", "at the assigned hour");
+  ok(t0.absoluteInstant, "with an instant behind it");
+  eq(t0.reconstruction.assignedTimeOfDay, "09:00", "and the record says the hour was assigned");
+  eq(t0.reconstruction.statedByKeeper, false, "and that nobody stated it");
+
+  /* And the decision's limit, seeded the same way it is imported: a dose line
+     with no time keeps none, because its instant is what the response window is
+     measured from. */
+  const { rows: doseRows } = parseSeries("2026-03-02 dose 8.8");
+  const td = timeFor(doseRows[0]);
+  eq(td.timeProvenance, PROVENANCE.DATE_ONLY, "a seeded dose with no time is still date-only");
+  eq("absoluteInstant" in td, false, "with no instant on it at all — not null, absent");
+  eq("localTime" in td, false, "and no time of day either");
 
   const t1 = timeFor(rows[1]);
   eq(t1.timeProvenance, PROVENANCE.EXACT_ABSOLUTE, "the line with a time is exact");
@@ -374,9 +388,12 @@ s.test("TM-09", "a seeded line with no time produces a record with no time in it
   await applySeries(store, rows, {});
   const events = await store.ledger.allEvents();
   eq(events.length, 2, "both were written");
-  const dateOnlyEvent = events.find((e) => e.time.localDate === "2026-03-01");
-  eq(dateOnlyEvent.time.timeProvenance, PROVENANCE.DATE_ONLY, "and the stored record is still date-only");
-  eq(dateOnlyEvent.time.absoluteInstant, undefined, "with no instant on it");
+  const assignedEvent = events.find((e) => e.time.localDate === "2026-03-01");
+  eq(assignedEvent.time.timeProvenance, PROVENANCE.RECONSTRUCTED_WITH_PROVENANCE,
+    "and the stored record carries the assigned hour");
+  eq(assignedEvent.time.localTime, "09:00", "which is 09:00");
+  ok(assignedEvent.time.absoluteInstant, "with an instant on it");
+  eq(assignedEvent.time.reconstruction.assignedTimeOfDay, "09:00", "and it says the hour was assigned");
 });
 
 s.test("TM-10", "a bad line stops the whole batch rather than half-applying it", async () => {

@@ -803,7 +803,11 @@ s.test("META-01", "every test in the application suite has at least one negative
     ["SUG-14", "pre-dates the port"],
     ["TM-13", "pre-dates the port"], ["TM-15", "pre-dates the port"],
     ["TM-18", "pre-dates the port"],
-    ["IMP-12", "pre-dates the port"], ["IMP-16", "pre-dates the port"],
+    /* IMP-12's exemption is gone: `AM-122` now turns it red. Dropping the
+       assigned-hour marker from a record's reconstruction stops the natural key
+       excluding it, and re-importing the same file writes the keeper's whole
+       history a second time. The list only shrinks. */
+    ["IMP-16", "pre-dates the port"],
     ["IMP-18", "pre-dates the port"], ["IMP-26", "pre-dates the port"],
     ["IMP-27", "pre-dates the port"],
     ["STR-05", "pre-dates the port"], ["STR-09", "pre-dates the port"],

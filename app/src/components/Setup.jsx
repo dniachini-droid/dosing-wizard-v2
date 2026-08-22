@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
 import { Card, DeleteButton } from './ErrorBoundary.jsx'
 import {
   Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 } from '../icons.jsx'
-import { fmtAmount, fmtVal, fmtTime } from '../lib/format.js'
+import { fmtAmount, fmtPotency, fmtTime } from '../lib/format.js'
 import { todayStr, fmtDate } from '../lib/dates.js'
 import { nowTime } from '../lib/clock.js'
 import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
@@ -66,6 +66,53 @@ function SetupSection({ icon: Icon, category, colour, heading, subtitle, open, o
   );
 }
 
+/* ============================================================================
+   WHAT SETUP SHOWS IS READ FROM THE CONFIGURATION, EVERY TIME IT CHANGES
+   ----------------------------------------------------------------------------
+   The screen used to take one copy of the configuration when it mounted and
+   hold it for the rest of its life. Every field below was a `useState`
+   initialiser, and a `useState` initialiser runs ONCE. Saving appends a new
+   configuration version and the `config` prop changes; the screen went on
+   rendering the copy it took at the start.
+
+   That is a screen and an engine reading from two different places, which is
+   the fault this round exists to remove: a number the app is not using is worse
+   than a wrong one, because nothing beside it can be trusted either.
+
+   So the readers are named functions rather than inline initialisers, and the
+   effect below re-runs every one of them whenever the configuration VERSION
+   changes. Keying on `configVersionId` rather than on the object is what makes
+   typing survive: the version changes when something is stored, and not when a
+   parent happens to re-render.
+
+   Nothing here derives a value. Each function reads one stored field and turns
+   it into the string an input renders, and `derived` below still renders the
+   ENGINE's own figure for the grams-per-litre form. `ALK-014` keeps its one
+   owner. */
+
+function factsFrom(config) {
+  const out = {};
+  for (const f of KEEPER_FACTS) out[f.key] = config && config[f.key] != null ? String(config[f.key]) : "";
+  return out;
+}
+
+function formFrom(config) {
+  return (config && config.potencyStatedAs) || POTENCY_FORM.DKH_PER_ML;
+}
+
+function chemicalFrom(config) {
+  return (config && config.chemical) || "NA2CO3";
+}
+
+function gPerLFrom(config) {
+  return config && config.stockConcentrationGPerL != null ? String(config.stockConcentrationGPerL) : "";
+}
+
+function per100LFrom(config) {
+  return config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
+    ? String(config.potencyStatedValue ?? "") : "";
+}
+
 export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
   doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
   lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
@@ -77,11 +124,7 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   const toggle = (id) => setOpenId(openId === id ? null : id);
 
   /* ---- the keeper's facts ---------------------------------------------- */
-  const [facts, setFacts] = useState(() => {
-    const out = {};
-    for (const f of KEEPER_FACTS) out[f.key] = config && config[f.key] != null ? String(config[f.key]) : "";
-    return out;
-  });
+  const [facts, setFacts] = useState(() => factsFrom(config));
   const [factMsg, setFactMsg] = useState("");
 
   const saveFacts = async (keys) => {
@@ -130,18 +173,28 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   const [dosedKey, setDosedKey] = useState("ALK");
   const dosedDef = paramDefs.find((d) => d.key === dosedKey);
 
-  const [form, setForm] = useState(
-    () => (config && config.potencyStatedAs) || POTENCY_FORM.DKH_PER_ML
-  );
-  const [chemical, setChemical] = useState(() => (config && config.chemical) || "NA2CO3");
-  const [gPerL, setGPerL] = useState(
-    () => (config && config.stockConcentrationGPerL != null ? String(config.stockConcentrationGPerL) : "")
-  );
-  const [per100L, setPer100L] = useState(
-    () => (config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
-      ? String(config.potencyStatedValue ?? "") : "")
-  );
+  const [form, setForm] = useState(() => formFrom(config));
+  const [chemical, setChemical] = useState(() => chemicalFrom(config));
+  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
+  const [per100L, setPer100L] = useState(() => per100LFrom(config));
   const [strengthMsg, setStrengthMsg] = useState("");
+
+  /* THE RE-READ. One effect, one condition: the stored version changed.
+
+     `standing` and `current` are handled at their own declaration below, for
+     the same reason and by the same rule — the dose in force is a ledger fact,
+     not a configuration field, so it has its own key. */
+  const syncedVersion = useRef(config ? config.configVersionId : null);
+  useEffect(() => {
+    const version = config ? config.configVersionId : null;
+    if (version === syncedVersion.current) return;
+    syncedVersion.current = version;
+    setFacts(factsFrom(config));
+    setForm(formFrom(config));
+    setChemical(chemicalFrom(config));
+    setGPerL(gPerLFrom(config));
+    setPer100L(per100LFrom(config));
+  }, [config]);
 
   const netVolumeL = parseFloat(facts.netVolumeL);
 
@@ -197,6 +250,17 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   const standing = newestFirst.length ? newestFirst[0].to : null;
   const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
   const [currentMsg, setCurrentMsg] = useState("");
+
+  /* The same re-read as the configuration's, keyed on the ledger fact rather
+     than the configuration version, because that is where the standing dose
+     lives. Without it the box went on showing the dose that was in force when
+     the screen opened, however many changes had been recorded since. */
+  const syncedStanding = useRef(standing);
+  useEffect(() => {
+    if (standing === syncedStanding.current) return;
+    syncedStanding.current = standing;
+    setCurrent(standing != null ? String(standing) : "");
+  }, [standing]);
 
   /* What the card says about itself when it is shut: the two facts whose
      absence stops the engine answering, named rather than counted. */
@@ -341,8 +405,8 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
             {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
             <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
               {derived.kind === "stated" && t("dosing.statedDirectly")}
-              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtVal(derived.value, 4) })}
-              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtVal(derived.value, 4), volume: fmtAmount(derived.volume) })}
+              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtPotency(derived.value) })}
+              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtPotency(derived.value), volume: fmtAmount(derived.volume) })}
               {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
               {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
             </p>

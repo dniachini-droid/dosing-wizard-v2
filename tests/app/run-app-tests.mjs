@@ -189,6 +189,29 @@ async function main() {
       notApplied += 1;
       continue;
     }
+    /* AN ANCHOR THAT MATCHES TWICE MUTATES THE WRONG PLACE, SILENTLY.
+
+       `String.prototype.replace` with a string argument replaces the FIRST
+       occurrence and no more. `AM-D7`'s anchor was
+       `if (c.severity === "INFO") continue;`, which was unique when it was
+       written and stopped being unique the moment a second surface filtered
+       INFO codes the same way. The mutation then landed in `whyPanel`, the
+       check it guards in `reasonRows` stayed green, and it reported MISSED —
+       an honest-looking result about a line the run never touched. A mutation
+       that reported CAUGHT under the same conditions would be worse: a
+       negative control passing on a defect it never introduced.
+
+       So a non-unique anchor is a BLOCKED mutation, not a quietly relocated
+       one. */
+    const occurrences = before.split(m.find).length - 1;
+    if (occurrences > 1) {
+      console.log(`\n[BLOCKED] ${m.id}  its anchor text appears ${occurrences} times in ${m.file}`);
+      console.log(`          ${m.why}`);
+      console.log("          A mutation replaces the FIRST match only, so this one would mutate a");
+      console.log("          site it was not written for. Extend the anchor until it is unique.");
+      notApplied += 1;
+      continue;
+    }
     fs.writeFileSync(target, before.replace(m.find, m.replace));
 
     const results = await runFrom(path.join(tree, "tests", "app"), `${i}-${Date.now()}`);

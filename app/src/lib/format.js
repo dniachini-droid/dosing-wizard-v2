@@ -22,6 +22,37 @@ export function fmtVal(def, v) {
   return v.toFixed(def && Number.isFinite(def.decimals) ? def.decimals : 2);
 }
 
+/* A SOLUTION STRENGTH, IN dKH PER MILLILITRE — ONE ARGUMENT, SO THERE IS
+   NOTHING TO SWAP.
+
+   This function exists because of a real defect, and its shape is the fix.
+   Setup rendered the derived strength with `fmtVal(derived.value, 4)` —
+   the VALUE where `fmtVal` takes a parameter DEFINITION, and the intended
+   decimal count where it takes the value. `def.decimals` on a bare number is
+   `undefined`, so the fallback of 2 applied and the function returned
+   `(4).toFixed(2)`. The screen read `4.00 dKH/mL` for a 77 L tank, it read
+   `4.00` whatever strength was entered, and it went on reading `4.00` after the
+   keeper corrected the figure — because the number on screen was never derived
+   from the strength at all. It was the decimal-places argument.
+
+   Every other `fmtVal` call site in the app passes `(def, value)` correctly.
+   Two did not, and nothing could tell: both orders are two numbers.
+
+   So the potency is not formatted by a two-argument function any more. It takes
+   the value and nothing else, and there is no second argument for a caller to
+   put in the wrong place. `POTENCY_DECIMALS` is display precision and is read
+   back by nothing (`ALK-V2-DATA-CONTRACT.md` §0).
+
+   It is also the ONE place a strength is written for the screen — Setup and the
+   Dosing tab both call it — so the two surfaces cannot disagree about how the
+   keeper's own number looks. */
+export const POTENCY_DECIMALS = 4;
+
+export function fmtPotency(v) {
+  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return "—";
+  return v.toFixed(POTENCY_DECIMALS);
+}
+
 /* A quantity with no parameter to take its precision from — millilitres, a
    difference, a litre count. Trailing zeros are trimmed, so 10.0 reads as 10
    and 10.25 keeps both places. */
