@@ -13,6 +13,7 @@
     "app/src/lib/clock.js",
     "app/src/lib/format.js",
     "app/src/lib/record.js",
+    "app/src/lib/viewport.js",
     "app/src/present/attention.js",
     "app/src/present/card-content.js",
     "app/src/present/cards.js",

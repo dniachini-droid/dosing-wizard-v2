@@ -272,12 +272,12 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   useEscape(onClose);
 
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4 sheet-layer" onClick={onClose}>
       {/* `relative`, so the pinned close control below has this box to sit
           against rather than the scrolling content inside it (finding 6). */}
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
         <SheetClose onClose={onClose} label={`Close ${def.label}`} />
-        <Card className="p-5 max-h-[85vh] overflow-y-auto">
+        <Card className="p-5 sheet-panel overflow-y-auto">
 
           {/* The notice sits at the top, as V1's dose banner did, and carries
               V2's wording: the engine's own reason code, worded by the strings

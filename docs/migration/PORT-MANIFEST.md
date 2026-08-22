@@ -833,8 +833,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
 | V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
-| Ported SHA-256 | `76b04f5e863ee3a8ec6de31963541488ff58a867d21d3d0a8a8da97e7f133ae2` |
-| Differences | 11 |
+| Ported SHA-256 | `43a72abca3dedb60bb87c10983137871b5b8f027b56e4661154eeef97cc166e1` |
+| Differences | 12 |
 
 1. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
@@ -1360,10 +1360,32 @@ Byte-identical to V1.
          {!off && state && due <= 0 && (
 ```
 
-6. **chemistry removed — the second use of the same pin label, in the reschedule sheet's header**
+6. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -526,8 +238,6 @@
+@@ -516,10 +228,14 @@
+   const intervalOk = isFinite(intervalNum) && intervalNum >= 1 && intervalNum <= 365;
+ 
+   return (
+-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
++    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sheet-layer"
+       style={{ background: "rgba(8,25,29,0.5)" }} onClick={onClose}>
++      {/* Bounded to the screen and scrollable, like every other sheet — owner
++          finding 22. It was `overflow-hidden` with no height limit, so on a
++          short viewport its lower half was simply not reachable: the controls
++          were rendered, they were off the bottom, and nothing scrolled. */}
+       <div onClick={(e) => e.stopPropagation()}
+-        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden"
++        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-y-auto sheet-panel"
+         style={{ boxShadow: "0 -8px 40px rgba(8,25,29,0.3)" }}>
+ 
+         <div className="px-4 pt-4 pb-3" style={{ background: tone + "10" }}>
+```
+
+7. **chemistry removed — the second use of the same pin label, in the reschedule sheet's header**
+
+```diff
+@@ -526,8 +242,6 @@
            <div className="text-[15px] font-black text-ink">{rem.label}</div>
            <div className="text-[12px] font-bold mt-0.5" style={{ color: tone }}>
              {!rem.enabled ? "Turned off — no reminders until you turn it back on"
@@ -1374,10 +1396,10 @@ Byte-identical to V1.
                : `Due ${fmtFriendly(state.due)}`}
 ```
 
-7. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -626,11 +336,15 @@
+@@ -626,11 +340,15 @@
    );
  }
  
@@ -1397,10 +1419,10 @@ Byte-identical to V1.
    const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 ```
 
-8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -647,7 +361,7 @@
+@@ -647,7 +365,7 @@
      for (const l of taskLog || []) {
        if (!l.date) continue;
        (map[l.date] = map[l.date] || []).push({
@@ -1411,10 +1433,10 @@ Byte-identical to V1.
      for (const w of waterChanges || []) {
 ```
 
-9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -756,11 +470,15 @@
+@@ -756,11 +474,15 @@
            ) : (
              <div className="space-y-1">
                {(byDay[picked] || []).map((it) => (
@@ -1433,10 +1455,10 @@ Byte-identical to V1.
                {/* Scheduled items are tappable: seeing a task on a day you
 ```
 
-10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+11. **defect fixed — owner finding 22: the Tasks sheet was overflow-hidden with no height limit, so on a short viewport its lower half was rendered off the bottom with nothing to scroll. It takes the one sheet rule now, like every other sheet.**
 
 ```diff
-@@ -803,7 +521,8 @@
+@@ -803,12 +525,13 @@
  
  /* The calendar as an overlay, so it can be reached from the dashboard without
     losing your place. */
@@ -1445,13 +1467,20 @@ Byte-identical to V1.
 +  onDeleteDone = null }) {
    useEscape(onClose);
    return (
-     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 sheet-layer"
+       onClick={onClose}>
+-      <div className="bg-app w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
++      <div className="bg-app w-full sm:max-w-lg sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+         onClick={(e) => e.stopPropagation()}
+         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+         <div className="sticky top-0 bg-app px-4 pt-4 pb-2 flex items-center justify-between gap-2 z-10">
 ```
 
-11. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+12. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -821,7 +540,7 @@
+@@ -821,7 +544,7 @@
          </div>
          <div className="px-4 pb-4">
            <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
@@ -4170,7 +4199,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `529a00f8b8372501ea07aa11670b33e7c64becd372d468c6a8d7c45dd5dcd23b` |
+| Ported SHA-256 | `f27dda4ab31e07a37924a41b0d7868e04b090f33cacc164511e09f952fdf87a7` |
 | Differences | 11 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
@@ -4664,17 +4693,19 @@ Byte-identical to V1.
    useEscape(onClose);
  
    return (
-     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
 -      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
-+      {/* `relative`, so the pinned close control below has this box to sit
-+          against rather than the scrolling content inside it (finding 6). */}
-+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
-+        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
-         <Card className="p-5 max-h-[85vh] overflow-y-auto">
+-        <Card className="p-5 max-h-[85vh] overflow-y-auto">
 -          {/* Whatever the dosing wizard currently believes about this element,
 -              said here too — the dashboard was previously silent about a change
 -              the user had made minutes earlier. */}
 -          {dose && dose.state !== "idle" && (
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4 sheet-layer" onClick={onClose}>
++      {/* `relative`, so the pinned close control below has this box to sit
++          against rather than the scrolling content inside it (finding 6). */}
++      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
++        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
++        <Card className="p-5 sheet-panel overflow-y-auto">
 +
 +          {/* The notice sits at the top, as V1's dose banner did, and carries
 +              V2's wording: the engine's own reason code, worded by the strings
@@ -5222,7 +5253,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `daee6b86813e660537eca461552d2f8b5c56bd9d26a42b76e2796912681d3c38` |
+| Ported SHA-256 | `1cb533440fbeabcdc078430e906f7ceef46aabf31bac0f2e97848323846c5e4c` |
 | Differences | 10 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
@@ -5362,7 +5393,7 @@ Byte-identical to V1.
 9. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
 
 ```diff
-@@ -229,9 +235,8 @@
+@@ -229,16 +235,15 @@
    const series = paramDefs
      .map((def) => ({
        def,
@@ -5374,6 +5405,15 @@ Byte-identical to V1.
      }))
      .filter((x) => x.data.length >= 2);
  
+   return (
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4"
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4 sheet-layer"
+       onClick={onClose}>
+-      <div className="bg-app w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
++      <div className="bg-app w-full sm:max-w-2xl sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+         onClick={(e) => e.stopPropagation()}
+         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+         {/* The header sticks, so the window control stays reachable however far
 ```
 
 10. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
@@ -8539,13 +8579,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `7a559c4f6ec0839d303a1501595c7b68884106092e9c2a6efe8c859330da4e61` |
+| Ported SHA-256 | `ec344577e3fc985a94b2c4e90227e272e338abcfc2f11a1dda04bfff295de3ea` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
 
 ```diff
-@@ -1,62 +1,84 @@
+@@ -1,62 +1,85 @@
 -import React, { useEffect, useMemo, useState } from 'react'
 +import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  import { Dashboard, ParamHistoryModal } from './components/Dashboard.jsx'
@@ -8585,6 +8625,7 @@ Byte-identical to V1.
 +import { NAV } from './lib/constants.js'
 +import { todayStr, fmtShort } from './lib/dates.js'
 +import { onStorageError, onToast, notify } from './lib/storage.js'
++import { watchViewport } from './lib/viewport.js'
 +import {
 +  chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 +} from './lib/adapt.js'
@@ -8681,7 +8722,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +88,655 @@
+@@ -66,1155 +89,693 @@
    return out;
  }
  
@@ -9113,14 +9154,19 @@ Byte-identical to V1.
 -     running, or one whose browser cleared everything. Null until it has run,
 -     so nothing is claimed before it is known. */
 -  const [install, setInstall] = useState(null);
--
++  const [remWindow, setRemWindow] = useState(14);
+ 
 -  // Merge any user-edited target ranges over the built-in defaults.
 -  const paramDefs = useMemo(() =>
 -    PARAM_DEFS.map((d) => customRanges[d.key]
 -      ? { ...d, min: customRanges[d.key].min, max: customRanges[d.key].max }
 -      : d),
 -  [customRanges]);
-+  const [remWindow, setRemWindow] = useState(14);
++  useEffect(() => {
++    onToast((m) => setToastMsg(m));
++    onStorageError((m) => setStorageMsg(m));
++    return onEngineState((s) => setEngineState(s));
++  }, []);
  
 -  const saveSettings = async (next) => {
 -    const merged = { ...DEFAULT_SETTINGS, ...next };
@@ -9157,11 +9203,11 @@ Byte-identical to V1.
 -    setCustomRanges(next);
 -    await saveKey("custom-ranges", next);
 -  };
-+  useEffect(() => {
-+    onToast((m) => setToastMsg(m));
-+    onStorageError((m) => setStorageMsg(m));
-+    return onEngineState((s) => setEngineState(s));
-+  }, []);
++  /* How tall the screen actually is, published for the stylesheet — see
++     `lib/viewport.js`. The shell and every sheet measure themselves against it
++     instead of against `vh`, which on a phone is the height the page would
++     have if the toolbar were hidden and is therefore taller than the screen. */
++  useEffect(() => watchViewport(), []);
  
 -  useEffect(() => { onStorageError((m) => setStorageMsg(m)); }, []);
 +  /* Reload everything this device holds. Called after every write, so no
@@ -10366,7 +10412,39 @@ Byte-identical to V1.
        <style>{`
          .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
          .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-+        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
++        /* Three declarations of one property, most-preferred last: a browser
++           with no dvh takes the first, one with dvh but no
++           visualViewport takes the second, and everything else takes the
++           live measurement. */
++        .app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }
++
++        /* OWNER FINDINGS 7 AND 22 — ONE RULE, NOT TWO.
++
++           Every sheet used to set its own height in vh (85, 88, 92), and a
++           sheet at 85% of the LARGE viewport is taller than 85% of the screen:
++           its lower portion falls below the fold, where the tab bar is, and a
++           fixed centred box has nothing to scroll to reach it. The tab bar was
++           never drawn in front of the sheet. The sheet was taller than the
++           screen.
++
++           One class, one measurement, every sheet. The gap leaves the sheet
++           clear of the bar rather than ending exactly on it, because a control
++           flush against the bar is a control that gets the wrong tap. */
++        .sheet-panel {
++          max-height: 85vh;
++          max-height: calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px));
++          max-height: calc(var(--app-vh, 100dvh) - var(--app-nav-h, 4rem) - 1.5rem);
++        }
++        /* The overlay a sheet sits in. Bounded the same way, so a sheet
++           anchored to the bottom of it cannot be anchored off the screen. */
++        .sheet-layer {
++          height: 100vh;
++          height: 100dvh;
++          height: var(--app-vh, 100dvh);
++          /* The bar's own row, kept clear. A sheet centred in the whole screen
++             has its lower edge behind the bar however short it is. */
++          padding-bottom: var(--app-nav-h, 4rem);
++        }
          .bg-app { background-color: #F3F7F6; }
 +        /* A raised surface on the pale-teal page. bg-card was USED by the
 +           correction sheet and the pinned close control and was never defined,
@@ -10382,7 +10460,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +764,26 @@
+@@ -1242,21 +803,26 @@
          }
        `}</style>
  
@@ -10419,7 +10497,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +793,35 @@
+@@ -1266,59 +832,35 @@
                );
              })}
            </nav>
@@ -10504,7 +10582,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +838,133 @@
+@@ -1335,105 +877,133 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10720,12 +10798,12 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +971,10 @@
+@@ -1440,10 +1010,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
 -      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
-+      <nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
++      <nav data-app-nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
          style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
          {NAV.map((n) => {
 -          const Icon = n.icon;
@@ -10738,7 +10816,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +988,96 @@
+@@ -1457,6 +1027,96 @@
    );
  }
  

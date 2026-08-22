@@ -272,8 +272,11 @@ export const MUTATIONS = [
     id: "AM-P50",
     why: "the 100vh floor is restored beside the dynamic height, so on iOS Safari the shell overhangs the visual viewport, the document scrolls as a whole and the tab bar rides below the fold again (finding 5)",
     file: "app/src/App.jsx",
-    find: ".app-shell { height: 100vh; height: 100dvh; overflow: hidden; }",
-    replace: ".app-shell { min-height: 100vh; height: 100dvh; }",
+    /* Re-anchored in round five: a third declaration joined the rule, so the
+       shell also takes the visible viewport. The floor this restores is the
+       same floor, and it still wins over every height beside it. */
+    find: ".app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }",
+    replace: ".app-shell { min-height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); }",
     breaks: ["PORT-20"],
   },
   {
@@ -2300,6 +2303,74 @@ export const MUTATIONS = [
     find: '              onChangeDoseAnyway={() => setTab("setup")} />',
     replace: '              onChangeDoseAnyway={() => setTab("settings")} />',
     breaks: ["EP-11"],
+  },
+
+  /* ---- ROUND FIVE: the screen is as tall as the screen (findings 21, 7,
+         22 and 6) ------------------------------------------------------- */
+  {
+    id: "AM-R12",
+    why: "a sheet sizes itself in vh again, so on a phone it is taller than the screen and its lower portion is unreachable behind the tab bar (findings 7 and 22)",
+    file: "app/src/components/Dashboard.jsx",
+    find: '        <Card className="p-5 sheet-panel overflow-y-auto">',
+    replace: '        <Card className="p-5 max-h-[85vh] overflow-y-auto">',
+    breaks: ["VP-01", "VP-02"],
+  },
+  {
+    id: "AM-R13",
+    why: "a sheet is measured against the large viewport rather than the visible one, and stops leaving the tab bar's row clear",
+    file: "app/src/App.jsx",
+    find: "          max-height: calc(var(--app-vh, 100dvh) - var(--app-nav-h, 4rem) - 1.5rem);",
+    replace: "          max-height: calc(100vh - 1.5rem);",
+    breaks: ["VP-03"],
+  },
+  {
+    id: "AM-R14",
+    why: "the live measurement is put FIRST, so the dvh declaration overrides it and the shell stops tracking the toolbar",
+    file: "app/src/App.jsx",
+    find: "        .app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }",
+    replace: "        .app-shell { height: var(--app-vh, 100dvh); height: 100vh; height: 100dvh; overflow: hidden; }",
+    breaks: ["VP-04"],
+  },
+  {
+    id: "AM-R15",
+    why: "a min-height is put back on the shell — round four's own defect, where a FLOOR wins over the height beside it and forces the bar below the fold (finding 21)",
+    file: "app/src/App.jsx",
+    find: '    <div className="bg-app text-ink font-body flex flex-col app-shell">',
+    replace: '    <div className="bg-app text-ink font-body flex flex-col app-shell min-h-screen">',
+    breaks: ["VP-05"],
+  },
+  {
+    id: "AM-R16",
+    why: "the watcher listens only for a resize, so it misses the toolbar's whole travel — which iOS reports as the visual viewport scrolling, and which is the gesture the owner said moves the bar",
+    file: "app/src/lib/viewport.js",
+    find: '  vv.addEventListener("scroll", apply);',
+    replace: "",
+    breaks: ["VP-06"],
+  },
+  {
+    id: "AM-R17",
+    why: "the bar's height is written into the stylesheet instead of measured, so it is a second statement of a number with one owner and it is wrong on a screen where the bar is not rendered at all",
+    file: "app/src/lib/viewport.js",
+    find: '    const nav = document.querySelector("nav[data-app-nav]");\n    root.style.setProperty(APP_NAV_H, `${nav ? Math.ceil(nav.offsetHeight) : 0}px`);',
+    replace: '    root.style.setProperty(APP_NAV_H, "62px");',
+    breaks: ["VP-08"],
+  },
+  {
+    id: "AM-R18",
+    why: "the close control is moved inside the box that scrolls, so it rides away with the content — finding 6, reported twice",
+    file: "app/src/components/SheetClose.jsx",
+    find: "absolute",
+    replace: "static",
+    breaks: ["VP-09"],
+  },
+
+  {
+    id: "AM-R19",
+    why: "the viewport watcher loses its guard, so it throws where there is no window — and the application's own suite, which is Node and nothing else, goes down with it",
+    file: "app/src/lib/viewport.js",
+    find: '  if (typeof window === "undefined" || typeof document === "undefined") return () => {};',
+    replace: "",
+    breaks: ["VP-07"],
   },
 
 ];

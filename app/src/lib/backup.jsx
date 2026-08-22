@@ -228,10 +228,14 @@ export function ReminderSheet({ rem, state, onClose, onSetDue, onSetInterval, on
   const intervalOk = isFinite(intervalNum) && intervalNum >= 1 && intervalNum <= 365;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sheet-layer"
       style={{ background: "rgba(8,25,29,0.5)" }} onClick={onClose}>
+      {/* Bounded to the screen and scrollable, like every other sheet — owner
+          finding 22. It was `overflow-hidden` with no height limit, so on a
+          short viewport its lower half was simply not reachable: the controls
+          were rendered, they were off the bottom, and nothing scrolled. */}
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden"
+        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-y-auto sheet-panel"
         style={{ boxShadow: "0 -8px 40px rgba(8,25,29,0.3)" }}>
 
         <div className="px-4 pt-4 pb-3" style={{ background: tone + "10" }}>
@@ -525,9 +529,9 @@ export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPic
   onDeleteDone = null }) {
   useEscape(onClose);
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 sheet-layer"
       onClick={onClose}>
-      <div className="bg-app w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+      <div className="bg-app w-full sm:max-w-lg sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="sticky top-0 bg-app px-4 pt-4 pb-2 flex items-center justify-between gap-2 z-10">

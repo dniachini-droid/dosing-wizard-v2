@@ -13,6 +13,7 @@ import { AlertTriangle, Beaker, FlaskConical, LayoutDashboard, ListChecks, Setti
 import { NAV } from './lib/constants.js'
 import { todayStr, fmtShort } from './lib/dates.js'
 import { onStorageError, onToast, notify } from './lib/storage.js'
+import { watchViewport } from './lib/viewport.js'
 import {
   chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
@@ -194,6 +195,12 @@ export function ReefConsoleInner() {
     onStorageError((m) => setStorageMsg(m));
     return onEngineState((s) => setEngineState(s));
   }, []);
+
+  /* How tall the screen actually is, published for the stylesheet — see
+     `lib/viewport.js`. The shell and every sheet measure themselves against it
+     instead of against `vh`, which on a phone is the height the page would
+     have if the toolbar were hidden and is therefore taller than the screen. */
+  useEffect(() => watchViewport(), []);
 
   /* Reload everything this device holds. Called after every write, so no
      screen ever renders from a copy of the record that the record has since
@@ -729,7 +736,39 @@ export function ReefConsoleInner() {
       <style>{`
         .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
         .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+        /* Three declarations of one property, most-preferred last: a browser
+           with no dvh takes the first, one with dvh but no
+           visualViewport takes the second, and everything else takes the
+           live measurement. */
+        .app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }
+
+        /* OWNER FINDINGS 7 AND 22 — ONE RULE, NOT TWO.
+
+           Every sheet used to set its own height in vh (85, 88, 92), and a
+           sheet at 85% of the LARGE viewport is taller than 85% of the screen:
+           its lower portion falls below the fold, where the tab bar is, and a
+           fixed centred box has nothing to scroll to reach it. The tab bar was
+           never drawn in front of the sheet. The sheet was taller than the
+           screen.
+
+           One class, one measurement, every sheet. The gap leaves the sheet
+           clear of the bar rather than ending exactly on it, because a control
+           flush against the bar is a control that gets the wrong tap. */
+        .sheet-panel {
+          max-height: 85vh;
+          max-height: calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px));
+          max-height: calc(var(--app-vh, 100dvh) - var(--app-nav-h, 4rem) - 1.5rem);
+        }
+        /* The overlay a sheet sits in. Bounded the same way, so a sheet
+           anchored to the bottom of it cannot be anchored off the screen. */
+        .sheet-layer {
+          height: 100vh;
+          height: 100dvh;
+          height: var(--app-vh, 100dvh);
+          /* The bar's own row, kept clear. A sheet centred in the whole screen
+             has its lower edge behind the bar however short it is. */
+          padding-bottom: var(--app-nav-h, 4rem);
+        }
         .bg-app { background-color: #F3F7F6; }
         /* A raised surface on the pale-teal page. bg-card was USED by the
            correction sheet and the pinned close control and was never defined,
@@ -971,7 +1010,7 @@ export function ReefConsoleInner() {
       </div>
 
       {/* Bottom nav - mobile */}
-      <nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
+      <nav data-app-nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {NAV.map((n) => {
           const Icon = NAV_ICON[n.icon];

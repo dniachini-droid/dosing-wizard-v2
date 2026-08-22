@@ -1021,9 +1021,15 @@ s.test("PORT-20", "the shell's viewport height has a fallback, not a floor", () 
   ok(rule, "the shell's height is a CSS rule, where one property may be declared twice");
   const decls = rule[1].split(";").map((d) => d.trim()).filter(Boolean);
   const heights = decls.filter((d) => /^height\s*:/.test(d));
-  eq(heights.length, 2, `two height declarations, the fallback and the dynamic one: ${heights.join("; ")}`);
-  ok(/100vh/.test(heights[0]), "the fallback comes first");
-  ok(/100dvh/.test(heights[1]), "and the dynamic one supersedes it");
+  /* ROUND FIVE. A third declaration joined these: `dvh` tracks the toolbar but
+     is not live — iOS does not reflow while it slides — so the shell also takes
+     the visible viewport, measured continuously (`lib/viewport.js`). Still one
+     property, still most-preferred last; there is simply one more rung on the
+     ladder. `VP-04` states the same ordering from the other side. */
+  eq(heights.length, 3, `three height declarations, weakest first: ${heights.join("; ")}`);
+  ok(/100vh/.test(heights[0]), "the oldest fallback comes first");
+  ok(/100dvh/.test(heights[1]), "the dynamic viewport supersedes it");
+  ok(/var\(--app-vh/.test(heights[2]), "and the live measurement supersedes both");
   ok(decls.some((d) => /^overflow\s*:\s*hidden$/.test(d)),
     "and the document itself cannot scroll, so nothing can run underneath the bar");
 });

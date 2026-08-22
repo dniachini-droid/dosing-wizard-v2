@@ -241,9 +241,9 @@ export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOp
     .filter((x) => x.data.length >= 2);
 
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4"
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4 sheet-layer"
       onClick={onClose}>
-      <div className="bg-app w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+      <div className="bg-app w-full sm:max-w-2xl sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {/* The header sticks, so the window control stays reachable however far
