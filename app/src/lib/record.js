@@ -40,7 +40,7 @@
    ========================================================================= */
 
 import { ANNOTATION, KIND, SOURCE } from "../store/ledger.js";
-import { PROVENANCE, dateOnly, exactInstant, localOffsetMinutes, localZone, nowIso } from "../store/time.js";
+import { PROVENANCE, assignedDayInstant, dateOnly, exactInstant, localOffsetMinutes, localZone, nowIso } from "../store/time.js";
 
 /* THE KEEPER GAVE A DATE AND A TIME. The device supplies the offset that was
    actually in force, so the instant is provable rather than assumed. */
@@ -67,6 +67,25 @@ function stamp(date, time) {
    option and no default. `PORT-10` drives every recorder and checks it. */
 function undated(date) {
   return dateOnly(date);
+}
+
+/* A READING whose form had no time box — OWNER DECISION 31.
+
+   A third constructor rather than a change to `undated`, and the split is the
+   decision's own: it names READINGS. `undated` is still what a lighting note or
+   a water change gets, because assigning nine in the morning to a dose change
+   would turn `effectiveAtConfidence` from `UNCERTAIN` into `EXACT` and assert an
+   hour nobody stated — see `store/import-v1.js` `timeFor` for why that one
+   matters more than it looks.
+
+   Which of the three a recorder uses still follows from its FORM and from what
+   it is recording. There is still no default. `PORT-10` drives every recorder
+   and checks it. */
+function undatedReading(date) {
+  return assignedDayInstant(date, localOffsetMinutes(new Date()), {
+    appliedAt: nowIsoExact(),
+    zoneId: localZone(),
+  });
 }
 
 const nowIsoExact = () => new Date().toISOString();
@@ -270,28 +289,44 @@ export async function correctReading(store, { eventId, param, value, date, time 
   if (!(typeof value === "number" && Number.isFinite(value))) {
     throw new Error("a reading needs a number");
   }
-  return store.ledger.append({
-    kind: KIND.READING,
-    parameter: param,
+  /* OWNER FINDING 17: THE RECORD HOLDS THE CORRECTED VALUE. NO SUPERSEDE CHAIN.
+
+     This used to append a new event carrying `supersedes: eventId`, leaving the
+     original in the ledger folded to SUPERSEDED. The owner wants what every
+     other app he uses does: he typed it wrong, he fixes it, and the record says
+     what he meant. So the stored event is rewritten in place and nothing is
+     appended.
+
+     `param` is not written back. Correcting a value is not a statement that the
+     reading was of a different parameter, and a form that let it change one
+     would be offering to turn an alkalinity reading into a calcium one by
+     editing a number. */
+  return store.ledger.replace(eventId, {
     rawValue: String(value),
     normalizedValue: value,
     /* The form offers a time box only where the original had one, so this
        branches on what is being corrected rather than on what was typed. */
-    time: time ? stamp(date, time) : undated(date),
-    recordedAt: nowIsoExact(),
-    source: SOURCE.KEEPER_ENTRY,
-    supersedes: eventId,
+    time: time ? stamp(date, time) : undatedReading(date),
+    source: SOURCE.KEEPER_CORRECTION,
     ...(note ? { detail: { note } } : {}),
   });
 }
 
-/* Mark an event as one that should not have been recorded. The record is not
-   deleted — the ledger is append-only and the fold is what decides state. */
-export async function markInvalid(store, eventId, note = null) {
-  return store.ledger.annotate({
-    type: ANNOTATION.MARK_INVALID,
-    targetEventId: eventId,
-    recordedAt: nowIsoExact(),
-    note,
-  });
+/* DELETE A RECORD. It is gone — owner decision 32.
+
+   This replaced `markInvalid`, which annotated the record and erased nothing.
+   There is no note to record because there is nothing left for a note to be
+   about, and no annotation type to record it with: `MARK_INVALID` is gone from
+   the vocabulary (`store/ledger.js`).
+
+   Every assessment that read the record goes with it, which is the owner's own
+   requirement — an assessment describing a past that no longer exists is a
+   worse artefact than no assessment. `store/assessments.js` `forgetEvent` owns
+   that half; this function calls it so that a caller cannot do one without the
+   other. */
+export async function deleteRecord(store, eventId) {
+  const { removed, event } = await store.ledger.remove(eventId);
+  if (!removed) return { removed: false };
+  const assessments = await store.assessments.forgetEvent(eventId);
+  return { removed: true, event, assessments };
 }

@@ -17,13 +17,14 @@ import {
   chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
-  correctReading, markInvalid,
+  correctReading, deleteRecord,
   recordDoseChange, recordDoseState, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
   recordReading, recordWaterChange,
 } from './lib/record.js'
 import { createStore } from './store/index.js'
 import { MODE, applyClock, currentMode, storeForMode } from './store/mode.js'
 import { TestMode, TestModeMarker } from './components/TestMode.jsx'
+import { POTENCY_FORM } from './store/config.js'
 import { KIND } from './store/ledger.js'
 import { autoCompletions, computeSchedule, makeTask, TASK_KIND } from './store/schedule.js'
 import { runAssessment, nowAsOf } from './assess.js'
@@ -166,6 +167,14 @@ export function ReefConsoleInner() {
   const [tasks, setTasks] = useState([]);
   const [completions, setCompletions] = useState([]);
   const [hiddenNotices, setHiddenNotices] = useState({});
+  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
+
+     A single string: the correction panel's signature, which is the
+     intervention and the class the engine reached on it. Delete the reading the
+     conclusion rested on, the engine reclassifies from what remains, the
+     signature stops matching and the panel is back — which is owner finding
+     16's worked example, and it needs no record that a deletion happened. */
+  const [correctionDismissed, setCorrectionDismissed] = useState(null);
 
   /* ---- what the engine said ------------------------------------------- */
   const [assessment, setAssessment] = useState(null);
@@ -189,18 +198,20 @@ export function ReefConsoleInner() {
      screen ever renders from a copy of the record that the record has since
      moved past. */
   const reload = useCallback(async () => {
-    const [proj, cfg, ts, cs, hidden] = await Promise.all([
+    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
       store.ledger.projection(),
       store.config.current(),
       store.tasks.tasks(),
       store.tasks.completions(),
       store.kvGet("hidden-notices"),
+      store.kvGet("correction-dismissed"),
     ]);
     setProjection(proj);
     setConfig(cfg);
     setTasks(ts);
     setCompletions(cs);
     setHiddenNotices(hidden || {});
+    setCorrectionDismissed(correction || null);
   }, [store]);
 
   /* Ask the engine. Every write that could change the answer calls this, and
@@ -319,6 +330,11 @@ export function ReefConsoleInner() {
     setHiddenNotices(next);
     notify("Notice shown again");
   };
+  const dismissCorrection = async (signature) => {
+    await store.kvSet("correction-dismissed", signature);
+    setCorrectionDismissed(signature);
+  };
+
   const restoreAllNotices = async () => {
     await store.kvSet("hidden-notices", {});
     setHiddenNotices({});
@@ -380,13 +396,25 @@ export function ReefConsoleInner() {
     assess();
   };
 
-  const dropReading = async (eventId) => {
-    try { await markInvalid(store, eventId); }
-    catch (e) { setStorageMsg(e && e.message); return; }
+  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 32.
+
+     The record is gone: the event, its annotations, and every assessment that
+     read it. `deleteRecord` owns all three so that no caller can do one and
+     forget another. What each caller supplies is the sentence the keeper sees,
+     because "Alkalinity reading deleted" and "Dose change deleted" are the same
+     act on different records and he is entitled to be told which. */
+  const deleteRecordById = async (eventId, said) => {
+    try {
+      const { removed } = await deleteRecord(store, eventId);
+      if (!removed) return false;
+    } catch (e) { setStorageMsg(e && e.message); return false; }
     await reload();
-    notify(t("correct.deleted"));
+    notify(said || t("correct.deleted"));
     assess();
+    return true;
   };
+
+  const dropReading = (eventId) => deleteRecordById(eventId, t("delete.done.reading"));
 
   /* The dose the keeper says his pump is running now. Stage 1 established, by
      measurement, that the engine had no readable record of this at all on a
@@ -439,10 +467,17 @@ export function ReefConsoleInner() {
     return true;
   };
 
-  const deleteEvent = async (eventId) => {
-    await markInvalid(store, eventId);
+  const deleteEvent = (eventId, said = null) => deleteRecordById(eventId, said);
+
+  /* Something the keeper recorded on his calendar, taken back off it (owner
+     finding 16). A completion is the task store's own record rather than a
+     ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
+     act is the same one and the keeper is told the same way. */
+  const deleteCompletion = async (item) => {
+    if (!item || !item.taskId || !item.date) return;
+    await store.tasks.uncomplete(item.taskId, item.date);
     await reload();
-    assess();
+    notify(t("delete.done.entry"));
   };
 
   /* ---- the schedule ----------------------------------------------------- */
@@ -534,6 +569,49 @@ export function ReefConsoleInner() {
     assess();
   };
 
+  /* ACCEPTING THE MEASURED STRENGTH — finding 13, and the keeper's act.
+
+     "If accepted it writes into configuration as a new version, exactly as if
+     typed. The dose is then sized from it." So this goes through `saveConfig`
+     like every other setting: a new configuration version, effective now, with
+     every assessment already stored still naming the version it actually used.
+
+     `potencyDecision` records WHICH way he decided, what the estimate was when
+     he decided it, and on what day. Three things follow from it and none would
+     work without all three:
+
+       · the provenance line — "measured from your tank's response, accepted 22
+         Aug" — which is a different sentence from "the figure you entered";
+       · the estimator asking AGAIN if it later learns something different,
+         which it can only know by comparing against the figure he was shown;
+       · keeping being a decision rather than an absence of one. A keeper who
+         has looked at a measurement and chosen his own number has told the app
+         something, and the box must stop asking him the same question.
+
+     It is application bookkeeping about a setting, not a setting the engine
+     reads, so it is stripped on the way to the engine like `potencyStatedAs`
+     beside it. */
+  const decidePotency = async (learned, accepted) => {
+    /* `inUse` is the figure this decision PUT IN FORCE — the measured one if he
+       took it, his own if he kept it. The provenance line reads it and states
+       nothing unless the configuration still holds it, so a figure he types
+       later cannot inherit "measured from your tank's response". */
+    const entered = config ? config.selectedPotencyDkhPerMl : null;
+    const values = {
+      potencyDecision: { accepted, learned, inUse: accepted ? learned : entered, on: todayStr() },
+    };
+    if (accepted) {
+      values.selectedPotencyDkhPerMl = learned;
+      values.potencyStatedValue = learned;
+      values.potencyStatedAs = POTENCY_FORM.DKH_PER_ML;
+    }
+    await saveConfig(values);
+    notify(accepted ? t("dosing.potency.accepted") : "Keeping the strength you entered");
+  };
+
+  const acceptPotency = (learned) => decidePotency(learned, true);
+  const keepPotency = (learned) => decidePotency(learned, false);
+
   const saveRange = async (key, min, max) => {
     const def = paramDefs.find((d) => d.key === key);
     if (!config && !def) return;
@@ -612,13 +690,43 @@ export function ReefConsoleInner() {
        ride anywhere: the content scrolls inside `<main>` and the bar is
        always the last row of the viewport.
 
-       `min-h-screen` is kept as the fallback for a browser with no `dvh`. */
-    <div className="bg-app text-ink font-body flex flex-col min-h-screen"
-      style={{ height: "100dvh" }}>
+       ROUND FOUR, ITEM 5 — AND IT WAS THE FALLBACK THAT BROKE IT.
+
+       The flex column above was right. What was wrong sat beside it:
+       `min-h-screen` is `min-height: 100vh`, and it was kept "as the fallback
+       for a browser with no `dvh`". A `min-height` is not a fallback for a
+       `height` — it is a FLOOR, and it wins. On iOS Safari `100vh` is the
+       viewport with the toolbars hidden, so it is TALLER than `100dvh`: the
+       shell was forced past the visual viewport, the document scrolled as a
+       whole, and the nav — the last row of a box taller than the screen — sat
+       below the fold. Which is exactly what the owner described: the bar
+       disappears as you scroll and "only reappears after scrolling all the way
+       to the bottom and continuing".
+
+       The fallback is now a `height` too, and it is written in CSS rather than
+       in a style object — a JS object cannot hold the same key twice, so
+       `{ height: "100vh", height: "100dvh" }` is not two declarations with the
+       second preferred, it is one declaration with the first silently dropped.
+       In the stylesheet below they are two declarations on one property: a
+       browser that understands `dvh` takes the second, one that does not takes
+       the first, which is what a fallback means.
+
+       `overflow: hidden` on the shell means the DOCUMENT cannot scroll at all.
+       Scrolling happens inside `<main>`, so there is no page-level scroll for
+       the bar to ride on however the viewport units resolve, and nothing can
+       run underneath it. */
+    <div className="bg-app text-ink font-body flex flex-col app-shell">
       <style>{`
         .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
         .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
         .bg-app { background-color: #F3F7F6; }
+        /* A raised surface on the pale-teal page. bg-card was USED by the
+           correction sheet and the pinned close control and was never defined,
+           so both rendered with no background at all - the sheet showed the
+           dark overlay through its own text. Defined once, here, beside the
+           page colour it has to stand out from (owner finding 10). */
+        .bg-card { background-color: #FFFFFF; }
         .border-app { border-color: #E3ECEA; }
         .text-ink { color: #08191D; }
         .text-ink2 { color: #45605F; }
@@ -651,7 +759,7 @@ export function ReefConsoleInner() {
           so `<main>` inside it is the only thing that scrolls. */}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar - desktop */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-app px-4 py-6 bg-white">
+        <aside className="hidden md:flex flex-col w-56 shrink-0 h-full overflow-y-auto border-r border-app px-4 py-6 bg-white">
           <div className="flex items-center gap-2 px-2 mb-8">
             <div className="w-9 h-9 rounded-xl bg-teal-brand flex items-center justify-center shadow-sm">
               <Waves size={17} className="text-white" />
@@ -773,6 +881,9 @@ export function ReefConsoleInner() {
 
           {tab === "dosing" && (
             <DosingWizard paramDefs={paramDefs} engineResult={engineResult}
+              asOf={assessment && assessment.asOf ? assessment.asOf : null}
+              correctionDismissed={correctionDismissed} onDismissCorrection={dismissCorrection}
+              onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
               config={config} readings={readings} chartEvents={chartEvents}
@@ -791,7 +902,8 @@ export function ReefConsoleInner() {
               onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval} onSkipTask={skipTask}
               onAddWaterChange={addWaterChange} onAddOneOff={addOneOff}
               onAddLightingChange={addLightingChange} onAddNote={addNote}
-              waterChanges={waterChanges} onOpenTest={openTestFor} />
+              waterChanges={waterChanges} onOpenTest={openTestFor}
+              onDeleteDone={deleteCompletion} />
           )}
 
           {tab === "setup" && (

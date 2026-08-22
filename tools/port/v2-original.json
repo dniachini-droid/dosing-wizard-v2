@@ -29,6 +29,8 @@
     "app/src/store/suggestion.js",
     "app/src/store/time.js",
     "app/src/components/CorrectReadingSheet.jsx",
+    "app/src/components/DeleteControl.jsx",
+    "app/src/components/SheetClose.jsx",
     "app/src/components/TestMode.jsx",
     "app/src/present/dosing-tab.js",
     "app/sw.js"

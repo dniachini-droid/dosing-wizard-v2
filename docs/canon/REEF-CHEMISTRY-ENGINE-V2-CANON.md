@@ -2384,6 +2384,72 @@ nothing to say and §2.3A.1 clause 1 applies.
 
 A new clean V2 regime may begin once precise absolute timestamps are available.
 
+### 2.3A.3 An assigned time of day — owner decision 31
+
+**Owner decision 31. A deliberate override of §2.3A and of `DATA-PROVENANCE.md` §2 and §61,
+and it is stated as an override rather than reconciled with them.**
+
+A **reading** that carries only a calendar date is assigned **09:00** in the keeper's own
+zone at the moment it enters the record, and is thereafter a fully timed reading for every
+purpose — trend, clustering, elapsed interval, response classification and potency
+observation alike. It is not silently ineligible under §2.3A.1, because it is not
+ineligible: it carries a usable instant.
+
+**What is overridden.** `DATA-PROVENANCE.md` §61 forbids this by name: *"no defaulting an
+unknown time to midnight, midday, or any other placeholder that would later be read as a real
+timestamp."* §2 and owner decision 30 say the same. The owner has been told and has decided.
+
+**The owner's reasoning, recorded because a decision without it is an instruction.** Across a
+whole history the time of day changes almost nothing. Assigning the SAME hour to every such
+record leaves every elapsed interval BETWEEN two of them exact, to the day; what it can
+distort is the interval between an assigned record and a genuinely timed one, by a few hours
+against gaps measured in days — the same order as the daylight-saving question owner decision
+30's reasoning already ruled irrelevant. A complete record is worth more than a scrupulous
+gap, and the keeper wants to see the engine work on the history he actually has.
+
+**Two conditions, and the decision is not satisfied without both.**
+
+1. **The assignment is recorded on every record it touches.** The hour assigned, that it WAS
+   assigned, and that nobody stated it. §61 exists because a fabricated time becomes
+   indistinguishable from a measured one; a record that says which hour was supplied and by
+   whom is distinguishable, and this is what makes the override a reading of the rule rather
+   than a suspension of it. A record carrying an assigned hour and no note of the assignment
+   is **malformed**, not merely undocumented.
+
+2. **Readings only.** The assignment does not extend to a dose change, a water change, an ICP
+   panel or any other event. A dose change's `effectiveAtConfidence` is derived from whether
+   its hour is known, and the response window is measured from that instant: assigning an
+   hour there would turn `UNCERTAIN` into `EXACT` and give the response classifier a moment
+   nobody stated. The owner's reasoning is a statement about a long run of readings and is not
+   true of a single intervention whose one instant the whole window hangs on.
+
+**What this does to owner decision 30.** Nothing is unpicked. The silence §2.3A.1 requires
+still applies to any record that reaches an analysis without a usable instant, and the reason
+codes retired there stay retired — they were removed because announcing the same fact in five
+places was wrong regardless. What changes is how many readings reach an analysis without one.
+
+### 2.3A.4 The keeper may delete a record — owner decision 32
+
+**Owner decision 32. A deliberate override of the append-only event ledger, and of §64's
+replay guarantee where it depends on it.**
+
+A record the keeper deletes is **gone**: the event, every annotation targeting it, and every
+stored assessment that read it. No tombstone, no supersede annotation, no audit trail.
+Nothing anywhere states that it existed. Any record, at any age, not only the most recent.
+The engine then answers from what remains, exactly as though the record had never been
+entered. Editing a record follows the same rule: the record holds the corrected value and no
+superseding event is appended.
+
+**The owner's reasoning.** This is a hobby app for one person's tank, not a medical record.
+
+**What this does to §64.** Deterministic replay is conditioned on the same event ledger, the
+same configuration versions and the same engine/canon version. A deletion changes the ledger a
+replay would run against, so an assessment stored before it could not be reproduced. That is
+why the assessments that READ the deleted record are removed with it rather than left to fail
+on replay: §64's guarantee holds over every assessment that still exists, which is the
+strongest form of it available once the ledger is amendable at all. An assessment that never
+read the record is untouched, because it never depended on it.
+
 ## 2.4 Event ordering at identical timestamps
 
 Where events share a timestamp, ordering must be explicit.
@@ -16758,6 +16824,49 @@ The learner may be enabled in the same product version if the schema/UI migratio
 If those fields are not implemented in the first V2 code phase, empirical potency learning is deferred to a later activation such as **V2.1**, without blocking the core Alk V2 controller.
 
 This is a capability deferral, not a retreat from the learner design.
+
+### A learned strength may size a dose, and only when the keeper accepts it — owner decision 33
+
+**Owner decision 33.** It settles the question this section left open — under what
+circumstances a strength the learner measured may replace the strength the keeper
+configured — and the answer is: **when, and only when, he says so.**
+
+While gated the learner **observes**. Every dose change in the ledger produces an
+observation with its SNR, its signal class and its plausibility; the pool is formed, the
+confidence ladder of `ALK-POTENCY-CONFIDENCE-001` is climbed, and `learnedPotencyDkhPerMl`
+and `potencyConfidence` are reported. What the gate withholds is the **promotion**:
+`selectedPotency` does not move off the theoretical or configured figure, whatever the pool
+says.
+
+**The gate stays shut, and that is what makes the rule true.** It is the only place in the
+engine that could substitute a learned strength, so leaving it shut means no path exists by
+which one can be substituted without the keeper. An implementation that opened it and then
+asked the keeper afterwards would have the rule as a policy; this has it as a structure.
+
+**Acceptance is the keeper stating a configured potency.** Where the estimate is
+`CALIBRATED` or `STRONGLY_CALIBRATED` — the two rungs at which this canon would itself have
+moved `selectedPotency` — and where `ALK-021`'s discrepancy band says the measured and
+configured figures do not broadly agree, the keeper is shown both and offered the choice.
+Accepting writes the measured figure into configuration as a new effective-dated version,
+exactly as if he had typed it, and `selectedPotencySource` remains
+`THEORETICAL_OR_CONFIGURED` — because after acceptance the figure IS his.
+
+**Three requirements travel with it, and the decision is not satisfied without all three.**
+
+1. **It is never silent.** The keeper's figure stands until he changes it.
+2. **The provenance follows the figure wherever it is shown.** A number measured from the
+   tank's response and accepted on a date must not be presented as one he typed at setup,
+   and a number he was shown a measurement for and chose to keep is a decision he made, not
+   an absence of one.
+3. **The learner keeps watching after acceptance.** If it later measures something different
+   and is confident, it asks again; accepting replaces the previous figure and rewriting it
+   without asking would make requirement 2 a lie.
+
+**A note on the citation.** The task that produced this decision named it as resolving *"what
+canon decision 12 left open"*. No section of this canon carries that identifier, and none was
+found under any near spelling. The RULE is recorded here, in the section that actually holds
+the open question; the identifier is not, because asserting a cross-reference that cannot be
+verified is how a canon acquires a dangling one. Recorded as `AI-028`.
 
 ---
 

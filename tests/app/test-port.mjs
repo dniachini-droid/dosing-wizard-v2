@@ -23,6 +23,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok, throws } from "./harness.mjs";
+import { chartDataFrom } from "../../app/src/lib/adapt.js";
+import { ANNOTATION } from "../../app/src/store/ledger.js";
+import { fmtPotency, fmtVal } from "../../app/src/lib/format.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(path.dirname(HERE));
@@ -561,7 +564,20 @@ s.test("PORT-11", "a record with no time is carried through to the screen with n
   }
 });
 
-s.test("PORT-12", "a correction may not improve a record's time provenance", async () => {
+s.test("PORT-12", "the provenance guard refuses an upgrade, and still stands on every append", async () => {
+  /* THE TITLE CHANGED BECAUSE THE SYSTEM DID. It used to read "a correction may
+     not improve a record's time provenance", and that is no longer true of a
+     correction: owner finding 17 made `correctReading` rewrite the record in
+     place through `ledger.replace`, which deliberately does NOT call this
+     guard. The guard protected a SUPERSEDE chain, where the danger was a later
+     record silently claiming precision the original never had while both
+     remained readable; there is no chain now.
+
+     What the guard still does — and what this check has always actually tested
+     — is refuse an upgrade when it is called. It is still called on `append`,
+     where superseding is still reachable for any imported or pre-branch ledger.
+     `COR-02` covers what a correction is now allowed to do. A test whose title
+     claims more than its body checks is how a property comes to look covered. */
   const { assertProvenanceNotImproved, dateOnly, exactInstant } = await import("../../app/src/store/time.js");
   const before = dateOnly("2026-03-04");
   const after = exactInstant("2026-03-04", "09:00", 600, "Australia/Sydney");
@@ -803,7 +819,11 @@ s.test("META-01", "every test in the application suite has at least one negative
     ["SUG-14", "pre-dates the port"],
     ["TM-13", "pre-dates the port"], ["TM-15", "pre-dates the port"],
     ["TM-18", "pre-dates the port"],
-    ["IMP-12", "pre-dates the port"], ["IMP-16", "pre-dates the port"],
+    /* IMP-12's exemption is gone: `AM-122` now turns it red. Dropping the
+       assigned-hour marker from a record's reconstruction stops the natural key
+       excluding it, and re-importing the same file writes the keeper's whole
+       history a second time. The list only shrinks. */
+    ["IMP-16", "pre-dates the port"],
     ["IMP-18", "pre-dates the port"], ["IMP-26", "pre-dates the port"],
     ["IMP-27", "pre-dates the port"],
     ["STR-05", "pre-dates the port"], ["STR-09", "pre-dates the port"],
@@ -971,6 +991,232 @@ s.test("PORT-19", "the Python runtime's location is stated once, so a built work
     eq(runtime.pathname, "/app/vendor/pyodide/",
       `and the indexURL agrees with it from ${where}`);
   }
+});
+
+/* ---------------------------------------------------------------------------
+   ROUND FOUR — the interface faults, each pinned by the property that was
+   actually wrong rather than by the appearance it produced. Every one of these
+   was reported by the owner using the app on his own tank.
+   ------------------------------------------------------------------------- */
+
+s.test("PORT-20", "the shell's viewport height has a fallback, not a floor", () => {
+  /* OWNER FINDING 5, reported done in round three and still wrong. The flex
+     column was right; `min-h-screen` beside it was not. `min-height: 100vh` is
+     not a fallback for `height: 100dvh`, it is a FLOOR — and on iOS Safari
+     `100vh` is the taller of the two, so the shell was forced past the visual
+     viewport, the document scrolled as a whole, and the tab bar sat below the
+     fold until you scrolled to the very bottom.
+
+     The two declarations must be on ONE property so the second supersedes the
+     first, and they cannot live in a style object: a JS object cannot hold the
+     same key twice, so `{ height: "100vh", height: "100dvh" }` is one
+     declaration with the first silently dropped. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
+
+  ok(!/className="[^"]*\bmin-h-screen\b[^"]*"[^>]*app-shell/.test(src)
+     && !/app-shell[^>]*min-h-screen/.test(src),
+    "the shell does not carry a 100vh floor beside its dynamic height");
+
+  const rule = /\.app-shell\s*\{([^}]*)\}/.exec(src);
+  ok(rule, "the shell's height is a CSS rule, where one property may be declared twice");
+  const decls = rule[1].split(";").map((d) => d.trim()).filter(Boolean);
+  const heights = decls.filter((d) => /^height\s*:/.test(d));
+  eq(heights.length, 2, `two height declarations, the fallback and the dynamic one: ${heights.join("; ")}`);
+  ok(/100vh/.test(heights[0]), "the fallback comes first");
+  ok(/100dvh/.test(heights[1]), "and the dynamic one supersedes it");
+  ok(decls.some((d) => /^overflow\s*:\s*hidden$/.test(d)),
+    "and the document itself cannot scroll, so nothing can run underneath the bar");
+});
+
+s.test("PORT-21", "the Dosing chart's points carry the label its axis and its markers both read", () => {
+  /* OWNER FINDING 9 — no dates on the x-axis and none of his four imported
+     dose changes marked — and it is ONE cause, not two. The chart draws its
+     axis from `dataKey="label"` and places an event marker by matching the
+     event's date to a point's `label`. The Dosing tab built its own point
+     shape, `{ i, value, date, time }`, with no label in it. Neither the axis
+     nor the markers had anything to find.
+
+     `chartDataFrom` is the shape every other chart in the app takes, and it is
+     where the label rule lives. A second point shape was the defect. */
+  const chart = fs.readFileSync(path.join(ROOT, "app/src/components/ZoomableChart.jsx"), "utf8");
+  ok(/dataKey="label"/.test(chart), "the axis reads `label`");
+  ok(/x=\{ev\.label\}/.test(chart), "and so does an event marker");
+
+  const wizard = fs.readFileSync(path.join(ROOT, "app/src/components/DosingWizard.jsx"), "utf8");
+  const code = wizard.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(/chartDataFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
+  ok(!/\.map\(\(r, i\) => \(\{ i, value/.test(code),
+    "and does not build a second point shape of its own");
+
+  /* And the shared builder does produce what the chart reads. */
+  const rows = [
+    { date: "2026-08-20", time: "09:00", value: 8.9, id: "a" },
+    { date: "2026-08-22", time: null, value: 9.0, id: "b" },
+  ];
+  const points = chartDataFrom(rows, (d) => d.slice(5));
+  ok(points.every((p) => p.label), `every point is labelled: ${JSON.stringify(points.map((p) => p.label))}`);
+  ok(points.every((p) => p.date), "and keeps its date, which is what a marker matches against");
+});
+
+s.test("PORT-22", "Setup's tank section counts only the facts it asks for", () => {
+  /* OWNER FINDING 4: "'One more left' persisted; the owner had to press save
+     repeatedly before the step completed." Nothing failed to save. The counter
+     read every one of `KEEPER_FACTS` while the section renders three of them,
+     and one of the other two — the solution strength — is legitimately ABSENT
+     for a keeper who states his solution in grams per litre, because the engine
+     derives the potency and the app storing a copy would override `ALK-014`'s
+     owner. The count could never reach zero. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/components/Setup.jsx"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(!/const missing = KEEPER_FACTS\.filter/.test(code),
+    "the counter is not taken over every keeper fact");
+  ok(/const missing = ASKED_HERE\.filter/.test(code),
+    "it is taken over the facts this section renders");
+  /* And the same list drives the fields, so the count and the form cannot
+     disagree about which facts the section is responsible for. */
+  ok(/\{ASKED_HERE\.map\(/.test(code),
+    "and the fields are rendered from that same list");
+});
+
+s.test("PORT-23", "the service worker does not take over a page that is still loading a previous version", () => {
+  /* OWNER FINDING 2: "On the first visit after a fresh deploy, the app
+     rendered the dashboard with no bottom tab bar — no way to reach any other
+     screen. A reload fixed it."
+
+     `skipWaiting`, deleting every superseded cache, and `clients.claim()` are
+     each right on their own. Together they move a page that is STILL LOADING
+     onto a worker that has never heard of the hashed assets its HTML names,
+     and the previous deploy's files are gone from the server. Every module the
+     page had not yet fetched 404s and React renders half an app.
+
+     The page is reloaded, and only where a previous version actually existed —
+     a genuine first install has no mismatch to correct. */
+  const src = fs.readFileSync(path.join(ROOT, "app/sw.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  ok(/superseded/.test(code), "the activate step knows whether it replaced a previous version");
+  ok(/if \(superseded\.length\)/.test(code),
+    "and reloads clients only where it did, so a first install is left alone");
+  ok(/client\.navigate\(/.test(code), "the reload re-requests the document");
+
+  /* The claim still happens — the point is not to stop claiming, it is to stop
+     leaving a claimed page on assets that no longer exist. */
+  ok(/clients\.claim\(\)/.test(code), "the new worker still takes control");
+  const claimAt = code.indexOf("clients.claim()");
+  const reloadAt = code.indexOf("if (superseded.length)");
+  ok(claimAt < reloadAt, "and the reload comes after the claim, not instead of it");
+});
+
+s.test("PORT-24", "no surface offers to mark a record invalid, because nothing can produce that state", () => {
+  /* OWNER DECISION 32: "Mark as invalid is removed everywhere it appears." A
+     screen offering an act the store cannot perform is the same class of fault
+     as a screen showing a number the engine is not using. */
+  const files = [
+    "app/src/store/ledger.js", "app/src/lib/record.js", "app/src/App.jsx",
+    "app/src/components/CorrectReadingSheet.jsx", "app/src/components/Dashboard.jsx",
+  ];
+  for (const f of files) {
+    const code = fs.readFileSync(path.join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(!/MARK_INVALID/.test(code), `${f} does not name the annotation`);
+    ok(!/markInvalid/.test(code), `${f} does not call the recorder`);
+  }
+  /* And the ledger's own vocabulary no longer declares it, so no caller could
+     spell one even if it wanted to. */
+  ok(!Object.keys(ANNOTATION).includes("MARK_INVALID"),
+    `the annotation vocabulary is ${Object.keys(ANNOTATION).join(", ")}`);
+});
+
+s.test("PORT-25", "the precache list names no path by hand that the build renames", () => {
+  /* THE CHEAP ALWAYS-ON HALF. The end-to-end proof is
+     `tools/app/check-precache.mjs`, which reads the BUILT worker and is run
+     against a deploy tree — the same split as `PORT-19` and
+     `check-runtime-path.mjs`, and for the same reason: `app/dist/` is
+     gitignored, so a suite check over the artefact would silently pass on every
+     fresh checkout. Its first draft did exactly that, with `ok(true, ...)`, and
+     was counted among the green.
+
+     What IS checkable without a build is the property the defect broke.
+     `/app/manifest.webmanifest` is where the manifest lives in SOURCE; the build
+     hashes it into `/assets/` and rewrites the `<link>` to match, so naming it
+     by hand named a URL the built app does not serve. Every asset the build
+     emits reaches the list through the bundle, under whatever name the build
+     gave it. A hand-written `/app/…` literal beside that is a second spelling of
+     a path with one owner — `AI-018`'s defect in a different file — and the only
+     one that is legitimate is the entry point, which the build does not rename. */
+  const src = fs.readFileSync(path.join(ROOT, "vite.config.js"), "utf8");
+  const block = /const precache = \[([\s\S]*?)\];/.exec(src);
+  ok(block, "the build states the precache list in one place");
+
+  const handWritten = [...block[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+  ok(handWritten.includes("/app/index.html"), "the entry point is named, and the build does not rename it");
+
+  const renamed = handWritten.filter((u) => u !== "/app/index.html" && u.startsWith("/app/"));
+  eq(renamed.join(", "), "",
+    `no other /app/ path is named by hand — the build hashes those and the list would name a URL it does not serve: ${renamed.join(", ")}`);
+
+  /* The bundle is what supplies them, so the list cannot fall behind it. */
+  ok(/\.\.\.assets/.test(block[1]), "every emitted asset reaches the list through the bundle");
+
+  /* And the engine's own files, which the build does NOT emit and which are
+     served from the repository, are still named — they have no other route in. */
+  ok(/engine\/alk_v2\//.test(block[1]), "the engine's own modules are named, because nothing else names them");
+});
+
+s.test("PORT-26", "a parameter formatter is given a parameter, not a decimal count", () => {
+  /* THE DEFECT OF THE ROUND, WRITTEN DOWN SO NOBODY HAS TO REDISCOVER IT.
+
+     `fmtVal(def, v)` takes a parameter DEFINITION and a value. Two call sites in
+     Setup passed `(value, decimals)`. `def.decimals` on a bare number is
+     `undefined`, so the fallback of 2 applied and the function returned the
+     DECIMAL COUNT formatted to two places. The screen read `4.00 dKH/mL` for a
+     77 L tank, read `4.00` whatever strength was entered, and went on reading
+     `4.00` after the keeper corrected the figure — because the number on screen
+     was never derived from the strength at all.
+
+     Both orders are two numbers, so nothing could tell. Sixteen call sites were
+     right and two were wrong and every one of them type-checked.
+
+     The strength formatter takes ONE argument now, so there is nothing to swap
+     — but `fmtVal` still takes two, and the trap is still there for the next
+     caller. This is the scan that holds them. */
+  const suspicious = [];
+  const files = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== "vendor") walk(f); }
+      else if (/\.(js|jsx)$/.test(e.name)) files.push(f);
+    }
+  };
+  walk(path.join(ROOT, "app/src"));
+  ok(files.length > 20, `there is something to scan: ${files.length} files`);
+
+  for (const f of files) {
+    const code = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const m of code.matchAll(/\bfmtVal\(\s*([^,()]+?)\s*,/g)) {
+      const first = m[1].trim();
+      const rel = path.relative(ROOT, f);
+      /* A numeric literal first is the swap itself. */
+      if (/^-?[\d.]+$/.test(first)) {
+        suspicious.push(`${rel}: fmtVal(${first}, …) — a literal where a definition belongs`);
+      }
+      /* A field that is plainly a VALUE first is the same mistake spelled with
+         a variable. `def.min` and `def.max` are excluded: they are a
+         definition's own band edges and are legitimately formatted BY that
+         definition, which is `fmtVal(def, def.min)`. */
+      if (/\.(value|spread|p05|p95|consumption|slope)$/.test(first)) {
+        suspicious.push(`${rel}: fmtVal(${first}, …) — a value where a definition belongs`);
+      }
+    }
+  }
+  eq(suspicious.join(" | "), "", `fmtVal takes (def, value): ${suspicious.join(" | ")}`);
+
+  /* And the trap itself, as a golden, because a scan can only catch the
+     spellings somebody thought of. */
+  eq(fmtVal(0.0693, 4), "4.00", "swapped, it silently renders the decimal count — this is what the owner saw");
+  eq(fmtVal({ decimals: 4 }, 0.0693), "0.0693", "in the right order it renders the strength");
+  eq(fmtPotency(0.0693), "0.0693", "and the strength formatter takes one argument, so it cannot be swapped");
+  eq(fmtPotency.length, 1, "one argument, structurally");
 });
 
 export default s;

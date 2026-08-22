@@ -21,7 +21,7 @@
    to detect or undo it later.
 
    So this module has exactly two ways to build a time, both of them `time.js`'s
-   own constructors. A row with no `time` field gets `dateOnly()` and nothing
+   own constructors. A row with no `time` field gets `assignedDayInstant()` and nothing
    else — no instant, no hour, no default. A row with one gets
    `assumedLocalInstant()`: its wall-clock time with ONE offset applied, the
    device's, recorded on the record as an assumption nobody made. There is no
@@ -65,7 +65,7 @@
    ========================================================================= */
 
 import { KIND, SOURCE, PARAMETERS } from "./ledger.js";
-import { dateOnly, assumedLocalInstant } from "./time.js";
+import { assignedDayInstant, assumedLocalInstant, dateOnly } from "./time.js";
 import { makeTask, TASK_KIND } from "./schedule.js";
 import { t } from "../strings.js";
 
@@ -520,7 +520,14 @@ export function describePlan(planned, assumption = null) {
      rather than asserted, so the report and the record cannot come apart. */
   let withInstant = 0;
   if (assumption) {
-    for (const r of [...planned.readings, ...planned.doses]) {
+    /* Each kind counted the way the WRITE builds it, including owner decision
+       31's readings-only assignment — the report and the record are built by
+       one function precisely so a rule that applies to one kind and not another
+       cannot make them disagree. */
+    for (const r of planned.readings) {
+      if (timeFor(r, assumption, { assignTimeOfDay: true }).absoluteInstant) withInstant += 1;
+    }
+    for (const r of planned.doses) {
       if (!r.time) continue;
       if (timeFor(r, assumption).absoluteInstant) withInstant += 1;
     }
@@ -530,7 +537,14 @@ export function describePlan(planned, assumption = null) {
     parameters: [...byParameter.values()].sort((a, b) => b.total - a.total),
     total: planned.readings.length,
     withTime,
+    /* Readings the FILE gave no time for. Under owner decision 31 each of them
+       is written with 09:00 assigned, so this is no longer the number of
+       DATE_ONLY records in the ledger — it is the number of records that carry
+       an assigned hour, which is what the keeper will be told at import when
+       that notice is built. `assignedTimeOfDay` names it for what it now is;
+       `dateOnly` is kept beside it because the screen reads it. */
     dateOnly: planned.readings.length - withTime,
+    assignedTimeOfDay: planned.readings.length - withTime,
     doseHistoryFrom,
     alkTotal: alk.length,
     alkAfterBoundary: afterBoundary,
@@ -574,7 +588,22 @@ export function naturalKey(kind, parameter, date, time, value) {
 export function naturalKeyOfEvent(e) {
   const date = e.time && e.time.localDate;
   if (!date) return null;
-  const time = (e.time && e.time.localTime) || "";
+  /* AN ASSIGNED TIME IS NOT PART OF A RECORD'S IDENTITY.
+
+     Owner decision 31 gives a date-only reading 09:00, so a reading imported
+     from a file with no time now carries `localTime: "09:00"` in the ledger
+     while the FILE still says nothing. The key on the way in is built from the
+     file's row and the key on the way out from the stored event; if the stored
+     one used the assigned hour the two would never match, every re-import would
+     write the whole history a second time, and the keeper's documented cutover
+     path — re-export, re-import — would double his tank's record.
+
+     `assignedTimeOfDay` on the reconstruction is what distinguishes an hour the
+     app supplied from one the keeper did. Identity is what the record SAYS
+     happened, so the supplied hour is excluded and the key is unchanged from
+     what it was before the decision. */
+  const assigned = e.time && e.time.reconstruction && e.time.reconstruction.assignedTimeOfDay;
+  const time = assigned ? "" : ((e.time && e.time.localTime) || "");
   const detail = e.detail || {};
 
   if (e.kind === KIND.READING) return naturalKey(KIND.READING, e.parameter, date, time, e.normalizedValue);
@@ -696,7 +725,7 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
       rawValue: r.rawValue,
       normalizedValue: r.value,
       unit: def ? def.unit : null,
-      time: timeFor(r, assumption),
+      time: timeFor(r, assumption, { assignTimeOfDay: true }),
       recordedAt,
       source: SOURCE.KEEPER_ENTRY,
       detail: { origin: ORIGIN.KEEPER, ...(r.note ? { note: r.note } : {}) },
@@ -1017,8 +1046,32 @@ function byWhen(a, b) {
    other, because one hour twice a year is not distinguishable from measurement
    noise against intervals measured in days. That is the owner's ruling and it
    is written here so the next reader does not restore the machinery. */
-export function timeFor(row, assumption = null) {
-  if (!row.time) return dateOnly(row.date);
+export function timeFor(row, assumption = null, { assignTimeOfDay = false } = {}) {
   if (!assumption) throw new Error(t("err.assumptionNeedsRecord"));
+  if (!row.time) {
+    /* OWNER DECISION 31, AND IT APPLIES TO READINGS ONLY.
+
+       The decision names readings: "any READING carrying only a date is
+       assigned 09:00". It is not extended here to doses, water changes, ICP
+       panels or lighting notes, and the difference is not pedantry.
+
+       A dose change's `effectiveAtConfidence` is derived from whether the hour
+       is known, and the engine measures a tank's response from the moment a
+       change took effect — canon `ALK-V2-DATA-CONTRACT.md:250` makes the field
+       required for exactly that reason. Assigning 09:00 to a dose change dated
+       11 August would turn `UNCERTAIN` into `EXACT` and assert that the pump
+       was reprogrammed at nine in the morning, which nobody said and which the
+       response classifier would then measure against. That is the fabrication
+       the rule exists to prevent, and the owner did not decide it.
+
+       What the owner reasoned about — that across a whole history the time of
+       day changes almost nothing, because every interval between two assigned
+       records stays exact — is a statement about a long run of readings. It is
+       not true of a single dose change, whose one instant is the thing the
+       whole response window is measured from. */
+    return assignTimeOfDay
+      ? assignedDayInstant(row.date, assumption.offsetMinutes, assumption)
+      : dateOnly(row.date);
+  }
   return assumedLocalInstant(row.date, row.time, assumption.offsetMinutes, assumption);
 }

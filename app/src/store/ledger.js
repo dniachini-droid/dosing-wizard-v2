@@ -47,10 +47,19 @@ export const KIND = Object.freeze({
   NOTE: "NOTE",
 });
 
+/* `MARK_INVALID` IS GONE, AND ITS ABSENCE IS OWNER DECISION 32.
+
+   "Mark as invalid" annotated a record and erased nothing — the opposite of
+   what the owner wants from a delete. There is no annotation for it any more,
+   so no screen can offer one and no fold can produce the state. Deleting is
+   `remove()` below, and it deletes.
+
+   `MARK_SUSPECT` stays. Flagging a reading you are unsure of is not the same
+   act as saying it should not exist, the engine still receives a suspect
+   reading, and the keeper who wants it gone now has a delete that works. */
 export const ANNOTATION = Object.freeze({
   SUPERSEDES: "SUPERSEDES",
   MARK_SUSPECT: "MARK_SUSPECT",
-  MARK_INVALID: "MARK_INVALID",
   WITHDRAW: "WITHDRAW",
 });
 
@@ -298,7 +307,88 @@ export function createLedger(backend) {
     return project(await allEvents(), await allAnnotations());
   }
 
-  return { append, annotate, allEvents, allAnnotations, projection, backend };
+  /* ============================================================================
+     DELETION IS REAL DELETION — OWNER DECISION 32
+     ----------------------------------------------------------------------------
+     THE DECISION, AND WHAT IT CONTRADICTS.
+
+     "A deleted record is gone. From the ledger, from storage, from every screen.
+     No tombstone, no 'marked invalid', no supersede annotation, no audit trail.
+     Nothing anywhere says it ever existed." Any record, any age. The engine then
+     recalculates from what remains, exactly as though it had never been entered.
+
+     This contradicts the append-only event ledger the canon requires, and the
+     contradiction is the decision rather than something to be worked around. The
+     owner has been told and has decided. His reasoning: this is a hobby app for
+     one person's tank, not a medical record. Recorded in
+     `docs/implementation/app/OPEN-ITEMS.md`.
+
+     The previous build annotated `MARK_INVALID` and erased nothing. That is the
+     opposite of what was asked for, and `MARK_INVALID` is removed entirely —
+     from this vocabulary, from the fold, and from every screen that offered it.
+
+     WHAT "GONE" HAS TO MEAN TO BE TRUE.
+
+     Deleting the event alone would leave its annotations pointing at nothing and
+     its assessments describing a past that no longer exists. So a deletion takes
+     three things, in one call, and the order matters only in that all three
+     complete before the next assessment runs:
+
+       1. the event,
+       2. every annotation targeting it,
+       3. every stored assessment that READ it.
+
+     (3) is the owner's own requirement — "assessments that used a deleted
+     reading go with it" — and it is what makes his worked example come out
+     right. It is also what a dismissed panel's return depends on, though not in
+     the way it first looks: the dismissal is keyed to the CONCLUSION, so once
+     the reading is gone the engine reclassifies from what remains, the signature
+     stops matching, and the panel is back. See `present/dosing-tab.js`
+     `correctionPanel`. Nothing has to remember that a deletion happened, which
+     is the point — there is no record that one did. */
+  async function remove(eventId) {
+    const event = await backend.get(EVENTS, eventId);
+    if (!event) return { removed: false };
+
+    for (const a of await backend.all(ANNOTATIONS)) {
+      if (a.targetEventId === eventId) await backend.del(ANNOTATIONS, a.annotationId);
+      /* A supersession records the SURVIVING event's id in its note. An
+         annotation pointing at a record that is gone is a dangling reference,
+         and the fold would carry it forever. */
+      else if (a.type === ANNOTATION.SUPERSEDES && a.note === eventId) {
+        await backend.del(ANNOTATIONS, a.annotationId);
+      }
+    }
+    await backend.del(EVENTS, eventId);
+    return { removed: true, event };
+  }
+
+  /* EDITING IS REAL EDITING — the same decision, applied to a change rather than
+     a removal (owner finding 17).
+
+     "The record holds the corrected value. No supersede chain." So this rewrites
+     the stored event in place and appends nothing. The event id, its ordinal and
+     its `recordedAt` are kept: they are what the record IS, and reissuing them
+     would make an edit indistinguishable from a delete-and-re-add for every
+     other index in the store.
+
+     `assertProvenanceNotImproved` is deliberately NOT called here, and this is
+     the one place that difference has to be stated. It guarded a SUPERSEDE
+     chain, where the danger was a later record silently claiming precision the
+     original never had while both remained readable. There is no chain now, and
+     under owner decision 31 a reading corrected without a time is assigned 09:00
+     with the assignment written onto it — which is a declared assumption, not an
+     acquired precision. The guard still stands on `append`, where superseding is
+     still possible. */
+  async function replace(eventId, changes) {
+    const prior = await backend.get(EVENTS, eventId);
+    if (!prior) throw new Error(t("err.annotateMissing"));
+    const next = Object.freeze({ ...prior, ...changes, eventId, eventOrdinal: prior.eventOrdinal });
+    await backend.put(EVENTS, eventId, next);
+    return next;
+  }
+
+  return { append, annotate, remove, replace, allEvents, allAnnotations, projection, backend };
 }
 
 /* `INV-A1`: the total order is `(absoluteInstant, eventOrdinal, eventId)`. A
@@ -327,13 +417,15 @@ export function sortLedger(events) {
      CURRENT     nothing later says otherwise
      SUPERSEDED  a later event replaced it — still in the record, still readable
      SUSPECT     the keeper flagged it; kept, and the engine still sees it
-     INVALID     the keeper says it should not have been recorded
 
-   SUSPECT and INVALID are the keeper's judgements about their own data. What
-   they DO to an assessment is a chemistry question with no canon rule, so this
-   build does not act on them: it records them, shows them, and says plainly
-   that they are not yet used. Inventing an eligibility rule here would be
-   inventing chemistry. Recorded as an open item. */
+   There is no INVALID any more (owner decision 32): a record the keeper says
+   should not have been recorded is DELETED, not annotated.
+
+   SUSPECT is the keeper's judgement about his own data. What it DOES to an
+   assessment is a chemistry question with no canon rule, so this build does not
+   act on it: it records it, shows it, and says plainly that it is not yet used.
+   Inventing an eligibility rule here would be inventing chemistry. Recorded as
+   an open item. */
 export function project(events, annotations) {
   const state = new Map();
   const notes = new Map();
@@ -344,7 +436,6 @@ export function project(events, annotations) {
     if (a.type === ANNOTATION.SUPERSEDES) state.set(a.targetEventId, "SUPERSEDED");
     else if (a.type === ANNOTATION.MARK_SUSPECT && state.get(a.targetEventId) === "CURRENT")
       state.set(a.targetEventId, "SUSPECT");
-    else if (a.type === ANNOTATION.MARK_INVALID) state.set(a.targetEventId, "INVALID");
     else if (a.type === ANNOTATION.WITHDRAW && state.get(a.targetEventId) !== "SUPERSEDED")
       state.set(a.targetEventId, "CURRENT");
     if (a.note && a.type !== ANNOTATION.SUPERSEDES) {

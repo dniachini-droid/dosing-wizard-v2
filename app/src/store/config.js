@@ -149,6 +149,12 @@ const APP_ONLY_KEYS = new Set([
   "importedFrom",
   "potencyStatedAs",
   "potencyStatedValue",
+  /* `potencyDecision` records which way the keeper decided when the estimator
+     asked, what it was estimating at the time, and on what day — see
+     `App.jsx` `decidePotency`. The FIGURE he accepted is in
+     `selectedPotencyDkhPerMl`, which the engine does read; this is the record
+     of the decision about it, and the engine declares no input by this name. */
+  "potencyDecision",
 ]);
 
 export function createConfigStore(backend) {

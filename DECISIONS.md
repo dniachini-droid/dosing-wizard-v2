@@ -1096,3 +1096,82 @@ exactly the list the owner asked never to be produced. That is why all four
 - The gate's absolute verdict is unchanged in kind: `CHK-RC-CATALOGUE`'s `CAPABILITY_`
   coverage line is closed as a side effect of restating a count that had to change anyway,
   and its `SAFETY_` line is a pre-existing defect that stays open and is out of scope here.
+
+---
+
+## DEC-026 — The application's record is the keeper's to amend, and the ledger's guarantees are restated around that
+
+- **ID:** DEC-026
+- **Date:** 2026-08-22
+- **Status:** ACTIVE
+
+**Decision**
+
+Owner decisions 31, 32 and 33 are **chemistry and data-provenance behaviour**. They live in
+`docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` §2.3A.3, §2.3A.4 and
+`ALK-POTENCY-CAPABILITY-GATE-001`, where the freeze, the fixture coverage and the reissue
+path apply to them. **This entry decides nothing about that behaviour and must not be read as
+authority for it** — `CLAUDE.md` is explicit that a chemistry rule recorded here would be a
+rule with no freeze, no coverage fixture and no governed reissue path.
+
+What it records is the **technical-architecture** consequence, which is this ledger's scope:
+the application's event ledger is no longer append-only, and three of its structural
+guarantees had to be restated rather than quietly weakened.
+
+1. **A deletion is three deletions, and they are one call.** `ledger.remove` takes the event,
+   every annotation targeting it, and every annotation whose `note` names it as a survivor;
+   `assessments.forgetEvent` takes every stored assessment whose `inputEventIds` include it;
+   `record.deleteRecord` calls both so that no caller can do one and forget the other. The
+   alternative — leaving a caller to remember — is how a tombstone survives a decision that
+   says there are none.
+
+2. **`inputEventIds` changes role and keeps its name.** It was written so that "replay this
+   assessment" could actually be done, per canon §64. It turns out to be exactly the index
+   that answers the opposite question: which stored answers depended on this record. Nothing
+   about it changes; it is worth recording that a field written for replay is now also what
+   makes deletion complete, because a later reader tempted to drop it would take both.
+
+3. **Canon §64's replay guarantee holds over what still exists.** A deletion changes the
+   ledger a replay would run against. Assessments that READ the deleted record are removed
+   with it, so the guarantee is not weakened for any assessment that remains — it is the
+   strongest form available once the ledger is amendable. Assessments that ran before the
+   record existed are untouched: they never depended on it, and deleting them would destroy a
+   true record of what the app said at a moment when the reading genuinely was not there.
+
+4. **A dismissal is keyed to the conclusion, not to the panel.** The correction panel's
+   dismissal signature carries the intervention and the response class the engine reached on
+   it. Delete the reading a conclusion rested on, the engine reclassifies from what remains,
+   the signature stops matching, and the panel returns saying what it said before. This is
+   what makes owner finding 16's worked example come out right **with no record that a
+   deletion happened** — nothing has to remember, which is the only design compatible with
+   "nothing anywhere says it ever existed." It is V1's own mechanism for a worse reading
+   bringing a finding straight back, applied to a different question.
+
+5. **Acceptance of a learned potency is a configuration write, not an engine path.** Owner
+   decision 33 is implemented by leaving the capability gate SHUT and having the keeper's
+   acceptance write `selectedPotencyDkhPerMl` into a new configuration version. The engine
+   gains no path by which a learned figure can size a dose without him, because the only
+   place that could do it is unchanged. `potencyDecision` records which way he decided, what
+   the estimate was at the time and on what day; it is application bookkeeping about a
+   setting, the engine declares no input by that name, and it is stripped on the way in
+   beside `potencyStatedAs`.
+
+**Consequences**
+
+- `ANNOTATION.MARK_INVALID` is removed from the vocabulary and from the fold. `project()`
+  can no longer produce the `INVALID` state; six filters that exclude it are now dead
+  conditions, recorded as `AI-026` rather than churned mid-round.
+- `correctReading` rewrites in place through `ledger.replace` and appends nothing. The event
+  id and ordinal are kept: they are what the record IS, and reissuing them would make an edit
+  indistinguishable from a delete-and-re-add for every index in the store.
+- `assertProvenanceNotImproved` still guards `append`, where superseding is still possible,
+  and is deliberately not called on `replace` — it guarded a chain, and there is no chain.
+- A fourth time constructor, `assignedDayInstant`, is built ON TOP of `assumedLocalInstant`
+  so there is one place that turns a local wall time and an offset into an instant, and one
+  shape of `reconstruction` record. `dateOnly` is kept and is still the honest answer for
+  every kind owner decision 31 does not cover.
+- The importer's natural key excludes an assigned hour. Without that, a re-import — the
+  documented cutover path — would write the keeper's whole history a second time.
+- `tools/port/reseal-manifest.mjs` is new: it reseals a ported file's manifest entry by
+  reconstructing V1's file from what is already committed, so a session with no V1 checkout
+  can still keep the manifest honest. It refuses to invent a reason.

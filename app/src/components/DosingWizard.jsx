@@ -3,11 +3,12 @@ import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
-import { fmtDate } from '../lib/dates.js'
-import { fmtQty } from '../lib/format.js'
+import { fmtDate, fmtShort } from '../lib/dates.js'
+import { chartDataFrom } from '../lib/adapt.js'
+import { fmtPotency, fmtQty } from '../lib/format.js'
 import { positionTone } from '../present/position.js'
 import {
-  PILL, boxes, potencySentence, reasonRows, recommendation, spanInWords,
+  PILL, boxes, correctionPanel, potencyBox, reasonRows, recommendation, spanInWords,
   statusParts, whyPanel, working,
 } from '../present/dosing-tab.js'
 import { sayPayloadKey, sayPayloadValue, sayReason } from '../present/wording.js'
@@ -81,27 +82,66 @@ export function DoseElementCard({ def, summary, selected, onSelect }) {
 }
 
 /* ---- a light-teal information panel, V1's surface ---------------------- */
+/* A PANEL STANDS OUT FROM THE PAGE — owner finding 10.
+
+   It was `#F3F7F6` on a `#F3F7F6` page: the same pale teal as the ground behind
+   it, so nothing on this tab read as a distinct element and the screen looked
+   flat rather than designed. The owner's instruction is a choice between two
+   schemes — "either a white page with teal boxes, or a teal page with white
+   boxes, not teal on teal" — and the page is already the teal one, so the
+   panels are the white ones.
+
+   White, a border and a soft shadow, which is the same surface `Card` uses.
+   Two definitions of "a raised surface" would drift apart, so this is deliberately
+   the same three values. */
 function Panel({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl p-3.5 ${className}`}
-      style={{ background: "#F3F7F6", border: "1px solid #E3ECEA" }}>
+    <div className={`rounded-2xl p-3.5 bg-card border border-app shadow-[0_1px_2px_rgba(15,40,45,0.04)] ${className}`}>
       {children}
     </div>
   );
 }
 
-/* ---- a grey secondary box, V1's surface -------------------------------- */
+/* THE THREE CONSUMPTION BOXES, RAISED — owner finding 10, in his own terms:
+   "darker teal, a shadow, and text chosen for contrast against whatever ground
+   they sit on."
+
+   They were `bg-app` on a `bg-app` page, which is why they disappeared into it.
+   They are the most-looked-at figures on the tab — what the tank uses, what the
+   dose supplies, and the difference — so they are the one surface here that is
+   deeper than the page rather than lighter than it, and they carry their own
+   shadow.
+
+   THE TEXT IS CHOSEN FOR THE GROUND, and that is not decoration. `tone` is
+   passed in by `boxes()` for a figure that carries a position colour, and a
+   position colour picked for dark text on a pale card is not legible on deep
+   teal. So a toned value keeps a pale card to sit on and an untoned one takes
+   the deep ground — rather than printing the engine's own colour on a
+   background it was never chosen against. */
+const DEEP_TEAL = "#0A6570";
+
 function Box({ label, value, sub, prose = false, tone = null }) {
+  const onDeep = !tone;
   return (
-    <div className="rounded-xl p-3 bg-app border border-app">
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink2 leading-tight">
+    <div className="rounded-xl p-3 border shadow-[0_2px_6px_rgba(8,25,29,0.12)] h-full"
+      style={{
+        background: onDeep ? DEEP_TEAL : "#FFFFFF",
+        borderColor: onDeep ? "#08525C" : "#E3ECEA",
+      }}>
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] leading-tight"
+        style={{ color: onDeep ? "#B7E2E3" : "#45605F" }}>
         {label}
       </div>
       <div className={`${prose ? "text-[13px]" : "text-[18px] tabular-nums"} font-black mt-1 leading-tight`}
-        style={{ color: tone || "#12312F" }}>
+        style={{ color: onDeep ? "#FFFFFF" : (tone || "#12312F") }}>
         {value == null ? t("dosing.boxes.notWorkedOut") : value}
       </div>
-      {sub && <div className="text-[10px] font-bold text-ink2 mt-0.5 leading-snug">{sub}</div>}
+      {sub && (
+        <div className="text-[10px] font-bold mt-0.5 leading-snug"
+          style={{ color: onDeep ? "#CDEBEB" : "#45605F" }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -198,32 +238,64 @@ function ShowWorking({ result, config, canExplain }) {
    app determines the dose has settled, or when a new dose change starts a new
    one — and the panel says so rather than offering to undo a thing that
    already happened. */
-function CorrectionInProgress({ result }) {
-  const iv = result && result.activeIntervention;
-  if (!iv || typeof iv !== "object") return null;
-  const at = iv.actualStartTime || iv.effectiveAt;
-  if (!at) return null;
+/* THE CHANGE YOU MADE, AND WHAT CAME OF IT.
 
-  const from = typeof iv.fromMlPerDay === "number" ? fmtQty(iv.fromMlPerDay, "mlPerDay") : null;
-  const to = typeof iv.toMlPerDay === "number" ? fmtQty(iv.toMlPerDay, "mlPerDay") : null;
-  const next = result.retest && result.retest.recommendedAt;
+   Finding 12. It renders `correctionPanel()`'s output and holds no rule: which
+   state applies, whether the engine has finished with it, and whether a test is
+   due now are all decided in `present/dosing-tab.js` from what the engine said.
+   This component chooses a sentence per state and draws a button. */
+function CorrectionPanel({ result, asOf, dismissed, onDismiss }) {
+  const p = correctionPanel(result, asOf);
+  if (!p) return null;
+  if (p.canDismiss && dismissed === p.signature) return null;
+
+  const stateLine =
+    p.state === "tooEarly"
+      ? (p.posts != null ? t("dosing.correction.tooEarly", { posts: p.posts })
+                         : t("dosing.correction.tooEarlyPlain"))
+      : t(`dosing.correction.${p.state}`);
 
   return (
     <Panel className="mb-3">
       <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.correction.title")}</h4>
-      {from && to && (
+      {p.from != null && p.to != null && (
         <p className="text-[12px] text-ink font-medium leading-relaxed">
-          {t("dosing.correction.body", { date: fmtDate(String(at).slice(0, 10)), from, to })}
+          {t("dosing.correction.body", {
+            date: fmtDate(p.changedOn),
+            from: fmtQty(p.from, "mlPerDay"),
+            to: fmtQty(p.to, "mlPerDay"),
+          })}
         </p>
       )}
-      {next && (
+
+      <p className="text-[12px] text-ink font-bold leading-relaxed mt-1">{stateLine}</p>
+
+      {/* The next test, and never as a date the keeper has already met. */}
+      {!p.terminal && p.nextTest && (
         <p className="text-[12px] text-ink font-medium leading-relaxed mt-1">
-          {t("dosing.correction.nextTest", { date: fmtDate(String(next).slice(0, 10)) })}
+          {p.nextTest.now
+            ? t("dosing.correction.nextTestNow")
+            : t("dosing.correction.nextTest", { date: fmtDate(String(p.nextTest.at).slice(0, 10)) })}
         </p>
       )}
-      <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-1.5">
-        {t("dosing.correction.ends")}
-      </p>
+
+      {p.offersNewDose && (
+        <p className="text-[12px] text-ink font-medium leading-relaxed mt-1">
+          {t("dosing.correction.newDose", { dose: fmtQty(p.recommendedDose, "mlPerDay") })}
+        </p>
+      )}
+
+      {p.canDismiss ? (
+        <button
+          onClick={() => onDismiss && onDismiss(p.signature)}
+          className="w-full mt-2.5 rounded-xl py-2 text-[12px] font-extrabold text-teal-brand border-2 border-app">
+          {t("dosing.correction.close")}
+        </button>
+      ) : (
+        <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-1.5">
+          {t("dosing.correction.ends")}
+        </p>
+      )}
     </Panel>
   );
 }
@@ -239,7 +311,20 @@ function DosingChart({ def, rows, chartEvents }) {
   const [days, setDays] = useState(7);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const shown = rows.filter((r) => r.date >= cutoff);
-  const data = shown.map((r, i) => ({ i, value: r.value, date: r.date, time: r.time }));
+
+  /* THE DATES AND THE DOSE-CHANGE MARKERS — owner finding 9, and one cause.
+
+     This built its own point shape: `{ i, value, date, time }`. The chart's
+     x-axis is `dataKey="label"` and its event markers place themselves by
+     matching an event's date to a point's `label`. Neither could find one, so
+     the axis drew no dates and the owner's four imported dose changes drew
+     nothing — on a chart that was already being handed them.
+
+     `chartDataFrom` is the shape every other chart in the app uses, and it is
+     where the label rule lives: where a day carries more than one reading the
+     label carries the time too, so two points on one day stay distinguishable.
+     Building a second point shape here was the defect; there is one now. */
+  const data = chartDataFrom(shown, fmtShort);
 
   return (
     <div className="mb-4">
@@ -259,9 +344,95 @@ function DosingChart({ def, rows, chartEvents }) {
   );
 }
 
+/* YOUR SOLUTION'S REAL STRENGTH — finding 13, owner-approved.
+
+   Renders `potencyBox()` and holds no rule: which sentence applies, whether the
+   estimate is confident enough to act on and whether the two figures agree are
+   all decided in `present/dosing-tab.js` from what the engine said.
+
+   THE TWO BUTTONS ARE THE WHOLE POINT AND THEY ARE NEVER PRE-PRESSED. Neither
+   is styled as the safe one, because neither is: the keeper's own figure may be
+   right and so may the tank's. Where the box does not offer them, nothing has
+   changed and nothing needs his attention. */
+function PotencyBox({ box, onAccept, onKeep }) {
+  const [open, setOpen] = useState(false);
+  const args = {
+    learned: box.learned == null ? "—" : fmtPotency(box.learned),
+    entered: fmtPotency(box.entered),
+    accepted: fmtPotency(box.entered),
+  };
+
+  return (
+    <Panel>
+      <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.potency.title")}</h4>
+
+      <p className="text-[12px] text-ink font-medium leading-relaxed">
+        {box.asksAgain ? t("dosing.potency.asksAgain", args) : t(`dosing.potency.${box.state}`, args)}
+      </p>
+
+      {/* Where the figure in use came from, once there is more than one place
+          it could have come from. The same line Setup shows. */}
+      {box.provenance && (
+        <p className="text-[11px] font-bold text-teal-brand leading-relaxed mt-1.5">
+          {t(box.provenance.key, {
+            value: fmtPotency(box.provenance.value),
+            date: fmtDate(box.provenance.date),
+          })}
+        </p>
+      )}
+
+      {box.working.length > 0 && (
+        <div className="mt-2">
+          <button onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
+            {t("dosing.reco.showWorking")}
+            {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+          {open && (
+            <div className="mt-2 rounded-xl border border-app p-3">
+              {box.working.map((line, i) => (
+                <p key={i} className="text-[12px] text-ink font-medium leading-relaxed mb-1 last:mb-0">
+                  {line}
+                </p>
+              ))}
+              {box.limits.length > 0 && (
+                <div className="mt-3">
+                  <h5 className="text-[12px] font-black text-ink mb-1">{t("dosing.potency.limitsHead")}</h5>
+                  {box.limits.map((r) => (
+                    <p key={r.code} className="text-[12px] text-ink2 font-medium leading-relaxed mb-1 last:mb-0">
+                      {sayReason(r.code)}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {box.offersChoice && (
+        <div className="flex gap-2 mt-3">
+          <button
+            className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-white bg-teal-brand"
+            onClick={() => onAccept && onAccept(box.learned)}>
+            {t("dosing.potency.useMeasured")}
+          </button>
+          <button
+            className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-teal-brand border-2 border-app"
+            onClick={() => onKeep && onKeep(box.learned)}>
+            {t("dosing.potency.keepEntered")}
+          </button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ---- the tab ------------------------------------------------------------ */
 export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
-  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null }) {
+  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
+  asOf = null, correctionDismissed = null, onDismissCorrection = null,
+  onAcceptPotency = null, onKeepPotency = null }) {
 
   const KEYS = ["ALK", "CA", "MG"];
   const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -276,7 +447,7 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
   const status = assessed ? statusParts(engineResult) : null;
   const rec = assessed ? recommendation(engineResult, rows.length) : null;
   const three = assessed ? boxes(engineResult) : null;
-  const potency = assessed ? potencySentence(engineResult) : null;
+  const potency = assessed ? potencyBox(engineResult, config) : null;
 
   return (
     <div>
@@ -326,7 +497,8 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
             </p>
           </Panel>
 
-          <CorrectionInProgress result={engineResult} />
+          <CorrectionPanel result={engineResult} asOf={asOf}
+            dismissed={correctionDismissed} onDismiss={onDismissCorrection} />
 
           {/* THE RECOMMENDATION. The most important thing on the screen, and it
               reads as sentences. */}
@@ -358,13 +530,9 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
             </div>
           )}
 
-          {/* THE POTENCY ESTIMATOR, its own box below everything, as a
-              sentence rather than four labelled figures. */}
+          {/* THE POTENCY ESTIMATOR, its own box below everything (finding 13). */}
           {potency && (
-            <Panel>
-              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.potency.title")}</h4>
-              <p className="text-[12px] text-ink font-medium leading-relaxed">{potency}</p>
-            </Panel>
+            <PotencyBox box={potency} onAccept={onAcceptPotency} onKeep={onKeepPotency} />
           )}
         </>
       )}

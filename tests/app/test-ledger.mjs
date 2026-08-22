@@ -273,22 +273,20 @@ s.test(
 
 s.test(
   "LED-06",
-  "superseded and invalid events are not sent to the engine; suspect ones are",
+  "superseded events are not sent to the engine; suspect ones are, and deleted ones no longer exist",
   async () => {
     const store = createMemoryStore();
     const kept = await store.ledger.append(reading(8.7, AT("2026-08-18", "07:40")));
     const replaced = await store.ledger.append(reading(8.6, AT("2026-08-19", "07:40")));
-    const invalid = await store.ledger.append(reading(99, AT("2026-08-20", "07:40")));
+    const deleted = await store.ledger.append(reading(99, AT("2026-08-20", "07:40")));
     const suspect = await store.ledger.append(reading(8.8, AT("2026-08-21", "07:40")));
 
     await store.ledger.append(
       reading(8.65, AT("2026-08-19", "07:40"), { supersedes: replaced.eventId, recordedAt: "2026-08-22T09:00:00Z" })
     );
-    await store.ledger.annotate({
-      type: ANNOTATION.MARK_INVALID,
-      targetEventId: invalid.eventId,
-      recordedAt: "2026-08-22T09:00:00Z",
-    });
+    /* Owner decision 32: the reading that should not have been counted is
+       DELETED, not annotated. There is no `MARK_INVALID` to annotate it with. */
+    await store.ledger.remove(deleted.eventId);
     await store.ledger.annotate({
       type: ANNOTATION.MARK_SUSPECT,
       targetEventId: suspect.eventId,
@@ -300,14 +298,15 @@ s.test(
     ok(values.includes(8.7), "the plain reading is sent");
     ok(values.includes(8.65), "the correction is sent");
     ok(!values.includes(8.6), "the superseded reading is not sent");
-    ok(!values.includes(99), "the invalid reading is not sent");
+    ok(!values.includes(99), "the deleted reading is not sent, because it is gone");
     ok(
       values.includes(8.8),
       "the suspect reading IS sent — the keeper doubting a reading is not a statement that it did not happen, " +
         "and eligibility is the engine's"
     );
-    /* Nothing was written to the ledger by asking what to send. */
-    eq((await store.ledger.allEvents()).length, 5, "the ledger is unchanged by projecting it");
+    /* Nothing was written to the ledger by asking what to send. Four, not the
+       five that were appended: the deleted one is gone rather than annotated. */
+    eq((await store.ledger.allEvents()).length, 4, "the ledger is unchanged by projecting it");
   }
 );
 
@@ -408,26 +407,35 @@ s.test("LED-08", "a dose event must say how sure it is of when it took effect", 
 
 s.test(
   "COR-01",
-  "a correction supersedes the original, and the original survives byte for byte",
+  "a correction rewrites the record, and the record holds the corrected value",
   async () => {
+    /* OWNER FINDING 17, replacing the rule this test used to pin. "If the
+       keeper recorded something in the past he can change it, and the engine
+       recalculates from the corrected value. No supersede chain. The record
+       holds the corrected value."
+
+       The defect it was built for is unchanged: 89 typed where 8.9 was meant.
+       What changed is what the store does about it. */
     const { correctReading } = await import("../../app/src/lib/record.js");
     const store = createMemoryStore();
-    /* The defect this exists for: 89 typed where 8.9 was meant. */
     const wrong = await store.ledger.append(reading(89, AT("2026-08-18", "07:40")));
-    const before = JSON.stringify(await store.backend.get(EVENTS, wrong.eventId));
 
     await correctReading(store, {
       eventId: wrong.eventId, param: "ALK", value: 8.9,
       date: "2026-08-18", time: "07:40",
     });
 
-    eq(JSON.stringify(await store.backend.get(EVENTS, wrong.eventId)), before,
-      "the original reading, untouched");
-    eq((await store.ledger.allEvents()).length, 2, "the correction is an append, not an edit");
+    eq((await store.ledger.allEvents()).length, 1, "there is one record, not a chain of two");
+    const after = await store.backend.get(EVENTS, wrong.eventId);
+    eq(after.normalizedValue, 8.9, "and it holds the corrected value");
+    eq(after.eventId, wrong.eventId, "under the id it always had");
+    eq(after.eventOrdinal, wrong.eventOrdinal, "keeping its place in the total order");
+    eq(after.source, "KEEPER_CORRECTION", "recorded as the keeper's own correction");
 
+    eq((await store.ledger.allAnnotations()).length, 0, "nothing is annotated");
     const rows = await store.ledger.projection();
-    eq(rows.find((r) => r.event.eventId === wrong.eventId).state, "SUPERSEDED",
-      "the original folds to superseded");
+    eq(rows.length, 1, "and the fold shows one reading");
+    eq(rows[0].state, "CURRENT", "which is current — there is nothing for it to be superseded by");
 
     /* And the engine is handed the corrected number, not the typo. */
     const sent = toEngineEvents(rows, "2026-08-20T00:00:00Z");
@@ -438,12 +446,14 @@ s.test(
 
 s.test(
   "COR-02",
-  "correcting a date-only reading produces a date-only reading, and cannot produce a timed one",
+  "correcting a value is not a statement about when, so no time box is honoured",
   async () => {
-    /* Correcting a NUMBER is not new information about WHEN. The store already
-       refuses an improvement (`TIME-02`); this pins that the correction path
-       does not try to make one, which is the thing a form with a time box on
-       it would do. */
+    /* Correcting a NUMBER is not new information about WHEN. Under owner
+       decision 31 a reading corrected without a time is assigned 09:00 like
+       every other reading, with the assignment written onto it — what this
+       pins is that the corrected record still says the hour was assigned and
+       still says nobody stated it. A correction may not turn an assumed hour
+       into a stated one. */
     const { correctReading } = await import("../../app/src/lib/record.js");
     const store = createMemoryStore();
     const original = await store.ledger.append(reading(89, dateOnly("2026-08-19")));
@@ -451,37 +461,97 @@ s.test(
     const fixed = await correctReading(store, {
       eventId: original.eventId, param: "ALK", value: 8.9, date: "2026-08-19", time: null,
     });
-    eq(fixed.time.timeProvenance, PROVENANCE.DATE_ONLY, "the correction keeps the provenance");
-    eq(fixed.time.absoluteInstant, undefined, "and gains no instant");
-
-    await throws(
-      () => correctReading(store, {
-        eventId: original.eventId, param: "ALK", value: 8.9,
-        date: "2026-08-19", time: "07:40",
-      }),
-      "provenance may not improve",
-      "a correction that tries to add a time"
-    );
+    eq(fixed.normalizedValue, 8.9, "the value is corrected");
+    eq(fixed.time.localTime, "09:00", "and the hour is the assigned one");
+    eq(fixed.time.reconstruction.assignedTimeOfDay, "09:00", "still declared as assigned");
+    eq(fixed.time.reconstruction.statedByKeeper, false, "and still not something the keeper said");
   }
 );
 
 s.test(
   "COR-03",
-  "taking a reading out stops it counting, and does not erase it",
+  "a deleted reading is gone — from the ledger, from the engine, and from every assessment that read it",
   async () => {
-    const { markInvalid } = await import("../../app/src/lib/record.js");
+    /* OWNER DECISION 32, replacing the rule this test used to pin. "A deleted
+       record is gone. From the ledger, from storage, from every screen. No
+       tombstone, no marked invalid, no supersede annotation, no audit trail.
+       Nothing anywhere says it ever existed." */
+    const { deleteRecord } = await import("../../app/src/lib/record.js");
     const store = createMemoryStore();
-    const ev = await store.ledger.append(reading(8.9, AT("2026-08-18", "07:40")));
-    const before = JSON.stringify(await store.backend.get(EVENTS, ev.eventId));
+    const kept = await store.ledger.append(reading(8.7, AT("2026-08-17", "07:40")));
+    const doomed = await store.ledger.append(reading(8.9, AT("2026-08-18", "07:40")));
 
-    await markInvalid(store, ev.eventId);
+    /* An annotation on it, and an assessment that read it. Both have to go. */
+    await store.ledger.annotate({
+      type: ANNOTATION.MARK_SUSPECT,
+      targetEventId: doomed.eventId,
+      recordedAt: "2026-08-19T09:00:00Z",
+      note: "cloudy sample",
+    });
+    await store.assessments.record({
+      engineResult: { position: "IN_RANGE" },
+      asOf: "2026-08-19T09:00:00Z",
+      localDate: "2026-08-19",
+      inputEventIds: [kept.eventId, doomed.eventId],
+      configVersionId: "CFG-V1",
+      describe: {},
+    });
+    const survivor = await store.assessments.record({
+      engineResult: { position: "IN_RANGE", note: "earlier" },
+      asOf: "2026-08-17T09:00:00Z",
+      localDate: "2026-08-17",
+      inputEventIds: [kept.eventId],
+      configVersionId: "CFG-V1",
+      describe: {},
+    });
+    eq((await store.assessments.all()).length, 2, "two assessments are stored to begin with");
 
-    eq(JSON.stringify(await store.backend.get(EVENTS, ev.eventId)), before,
-      "the reading itself is untouched");
+    await deleteRecord(store, doomed.eventId);
+
+    eq(await store.backend.get(EVENTS, doomed.eventId), undefined, "the event is gone from storage");
+    const events = await store.ledger.allEvents();
+    eq(events.length, 1, "one record remains");
+    eq(events[0].eventId, kept.eventId, "and it is the one that was kept");
+
+    eq((await store.ledger.allAnnotations()).length, 0, "its annotation went with it");
     const rows = await store.ledger.projection();
-    eq(rows[0].state, "INVALID", "it folds to invalid");
-    eq(toEngineEvents(rows, "2026-08-20T00:00:00Z").length, 0,
-      "and it is not sent to the engine");
+    eq(rows.length, 1, "the fold has nothing left to say about it");
+    ok(!JSON.stringify(rows).includes(doomed.eventId), "nothing anywhere still names it");
+
+    eq(toEngineEvents(rows, "2026-08-20T00:00:00Z").length, 1,
+      "the engine is given what remains, as though it was never entered");
+
+    const left = await store.assessments.all();
+    eq(left.length, 1, "the assessment that read it is gone too");
+    eq(left[0].assessmentId, survivor.record.assessmentId,
+      "and the one that never read it is untouched");
+  }
+);
+
+s.test(
+  "COR-04",
+  "any record, any age, and deleting one does not disturb the ones around it",
+  async () => {
+    /* "Any record, any age. Not only the most recent. Delete a reading from
+       three days ago and everything downstream recomputes normally." */
+    const { deleteRecord } = await import("../../app/src/lib/record.js");
+    const store = createMemoryStore();
+    const days = ["2026-08-15", "2026-08-16", "2026-08-17", "2026-08-18"];
+    const made = [];
+    for (const d of days) made.push(await store.ledger.append(reading(8.9, AT(d, "07:40"))));
+
+    /* The middle one — neither first nor last. */
+    await deleteRecord(store, made[1].eventId);
+
+    const events = await store.ledger.allEvents();
+    eq(events.length, 3, "three remain");
+    ok(!events.some((e) => e.eventId === made[1].eventId), "and the deleted one is not among them");
+    for (const survivor of [made[0], made[2], made[3]]) {
+      const still = await store.backend.get(EVENTS, survivor.eventId);
+      ok(still, `${survivor.eventId} is untouched`);
+    }
+    eq(toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z").length, 3,
+      "and the engine sees three readings");
   }
 );
 

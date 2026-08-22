@@ -35,7 +35,7 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
   onMarkDone, onAddTask, onDeleteTask, onUpdateTask,
   onSetTaskDue, onSetTaskInterval, onSkipTask,
   onAddWaterChange, onAddOneOff, onAddLightingChange, onAddNote,
-  waterChanges = [], onOpenTest = () => {} }) {
+  waterChanges = [], onOpenTest = () => {}, onDeleteDone = null }) {
 
   /* ---- the water-change prompt: litres, and nothing else ---------------- */
   const [wcOpen, setWcOpen] = useState(null);
@@ -315,7 +315,7 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
           glance. */}
       <SectionTitle eyebrow="History" title="Done & coming up" />
       <CompletionCalendar taskLog={completions} reminders={tasks} waterChanges={waterChanges}
-        onPickTask={onPickTask} />
+        onPickTask={onPickTask} onDeleteDone={onDeleteDone} />
 
       {sheetTask && (
         <ReminderSheet rem={sheetTask} state={sheetState} onClose={closeSheet}

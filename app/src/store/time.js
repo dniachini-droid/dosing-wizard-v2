@@ -231,7 +231,50 @@ export const ASSUMPTION = Object.freeze({
   /* The device's own offset, applied because nothing better exists and the tank
      does not move. Not a statement by anybody. */
   DEVICE_ZONE: "ASSUMED_DEVICE_ZONE",
+  /* The time of day itself, assigned to a record that carried only a date.
+     Owner decision 31 — see `ASSIGNED_TIME_OF_DAY` below. */
+  TIME_OF_DAY: "ASSIGNED_TIME_OF_DAY",
 });
+
+/* --- OWNER DECISION 31: A DATE-ONLY READING IS ASSIGNED 09:00 -------------
+
+   THE DECISION, IN THE OWNER'S WORDS AND WITH HIS REASONING.
+
+   "Any reading carrying only a date is assigned 09:00 and becomes a fully timed
+   reading for every purpose." His reasoning: across a whole history, time of day
+   changes almost nothing, and a complete record is worth more than a scrupulous
+   gap. He has 325 date-only readings and wants to see the app work on his real
+   data.
+
+   WHAT IT OVERRIDES, STATED PLAINLY RATHER THAN WORKED AROUND.
+
+   `DATA-PROVENANCE.md` §2 and owner decision 30 both forbid assigning a time
+   that was not recorded, and `DATA-PROVENANCE.md` §61 names the failure mode
+   exactly: "no defaulting an unknown time to midnight, midday, or any other
+   placeholder that would later be read as a real timestamp." This assigns
+   09:00, which is such a placeholder. The owner has been told and has decided.
+   The conflict is recorded in `docs/implementation/app/OPEN-ITEMS.md` and the
+   canon is amended rather than reinterpreted.
+
+   WHY 09:00 IS SAFE HERE, WHICH IS NOT THE SAME AS THE RULE BEING WRONG.
+
+   The rule exists because a fabricated time is afterwards indistinguishable
+   from a real one. That is what the `reconstruction` record below prevents: the
+   record says the time was assigned, says nobody stated it, and says which hour
+   was used. It is not indistinguishable, and the import screen will say so too.
+
+   And the quantity the engine computes from these times is the elapsed interval
+   between readings. Assigning the SAME hour to every date-only record leaves
+   every interval between two of them exactly right, to the day. What it can
+   distort is the interval between an assigned record and a genuinely timed one,
+   by up to a few hours against gaps measured in days — the same order as the
+   daylight-saving question the owner has already ruled irrelevant.
+
+   WHAT IT DOES NOT DO. It does not unpick the canon time amendment (PR #16).
+   The retired reason codes stay retired: they were removed because announcing
+   the same fact in five places was wrong regardless, and this decision does not
+   make them right. It makes them unreachable, which is a different thing. */
+export const ASSIGNED_TIME_OF_DAY = "09:00";
 
 /* An instant built from a local wall time and ONE assumed offset, carrying the
    assumption that produced it.
@@ -272,6 +315,32 @@ export function assumedLocalInstant(localDate, localTime, offsetMinutes, assumpt
       statedByKeeper: false,
       offsetMinutes: off,
     }),
+  });
+}
+
+/* A record that carried only a date, given the assigned hour and the record of
+   the assignment.
+
+   It is built ON TOP of `assumedLocalInstant` rather than beside it, so there is
+   one place that turns a local wall time and an offset into an instant, and one
+   shape of `reconstruction` record. What this function adds is the hour and the
+   statement that the hour was assigned.
+
+   `dateOnly` is deliberately NOT deleted. It is still the honest answer for any
+   record this decision does not cover, and a caller that wants a timeless record
+   must still be able to build one — the point of that constructor was that the
+   absence of a time cannot be defaulted away by omitting an argument, and that
+   remains true. What changes is which callers choose it. */
+export function assignedDayInstant(localDate, offsetMinutes, assumption) {
+  if (!localDate) throw new Error(t("err.dateOnlyNeedsDate"));
+  return assumedLocalInstant(localDate, ASSIGNED_TIME_OF_DAY, offsetMinutes, {
+    ...(assumption || {}),
+    basis: ASSUMPTION.TIME_OF_DAY,
+    appliedAt: assumption && assumption.appliedAt ? assumption.appliedAt : nowIso(),
+    /* The hour is part of what was assumed, so it travels with the record. A
+       later reader must be able to tell 09:00-because-assigned from
+       09:00-because-measured, and this is the field that tells them. */
+    assignedTimeOfDay: ASSIGNED_TIME_OF_DAY,
   });
 }
 
