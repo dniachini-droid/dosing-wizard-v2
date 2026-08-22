@@ -763,39 +763,30 @@ s.test("TM-23", "nothing outside the listed places reads the wall clock", () => 
   ok(/async today\(\) \{\s*\n\s*return todayLocal\(\);/.test(schedule), "the task store's today is the app's today");
 });
 
-s.test("TM-24", "test mode has no surface in this build, and that is recorded", () => {
-  /* RETIRED WITH THE SHELL IT PINNED, AND SAYING SO RATHER THAN PASSING
-     QUIETLY.
+s.test("TM-24", "test mode has a surface again, and the shell actually follows the mode", () => {
+  /* THIS TEST USED TO PIN THE ABSENCE, AND THAT WAS RIGHT AT THE TIME.
 
-     This test read `app/src/main.js` and pinned the shape of test mode's
-     surface: that stepping the instant moved the day label AND recomputed the
-     assessment, that switching stores dropped the previous store's answer, and
-     that the marker was drawn on every render including the crash render.
+     The V1 interface port deleted the shell that carried test mode's screen
+     and did not carry the screen across. `store/mode.js` survived untouched,
+     so the mechanism was intact and the way in was gone. Rather than delete
+     the test and make a real loss invisible, it asserted the true thing: the
+     mechanism is here, the surface is not, and the omission is written down.
 
-     The V1 interface port deleted that shell and did not carry test mode's
-     screen across — the brief specifies five tabs and none of them is it.
-     `app/src/store/mode.js` survives untouched, so the mechanism is intact and
-     nothing about the record changed; what is gone is the way in.
+     Round three, item 9 restores the surface, so the true thing has changed
+     and so has the test. What it checks now is the pair of properties whose
+     absence made the port's version of this a loss:
 
-     Re-pointing the assertions at the new shell would have meant asserting a
-     shape that does not exist, and deleting the test outright would have made
-     a real loss invisible. So it asserts the true thing: the mechanism is
-     still here and the surface is not, and the omission is written down where
-     the owner reads it.
+       1. there is a route in — an interface file that imports the module;
+       2. the shell BUILDS ITS STORE from the mode.
 
-     `docs/migration/PORT-OMISSIONS.md` carries what restoring it needs. */
+     The second is the one that matters and the one a screen alone would not
+     have given. `App.jsx` called `createStore()` unconditionally, so even with
+     a screen wired the app would have read the real tank in test mode — which
+     is the single failure the whole real/test separation exists to prevent. */
   const mode = fs.readFileSync(path.join(ROOT, "app/src/store/mode.js"), "utf8");
   ok(/export function enterTestMode/.test(mode), "the mechanism is still here");
   ok(/export function setClock|setClock\(/.test(mode), "and it still owns the clock");
 
-  /* A ROUTE, not a mention. The shell may well talk about test mode in a
-     comment — it does, to explain why the Test tab's state is not called
-     `testMode` — and a check that a word is absent from a file would fail on
-     that and pass on a real route spelled differently. What makes a route is
-     importing the module that owns the mode. */
-  const app = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
-  ok(!/^import[^\n]*from\s+['"]\.\/store\/mode\.js['"]/m.test(app),
-    "the ported shell imports the test-mode module — it has a route in after all");
   const files = [];
   const walk = (dir) => {
     for (const name of fs.readdirSync(dir)) {
@@ -807,10 +798,20 @@ s.test("TM-24", "test mode has no surface in this build, and that is recorded", 
   walk(path.join(ROOT, "app/src"));
   const importers = files.filter((f) =>
     /^import[^\n]*from\s+['"][^'"]*store\/mode\.js['"]/m.test(fs.readFileSync(f, "utf8")));
-  eq(importers.length, 0, `no interface file reaches test mode: ${importers.join(", ")}`);
+  ok(importers.length > 0, "an interface file reaches test mode");
 
-  const omissions = fs.readFileSync(path.join(ROOT, "docs/migration/PORT-OMISSIONS.md"), "utf8");
-  ok(/test mode/i.test(omissions), "and the omission is recorded for the owner");
+  /* The route is a screen, not just an import. */
+  ok(fs.existsSync(path.join(ROOT, "app/src/components/TestMode.jsx")),
+    "and the screen itself exists");
+
+  /* And the shell takes its STORE from the mode, rather than always the real
+     one. Behavioural in the sense that matters: this is the line whose absence
+     would put test readings in the keeper's own tank. */
+  const app = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
+  ok(/storeForMode\(/.test(app), "the shell builds its store from the mode");
+  ok(/applyClock\(\)/.test(app), "and applies the mode's clock");
+  ok(!/if \(!storeRef\.current\) storeRef\.current = createStore\(\);/.test(app),
+    "and no longer builds the real store unconditionally");
 });
 
 s.test("TM-25", "the tank facts are stamped at the app's own instant, so a backdated assessment resolves one", async () => {

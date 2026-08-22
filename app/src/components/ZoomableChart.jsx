@@ -206,7 +206,31 @@ export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin
         if (!seen.has(k)) { seen.add(k); out.push({ ...ev, label: best.label }); }
       }
     }
-    return out.slice(0, 25);
+
+    /* ROUND THREE, ITEM 6 — MARKER DENSITY.
+
+       Every water change in the imported history drew its own dashed vertical
+       line. On a 7-day view that is one or two and they are useful; on the
+       90-day view it was roughly twenty, and twenty dashed lines across a
+       chart obscure the trace they are annotating. The markers stopped being
+       annotation and became the picture.
+
+       So they thin as the window widens. The rule is a budget rather than a
+       cutoff date: a chart gets about one marker per eight visible readings,
+       never fewer than four and never more than twelve, and when there are
+       more than the budget the ones kept are spread evenly across the window
+       rather than taken from one end — a chart that drew every marker in
+       February and none in August would misrepresent the history worse than
+       drawing none at all.
+
+       Nothing is hidden that the keeper cannot reach: the full list is his
+       history, and this is one chart's annotation layer. */
+    const budget = Math.max(4, Math.min(12, Math.round(visible.length / 8)));
+    if (out.length <= budget) return out;
+    const step = out.length / budget;
+    const thinned = [];
+    for (let i = 0; i < budget; i += 1) thinned.push(out[Math.floor(i * step)]);
+    return thinned;
   }, [events, visible]);
 
   if (!described) {

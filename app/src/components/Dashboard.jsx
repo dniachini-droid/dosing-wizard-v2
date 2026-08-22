@@ -96,7 +96,14 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           list, and it is a tile like the others rather than a full-width card. */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8 items-stretch">
         {paramDefs.map((def) => {
-          const content = cardContent(def, engineResult, assessmentState);
+          /* Round three, item 13: the keeper's own range and his latest
+             reading, so an unassessed parameter is placed against the two
+             numbers he typed rather than rendered grey. `def.min`/`def.max`
+             are already `keeperRange`'s answer — the one owner of "which
+             range is his". */
+          const content = cardContent(def, engineResult, assessmentState,
+            latestByParam[def.key],
+            def.min != null && def.max != null ? { min: def.min, max: def.max } : null);
           return (
             <ParamCard key={def.key} def={def} reading={latestByParam[def.key]}
               recent={recentRangeByParam[def.key]}

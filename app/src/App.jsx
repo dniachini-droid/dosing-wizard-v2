@@ -22,6 +22,8 @@ import {
   recordReading, recordWaterChange,
 } from './lib/record.js'
 import { createStore } from './store/index.js'
+import { MODE, applyClock, currentMode, storeForMode } from './store/mode.js'
+import { TestMode, TestModeMarker } from './components/TestMode.jsx'
 import { KIND } from './store/ledger.js'
 import { autoCompletions, computeSchedule, makeTask, TASK_KIND } from './store/schedule.js'
 import { runAssessment, nowAsOf } from './assess.js'
@@ -125,8 +127,26 @@ function doseSummaries(engineResult, paramDefs, assessmentState) {
 }
 
 export function ReefConsoleInner() {
+  /* ROUND THREE, ITEM 9 — TEST MODE WAS UNREACHABLE.
+
+     `store/mode.js` survived the port whole, and nothing imported it. The
+     store was built with `createStore()` unconditionally, so the app always
+     read the real tank whatever the mode said, and the clock was never
+     applied.
+
+     `storeForMode` is the one owner of which database is in force, and
+     `applyClock` the one owner of what "now" means. Both are called here and
+     nowhere else. `modeTick` re-runs this when the screen switches modes, so
+     the store the app holds and the mode the module reports cannot disagree. */
+  const [modeTick, setModeTick] = useState(0);
+  const mode = currentMode();
   const storeRef = useRef(null);
-  if (!storeRef.current) storeRef.current = createStore();
+  const storeModeRef = useRef(null);
+  if (!storeRef.current || storeModeRef.current !== mode) {
+    applyClock();
+    storeRef.current = mode === MODE.TEST ? storeForMode(mode) : createStore();
+    storeModeRef.current = mode;
+  }
   const store = storeRef.current;
 
   const [loaded, setLoaded] = useState(false);
@@ -576,7 +596,25 @@ export function ReefConsoleInner() {
   const modalDef = modalParam ? paramDefs.find((d) => d.key === modalParam) : null;
 
   return (
-    <div className="min-h-screen bg-app text-ink font-body">
+    /* ROUND THREE, ITEM 7 — THE TAB BAR SCROLLED WITH THE CONTENT.
+
+       `min-h-screen` on the shell plus `fixed bottom-0` on the nav is pinned
+       only while the visual viewport and the layout viewport agree, and on a
+       phone they do not: iOS Safari's toolbars shrink the visual viewport as
+       you scroll, so `100vh` overhangs the screen, the document grows past it
+       and the bar rides down with the content, leaving a band of dead grey
+       below it and a cut-off look at the fold.
+
+       `100dvh` is the DYNAMIC viewport height — the one that tracks the
+       toolbars — and the shell is now a flex column that owns its own scroll
+       region. The nav is a flex sibling of that region rather than a fixed
+       element floating over a document taller than the screen, so it cannot
+       ride anywhere: the content scrolls inside `<main>` and the bar is
+       always the last row of the viewport.
+
+       `min-h-screen` is kept as the fallback for a browser with no `dvh`. */
+    <div className="bg-app text-ink font-body flex flex-col min-h-screen"
+      style={{ height: "100dvh" }}>
       <style>{`
         .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
         .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
@@ -608,7 +646,10 @@ export function ReefConsoleInner() {
         }
       `}</style>
 
-      <div className="flex">
+      {/* The row that holds the desktop sidebar and the content. It is the
+          flex child that takes the leftover height, and it owns the overflow
+          so `<main>` inside it is the only thing that scrolls. */}
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar - desktop */}
         <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-app px-4 py-6 bg-white">
           <div className="flex items-center gap-2 px-2 mb-8">
@@ -649,11 +690,19 @@ export function ReefConsoleInner() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 px-4 md:px-8 max-w-6xl"
+        <main className="flex-1 px-4 md:px-8 max-w-6xl overflow-y-auto"
           style={{
             paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))",
-            paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
+            /* The nav is a sibling now and takes its own height, so this no
+               longer has to reserve 6rem for a bar floating over it. */
+            paddingBottom: "1.5rem",
+            WebkitOverflowScrolling: "touch",
           }}>
+
+          {/* The one failure the whole real/test separation exists to prevent
+              is a keeper reading a test answer as his own tank's, so the
+              marker is loud and is on every screen while the mode is on. */}
+          <TestModeMarker key={modeTick} />
 
           {storageMsg && (
             <div className="mb-4 rounded-xl p-3 border-2" style={{ background: "#C4285B12", borderColor: "#C4285B55" }}>
@@ -750,6 +799,7 @@ export function ReefConsoleInner() {
               engineResult={engineResult}
               doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
               onSetStandingDose={setStandingDose}
+              onModeChange={() => setModeTick((n) => n + 1)}
               lightingChanges={lightingChanges}
               hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}
               onRestoreAllNotices={restoreAllNotices}
@@ -794,7 +844,7 @@ export function ReefConsoleInner() {
       </div>
 
       {/* Bottom nav - mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
+      <nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {NAV.map((n) => {
           const Icon = NAV_ICON[n.icon];

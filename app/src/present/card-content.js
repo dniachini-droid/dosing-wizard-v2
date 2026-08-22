@@ -25,8 +25,8 @@
    ========================================================================= */
 
 import { selectCard, isPresent } from "./cards.js";
-import { positionTone, positionWord, knownPosition } from "./position.js";
-import { sayReason, saySeverity } from "./wording.js";
+import { keeperPosition, positionTone, positionWord, knownPosition } from "./position.js";
+import { sayAction, sayOuter, sayReason, saySeverity } from "./wording.js";
 import { t } from "../strings.js";
 
 /* Which trajectory values are a DIRECTION the card can draw an arrow for.
@@ -83,24 +83,65 @@ const SEVERITY_ORDER = { REFUSAL: 0, GATING: 1, INFO: 2 };
 const SEVERITY_TONE = { REFUSAL: "#C4285B", GATING: "#A2621B", INFO: "#45605F" };
 
 export function cardNotice(engineResult) {
-  const codes = engineResult?.reasonCodes;
-  if (!Array.isArray(codes) || !codes.length) return null;
-  const ranked = codes
-    .map((c, i) => ({ ...c, seq: i, order: SEVERITY_ORDER[c.severity] ?? 3 }))
-    .sort((a, b) => a.order - b.order || a.seq - b.seq);
-  const top = ranked[0];
-  if (!top) return null;
+  /* ROUND THREE, ITEM 14 — THE STRIP CARRIED A RAW REASON CODE.
+
+     It read `A RECORD CARRIES A TIME ...`, truncated, because the strip was
+     built by ranking every reason code the engine emitted and rendering the
+     top one's sentence. That is the engine talking about its own inputs, and
+     the strip is not for that: it is for what the engine has to say about THE
+     TANK, in the keeper's language.
+
+     The specific code behind that message is gone — stage 1's `AI-014` fix
+     stops the app sending a date-only reading in a shape the engine has to
+     call malformed — but the rule stands whatever the engine emits next, and
+     it is enforced here rather than by hoping no code is ever ugly again:
+     REASON CODES DO NOT REACH THIS STRIP AT ALL. They live last, inside Show
+     working on the Dosing tab, which is `17-DOSING-TAB-SPEC.md`'s rule for
+     them — "never on the face of the screen, never in a notification strip".
+
+     What is left is the two things the engine says about the tank that a
+     keeper needs on a card: it wants the dose changed, or the tank is outside
+     the safe outer bounds. Both are read from the engine's own structured
+     output, not from a code, and both are already worded. Anything else and
+     the strip is absent, which is the honest answer — a card with nothing
+     urgent to say should say nothing. */
+  if (!engineResult) return null;
+
+  const dose = engineResult.doseRecommendation;
+  const outer = engineResult.outerBoundState;
+
+  let id, title, severity;
+  if (outer === "BREACH_LOW" || outer === "BREACH_HIGH") {
+    id = `SAFETY:${outer}`;
+    title = sayOuter(outer);
+    severity = "REFUSAL";
+  } else if (
+    dose && dose.action === "SET_MAINTENANCE_DOSE"
+    && isPresent(dose.recommendedDoseMlPerDay)
+  ) {
+    id = "DOSE:SET_MAINTENANCE_DOSE";
+    title = sayAction(dose.action);
+    severity = "GATING";
+  } else {
+    return null;
+  }
+  if (!title) return null;
+
   return {
-    /* The identity the dismissal machinery keys on. Both halves are the
-       engine's: the code it raised and the payload it attached. */
-    id: top.code,
-    title: sayReason(top.code),
-    text: sayReason(top.code),
-    detail: sayReason(top.code),
-    severity: top.severity,
-    severityWord: saySeverity(top.severity),
-    payload: top.payload || {},
-    tone: SEVERITY_TONE[top.severity] || SEVERITY_TONE.INFO,
+    /* The identity the dismissal machinery keys on, and the signature that
+       brings a dismissed notice back when the numbers change. Both are still
+       the engine's — what changed is that they name the engine's ANSWER
+       rather than one of the codes it emitted on the way to it. */
+    id,
+    title,
+    text: title,
+    detail: title,
+    severity,
+    severityWord: saySeverity(severity),
+    payload: dose && isPresent(dose.recommendedDoseMlPerDay)
+      ? { recommendedDoseMlPerDay: dose.recommendedDoseMlPerDay }
+      : {},
+    tone: SEVERITY_TONE[severity] || SEVERITY_TONE.INFO,
     /* Where tapping it should go, WHEN the engine's own output identifies a
        dose recommendation. The brief allows this link only if it can be made
        from what the engine emits, and this is the test of that: an action of
@@ -112,11 +153,29 @@ export function cardNotice(engineResult) {
   };
 }
 
-/* Everything a card needs, in one call, so no screen assembles it twice. */
-export function cardContent(def, engineResult, assessmentState = null) {
+/* Everything a card needs, in one call, so no screen assembles it twice.
+
+   ROUND THREE, ITEM 13. An unassessed parameter used to come out of here with
+   `position: null`, which gave it the unknown tone — so its value, its range
+   marker and its status line all rendered grey, and a perfectly good reading
+   looked like a broken one.
+
+   It now gets its position from the keeper's own range, which is not chemistry
+   and has no engine to wait for: see `keeperPosition`. `latest` is the reading
+   to place, and `range` is the keeper's two numbers; either being absent leaves
+   the position null exactly as before, because "no range set" and "no reading"
+   are both still genuinely unknown.
+
+   ASSESSED PARAMETERS ARE UNTOUCHED. Alkalinity's position is the engine's and
+   the branch below is the only reader of `keeperPosition` anywhere. What the
+   unassessed ones still do not get is `card`, `direction` or `notice` — those
+   are inferences with an owner, and they stay null. */
+export function cardContent(def, engineResult, assessmentState = null, latest = null, range = null) {
   const assessed = !!def.assessed;
   const result = assessed ? engineResult : null;
-  const position = result && knownPosition(result.position) ? result.position : null;
+  const position = assessed
+    ? (result && knownPosition(result.position) ? result.position : null)
+    : keeperPosition(latest && typeof latest.value === "number" ? latest.value : null, range);
   return {
     position,
     tone: positionTone(position),

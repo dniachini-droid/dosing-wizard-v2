@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react'
 import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
 import { Card, DeleteButton } from './ErrorBoundary.jsx'
 import {
-  Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, SunMedium, Upload, Waves,
+  Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 } from '../icons.jsx'
 import { fmtAmount, fmtVal, fmtTime } from '../lib/format.js'
 import { todayStr, fmtDate } from '../lib/dates.js'
 import { nowTime } from '../lib/clock.js'
 import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
 import { ImportPanel } from './ImportPanel.jsx'
+import { TestMode } from './TestMode.jsx'
+import { MODE, currentMode } from '../store/mode.js'
 import { t } from '../strings.js'
 
 /* ---------------------------------- Setup ---------------------------------- */
@@ -67,10 +69,11 @@ function SetupSection({ icon: Icon, category, colour, heading, subtitle, open, o
 export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
   doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
   lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
-  onExport, store = null, onImported = null,
+  onExport, store = null, onImported = null, onModeChange = null,
   storageHealth = null }) {
 
   const [openId, setOpenId] = useState(null);
+  const testModeOn = currentMode() === MODE.TEST;
   const toggle = (id) => setOpenId(openId === id ? null : id);
 
   /* ---- the keeper's facts ---------------------------------------------- */
@@ -460,6 +463,16 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
             </div>
           </>
         )}
+      </SetupSection>
+
+      {/* ---- test mode ---------------------------------------------------
+           ROUND THREE, ITEM 9. Here rather than on the tab bar because, in the
+           port's own words, "it is not part of keeping a tank". */}
+      <SetupSection icon={Settings2} category="Tools" colour="#A2621B"
+        heading={t("testmode.title")}
+        subtitle={testModeOn ? t("testmode.on") : t("testmode.off")}
+        open={openId === "testmode"} onToggle={() => toggle("testmode")}>
+        <TestMode onModeChange={onModeChange} />
       </SetupSection>
 
       {/* ---- lighting ---------------------------------------------------- */}
