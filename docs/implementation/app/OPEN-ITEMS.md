@@ -196,6 +196,42 @@ app is opened.
 
 ## AI-008 — The `DATE_ONLY` wire representation contradicts itself (CONTRACT)
 
+> **RESOLVED by owner decision 30 (21 August 2026).** A reading with no usable instant is
+> **not transmitted as an `Instant` at all**: `ALK-V2-DATA-CONTRACT.md` §1 now declares
+> `ObservedTime`, of which `Instant` is the narrowing to the two provenances that carry an
+> `absoluteInstant`. A `DATE_ONLY` reading carries `calendarDate`; a
+> `LOCAL_TIME_ZONE_UNKNOWN` reading carries `localDateTime`; neither carries an
+> `absoluteInstant`. Both contract statements now hold together, because the shape the
+> record is sent in is the shape the contract declares for its provenance.
+>
+> The third bad option the analysis below did not have — say nothing, and let the engine
+> report a validation failure — is also closed. The engine no longer treats a record
+> honouring its own provenance as malformed. `VALIDATION_TIMESTAMP_INVALID` is **narrowed**
+> to a record that claims a usable instant and does not supply a readable one, which is what
+> it was always for.
+>
+> **What the keeper stops seeing.** The app's own honest *"kept in your history; it cannot
+> be used for the trend"* no longer sits beside the engine's *"a record carries a time that
+> could not be read"*, because the engine says nothing at all. Whether the app's own
+> sentence should also go is an interface question and is not decided here; under decision
+> 30 there is nothing left for it to contradict.
+>
+> **The application still sends the old shape.** This build was not permitted to touch the
+> interface, so `store/import-v1.js` and `store/time.js` still emit a bare calendar day
+> where the contract now asks for `calendarDate`. That is a one-field rename in the writer
+> and is the whole of the remaining work; it is recorded below as `AI-014` rather than done
+> here. Until it is done the engine treats those records as malformed for want of the
+> declared field — the same visible outcome as before the amendment, from a different and
+> now-fixable cause.
+>
+> Encoded in canon Part II §2.3A.1, §2.3A.2, `M-8`, `M-13`, `X-INV-007`;
+> `ALK-V2-DATA-CONTRACT.md` §1 and `Reading.measuredAt`; `ALK-V2-ALGORITHM-CONTRACT.md`
+> `A1`; `INV-H6`; fixtures `AD-TIME-001`, `AD-TIME-002`, `WG-ALK-066`, `INV-TIME-001`;
+> mutations `E-28` … `E-31`.
+>
+> Everything below this box is the pre-decision analysis, preserved as the record of why the
+> decision was needed.
+
 **Where.** `docs/implementation/alk-v2/ALK-V2-DATA-CONTRACT.md:87` against §1's
 `Reading.measuredAt`.
 
@@ -412,6 +448,36 @@ it and are open:
   way: a default nobody typed must never be recorded as something the keeper
   said.
 
+#### Assessed under owner decision 30 — the mechanism is KEPT, and the conflict stays open
+
+Owner decision 30 asks whether this mechanism is still needed, on the reasoning that if
+those readings are silently ineligible either way the assumption buys nothing. **It buys
+something, and the premise does not reach it.**
+
+The mechanism never touched the 325 date-only rows. `import-v1.js`'s `timeFor` has exactly
+two branches: a row with no `time` field gets `dateOnly(row.date)` and gains nothing, in
+every case and whatever else is going on; only a row that carries a local clock time is
+given an offset. The device offset therefore applies to the 28 timed rows, and no others.
+
+For those 28 the assumption is not the difference between an announcement and a silence.
+It is the difference between **28 real observations and none**. One offset applied
+uniformly leaves every elapsed interval *between* them exactly right, and elapsed interval
+is the only thing the engine computes from these times. Remove the mechanism and those rows
+become `LOCAL_TIME_ZONE_UNKNOWN`, silently ineligible, and the keeper loses trend evidence
+he actually has — quietly, which is worse than losing it loudly.
+
+So: **keep it.** What decision 30 does change is the mechanism's *standing*. Part of what
+made it attractive was that the alternative was a wall of blocking notices; the amendment
+removes that pressure entirely, so the mechanism now has to stand on its own merits, and it
+does — on the 28 rows, for the reason above.
+
+What decision 30 does **not** settle is the first bullet above: whether
+`RECONSTRUCTED_WITH_PROVENANCE` may admit an assumption at all. That is a canon-authority
+question about a *different* clause of `SHARED-LEGACY-TIME-001` — the one governing when a
+reconstruction may participate — and decision 30 amends only the reporting of records that
+lack a usable instant. It is untouched, and it **stays open** for the owner. Deciding it
+here would be exactly the silent chemistry ruling `CLAUDE.md` forbids.
+
 ### Decisions for the owner, surfaced and not taken
 
 - **A derived `fromMlPerDay`.** V1 records each dose change as one number — the
@@ -512,3 +578,63 @@ detected anything. A control that cannot distinguish the mutation from its own
 environment is not a control, and it made "0 missed" a claim the arm had not
 earned. Fixed, and the arm now also warns when a mutation names a test no suite
 defines.
+
+---
+
+# Recorded during the `SHARED-LEGACY-TIME-001` amendment (21 August 2026)
+
+## AI-014 — The importer still writes the pre-amendment wire shape (INTERFACE)
+
+**Where.** `app/src/store/ledger.js:462` — `toEngineEvents` writes
+`measuredAt: at || e.time.localDate`, so a record with no instant is sent as a bare calendar
+day **in the `measuredAt` field**. `store/time.js` `dateOnly()` is where the record itself
+is built, and it is already correct in substance: it emits `timeProvenance: DATE_ONLY`,
+`localDate`, and — in its own words — *"No absoluteInstant. Not null, not midnight, not
+noon — absent."*
+
+**What.** `AI-008` is resolved: `ALK-V2-DATA-CONTRACT.md` §1 now declares that a `DATE_ONLY`
+record carries `calendarDate` and a `LOCAL_TIME_ZONE_UNKNOWN` record carries
+`localDateTime`, and that neither carries an `absoluteInstant`. The application still writes
+the shape it wrote before the amendment, so the engine — which now reads the declared field
+or reports the record malformed — does not yet see those 325 readings as the honoured
+records they are.
+
+**Measured, not inferred.** `test-engineer` ran the application's exact payload — three
+`DATE_ONLY` readings of 8.6 / 8.4 / 8.2, each with the calendar day in `measuredAt` and no
+`calendarDate` — through the amended engine:
+
+```text
+position          : UNKNOWN
+latestValidValueDkh : NOT_RUN
+VALIDATION_TIMESTAMP_INVALID  x3
+```
+
+Three refusals, one per reading, and *"the engine does not know your alkalinity"* while
+holding three measurements of it. **This is identical at the base commit** — the amendment
+does not cause it. What the amendment does is make it fixable by one field rename instead of
+by a contract ruling, which is what `AI-008` was blocked on.
+
+**Why it is left.** The amendment brief forbade touching the interface. The change is a
+field rename in the writer and nothing more; no logic moves, and no reading gains a time.
+
+**What now pins it.** `AD-TIME-005B` is the engine-side half: a record claiming `DATE_ONLY`
+without the `calendarDate` that provenance declares is refused **and named**, and mutation
+`E-32` turns the gate red if the engine ever "helps" by taking the day out of `measuredAt`
+instead. What is still missing, and `test-engineer` is right to name it, is a test on the
+**producer** — an app-suite case over `toEngineEvents` that is red while this item is open and
+green when it closes. That test belongs with the fix, in the application's own workflow.
+
+**What would close it.** `toEngineEvents` stops putting a day in `measuredAt` and emits
+`calendarDate` (or `localDateTime`) beside `timeProvenance` instead. The storage record does
+not have to change at all — only the wire form the engine is handed. One commit, inside the
+application's own review workflow.
+
+## AI-015 — Two reason-code strings survive for codes that no longer exist (INTERFACE)
+
+`app/src/strings.js:2205` and `:2207` hold wording for
+`CAPABILITY_MEASUREMENT_TIME_IMPRECISE` and `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE`, both
+retired by owner decision 30. They are unreachable — no engine may emit either — so nothing
+renders them. They are left because the brief forbade touching the interface, and they are
+named here because dead announcement wording sitting in the string table is precisely how an
+announcement comes back: the next build has a sentence ready and only needs a code to hang
+it on.

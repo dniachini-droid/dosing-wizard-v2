@@ -233,6 +233,26 @@ _ABSOLUTE_TIME_FIELDS = (
     "fromAt",
 )
 
+#: The two further time fields owner decision 30 added to the data contract
+#: (`ALK-V2-DATA-CONTRACT.md` §1 `ObservedTime`). A `DATE_ONLY` record carries
+#: `calendarDate` and a `LOCAL_TIME_ZONE_UNKNOWN` record carries `localDateTime`,
+#: and **neither carries an `absoluteInstant`** -- that is the whole point of the
+#: amendment, and of `AI-008`'s resolution.
+#:
+#: They are declared apart from `_ABSOLUTE_TIME_FIELDS` rather than added to it,
+#: because two different questions are asked of these tuples and only one of the
+#: answers changed. *Is this an event ledger an engine can read?* -- yes, a
+#: record honouring the contract's shape for its own provenance is readable.
+#: *Is there an instant here?* -- no, and `default_as_of` must keep saying no,
+#: or `DEC-021` would derive an assessment instant from a day nobody stated a
+#: time for, which is the fabrication the whole decision forbids.
+_DECLARED_DAY_FIELDS = (
+    "calendarDate",
+    "localDateTime",
+)
+
+_DECLARED_TIME_FIELDS = _ABSOLUTE_TIME_FIELDS + _DECLARED_DAY_FIELDS
+
 
 def _looks_like_event_ledger(inp: Any) -> bool:
     """An event ledger, not a scenario that happens to use the word `events`.
@@ -256,7 +276,7 @@ def _looks_like_event_ledger(inp: Any) -> bool:
         return False
     if not all(isinstance(e, dict) and "kind" in e for e in events):
         return False
-    return all(any(k in e for k in _ABSOLUTE_TIME_FIELDS) for e in events)
+    return all(any(k in e for k in _DECLARED_TIME_FIELDS) for e in events)
 
 
 def default_as_of(inp: Any) -> Optional[str]:
@@ -291,12 +311,25 @@ def default_as_of(inp: Any) -> Optional[str]:
 
 
 def _instant_sort_key(text: str):
+    """The instant's epoch seconds, or `None` if it is not one.
+
+    **Offset-aware only.** `datetime.fromisoformat` accepts `2026-09-02` and
+    returns a naive midnight, so without this guard `DEC-021` could derive an
+    assessment instant from a bare calendar day — supplying the offset that
+    `SHARED-LEGACY-TIME-001` says is not ours to supply, and handing the engine
+    a third argument it correctly refuses. `kernel.parse_instant` rejects the
+    same shape for the same reason; this is that rule applied where the harness
+    chooses the instant rather than where the engine reads one.
+
+    Found by `AD-TIME-005B`, whose malformed record carries exactly that shape.
+    """
     from datetime import datetime
 
     try:
-        return datetime.fromisoformat(text).timestamp()
+        when = datetime.fromisoformat(text)
     except ValueError:
         return None
+    return None if when.tzinfo is None else when.timestamp()
 
 
 def _unreadable_expectations(body: Dict[str, Any]) -> List[str]:

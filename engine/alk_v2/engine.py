@@ -240,7 +240,10 @@ def assess(
             )
 
     # 3 — POSITION ---------------------------------------------------------
-    pos = observation.position(eps, cfg)
+    # `led.untimed` carries the readings with no usable instant. They reach
+    # position (canon Part II §2.3A.2) and nothing else, and their presence is
+    # never reported -- owner decision 30.
+    pos = observation.position(eps, cfg, led.untimed)
 
     # 5 — SEGMENT -----------------------------------------------------------
     # `ALK-007` / Part II §13: a maintenance dose change is a hard boundary for
@@ -1647,8 +1650,15 @@ def _assemble(**kw) -> Dict[str, Any]:
         "canonVersion": CANON_VERSION,
         "configVersionId": cfg.version_id,
         "position": pos.position,
+        # `NONE` where the current value came from a reading with no usable
+        # instant: such a reading forms no episode, so there is no cluster id to
+        # give, and that is a **value**, not a withholding (owner decision 30).
+        # `NOT_RUN` is kept for the genuinely empty case -- no observation of
+        # any kind resolved -- where the umbrella names it.
         "latestValidClusterId": (
-            pos.episode.cluster_id if pos.episode is not None else NOT_RUN
+            pos.episode.cluster_id
+            if pos.episode is not None
+            else (kernel.NONE_VALUE if pos.a_now is not None else NOT_RUN)
         ),
         "latestValidValueDkh": pos.a_now if pos.a_now is not None else NOT_RUN,
         "outerBoundState": (

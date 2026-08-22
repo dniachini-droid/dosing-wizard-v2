@@ -1007,14 +1007,15 @@
     },
     {
       "fixtureId": "WG-ALK-066",
-      "title": "Legacy local time without a timezone does not become an absolute instant",
+      "title": "Legacy local time without a timezone does not become an absolute instant, and does not announce that it did not",
       "provenance": {
         "class": "CANON_VERBATIM",
         "canonSource": [
           "WG-ALK-066",
           "SHARED-LEGACY-TIME-001",
           "M-13"
-        ]
+        ],
+        "note": "Amended by owner decision 30. The canon sentence this fixture quotes is unchanged: the record stays visible, may support current position, and is not an exact elapsed-time operand. What changed is that the third clause is now carried out in silence, so the two codes this fixture used to require are retired."
       },
       "rulesExercised": [
         "SHARED-LEGACY-TIME-001"
@@ -1026,20 +1027,44 @@
       },
       "expectedAction": {
         "timeProvenance": "LOCAL_TIME_ZONE_UNKNOWN",
-        "exactElapsedTimeAnalysis": "NOT_RUN",
+        "storedAs": "localDateTime = 2026-04-05T02:30, with NO absoluteInstant (ALK-V2-DATA-CONTRACT.md §1)",
+        "eligibleForElapsedTime": false,
+        "eligibleForElapsedTimeIsAnnounced": false,
         "remainsVisibleInHistory": true,
-        "maySupportCurrentPositionIfOtherwiseValid": true
+        "maySupportCurrentPositionIfOtherwiseValid": true,
+        "orderedForPositionBy": "its stated day, 2026-04-05, never converted through an assumed zone (PII-2.3A.2)"
       },
-      "expectedReasonCodes": [
-        "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
-        "TIME_EXACT_ELAPSED_UNAVAILABLE"
-      ],
+      "expectedReasonCodes": [],
       "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"
+        ],
         "cases": [
           "assigning the keeper's current timezone",
           "assigning noon",
-          "using it as an exact elapsed-time trend point across a possible DST/offset ambiguity"
+          "assigning midnight",
+          "using it as an exact elapsed-time trend point across a possible DST/offset ambiguity",
+          "reporting that it was not used"
         ]
+      },
+      "supersededExpectation": {
+        "expectedAction": {
+          "timeProvenance": "LOCAL_TIME_ZONE_UNKNOWN",
+          "exactElapsedTimeAnalysis": "NOT_RUN",
+          "remainsVisibleInHistory": true,
+          "maySupportCurrentPositionIfOtherwiseValid": true
+        },
+        "expectedReasonCodes": [
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE"
+        ],
+        "supersededBy": "owner decision 30",
+        "$comment": "Preserved verbatim. Every substantive claim survives; the announced NOT_RUN and its two codes do not."
       }
     },
     {

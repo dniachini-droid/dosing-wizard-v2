@@ -177,11 +177,25 @@ BREACHED_LOW = "BREACHED_LOW"
 BREACHED_HIGH = "BREACHED_HIGH"
 
 
+def _day_of(at: Instant) -> str:
+    """The calendar day an instant states, **in the offset it arrived in**.
+
+    Not converted to UTC and not converted to the host's zone: canon Part II
+    §2.3A.2 orders by the day the record states, in the day's own terms. A
+    keeper in +10:00 testing at 08:00 must not have their reading placed on the
+    previous day because the process happens to run in UTC.
+    """
+    return at.text[:10]
+
+
 @dataclass
 class PositionState:
     position: str
     outer_bound_state: Optional[str]
     a_now: Optional[float]
+    #: The episode the current value came from, or `None` when it came from a
+    #: reading with no usable instant -- which forms no episode (owner decision
+    #: 30). `None` here is not a withholding and carries no reason code.
     episode: Optional[Episode]
     #: `OI-EPISODENOOBS-001`: what `outerBoundState` takes when no episode
     #: resolves is not stated by canon and its closed vocabulary has no member
@@ -190,33 +204,58 @@ class PositionState:
     open_issue: Optional[str] = None
 
 
-def position(eps: List[Episode], cfg) -> PositionState:
-    """Latest resolved episode value against the range and the outer bounds.
+def position(eps: List[Episode], cfg, untimed=()) -> PositionState:
+    """Latest current value against the range and the outer bounds.
 
     Position reads the episode's one canonical value, never a member of it and
     never a cluster chosen from inside it -- owner decision 19, carried forward
     by 27 and 28.
+
+    **Owner decision 30 adds the readings that carry no usable instant.** Canon
+    Part II §2.3A says such a reading "may support current position if otherwise
+    valid" and §2.3A.2 says how to order it:
+
+    1. by calendar day, ascending;
+    2. within one day, a record carrying a usable instant is **later** than one
+       carrying none -- not a claim about the tank but the refusal to make one,
+       because the record without a time cannot be *shown* to be later and
+       position is never decided by an assumption;
+    3. between two untimed records on one day, by `eventOrdinal`.
+
+    This ordering is never an elapsed-time operand. Nothing here reaches a
+    slope, a consumption estimate, an episode-membership decision or a retest
+    interval, and no output says which kind of record won.
 
     Comparisons at the **outer bounds are strict** (`ALK-003A`: exactly at a
     bound is not breached); **range edges are inclusive** (`ALK-004`: 8.19
     against a lower edge of 8.20 is below range). Both are exact-decimal
     predicates. Uncertainty does not widen the range.
     """
-    if not eps:
+    #: `(day, tier, tiebreak)`. Tier 1 beats tier 0 inside one day, which is
+    #: §2.3A.2 clause 2. The tiebreaks are never compared across tiers.
+    candidates = [
+        ((_day_of(e.at), 1, e.at.epoch_seconds), e.value_dkh, e) for e in eps
+    ]
+    candidates += [
+        ((r.day, 0, float(r.ordinal)), r.raw_value_dkh, None)
+        for r in untimed
+        if r.status in ("VALID", "SUSPECT")
+    ]
+    if not candidates:
         return PositionState(UNKNOWN, None, None, None, open_issue="OI-EPISODENOOBS-001")
-    latest = max(eps, key=lambda e: e.at.epoch_seconds)
-    a = dec(latest.value_dkh)
+    _key, value, latest = max(candidates, key=lambda c: c[0])
+    a = dec(value)
     outer_min = cfg.num("outerMinDkh")
     outer_max = cfg.num("outerMaxDkh")
     range_min = cfg.num("targetRangeMinDkh")
     range_max = cfg.num("targetRangeMaxDkh")
 
     if outer_min is not None and a < dec(outer_min):
-        return PositionState(ALERT_LOW, BREACHED_LOW, latest.value_dkh, latest)
+        return PositionState(ALERT_LOW, BREACHED_LOW, value, latest)
     if outer_max is not None and a > dec(outer_max):
-        return PositionState(ALERT_HIGH, BREACHED_HIGH, latest.value_dkh, latest)
+        return PositionState(ALERT_HIGH, BREACHED_HIGH, value, latest)
     if range_min is not None and a < dec(range_min):
-        return PositionState(BELOW_RANGE, WITHIN_BOUNDS, latest.value_dkh, latest)
+        return PositionState(BELOW_RANGE, WITHIN_BOUNDS, value, latest)
     if range_max is not None and a > dec(range_max):
-        return PositionState(ABOVE_RANGE, WITHIN_BOUNDS, latest.value_dkh, latest)
-    return PositionState(IN_RANGE, WITHIN_BOUNDS, latest.value_dkh, latest)
+        return PositionState(ABOVE_RANGE, WITHIN_BOUNDS, value, latest)
+    return PositionState(IN_RANGE, WITHIN_BOUNDS, value, latest)

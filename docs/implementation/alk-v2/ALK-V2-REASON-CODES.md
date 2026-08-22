@@ -33,7 +33,7 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 | `VALIDATION_VALUE_NOT_FINITE` | `REFUSAL` | Entry is not a finite number. | `enteredValue` |
 | `VALIDATION_UNIT_UNSUPPORTED` | `REFUSAL` | Unit not supported for the parameter. | `enteredUnit`, `supportedUnits[]` |
 | `VALIDATION_VALUE_NOT_PHYSICAL` | `REFUSAL` | Outside physical representability. Being outside the target or outer range is **not** this. | `valueDkh`, `representableRange` |
-| `VALIDATION_TIMESTAMP_INVALID` | `REFUSAL` | Unparseable or implausibly future. | `enteredAt`, `asOf` |
+| `VALIDATION_TIMESTAMP_INVALID` | `REFUSAL` | Unparseable or implausibly future. **Narrowed by owner decision 30:** a record whose declared `timeProvenance` is `DATE_ONLY` or `LOCAL_TIME_ZONE_UNKNOWN` carries no instant *by contract* and is not malformed — it is silently ineligible for elapsed-time inference and emits nothing. This code is for a record that claims a usable instant and does not have a readable one. | `enteredAt`, `asOf` |
 | `VALIDATION_PARAMETER_MISMATCH` | `REFUSAL` | Entry parameter differs from context. | `entered`, `expected` |
 | `VALIDATION_UNIT_CONVERTED` | `INFO` | meq/L converted at 2.8 dKH per meq/L. | `enteredValue`, `enteredUnit`, `canonicalValueDkh` |
 | `VALIDATION_TARGET_RANGE_INVERTED` | `REFUSAL` | `min ≥ max`. | `min`, `max` |
@@ -50,12 +50,11 @@ Common payload fields, omitted from each row for brevity: `ruleId`, `assessmentI
 
 | Code | Sev | Meaning | Payload |
 |---|---|---|---|
-| `TIME_PROVENANCE_EXACT` | `INFO` | Event carries a proven absolute instant. | `readingId` |
-| `TIME_PROVENANCE_RECONSTRUCTED` | `INFO` | Historical offset independently proven; reconstruction recorded. | `readingId`, `provenanceNote` |
-| `TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN` | `GATING` | Local `HH:MM` with no proven offset; excluded from exact-elapsed analysis. | `readingId` |
-| `TIME_PROVENANCE_DATE_ONLY` | `GATING` | Date known, time unknown; excluded from trend, retained for history/position. | `readingId`, `date` |
-| `TIME_EXACT_ELAPSED_UNAVAILABLE` | `REFUSAL` | An exact-elapsed calculation cannot run on these operands. | `fromReadingId`, `toReadingId`, `provenances[]` |
 | `TIME_EVENT_ORDER_AMBIGUOUS` | `GATING` | Same-instant events whose physical order is not established. | `eventIds[]`, `instant` |
+
+**Five codes were retired from this group by owner decision 30** and are listed under
+*Retired by owner decision 30* below. The group's one surviving code is about two events
+that share an instant, which is a different condition from a record having none.
 
 ## CONFIG_ — owner: `VALIDATION`
 
@@ -354,12 +353,10 @@ any more — owner decision 27 retired the contested state, so every episode res
 | `CAPABILITY_DOSE_EFFECTIVE_TIME_UNCERTAIN` | `GATING` | `M-5`. | `doseStateId` |
 | `CAPABILITY_DELIVERED_VOLUME_UNAVAILABLE` | `GATING` | `M-6`: mixed integration `NOT_RUN`; segmenting instead. | `intervalFromAt`, `intervalToAt` |
 | `CAPABILITY_PREDICTION_SNAPSHOT_MISSING` | `GATING` | `M-7`. | `interventionId` |
-| `CAPABILITY_MEASUREMENT_TIME_IMPRECISE` | `GATING` | `M-8`: degrade to position/history. | `readingId` |
 | `CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED` | `GATING` | `M-9`. | `side` |
 | `CAPABILITY_HISTORICAL_BRACKET_UNAVAILABLE` | `INFO` | `M-10`. | — |
 | `CAPABILITY_MAGNESIUM_STATE_UNKNOWN` | `INFO` | `M-11`: Alk safety still runs; no low-Mg warning invented. | — |
 | `CAPABILITY_HISTORICAL_CONFIGURATION_UNAVAILABLE` | `REFUSAL` | `M-12`: config-dependent replay before the first proven version. | `requestedAt` |
-| `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE` | `GATING` | `M-13`. | `readingIds[]` |
 | `CAPABILITY_POTENCY_LEARNER_GATED` | `INFO` | Empirical learning disabled by the capability gate. | `missingCapabilities[]` |
 
 ## OUTPUT_ — owner: `OUTPUT`
@@ -407,7 +404,7 @@ output.
 | Group | Codes |
 |---|---|
 | `VALIDATION_` | 15 |
-| `TIME_` | 6 |
+| `TIME_` | 1 |
 | `CONFIG_` | 4 |
 | `CLUSTER_` | 5 |
 | `EPISODE_` | 2 |
@@ -425,12 +422,12 @@ output.
 | `RETURN_` | 12 |
 | `SAFETY_` | 18 |
 | `RETEST_` | 16 |
-| `CAPABILITY_` | 14 |
+| `CAPABILITY_` | 11 |
 | `OUTPUT_` | 3 |
 | `AUDIT_` | 3 |
 | `PRESENTATION_` | 5 |
 | `MIGRATION_` | 4 |
-| **Total** | **242** |
+| **Total** | **235** |
 
 ---
 
@@ -532,6 +529,39 @@ Two `RETEST_` codes are **kept**, with their meaning changed from "policy absent
 A code listed here is retired **as an emitted code**. Where a Freeze-5 decision turned out
 to leave a narrow question open, the replacement column names the code that now covers the
 open part — a refusal under a precise name, not a reinstatement of the vague one.
+
+### Retired by owner decision 30
+
+Owner decision 30 amends `SHARED-LEGACY-TIME-001` (canon Part II §2.3A.1). A reading that
+lacks a usable instant is **silently ineligible** for elapsed-time inference: the engine does
+not use it and says nothing about having declined to. Every code below existed only to
+announce that condition, so none has a reachable state.
+
+The provenance record itself is untouched — `DATE_ONLY` stays `DATE_ONLY` forever and
+nothing gains a time. What is retired is the **reporting**, not the fact.
+
+| Retired code | Replaced by | Decision |
+|---|---|---|
+| `TIME_PROVENANCE_DATE_ONLY` | **nothing** — the state it announced is now silent. Where the remaining evidence is too thin the ordinary insufficiency codes (`EVIDENCE_INSUFFICIENT_CLUSTERS`, `EVIDENCE_INSUFFICIENT_SPAN`) say so, without naming a record | 30 |
+| `TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN` | **nothing** — same state, same silence | 30 |
+| `TIME_PROVENANCE_EXACT` | **nothing.** It announced the *converse* — that a record does carry a proven instant — and it is retired for the reason §2.3A.1 clause 1 gives: a per-record channel that names the eligible records names the ineligible ones by omission, which is the same announcement written backwards. Retiring only half the family would have left the surface able to reconstruct the whole of it | 30 |
+| `TIME_PROVENANCE_RECONSTRUCTED` | **nothing** — same reasoning. The reconstruction and its proof are still **recorded** on the reading (`DATA-PROVENANCE.md` §2, canon `M-13`); what is retired is emitting it as a per-reading finding in an assessment | 30 |
+| `TIME_EXACT_ELAPSED_UNAVAILABLE` | **nothing** — it refused an elapsed-time calculation on operands that lack usable instants. Such operands are no longer offered to the calculation, so there is nothing to refuse. `\(\Delta t\)` is defined only between two usable instants and is now only ever asked for between two | 30 |
+| `CAPABILITY_MEASUREMENT_TIME_IMPRECISE` | **nothing** — `M-8` no longer degrades. The measurements the trend consumes all carry usable instants by construction, so the datum the capability asks about is present for every observation any analysis is given | 30 |
+| `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE` | **nothing** — `M-13` no longer degrades, for the same reason | 30 |
+
+**Narrowed by decision 30, and NOT retired — `VALIDATION_TIMESTAMP_INVALID`.** It is a live
+catalogue row and stays one; it is described here in prose rather than in a table because a
+table row in this section would put a live code into the retired set. What decision 30
+removed from it: it used to fire on a record whose declared provenance is `DATE_ONLY` or
+`LOCAL_TIME_ZONE_UNKNOWN`, because such a record carries no parseable absolute instant.
+Under the amended data contract it carries none **by contract** — it is not malformed, and
+it emits nothing. The code keeps its whole substance for a record that claims a usable
+instant and does not have a readable one.
+
+`M-8` and `M-13` remain rows in the capability set — `M-1` … `M-13` is closed and a result
+carrying eleven of thirteen would be an output that failed to mention what it did not look
+at. What changed is their outcome: `OK`, no affected outputs, no reason code, in every state.
 
 ---
 

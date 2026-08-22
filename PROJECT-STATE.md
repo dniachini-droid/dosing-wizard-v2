@@ -89,14 +89,33 @@ Phase 0 — Preserve and found V2
   eight checks deliberately not carried across and what each dropped.
   `recompute-goldens.py` remains in the package and is unaffected: it is a recorder, not
   a gate.
+  **Owner decision 30 amends `SHARED-LEGACY-TIME-001`** (canon Part II §2.3A.1 and
+  §2.3A.2): a reading that lacks a usable instant is **silently** ineligible for
+  elapsed-time inference. It is kept in history, charted, counted in descriptive statistics
+  and may be the current value; it produces no reason code, no notice, no capability
+  degradation and no payload of its own, and no output names it — in either direction.
+  Seven reason codes are retired (the four `TIME_PROVENANCE_*`,
+  `TIME_EXACT_ELAPSED_UNAVAILABLE`, `CAPABILITY_MEASUREMENT_TIME_IMPRECISE`,
+  `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE`) and `VALIDATION_TIMESTAMP_INVALID` is narrowed.
+  The prohibition on fabricating a time is **untouched and absolute**; the amendment
+  changes what is reported, never what is recorded. It resolves `OI-EPISODEDATEONLY-001`
+  and the contract contradiction recorded as `AI-008`. `INV-H6`, the eight `AD-TIME-*`
+  fixtures and `E-28` … `E-32` pin it, `INV-I7` became executable, and `DEC-025` records the
+  harness consequences. `test-engineer` reviewed it and demonstrated four ways the first
+  version reported more safety than it held; all four are fixed, and the review's own record
+  is `docs/process/runs/2026-08-21-alk-v2-decision-30.md`. Two questions it raised are open
+  rather than answered: `OI-UNTIMEDSAMEDAY-001` and `OI-EVENTNOINSTANT-001`.
   The harness is **RED today, and every red is accounted for**. An engine now exists, so
   the `ENGINE_ABSENT` failures are gone; what remains is the five mechanical checks
   reporting pre-existing document defects that predate all of this work
   (`docs/process/CONFORMANCE-HARNESS.md` lists them), the three invariants delegated to
   those checks, and eleven fixtures whose expectations the first engine showed to be
   wrong, unsatisfiable or out of the built scope — each one recorded as an open owner
-  decision rather than worked around.
-  **The mutation set is GREEN**: 80 mutations defined, 69 caught, 0 missed, 11 blocked
+  decision rather than worked around. Owner decision 30 changed none of those counts and
+  closed one line inside `CHK-RC-CATALOGUE` as a side effect of restating two group counts
+  it had to restate anyway; the `SAFETY_` line of that same defect is untouched and still
+  open.
+  **The mutation set is GREEN**: 85 mutations defined, 74 caught, 0 missed, 11 blocked
   with their unblocking conditions stated. Twenty-seven of them are new engine mutations
   under `DEC-020` clause 3.
 - An **executable fixture format** is defined in
@@ -220,7 +239,9 @@ Phase 0 — Preserve and found V2
 The following are authoritative and must not be silently altered:
 
 - `SHARED_V2_FREEZE_2`
-- `ALK_V2_FREEZE_5`
+- `ALK_V2_FREEZE_5`, as amended by owner decisions 16–30. The identifier has not been
+  reissued for any of them; that discrepancy is `OI-FREEZEIDBEHAVIOUR-001` and remains
+  open.
 - `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` (copied into this repository from the
   read-only V1 reference repository, byte-for-byte)
 

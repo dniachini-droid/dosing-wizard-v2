@@ -1,6 +1,6 @@
 """Executable forms of the invariants, and an honest account of the rest.
 
-The rule this module enforces on itself: **every one of the 60 invariants in
+The rule this module enforces on itself: **every invariant in
 `ALK-V2-INVARIANTS.md` is either executed here or appears in
 `NOT_EXECUTABLE_REASONS` with a stated reason.** The runner asserts that the
 two sets partition the document exactly, so an invariant added to the document
@@ -147,7 +147,6 @@ NOT_EXECUTABLE_REASONS: Dict[str, str] = {
     "INV-G15": NO_ENGINE_BEHAVIOUR,
     "INV-G16": NO_ENGINE_BEHAVIOUR,
     "INV-G17": NO_ENGINE_BEHAVIOUR,
-    "INV-I7": NO_ENGINE_BEHAVIOUR,
 }
 
 #: Invariants this module executes, and the CHK-* checks that carry the
@@ -156,6 +155,8 @@ EXECUTED_HERE = (
     "INV-A1",
     "INV-A2",
     "INV-A3",
+    "INV-H6",
+    "INV-I7",
     "INV-B7",
     "INV-I2",
     "INV-I3",
@@ -368,6 +369,260 @@ def _inv_a3(engine: ea.Engine, c: corpus_mod.Corpus) -> InvariantOutcome:
     )
 
 
+def _string_values(node: Any, path: str = "") -> List[Tuple[str, str]]:
+    """Every string in the result, with the path it sits at."""
+    out: List[Tuple[str, str]] = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            out.extend(_string_values(v, f"{path}.{k}" if path else k))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out.extend(_string_values(v, f"{path}[{i}]"))
+    elif isinstance(node, str):
+        out.append((path, node))
+    return out
+
+
+def _untimed_readings(inp: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """`READING` events that honour a provenance carrying no usable instant.
+
+    The predicate is **carries one of the contract's declared day fields**, not
+    *has no absolute-time field*. Those are different sets and the difference
+    matters twice:
+
+    * a record carrying `calendarDate` **and** a stray `measuredAt` is still a
+      record with no usable instant -- `ledger.build` routes it by its
+      provenance, not by which fields happen to be present -- and the weaker
+      predicate did not see it;
+    * a record carrying neither an instant nor a day is **malformed**, is
+      correctly named by `VALIDATION_TIMESTAMP_INVALID`, and must not be a
+      subject here or the check would forbid the naming the contract requires.
+
+    `corpus._DECLARED_DAY_FIELDS` is the corpus's own statement of those fields,
+    so nothing is transcribed.
+    """
+    return [
+        e
+        for e in (inp.get("events") or [])
+        if isinstance(e, dict)
+        and e.get("kind") == "READING"
+        and any(k in e for k in corpus_mod._DECLARED_DAY_FIELDS)
+    ]
+
+
+#: Result fields whose value is the assessment instant the CALLER supplied, or
+#: is derived from it. They are excluded from the day sweep by path: an untimed
+#: reading dated on the assessment day would otherwise be "named" by a field
+#: that names the caller's own argument and knows nothing about any reading.
+_CALLER_INSTANT_PATHS = ("assessmentAsOf", "assessmentId", "auditTraceId")
+
+
+def _inv_h6(engine: ea.Engine, c: corpus_mod.Corpus) -> InvariantOutcome:
+    """A record with no usable instant never announces itself.
+
+    `SHARED-LEGACY-TIME-001` Part II §2.3A.1 clause 1, owner decision 30. The
+    keeper is not told which specific records were skipped or why, and is not
+    told which were used either -- naming the eligible records names the rest by
+    omission.
+
+    Four checks, and **every subject is read out of the fixture's own input**.
+    The check transcribes no provenance name, no field name and no reason code,
+    so it keeps testing the right thing across a vocabulary change and cannot
+    pass by looking only at what it already knows about.
+
+    1. no provenance token the input carried is quoted back, in either direction;
+    2. no untimed record's stated day appears in the result;
+    3. no untimed record's event id appears in the result;
+    4. **the capability set is byte-identical with and without those readings.**
+
+    Check 4 is the one that makes the invariant match its own text. Clause 1
+    names capability degradation explicitly, and the first three checks cannot
+    see it: a restored `M-8` / `M-13` `DEGRADE` carrying no reason code changes
+    no string in the result, so it passed all three. Rather than transcribe
+    `M-8` and `M-13` -- which would be this harness naming a canon vocabulary it
+    does not own -- the check submits the same ledger twice, once with the
+    untimed readings removed, and requires `capabilities[]` to be unchanged.
+    That is the property stated directly: **their presence changes nothing about
+    what the engine says it could look at.**
+    """
+    violations: List[str] = []
+    ran = 0
+    subjects = 0
+    uninformative = 0
+    for fid, req in _executable_requests(c):
+        untimed = _untimed_readings(req)
+        if not untimed:
+            continue
+        subjects += 1
+        reply = engine.assess(copy.deepcopy(req))
+        if not reply.ok:
+            violations.append(f"{fid}: engine produced no result ({reply.error})")
+            continue
+        ran += 1
+        strings = [
+            (path, value)
+            for path, value in _string_values(reply.result)
+            if path.split("[")[0] not in _CALLER_INSTANT_PATHS
+        ]
+
+        # 1 -- no provenance token the input carried is quoted back.
+        provenances = {
+            e["timeProvenance"]
+            for e in (req.get("events") or [])
+            if isinstance(e, dict) and isinstance(e.get("timeProvenance"), str)
+        }
+        for path, value in strings:
+            for token in provenances:
+                if token in value:
+                    violations.append(
+                        f"{fid}: the result quotes the time provenance `{token}` at "
+                        f"`{path}`; §2.3A.1 clause 1 forbids reporting a record's "
+                        f"provenance, in either direction"
+                    )
+
+        # 2 -- no untimed record's day, and 3 -- no untimed record's id.
+        #
+        # A day the ledger ALSO carries an instant on is skipped, and counted.
+        # The test is a substring search, and on such a day it cannot tell the
+        # untimed record's day from the timed record's own instant rendered into
+        # a cluster id -- `CL-2026-09-01T08:00:00+10:00` contains `2026-09-01`
+        # because the timed reading is on that day, not because anything was
+        # announced. Skipping it silently would be the worse error: the count is
+        # reported so the check never claims coverage it does not have, and
+        # checks 3 and 4 remain fully informative on exactly those records.
+        ledger_days = {
+            str(e[k])[:10]
+            for e in (req.get("events") or [])
+            if isinstance(e, dict)
+            for k in corpus_mod._ABSOLUTE_TIME_FIELDS
+            if isinstance(e.get(k), str)
+        }
+        # The assessment instant's own day too. It is the CALLER's argument and
+        # it is rendered legitimately all over the result -- window ends,
+        # forecast horizons, retest times. An untimed record dated on the
+        # assessment day would otherwise be reported as "named" by a field that
+        # knows nothing about it. `AD-TIME-006` is that case.
+        if isinstance(req.get("asOf"), str):
+            ledger_days.add(req["asOf"][:10])
+        for u in untimed:
+            days = {
+                str(v)[:10]
+                for key, v in u.items()
+                if key in corpus_mod._DECLARED_DAY_FIELDS and isinstance(v, str)
+            }
+            for day in days:
+                if len(day) != 10 or day.count("-") != 2:
+                    continue
+                if day in ledger_days:
+                    uninformative += 1
+                    continue
+                for path, value in strings:
+                    if day in value:
+                        violations.append(
+                            f"{fid}: the result names {day} at `{path}`, the day of a "
+                            f"record with no usable instant; the keeper is not told "
+                            f"which records were skipped"
+                        )
+            eid = u.get("eventId")
+            if isinstance(eid, str) and eid:
+                for path, value in strings:
+                    if eid in value:
+                        violations.append(
+                            f"{fid}: the result names the record `{eid}` at `{path}`, "
+                            f"which carries no usable instant"
+                        )
+
+        # 4 -- the capability set does not move.
+        without = copy.deepcopy(req)
+        without["events"] = [e for e in (req.get("events") or []) if e not in untimed]
+        other = engine.assess(without)
+        if not other.ok:
+            violations.append(
+                f"{fid}: the engine produced no result for the same ledger with the "
+                f"readings that carry no usable instant removed ({other.error}); the "
+                f"capability comparison could not be made"
+            )
+        elif _canonical(other.result.get("capabilities")) != _canonical(
+            reply.result.get("capabilities")
+        ):
+            violations.append(
+                f"{fid}: the capability set changes when readings with no usable "
+                f"instant are present; §2.3A.1 clause 1 forbids a capability "
+                f"degradation, and a degradation carrying no reason code is still one"
+            )
+
+    if not subjects:
+        # An empty subject set is a defect, not an abstention. `AD-TIME-001` and
+        # `AD-TIME-002` are in the index and are pinned there; if neither reaches
+        # this check, either they were removed or the predicate above stopped
+        # matching them, and both are failures rather than reasons to say nothing.
+        violations.append(
+            "no executable fixture carries a READING declaring a provenance with no "
+            "usable instant, so this invariant checked nothing; AD-TIME-001 and "
+            "AD-TIME-002 exist to be its subjects"
+        )
+
+    return InvariantOutcome(
+        inv_id="INV-H6",
+        title="A record with no usable instant never announces itself",
+        status=FAIL if violations else PASS,
+        what_was_checked=(
+            f"{subjects} executable fixture(s) carry a READING declaring a provenance "
+            f"with no usable instant; {ran} returned a result. Each result was swept "
+            f"for a quoted time provenance, for such a record's stated day and for its "
+            f"event id, and each ledger was resubmitted without those readings and the "
+            f"capability set required to be byte-identical -- every subject read out of "
+            f"the fixture's own input. {uninformative} day(s) were skipped by the day "
+            f"sweep as uninformative, being days the ledger also carries an instant on; "
+            f"checks 3 and 4 still cover those records"
+        ),
+        violations=violations,
+    )
+
+
+def _inv_i7(engine: ea.Engine, c: corpus_mod.Corpus) -> InvariantOutcome:
+    """No retired reason code is emitted.
+
+    Executable since an engine exists. The retired set is parsed from the
+    catalogue's own "Retired by ..." tables at run time, so retiring a code adds
+    it to this check and nothing has to be edited here.
+
+    It sweeps the **whole** result rather than `reasonCodes[]` alone: a
+    capability row's `capabilityReasonCode` is an emitted code too, and reading
+    only the top-level array is how `CAPABILITY_MEASUREMENT_TIME_IMPRECISE`
+    could have come back through `capabilities[]` unnoticed.
+    """
+    cat = rc_mod.load()
+    retired = set(cat.retired) - set(cat.codes)
+    violations: List[str] = []
+    ran = 0
+    for fid, req in _executable_requests(c):
+        reply = engine.assess(copy.deepcopy(req))
+        if not reply.ok:
+            violations.append(f"{fid}: engine produced no result ({reply.error})")
+            continue
+        ran += 1
+        for path, value in _string_values(reply.result):
+            if value in retired:
+                violations.append(
+                    f"{fid}: the retired code `{value}` is emitted at `{path}`; "
+                    f"a retired code has no reachable state and is outside the "
+                    f"closed set"
+                )
+    return InvariantOutcome(
+        inv_id="INV-I7",
+        title="No retired reason code is emitted",
+        status=FAIL if violations else (PASS if ran else NOT_EXECUTABLE),
+        what_was_checked=(
+            f"every string in {ran} engine result(s) compared against the "
+            f"{len(retired)} codes the catalogue's retired tables list, parsed at "
+            f"run time"
+        ),
+        violations=violations,
+        not_executable_reason="" if ran else "no engine reply to sweep",
+    )
+
+
 def run_invariants(
     engine: ea.Engine,
     c: corpus_mod.Corpus,
@@ -379,7 +634,7 @@ def run_invariants(
     problems: List[str] = []
 
     executed: Dict[str, InvariantOutcome] = {}
-    for fn in (_inv_a1, _inv_a2, _inv_a3):
+    for fn in (_inv_a1, _inv_a2, _inv_a3, _inv_h6, _inv_i7):
         o = fn(engine, c)
         executed[o.inv_id] = o
 

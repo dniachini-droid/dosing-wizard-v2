@@ -434,7 +434,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
          'D23':['OI-SAFETYRATE-001'],'D24':['OI-ADVISORYEXCEPTION-001','OI-ADVISORYMEMBERS-001','OI-ADVISORYRETURN-001'],
          'D25':['OI-BRANCHAREFUSAL-001'],'D26':['OI-ADVISORYRETEST-001'],
          'D27':['OI-METHODUNKNOWN-001'],'D28':['OI-EPISODEMEMBERSHIP-001'],
-         'D29':['OI-ADVISORYWARNSTATE-001']}
+         'D29':['OI-ADVISORYWARNSTATE-001'],'D30':['OI-EPISODEDATEONLY-001']}
         for dec,ois in DEC.items():
             pos=[fid for fid,(fn,f) in fixtures.items()
                  if any(any(o in s for s in (f.get('openIssues') or [])) for o in ois)]
@@ -449,12 +449,15 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
          'OI-RETURNOFFER-001','OI-BELOWRISING-001','OI-WATERCHANGE-001','OI-LIQUIDGUARD-001','OI-SAFETYRATE-001',
          'OI-RETURNDURINGSAFETY-001','OI-RAPIDBASIS-001','OI-CONFIDENCE-001',
          'OI-HIGHBREACHBAND-001','OI-CLUSTERTIE-001','OI-RETESTFLOOR-001']
+        # Named for the round that introduced it; it now carries every owner decision from
+        # 16 onward, decision 30 included.
         DECIDED_16_19=['OI-HIGHBREACHSIZING-001','OI-EPISODE-001','OI-CROSSMETHOD-001',
          'OI-DECIMALTHRESHOLD-001','OI-EPISODECONSUMER-001',
          'OI-DELIVERYRATEBASIS-001','OI-UNCOMPUTABLEC-001',
          'OI-ADVISORYEXCEPTION-001','OI-ADVISORYMEMBERS-001','OI-ADVISORYRETURN-001',
          'OI-BRANCHAREFUSAL-001','OI-ADVISORYRETEST-001',
-         'OI-METHODUNKNOWN-001','OI-EPISODEMEMBERSHIP-001','OI-ADVISORYWARNSTATE-001']
+         'OI-METHODUNKNOWN-001','OI-EPISODEMEMBERSHIP-001','OI-ADVISORYWARNSTATE-001',
+         'OI-EPISODEDATEONLY-001']
         # Opened by the decisions 16-19 review and DELIBERATELY LEFT OPEN. A register section that
         # quietly acquired a resolution box would be a silent decision, so the gate asserts the
         # absence of one as hard as it asserts the presence of the others.
@@ -476,7 +479,7 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
         n_res=OI.count('> **RESOLVED by `ALK_V2_FREEZE_5`')
         check('exactly 16 Freeze-5 resolution boxes', n_res==16, str(n_res))
         n_d=OI.count('> **RESOLVED by owner decision')
-        check('exactly 15 owner-decision 16-29 resolution boxes', n_d==15, str(n_d))
+        check('exactly 16 owner-decision 16-30 resolution boxes', n_d==16, str(n_d))
         for oi in LEFT_OPEN:
             m=re.search(r'^## '+re.escape(oi)+r' — ', OI, re.M)
             if not m: check('register section for '+oi, False); continue
@@ -710,6 +713,14 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                 if len(pts)>=2:
                     try: inst=[datetime.datetime.fromisoformat(x) for x,_ in pts]
                     except Exception: return None,None
+                    # A `measuredAt` with no offset is not an instant, and mixing one
+                    # into this list makes `min()` raise rather than fail a check --
+                    # which stops every absorbed check after this one and reports 256
+                    # assertions as unrun. `kernel.parse_instant` rejects the same
+                    # shape; a fixture may legitimately contain such a record, because
+                    # asserting that the engine REFUSES it is a real assertion
+                    # (`AD-TIME-005B`). This series simply has no arithmetic to check.
+                    if any(x.tzinfo is None for x in inst): return None,None
                     t0=min(inst)
                     days=[(x-t0).total_seconds()/86400.0 for x in inst]
                     by=collections.OrderedDict()

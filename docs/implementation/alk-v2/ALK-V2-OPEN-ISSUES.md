@@ -3179,9 +3179,41 @@ reconcile it. **Not done here.**
 
 ## OI-EPISODEDATEONLY-001 — a date-only measurement cannot be placed in a 30-minute window
 
+> **RESOLVED by owner decision 30.**
+>
+> A measurement with no usable instant has no position inside the 30-minute window, so it
+> **forms no episode and joins none**. It is excluded from episode construction, and the
+> exclusion is **silent**: no reason code, no notice, no capability degradation, no payload.
+>
+> Of the three candidate answers the analysis below sets out — forms its own episode, joins
+> the nearest, or is excluded — *joins the nearest* requires placing the measurement in time,
+> which means assuming a time, which `SHARED-LEGACY-TIME-001`'s forbidden list rules out
+> absolutely. *Forms its own episode* assumes no time, but an episode carries a
+> representative timestamp that every downstream consumer reads, so a singleton with none
+> would need either a fabricated timestamp or a special case in every consumer of
+> `episodeAt` — the first is forbidden and the second gives one inference several owners,
+> which `MASTER RULE 1` calls a defect. Exclusion is the answer that neither fabricates nor
+> forks.
+>
+> The failure scenario below is answered directly: three date-only readings on one day form
+> **no** episodes, contribute **nothing** to `ALK-008`'s independence count, and are kept in
+> history, on the chart and in descriptive statistics. Where that leaves too few independent
+> observations, `EVIDENCE_INSUFFICIENT_CLUSTERS` says so — and says only that.
+>
+> This is a deliberate **relaxation**: the rule was written to stop an engine treating a
+> fabricated instant as a real one, and it did that by making the absence of an instant
+> loud. The prohibition on fabrication is kept in full; the announcement is removed.
+>
+> Encoded in canon Part II §2.3A.1 and §2.3A.2, `M-8`, `M-13`, `X-INV-007`,
+> `ALK-V2-DATA-CONTRACT.md` §1, `ALK-V2-ALGORITHM-CONTRACT.md` `A1`, `INV-H6` and
+> `AD-TIME-001`. Seven reason codes are retired and `VALIDATION_TIMESTAMP_INVALID` is
+> narrowed; see `ALK-V2-REASON-CODES.md` "Retired by owner decision 30".
+>
+> Everything below this box is the pre-decision analysis, preserved as the record of why the
+> decision was needed.
+
 - **Class:** `CANON_DEFECT`
-- **Status:** **OPEN.** Cited by `ALK-TESTING-EPISODE-001` before this section existed and
-  now recorded here.
+- **Status:** **RESOLVED by owner decision 30.**
 - **Canon:** `ALK-TESTING-EPISODE-001`; `SHARED-LEGACY-TIME-001`; Part II §3
 
 Membership is decided entirely by elapsed time between measurements. A legacy or imported
@@ -3192,6 +3224,74 @@ episode construction is unstated.
 **Failure scenario.** An import puts three date-only readings on one day. One engine makes
 them one episode of three, another makes three observations, and `ALK-008`'s independence
 count — and therefore whether a trend exists at all — differs. **Not decided here.**
+
+---
+
+## OI-UNTIMEDSAMEDAY-001 — which of two same-day records with no usable instant is the current value
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Found by `test-engineer` reviewing owner decision 30, and deliberately
+  left.
+- **Canon:** `SHARED-LEGACY-TIME-001` Part II §2.3A.2 clause 3; Part II §2.4
+
+Clause 3 breaks a same-day tie between two records with no usable instant **by
+`eventOrdinal`**. Part II §2.4 defines `eventOrdinal` as a "monotonic insertion sequence".
+`ledger.build` deliberately does **not** implement it that way: it derives the ordinal from a
+SHA-256 of the event's own content, and its docstring gives the reason — taking it from the
+position in the submitted array would make the sort key depend on the array order it exists
+to defeat, and `INV-A1` requires that independence.
+
+Both readings are defensible and they were indistinguishable until this decision. Before it,
+the content ordinal only separated events sharing an instant. It now decides **which
+measurement the keeper is shown as their current alkalinity**.
+
+**Failure scenario.** Two date-only readings on one day, 8.4 and 8.6. Which is current is
+decided by a hash. `test-engineer` demonstrated that adding an inert `"note"` field to one of
+them flips `latestValidValueDkh` from 7.0 to 9.5 and `position` from `BELOW_RANGE` to
+`ABOVE_RANGE` on a comparable ledger — deterministic, reproducible, and unrelated to
+anything about time.
+
+**Why it is not decided here.** Owner decision 30 is about *reporting*. Which of two records
+neither of which can be shown to be later is "the latest" is a different question, it sets
+behaviour, and neither reading of `eventOrdinal` follows from the decision. Answering it
+would also reopen `ledger.build`'s array-order independence, which `INV-A1` depends on.
+
+**What the engine does meanwhile, and what is tested.** The content ordinal decides, which is
+deterministic and array-order independent — `INV-A1` and `INV-A3` reverse and rotate
+`AD-TIME-004`'s ledger and require byte-identical output. `AD-TIME-004` deliberately puts
+both values on the same side of every threshold, so it asserts the position without asserting
+**which** record produced it. Pinning that would pin an answer nobody has chosen.
+
+---
+
+## OI-EVENTNOINSTANT-001 — what a non-measurement event with no usable instant does is unstated
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Found while encoding owner decision 30 and deliberately left.
+- **Canon:** `SHARED-LEGACY-TIME-001` Part II §2.3A / §2.3A.1; `M-5`; `M-13`
+
+Owner decision 30 says what happens to a **measurement** that lacks a usable instant. It says
+nothing about a dose change, a manual correction, a water change or a delivery anomaly that
+lacks one — and `TimeProvenance` is declared on `Instant`, not on `Reading`, so the
+vocabulary is available to every event kind.
+
+**Failure scenario.** A V1 import carries a dose change with a date and no time. Under
+decision 30's reading it is silently ineligible, so the engine sees no dose boundary at all
+and fits one trend line across two dosing regimes — the exact confound `ALK-007` exists to
+prevent. Under the opposite reading it is a hard confounder and every downstream inference
+refuses. The two answers differ by a whole recommendation, and neither is stated.
+
+**Why it is not decided here.** Decision 30's scope is measurements and their reporting. A
+dose event with no usable time is a *confounding* question, not a reporting one:
+`SEGMENT_CONFOUNDED_UNKNOWN_DOSE_TIME` and `CAPABILITY_DOSE_EFFECTIVE_TIME_UNCERTAIN` already
+exist for a dose whose time is uncertain, and whether a dose whose time is *absent* is that
+same state or a different one sets behaviour. That is the owner's.
+
+**What the engine does meanwhile.** The decision-30 split in `ledger._readings` is scoped to
+`READING` events and to nothing else. Every other kind is parsed exactly as it was before the
+amendment: it needs a parseable offset-aware instant in its own time field, and without one
+it sorts last and contributes nothing. That is the pre-existing behaviour, unchanged and not
+endorsed.
 
 ---
 

@@ -12,6 +12,7 @@ output.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -27,6 +28,31 @@ MANUAL_CORRECTION = "MANUAL_CORRECTION"
 WATER_CHANGE = "WATER_CHANGE"
 DELIVERY_ANOMALY = "DELIVERY_ANOMALY"
 CONSUMPTION_CONTEXT_EVENT = "CONSUMPTION_CONTEXT_EVENT"
+
+#: The four time provenances `SHARED-LEGACY-TIME-001` declares (canon Part II
+#: §2.3A). The first two carry an `absoluteInstant`; the last two carry no
+#: usable instant and, under owner decision 30, are **silently** ineligible for
+#: elapsed-time inference. A value outside this set is not a provenance the
+#: contract knows and is a validation refusal, not a fifth behaviour.
+TIME_PROVENANCES = (
+    "EXACT_ABSOLUTE",
+    "RECONSTRUCTED_WITH_PROVENANCE",
+    "LOCAL_TIME_ZONE_UNKNOWN",
+    "DATE_ONLY",
+)
+
+#: The wire field a provenance with no usable instant carries its day in
+#: (`ALK-V2-DATA-CONTRACT.md` §1 `ObservedTime`, owner decision 30). Reading a
+#: day out of `measuredAt` instead is deliberately **not** offered: a record
+#: with one of these provenances must not carry an `absoluteInstant` at all, and
+#: taking a day from one would take the day whoever fabricated it chose.
+_DAY_FIELD = {
+    "DATE_ONLY": "calendarDate",
+    "LOCAL_TIME_ZONE_UNKNOWN": "localDateTime",
+}
+
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 
 #: Which field carries each kind's own instant.
 _TIME_FIELD = {
@@ -65,9 +91,38 @@ class Reading:
 
 
 @dataclass
+class UntimedReading:
+    """One raw test result whose record carries **no usable instant**.
+
+    `DATE_ONLY` and `LOCAL_TIME_ZONE_UNKNOWN` (canon Part II §2.3A). It is a real
+    measurement and is kept: it serves current position under §2.3A.2, and the
+    application charts it and counts it in descriptive statistics. What it never
+    does is take part in an inference that needs elapsed time -- and under owner
+    decision 30 it never says so either, which is why this class carries no
+    reason code, no capability state and no flag. The engine simply does not use
+    it, and the silence is the point.
+
+    It is a separate type from `Reading` rather than a `Reading` with an optional
+    instant, so that no elapsed-time code path can be handed one by accident: the
+    exclusion is enforced by the type, not by remembering to check a field.
+    """
+
+    reading_id: str
+    #: `YYYY-MM-DD`, the day the record states, in the day's own terms. Never
+    #: converted through a zone and never widened into an instant.
+    day: str
+    raw_value_dkh: float
+    status: str = "VALID"
+    ordinal: int = 0
+
+
+@dataclass
 class Ledger:
     events: List[Event] = field(default_factory=list)
     readings: List[Reading] = field(default_factory=list)
+    #: Readings with no usable instant. Never merged into `readings`: every
+    #: consumer of `readings` divides by an elapsed interval sooner or later.
+    untimed: List[UntimedReading] = field(default_factory=list)
     #: What the ledger could not read, as `(reasonCode | None, payload | text)`.
     #: Nothing is dropped silently: `engine.assess` turns every entry into a
     #: visible reason code or a named line in the insufficiency umbrella.
@@ -120,7 +175,15 @@ def build(events: List[Dict[str, Any]]) -> Ledger:
             led.unhandled_kinds.append(kind)
             continue
         provenance = item.get("timeProvenance", "EXACT_ABSOLUTE")
-        at = parse_instant(item.get(_TIME_FIELD[kind]), provenance)
+        if kind == READING and provenance not in kernel.EXACT_PROVENANCES:
+            # Owner decision 30: a reading whose provenance carries no
+            # `absoluteInstant` must not be read as though it had one. Any
+            # `measuredAt` such a record carries is not the contract's and is
+            # not consulted -- `_readings` takes its day from the field the
+            # provenance declares, or refuses the record.
+            at = None
+        else:
+            at = parse_instant(item.get(_TIME_FIELD[kind]), provenance)
         prepared.append(
             Event(
                 kind=kind,
@@ -132,8 +195,22 @@ def build(events: List[Dict[str, Any]]) -> Ledger:
         )
 
     led.events = sorted(prepared, key=_sort_key)
-    led.readings = _readings(led)
+    led.readings, led.untimed = _readings(led)
     return led
+
+
+def _declared_day(e: Event, provenance: str) -> Optional[str]:
+    """The calendar day a record with no usable instant states, or `None`.
+
+    `None` means the record does not honour the shape its own `timeProvenance`
+    declares, which *is* a malformed record and is reported as one. A record
+    that does honour it is not malformed and reports nothing at all.
+    """
+    raw = e.get(_DAY_FIELD[provenance])
+    if not isinstance(raw, str):
+        return None
+    day = raw[:10]
+    return day if _DAY.match(day) else None
 
 
 def _content_ordinal(item: Dict[str, Any]) -> int:
@@ -150,8 +227,8 @@ def _content_ordinal(item: Dict[str, Any]) -> int:
     return int(hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12], 16)
 
 
-def _readings(led: Ledger) -> List[Reading]:
-    """Every `READING` in the ledger, in ledger order.
+def _readings(led: Ledger):
+    """Every `READING` in the ledger, split by whether it carries a usable instant.
 
     `READING_SERIES` is **not** expanded. `OD-014` records that its expansion
     has no owner and that two implementations of it already exist; a third
@@ -159,26 +236,81 @@ def _readings(led: Ledger) -> List[Reading]:
     which `MASTER RULE 1` calls a defect rather than a coincidence. The engine
     therefore reports the series as unhandled and the assessment refuses on the
     evidence it does have, rather than guessing at a shape nobody owns.
+
+    **The split is owner decision 30** (canon Part II §2.3A.1). A reading whose
+    `timeProvenance` is `DATE_ONLY` or `LOCAL_TIME_ZONE_UNKNOWN` carries no
+    `absoluteInstant` **by contract**. It is not malformed, it is not dropped,
+    and it produces no reason code, no problem entry and no capability
+    degradation: it goes to `untimed`, where position can reach it and no
+    elapsed-time consumer can. The one thing that would be dishonest here is
+    treating the contract being honoured as a validation failure, which is what
+    this engine did before the amendment and is exactly the announcement the
+    decision removes.
     """
-    out: List[Reading] = []
+    timed: List[Reading] = []
+    untimed: List[UntimedReading] = []
     for e in led.events:
         if e.kind == READING_SERIES:
             led.unhandled_kinds.append(READING_SERIES)
             continue
         if e.kind != READING:
             continue
+
+        provenance = str(e.get("timeProvenance", "EXACT_ABSOLUTE"))
+        if provenance not in TIME_PROVENANCES:
+            # Not one of the four the contract declares. A name nobody owns is
+            # not a fifth behaviour to guess at.
+            led.problems.append(
+                ("VALIDATION_TIMESTAMP_INVALID",
+                 {"enteredAt": provenance,
+                  "readingId": e.event_id or "UNKNOWN"})
+            )
+            continue
+
+        value = e.get("rawValueDkh")
+
+        if provenance not in kernel.EXACT_PROVENANCES:
+            day = _declared_day(e, provenance)
+            if day is None:
+                # The record claims a provenance and does not carry the field
+                # that provenance declares. That is malformed, and unlike the
+                # honoured case it is reported.
+                led.problems.append(
+                    ("VALIDATION_TIMESTAMP_INVALID",
+                     {"enteredAt": e.get(_DAY_FIELD[provenance], "UNKNOWN"),
+                      "readingId": e.event_id or "UNKNOWN"})
+                )
+                continue
+            if not kernel.finite(value):
+                led.problems.append(
+                    ("VALIDATION_VALUE_NOT_FINITE",
+                     {"enteredValue": value if value is not None else "UNKNOWN",
+                      "readingId": e.event_id or f"R-{day}"})
+                )
+                continue
+            untimed.append(
+                UntimedReading(
+                    reading_id=e.event_id or f"R-{day}",
+                    day=day,
+                    raw_value_dkh=float(value),
+                    status=str(e.get("status", "VALID")),
+                    ordinal=e.ordinal,
+                )
+            )
+            continue
+
         if e.at is None:
-            # Nothing is dropped silently: the engine records what it could not
-            # read so `engine.assess` can say so in a reason code. A keeper who
-            # entered four readings must never be told "2 clusters, need 3"
-            # with no account of where the other two went.
+            # A record that CLAIMS a usable instant and does not supply a
+            # readable one. Nothing is dropped silently: the engine records what
+            # it could not read so `engine.assess` can say so in a reason code.
+            # A keeper who entered four readings must never be told "2 clusters,
+            # need 3" with no account of where the other two went.
             led.problems.append(
                 ("VALIDATION_TIMESTAMP_INVALID",
                  {"enteredAt": e.get(_TIME_FIELD[READING], "UNKNOWN"),
                   "readingId": e.event_id or "UNKNOWN"})
             )
             continue
-        value = e.get("rawValueDkh")
         if not kernel.finite(value):
             led.problems.append(
                 ("VALIDATION_VALUE_NOT_FINITE",
@@ -186,7 +318,7 @@ def _readings(led: Ledger) -> List[Reading]:
                   "readingId": e.event_id or f"R-{e.at.text}"})
             )
             continue
-        out.append(
+        timed.append(
             Reading(
                 reading_id=e.event_id or f"R-{e.at.text}",
                 at=e.at,
@@ -195,7 +327,7 @@ def _readings(led: Ledger) -> List[Reading]:
                 ordinal=e.ordinal,
             )
         )
-    return out
+    return timed, untimed
 
 
 # ---------------------------------------------------------------------------

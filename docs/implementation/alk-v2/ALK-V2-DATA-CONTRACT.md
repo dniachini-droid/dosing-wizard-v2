@@ -65,35 +65,104 @@ says so (`recommendedDoseMlPerDay` is the rounded recommendation;
 
 ## 1. Time
 
-### `Instant`
+### `ObservedTime` — amended by owner decision 30, resolving `AI-008`
+
+Every event carries exactly one `ObservedTime`. Which of its three time fields is present is
+decided by `timeProvenance` and by nothing else.
 
 ```text
-Instant {
-  absoluteInstant      REQ    offset-aware timestamp or UTC instant, second precision or finer
-  displayTimeZoneId    OPT    IANA zone id, presentation only, never used in arithmetic
+ObservedTime {
   timeProvenance       REQ    TimeProvenance
+  absoluteInstant      REQ when timeProvenance is EXACT_ABSOLUTE or
+                              RECONSTRUCTED_WITH_PROVENANCE; ABSENT otherwise
+                       offset-aware timestamp or UTC instant, second precision or finer
+  localDateTime        REQ when timeProvenance is LOCAL_TIME_ZONE_UNKNOWN; ABSENT otherwise
+                       the recorded local `YYYY-MM-DDTHH:MM`, with NO offset and no zone
+  calendarDate         REQ when timeProvenance is DATE_ONLY; ABSENT otherwise
+                       `YYYY-MM-DD`, the day as the record states it
+  displayTimeZoneId    OPT    IANA zone id, presentation only, never used in arithmetic
+  reconstructionNote   REQ when timeProvenance is RECONSTRUCTED_WITH_PROVENANCE
+                       what proved the historical offset, and that it was proved
 }
 ```
 
 `SHARED-LEGACY-TIME-001`, `M-13`, Part II §2.1-2.3A.
 
+**`Instant`** is `ObservedTime` narrowed to the two provenances that carry an
+`absoluteInstant`. Where this document says a field is an `Instant`, a value whose
+provenance carries no `absoluteInstant` is not merely invalid there — it is not
+representable there, which is the point.
+
+> **`AI-008` — RESOLVED by owner decision 30.** The contradiction was that a `DATE_ONLY`
+> reading was declared usable as the latest valid current value while `measuredAt` was a
+> required `Instant`, so a sender had two options and both were wrong: transmit the bare
+> date and have the engine record `VALIDATION_TIMESTAMP_INVALID` and drop the reading, or
+> fabricate an instant, which §1 forbids absolutely.
+>
+> The resolution is that a reading without a usable instant is **not transmitted as an
+> `Instant` at all**. It carries `calendarDate` (or `localDateTime`), no `absoluteInstant`,
+> and its true provenance. Both statements now hold together: nothing is fabricated, and
+> nothing is malformed, because the shape the record is sent in is the shape the contract
+> declares for its provenance. A receiver that finds no `absoluteInstant` on a `DATE_ONLY`
+> record has found the contract being honoured, and emits nothing — see §1's
+> *Silent ineligibility* below.
+>
+> A record whose provenance **claims** an `absoluteInstant` and whose value is unreadable is
+> a different thing and is still `VALIDATION_TIMESTAMP_INVALID`.
+
 ### `TimeProvenance` — closed vocabulary
 
-| Value | Meaning | Trend eligibility | Position eligibility |
+| Value | Wire form | Elapsed-time eligibility | Position, history, chart, descriptive statistics |
 |---|---|---|---|
-| `EXACT_ABSOLUTE` | Captured with a proven absolute instant. Required for all new V2 events. | yes | yes |
-| `RECONSTRUCTED_WITH_PROVENANCE` | Historical offset independently proven and the reconstruction recorded. | yes | yes |
-| `LOCAL_TIME_ZONE_UNKNOWN` | Local `HH:MM` with no proven offset. | **no** — exact elapsed time not derivable across offset/DST ambiguity | yes, if latest valid |
-| `DATE_ONLY` | Date known, time within the day unknown. | **no** | yes, if latest valid |
+| `EXACT_ABSOLUTE` | `absoluteInstant` | yes | yes |
+| `RECONSTRUCTED_WITH_PROVENANCE` | `absoluteInstant` + `reconstructionNote` | yes | yes |
+| `LOCAL_TIME_ZONE_UNKNOWN` | `localDateTime` | **no**, silently | yes |
+| `DATE_ONLY` | `calendarDate` | **no**, silently | yes |
+
+The latter two are said to **lack a usable instant**.
 
 Forbidden, absolutely (`SHARED-LEGACY-TIME-001`, `DATA-PROVENANCE.md` §2): assigning
 noon; assigning midnight; assigning the keeper's current timezone to an old local
 timestamp; treating a local `HH:MM` as an absolute instant; inferring a time from testing
-routine, file order or entry order.
+routine, file order or entry order. Owner decision 30 does not touch this list and does not
+weaken it. It changes what is **reported**, never what is **recorded**.
 
 A `DATE_ONLY` record **stays** `DATE_ONLY` through every layer, including export and
 migration. There is no transformation that upgrades time provenance except an importer
 that independently proves the historical offset and records the proof.
+
+### Silent ineligibility — `SHARED-LEGACY-TIME-001`, owner decision 30, canon Part II §2.3A.1
+
+A record lacking a usable instant is ineligible for every inference that needs elapsed time.
+**That ineligibility is a fact about the engine's input and is never reported.** It produces
+no reason code, no notice, no capability degradation and no payload of its own, and no
+output names the record. There is no `timeCapability` field, no `exactElapsedTimeAnalysis`
+field and no `trendEligibility` field in `EngineResult`; each was retired by decision 30.
+
+A record's provenance is likewise never emitted **per record in either direction**: an
+output that names the eligible readings names the ineligible ones by omission. The four
+`TIME_PROVENANCE_*` codes are retired for that reason, the positive two along with the
+negative two.
+
+Where excluding such records leaves too little evidence, the ordinary insufficiency rules
+apply and are the whole of what is said — `EVIDENCE_INSUFFICIENT_CLUSTERS`,
+`EVIDENCE_INSUFFICIENT_SPAN` and their kin. They describe the evidence the engine holds.
+They do not itemise what it did not use and they name no record.
+
+### Ordering without a usable instant
+
+Canon Part II §2.3A.2. For position, history and charting only:
+
+```text
+1. calendar day ascending, in the day's own terms, never converted through an assumed zone
+2. within one day, a record carrying a usable instant is LATER than one carrying none
+3. between two records on one day that both lack a usable instant, eventOrdinal
+```
+
+Clause 2 is not a claim about the tank. It is the refusal to make one: a record with no
+time cannot be **shown** to be later, and position is never decided by an assumption. This
+ordering is never an elapsed-time operand, and no rate, slope, episode-membership decision
+or retest interval may be derived from it.
 
 ### Elapsed time
 
@@ -101,8 +170,15 @@ that independently proves the historical offset and records the proof.
 elapsedDays(a, b) = (b.absoluteInstant - a.absoluteInstant) / 86400 seconds
 ```
 
-Defined only when both operands are `EXACT_ABSOLUTE` or `RECONSTRUCTED_WITH_PROVENANCE`.
-Otherwise the requesting analysis emits `NOT_RUN` with `TIME_EXACT_ELAPSED_UNAVAILABLE`.
+Defined only when both operands carry a usable instant. **Amended by owner decision 30:** an
+operand that carries none is never offered to the calculation, so there is no refusal to
+emit. The analysis runs on the records that do carry usable instants, and where those are
+too few, the insufficiency rules above state that and nothing more.
+
+> **Superseded wording, preserved rather than deleted.** This section previously read:
+> *"Defined only when both operands are `EXACT_ABSOLUTE` or
+> `RECONSTRUCTED_WITH_PROVENANCE`. Otherwise the requesting analysis emits `NOT_RUN` with
+> `TIME_EXACT_ELAPSED_UNAVAILABLE`."* That code is retired.
 
 ### Event ordering
 
@@ -131,8 +207,8 @@ One raw test result. Never a cluster, never a derived value.
 |---|---|---|---|
 | `readingId` | — | `REQ` `IMMUT` | Stable identity. |
 | `parameter` | — | `REQ` | `ALK` \| `CA` \| `MG`. Ca/Mg are inert facts in this runtime. |
-| `measuredAt` | `Instant` | `REQ` | Biological sampling time. Drives all trend arithmetic (`M-8`). |
-| `recordedAt` | `Instant` | `REQ` | When the app captured it. **Never** substituted for `measuredAt`. |
+| `measuredAt` | `ObservedTime` | `REQ` | Biological sampling time. Drives all trend arithmetic (`M-8`). **Amended by owner decision 30 (`AI-008`):** an `ObservedTime`, not an `Instant` — a reading whose `timeProvenance` is `DATE_ONLY` or `LOCAL_TIME_ZONE_UNKNOWN` carries `calendarDate` or `localDateTime` and **no** `absoluteInstant`. It is kept, charted and counted, is eligible for position under §1's ordering, is silently ineligible for elapsed-time inference, and emits nothing. |
+| `recordedAt` | `Instant` | `REQ` | When the app captured it — an app write, which always has a proven instant, so this stays a true `Instant` whatever `measuredAt` carries. **Never** substituted for `measuredAt`, and decision 30 does not weaken that: a present `recordedAt` is not a time the measurement was taken. |
 | `rawValueDkh` | dKH | `REQ` `IMMUT` | The value as entered. Never overwritten by a rounded, median, fitted or normalized value (Part II §3.1). |
 | `canonicalUnit` | — | `REQ` | `dKH` for Alk. Entry in meq/L converts at `1 meq/L = 2.8 dKH` and stores both the original entry and the canonical value. |
 | `enteredValue` / `enteredUnit` | — | `OPT` | Preserved exactly as typed, for audit. |
@@ -154,7 +230,10 @@ finite numeric value
 supported unit
 physically representable range        (a value outside the target or outer range is
                                        NOT a validation failure — unusual biology is data)
-valid timestamp
+time fields match the declared         (owner decision 30: a DATE_ONLY record carrying no
+  timeProvenance                        absoluteInstant is CORRECT, not malformed; a record
+                                        that claims one and cannot supply a readable one is
+                                        VALIDATION_TIMESTAMP_INVALID)
 parameter identity matches the entry context
 ```
 
@@ -861,6 +940,14 @@ disposition):
 
 ### `EngineResult` — the single domain output
 
+**`latestValidClusterId` has three states (owner decision 30).** The cluster id of the
+episode the current value came from; `NONE` where the current value came from a reading with
+no usable instant, which forms no episode; `NOT_RUN` where no observation of any kind
+resolved. `NONE` is a **value**, not a withholding — nothing is withheld, no output is
+absent, and no reason code is emitted for it. Only `NOT_RUN` is a withholding, and the
+insufficiency umbrella names it.
+
+
 ```text
 EngineResult {
   assessmentId              IMMUT
@@ -871,7 +958,7 @@ EngineResult {
   configVersionId           REQ            resolved at assessmentAsOf
 
   position                  Position
-  latestValidClusterId      REQ
+  latestValidClusterId      REQ            ClusterId | NONE | NOT_RUN
   latestValidValueDkh       dKH
   outerBoundState
 

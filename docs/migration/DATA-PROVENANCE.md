@@ -69,7 +69,24 @@ recognisable as date-only at every layer of the system. Date-only data stays dat
 
 Consequences for analysis follow from this rather than from any separate rule: an
 analysis whose correctness depends on intervals shorter than the recorded precision
-cannot be run on records that lack that precision. It refuses; it does not approximate.
+cannot be run on records that lack that precision. It does not approximate.
+
+**Amended by owner decision 30 — how that consequence is delivered.** The analysis is not
+*refused*; the record is simply not one of its operands, and the engine says nothing about
+having left it out. The keeper is not told which records were skipped or why. Where the
+records that remain are too few, the ordinary insufficiency statements — not enough separate
+tests yet, the tests do not yet cover enough days — are the whole of what is said. See canon
+Part II §2.3A.1.
+
+**The four prohibitions above are untouched by that amendment and remain absolute.** They are
+what this section is for. Decision 30 relaxes what is *reported*; it relaxes nothing about
+what may be *recorded*, and a date-only record still stays date-only at every layer,
+including export and migration.
+
+> **Superseded wording, preserved rather than deleted.** The consequence paragraph
+> previously ended *"It refuses; it does not approximate."* The second half stands. The
+> first half was the announcement, and it is what every screen built against this document
+> faithfully reproduced.
 
 ---
 

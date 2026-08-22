@@ -2292,19 +2292,95 @@ Rules:
 - `LOCAL_TIME_ZONE_UNKNOWN` remains visible in history and may support event order where that order is independently unambiguous, but it is **not** eligible for calculations requiring exact elapsed seconds across an offset/DST ambiguity.
 - `DATE_ONLY` remains visible and may support current position if otherwise valid, but it is not an exact trend point where assumed time-of-day could change slope, clustering or intervention attribution.
 
+A record carrying one of the latter two provenances is said to lack a **usable instant**.
+
 Forbidden:
 
 - silently assigning noon;
+- silently assigning midnight;
 - silently applying the keeper's current timezone to old local timestamps;
 - silently treating a local `HH:MM` as an absolute instant.
 
-Missing behaviour for exact-time-dependent analysis:
+### 2.3A.1 Ineligibility is silent — `SHARED-LEGACY-TIME-001`, owner decision 30
 
-```text
-DEGRADE
-timeCapability = IMPRECISE_OR_ABSOLUTE_TIME_UNKNOWN
-exactElapsedTimeAnalysis = NOT_RUN
-```
+**Owner decision 30. A deliberate relaxation of §2.3A, and it supersedes the missing-behaviour
+block preserved below.**
+
+A record that lacks a usable instant is **ineligible** for any inference that needs elapsed
+time. That ineligibility is a **fact about the engine's input, not a finding about the
+tank**. The engine does not use the record for elapsed-time inference and says nothing
+about having declined to.
+
+Normative consequences, and this list is closed:
+
+1. **No announcement.** Lacking a usable instant produces no reason code, no notice, no
+   capability degradation and no payload of its own. There is no `timeCapability` field and
+   no `exactElapsedTimeAnalysis` field. A record's own provenance is never reported per
+   record, in either direction — a channel that names the eligible records names the
+   ineligible ones by omission, which is the same announcement written backwards.
+2. **Not a member of a testing episode.** Episode membership is decided entirely by elapsed
+   time between measurements (Part II §5.3, and the testing-episode rule that owns it). A
+   measurement with no usable instant has no position inside the window, so it forms no
+   episode and joins none — it is excluded from episode construction rather than forming a
+   singleton, because an episode carries a representative timestamp that every downstream
+   consumer reads, and a singleton with none would need either a fabricated one or a special
+   case in each of those consumers. Exclusion keeps one owner and fabricates nothing. This
+   resolves `OI-EPISODEDATEONLY-001`.
+3. **Not an operand of elapsed time.** \(\Delta t\) is defined only between two usable
+   instants (§2.2). An analysis is never asked for one it cannot have, so there is no
+   refusal to report.
+4. **Retained everywhere else.** The record stays in history, is charted as an ordinary
+   point on an ordinary line, is counted in descriptive statistics, and may be the current
+   value under §2.3A.2. It is a real measurement.
+5. **Where the remaining evidence is too thin, the ordinary insufficiency rules already say
+   so** — not enough independent observations, or not enough elapsed span. Those statements
+   are correct and sufficient. They describe the evidence the engine holds; they never
+   itemise what it did not use, and they name no record.
+6. **Storage is untouched.** `DATE_ONLY` remains `DATE_ONLY` through every layer including
+   export and migration, and nothing gains a time. The forbidden list above is unchanged and
+   remains absolute. This decision changes what is **reported**, never what is **recorded**.
+
+**Why this is a relaxation, and why it was made.** §2.3A was written to stop an engine
+quietly treating a fabricated instant as a real one. It achieved that by making the absence
+of an instant a loud, blocking condition — a degradation with a capability state and a
+refusal code per operand. That was the right instrument against fabrication and the wrong
+one against *ordinary legacy history*: a keeper importing years of dated records has done
+nothing wrong, has nothing to fix, and cannot act on the announcement. In one such import
+the same fact was announced in five places at once. The prohibition on fabricating a time is
+what §2.3A is for and it is kept in full; the announcement was scaffolding around it and is
+removed. Nothing about what the engine computes changes — only which observations are
+eligible, and what is said about the ones that are not.
+
+### 2.3A.2 Position and ordering without a usable instant — owner decision 30
+
+`DATE_ONLY` and `LOCAL_TIME_ZONE_UNKNOWN` records may support the current position. Ordering
+for that purpose, and for that purpose only:
+
+1. by calendar day, ascending — the day the record states, in the day's own terms, never
+   converted through an assumed zone;
+2. within one day, a record carrying a usable instant is later than a record that carries
+   none, because the record without one **cannot be shown** to be later and position is
+   never decided by an assumption;
+3. between two records on one day that both lack a usable instant, by `eventOrdinal`.
+
+This ordering may not be used as an elapsed-time operand, and no rate, slope, clustering
+decision or retest interval may be derived from it. Where the current value is taken from a
+record with no usable instant, nothing is said about that record's time, because there is
+nothing to say and §2.3A.1 clause 1 applies.
+
+> **Superseded wording, preserved rather than deleted.** Before owner decision 30 this
+> section additionally required, under the heading *"Missing behaviour for exact-time-dependent
+> analysis"*:
+>
+> ```text
+> DEGRADE
+> timeCapability = IMPRECISE_OR_ABSOLUTE_TIME_UNKNOWN
+> exactElapsedTimeAnalysis = NOT_RUN
+> ```
+>
+> Both fields are **retired**, not renamed: the states they carried are no longer reported
+> at all. `M-8` and `M-13` no longer degrade on measurement-time provenance, and the reason
+> codes that carried this to a surface are retired with them.
 
 A new clean V2 regime may begin once precise absolute timestamps are available.
 
@@ -6278,9 +6354,11 @@ open (`OI-EPISODEINTERVENTION-001`) rather than decided here.
 
 Two further questions this rule does **not** answer, both recorded open rather than settled:
 whether the window is measured pairwise between consecutive measurements or from the first
-measurement of an episode (`OI-EPISODEANCHOR-001`), and what happens to a measurement with
-**no time of day at all** — a date-only legacy reading, which a purely temporal membership
-test cannot place (`OI-EPISODEDATEONLY-001`). Part II §5.2's *"explicit grouping wins"* is
+measurement of an episode (`OI-EPISODEANCHOR-001`), and — **no longer open** — what happens
+to a measurement with **no time of day at all**. `OI-EPISODEDATEONLY-001` is **RESOLVED by
+owner decision 30**: a measurement with no usable instant has no position inside the window,
+so it forms no episode and joins none, and the exclusion is silent (Part II §2.3A.1
+clause 2). Part II §5.2's *"explicit grouping wins"* is
 shared canon and is not edited here; its interaction with a time-only membership test is
 `OI-PII52EXPLICIT-001`.
 
@@ -16407,17 +16485,26 @@ recordedAt
 
 Repeat clusters are derived deterministically from eligible measurements within the canonical repeat window.
 
-### Missing behaviour
+### Missing behaviour — amended by owner decision 30
 
 For a legacy reading with insufficient time precision:
-- it may support current position if it is the latest valid reading;
-- it remains visible in history;
-- it is not treated as an exact independent trend point where timing ambiguity could change slope or cluster membership.
+- it may support current position if it is the latest valid reading, ordered by Part II §2.3A.2;
+- it remains visible in history, on the chart and in descriptive statistics;
+- it is not a member of a testing episode and is not an exact independent trend point.
 
 ```text
-DEGRADE
-trendEligibility = TIME_IMPRECISE
+OK
 ```
+
+**`M-8` does not degrade, and emits no reason code.** The set of measurements the trend
+consumes contains, by construction, only measurements carrying a usable instant, so the
+datum this capability asks about is present for every observation any analysis is given.
+A reading without one is not a degraded input; it is not an input. Part II §2.3A.1 clause 1
+forbids reporting its absence, and `CAPABILITY_MEASUREMENT_TIME_IMPRECISE` is retired.
+
+> **Superseded wording, preserved rather than deleted.** This section previously required
+> `DEGRADE` with `trendEligibility = TIME_IMPRECISE`. Owner decision 30 retires both the
+> degradation and the field.
 
 New V2 measurement entry must capture `measuredAt` precisely enough for the engine.
 
@@ -16598,21 +16685,28 @@ timeProvenance = EXACT_ABSOLUTE
 
 Equivalent offset-aware timestamp storage is acceptable.
 
-### Missing behaviour
+### Missing behaviour — amended by owner decision 30
 
 Legacy records without a proven absolute instant:
 
 ```text
-DEGRADE
-timeCapability = IMPRECISE_OR_ABSOLUTE_TIME_UNKNOWN
+OK
 ```
 
 Then:
 
-- history display remains available;
-- current position may remain available if the latest reading is otherwise valid;
-- exact elapsed-time trend/consumption/response calculations that could change under timezone/DST ambiguity are `NOT_RUN`;
-- no noon or current-timezone backfill is invented.
+- history display remains available, and so do the chart and descriptive statistics;
+- current position may remain available if the latest reading is otherwise valid, ordered by Part II §2.3A.2;
+- such records are not operands of any exact elapsed-time calculation, and are **silently** not operands: the calculation runs on the records that do carry usable instants, and where those are too few the ordinary insufficiency rules state that and nothing more;
+- no noon, midnight or current-timezone backfill is invented.
+
+**`M-13` does not degrade, and emits no reason code.** `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE`
+is retired with it. Part II §2.3A.1 clause 1 is the governing statement.
+
+> **Superseded wording, preserved rather than deleted.** This section previously required
+> `DEGRADE` with `timeCapability = IMPRECISE_OR_ABSOLUTE_TIME_UNKNOWN`, and declared the
+> affected calculations `NOT_RUN`. Owner decision 30 retires the degradation, the field and
+> the announced `NOT_RUN`; what is left is that the calculation never sees the record.
 
 If historical timezone/offset is independently proven, the importer may reconstruct an absolute instant and retain provenance:
 
@@ -17819,6 +17913,12 @@ Same raw pre-V2 history plus two different current target ranges must not rewrit
 Coverage ID: `INV-TIME-001`
 
 Legacy date-only/local-time-without-zone records must never gain fabricated noon/current-zone instants. Exact elapsed-time calculations use only exact or provenance-backed reconstructed instants.
+
+**Extended by owner decision 30.** The invariant now has a second half, and it is the half a
+surface can violate: such a record must also never *announce itself*. No output names a
+record as lacking a usable instant, and none names one as carrying a usable instant either —
+per Part II §2.3A.1 clause 1, the second is the first written backwards. Storage is
+unchanged and remains the invariant's first half.
 
 ---
 

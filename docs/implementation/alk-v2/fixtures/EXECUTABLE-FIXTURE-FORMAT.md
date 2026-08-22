@@ -16,7 +16,7 @@ a fixture asserts is not a conversion; it is a canon edit wearing a disguise.
 
 ## 1. The problem this solves
 
-Of 204 fixtures, 6 can be submitted to an engine. The corpus was written to pin
+Of 211 fixtures, 31 can be submitted to an engine (6 when this format was written). The corpus was written to pin
 canon behaviour **for a human reader**, before any engine or interface existed,
 so the other 198 describe their scenario in whatever vocabulary suited the
 paragraph they came from — `sPreDkhPerDay`, `readings: 4`, `day0: {...}`,
@@ -163,7 +163,7 @@ and following) — this format adds none.
 
 | `kind` | Required fields | Notes |
 |---|---|---|
-| `READING` | `measuredAt`, `rawValueDkh` | `timeProvenance` defaults to `EXACT_ABSOLUTE` |
+| `READING` | one time field, and `rawValueDkh` | `timeProvenance` defaults to `EXACT_ABSOLUTE`. **Which** time field is required is decided by it (owner decision 30, `ALK-V2-DATA-CONTRACT.md` §1 `ObservedTime`): `measuredAt` for `EXACT_ABSOLUTE` and `RECONSTRUCTED_WITH_PROVENANCE`; `calendarDate` for `DATE_ONLY`; `localDateTime` for `LOCAL_TIME_ZONE_UNKNOWN`. The last two carry **no** `absoluteInstant`, and a fixture that gives one anyway is stating a time the record does not have |
 | `READING_SERIES` | `startAt`, `everyHours`, `count`, `valuesDkh` | shorthand for a regular series; `len(valuesDkh) == count`. **Expansion is unowned — see below.** |
 | `DOSE_STATE` | `programmedDoseMlPerDay`, `effectiveAt` | `effectiveAtConfidence` defaults to `EXACT` |
 | `DOSE_CHANGE` | `effectiveAt`, `from`, `to` | `effectiveAtConfidence` is `EXACT` or `UNCERTAIN`; when `UNCERTAIN`, `effectiveAtEarliest` / `effectiveAtLatest` are required |
@@ -171,6 +171,12 @@ and following) — this format adds none.
 | `WATER_CHANGE` | `occurredAt`, `changedFraction` | plus `replacementAlkalinityDkh`, `replacementAlkalinityConfidence` |
 | `DELIVERY_ANOMALY` | `anomalyType`, `fromAt`, `toAt` | `quantifiedEffect` may be `null` |
 | `CONSUMPTION_CONTEXT_EVENT` | `occurredAt`, `classification`, `materiality`, `source` | |
+
+**A ledger whose readings carry no absolute instant states its own `asOf`.** `DEC-021`
+derives the default from the instant of the last `READING`, and a `DATE_ONLY` or
+`LOCAL_TIME_ZONE_UNKNOWN` reading has none for it to name — deriving one from a stated day
+would be the fabrication `SHARED-LEGACY-TIME-001` forbids. `AD-TIME-002` is the first
+fixture in this position and states `input.asOf`.
 
 Events are written in chronological order for a human reader. The engine must
 not depend on that order — `INV-A1` requires the sort key

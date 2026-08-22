@@ -466,6 +466,22 @@ Fixture bodies for the canon-named invariants are in
   requiring exact elapsed time consumes it.
 - **Negative control:** assign noon on import; `WG-ALK-066` must fail.
 
+### INV-H6 — A record with no usable instant never announces itself
+- **Canon:** `SHARED-LEGACY-TIME-001` Part II §2.3A.1 (owner decision 30); `X-INV-007`.
+- **Added by owner decision 30.** `INV-H1` pins what is *stored*; this pins what is *said*.
+  They are separate failures and the second is the one every surface reproduced.
+- **Generator:** replay any ledger containing at least one record whose `timeProvenance` is
+  `DATE_ONLY` or `LOCAL_TIME_ZONE_UNKNOWN`, including the ledger in which *every* record is
+  one.
+- **Assert:** the `EngineResult` contains none of the seven codes decision 30 retired, no
+  `timeCapability` / `exactElapsedTimeAnalysis` / `trendEligibility` field, no `DEGRADE` on
+  `M-8` or `M-13`, and no payload anywhere naming a record's time provenance — in **either**
+  direction, because naming the eligible records names the rest by omission. Where the
+  remaining evidence is too thin, an ordinary `EVIDENCE_INSUFFICIENT_*` code carries the
+  whole message.
+- **Negative control:** re-emit `TIME_PROVENANCE_DATE_ONLY` for each such record;
+  `AD-TIME-001` must fail, and the emitted code must fall outside the closed set.
+
 ### INV-H2 — Missing dose history stays missing
 - **Canon:** `DATA-PROVENANCE.md` §3; `DEC-010`; Part II §70.1.
 - **Assert:** no code path infers a past dose from chemistry movement, back-fills a past
@@ -907,9 +923,9 @@ Fixture bodies for the canon-named invariants are in
 | E — Interventions and response | 8 |
 | F — Potency | 4 |
 | G — Safety | 17 |
-| H — History and provenance | 5 |
+| H — History and provenance | 6 |
 | I — Ownership and output contract | 10 |
-| **Total** | **76** |
+| **Total** | **77** |
 
 Six invariants were added by `ALK_V2_FREEZE_5`, its review and its amendments. `INV-I7`
 checks that the retired reason codes are gone. `INV-I8` checks that every owner decision is
