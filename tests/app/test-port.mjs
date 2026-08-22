@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { suite, eq, ok, throws } from "./harness.mjs";
 import { chartDataFrom } from "../../app/src/lib/adapt.js";
 import { ANNOTATION } from "../../app/src/store/ledger.js";
+import { fmtPotency, fmtVal } from "../../app/src/lib/format.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(path.dirname(HERE));
@@ -563,7 +564,20 @@ s.test("PORT-11", "a record with no time is carried through to the screen with n
   }
 });
 
-s.test("PORT-12", "a correction may not improve a record's time provenance", async () => {
+s.test("PORT-12", "the provenance guard refuses an upgrade, and still stands on every append", async () => {
+  /* THE TITLE CHANGED BECAUSE THE SYSTEM DID. It used to read "a correction may
+     not improve a record's time provenance", and that is no longer true of a
+     correction: owner finding 17 made `correctReading` rewrite the record in
+     place through `ledger.replace`, which deliberately does NOT call this
+     guard. The guard protected a SUPERSEDE chain, where the danger was a later
+     record silently claiming precision the original never had while both
+     remained readable; there is no chain now.
+
+     What the guard still does — and what this check has always actually tested
+     — is refuse an upgrade when it is called. It is still called on `append`,
+     where superseding is still reachable for any imported or pre-branch ledger.
+     `COR-02` covers what a correction is now allowed to do. A test whose title
+     claims more than its body checks is how a property comes to look covered. */
   const { assertProvenanceNotImproved, dateOnly, exactInstant } = await import("../../app/src/store/time.js");
   const before = dateOnly("2026-03-04");
   const after = exactInstant("2026-03-04", "09:00", 600, "Australia/Sydney");
@@ -1112,64 +1126,97 @@ s.test("PORT-24", "no surface offers to mark a record invalid, because nothing c
     `the annotation vocabulary is ${Object.keys(ANNOTATION).join(", ")}`);
 });
 
-s.test("PORT-25", "every path the built service worker precaches exists in what is deployed", () => {
-  /* THE BUILT ARTEFACT, NOT THE SOURCE. `app/sw.js` in source carries
-     `__PRECACHE__`; the list is written at build time from the bundle and from
-     `ENGINE_MODULES`, and a stale entry in it is invisible to every check that
-     reads source — the install step is deliberately tolerant of a 404, so a
-     path that does not exist is skipped in silence.
+s.test("PORT-25", "the precache list names no path by hand that the build renames", () => {
+  /* THE CHEAP ALWAYS-ON HALF. The end-to-end proof is
+     `tools/app/check-precache.mjs`, which reads the BUILT worker and is run
+     against a deploy tree — the same split as `PORT-19` and
+     `check-runtime-path.mjs`, and for the same reason: `app/dist/` is
+     gitignored, so a suite check over the artefact would silently pass on every
+     fresh checkout. Its first draft did exactly that, with `ok(true, ...)`, and
+     was counted among the green.
 
-     One was. `/app/manifest.webmanifest` is where the manifest lives in SOURCE;
-     the build hashes it into `/assets/` and rewrites the `<link>` to match, so
-     the hand-written entry named a URL the built app does not serve. Nothing
-     was missing from the cache — the hashed one was already there via the
-     bundle — but a second, stale spelling of a path with one owner is the same
-     defect as `AI-018`'s two spellings of the runtime's location, and this is
-     the arm that can see it.
+     What IS checkable without a build is the property the defect broke.
+     `/app/manifest.webmanifest` is where the manifest lives in SOURCE; the build
+     hashes it into `/assets/` and rewrites the `<link>` to match, so naming it
+     by hand named a URL the built app does not serve. Every asset the build
+     emits reaches the list through the bundle, under whatever name the build
+     gave it. A hand-written `/app/…` literal beside that is a second spelling of
+     a path with one owner — `AI-018`'s defect in a different file — and the only
+     one that is legitimate is the entry point, which the build does not rename. */
+  const src = fs.readFileSync(path.join(ROOT, "vite.config.js"), "utf8");
+  const block = /const precache = \[([\s\S]*?)\];/.exec(src);
+  ok(block, "the build states the precache list in one place");
 
-     Skipped rather than failed where the app has not been built: a checkout
-     that has never run `npm run build` has no artefact to check, and reporting
-     that as a defect would train a reader to ignore it. */
-  const dist = path.join(ROOT, "app/dist");
-  const swPath = path.join(dist, "app/sw.js");
-  if (!fs.existsSync(swPath)) {
-    ok(true, "no built app in app/dist — nothing to check (run `npm run build`)");
-    return;
+  const handWritten = [...block[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+  ok(handWritten.includes("/app/index.html"), "the entry point is named, and the build does not rename it");
+
+  const renamed = handWritten.filter((u) => u !== "/app/index.html" && u.startsWith("/app/"));
+  eq(renamed.join(", "), "",
+    `no other /app/ path is named by hand — the build hashes those and the list would name a URL it does not serve: ${renamed.join(", ")}`);
+
+  /* The bundle is what supplies them, so the list cannot fall behind it. */
+  ok(/\.\.\.assets/.test(block[1]), "every emitted asset reaches the list through the bundle");
+
+  /* And the engine's own files, which the build does NOT emit and which are
+     served from the repository, are still named — they have no other route in. */
+  ok(/engine\/alk_v2\//.test(block[1]), "the engine's own modules are named, because nothing else names them");
+});
+
+s.test("PORT-26", "a parameter formatter is given a parameter, not a decimal count", () => {
+  /* THE DEFECT OF THE ROUND, WRITTEN DOWN SO NOBODY HAS TO REDISCOVER IT.
+
+     `fmtVal(def, v)` takes a parameter DEFINITION and a value. Two call sites in
+     Setup passed `(value, decimals)`. `def.decimals` on a bare number is
+     `undefined`, so the fallback of 2 applied and the function returned the
+     DECIMAL COUNT formatted to two places. The screen read `4.00 dKH/mL` for a
+     77 L tank, read `4.00` whatever strength was entered, and went on reading
+     `4.00` after the keeper corrected the figure — because the number on screen
+     was never derived from the strength at all.
+
+     Both orders are two numbers, so nothing could tell. Sixteen call sites were
+     right and two were wrong and every one of them type-checked.
+
+     The strength formatter takes ONE argument now, so there is nothing to swap
+     — but `fmtVal` still takes two, and the trap is still there for the next
+     caller. This is the scan that holds them. */
+  const suspicious = [];
+  const files = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== "vendor") walk(f); }
+      else if (/\.(js|jsx)$/.test(e.name)) files.push(f);
+    }
+  };
+  walk(path.join(ROOT, "app/src"));
+  ok(files.length > 20, `there is something to scan: ${files.length} files`);
+
+  for (const f of files) {
+    const code = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const m of code.matchAll(/\bfmtVal\(\s*([^,()]+?)\s*,/g)) {
+      const first = m[1].trim();
+      const rel = path.relative(ROOT, f);
+      /* A numeric literal first is the swap itself. */
+      if (/^-?[\d.]+$/.test(first)) {
+        suspicious.push(`${rel}: fmtVal(${first}, …) — a literal where a definition belongs`);
+      }
+      /* A field that is plainly a VALUE first is the same mistake spelled with
+         a variable. `def.min` and `def.max` are excluded: they are a
+         definition's own band edges and are legitimately formatted BY that
+         definition, which is `fmtVal(def, def.min)`. */
+      if (/\.(value|spread|p05|p95|consumption|slope)$/.test(first)) {
+        suspicious.push(`${rel}: fmtVal(${first}, …) — a value where a definition belongs`);
+      }
+    }
   }
-  const sw = fs.readFileSync(swPath, "utf8");
-  ok(!/__PRECACHE__|__VERSION__/.test(sw), "the built worker carries no unfilled placeholder");
+  eq(suspicious.join(" | "), "", `fmtVal takes (def, value): ${suspicious.join(" | ")}`);
 
-  const m = /const PRECACHE = (\[[\s\S]*?\n\]);/.exec(sw);
-  ok(m, "the built worker states its precache list");
-  const list = JSON.parse(m[1]);
-  ok(list.length > 5, `and the list is not empty: ${list.length} entries`);
-
-  /* WHICH TREE ANSWERS FOR WHICH PATH, and it must not be "either" — that is
-     what let the stale entry pass a first draft of this check.
-     `/app/manifest.webmanifest` exists in SOURCE and is not what is served: the
-     build hashes it into `/assets/`. A check that accepted the source copy as
-     proof would have reported the very defect it was written for as fine.
-
-     So the shell answers for itself. `/app/` and `/assets/` are the build's
-     output and must be in `app/dist`; the engine's own Python files and the
-     frozen catalogue are served from the REPOSITORY root, which is what
-     `vite.config.js` explains the root is for. */
-  const missing = [];
-  for (const url of list) {
-    const rel = url.replace(/^\//, "");
-    const builtShell = rel.startsWith("app/") || rel.startsWith("assets/");
-    const where = builtShell ? path.join(dist, rel) : path.join(ROOT, rel);
-    if (!fs.existsSync(where)) missing.push(`${url} (looked in ${builtShell ? "app/dist" : "the repository"})`);
-  }
-  eq(missing.join(", "), "", `every precached path is served from where it is served from: missing ${missing.join(", ")}`);
-
-  /* And the manifest the HTML actually links is the one that is cached — the
-     specific pairing that was wrong. */
-  const html = fs.readFileSync(path.join(dist, "app/index.html"), "utf8");
-  const link = /<link[^>]+rel="manifest"[^>]+href="([^"]+)"/.exec(html);
-  ok(link, "the built page links a manifest");
-  ok(list.includes(link[1]),
-    `the manifest the page links (${link && link[1]}) is the one precached`);
+  /* And the trap itself, as a golden, because a scan can only catch the
+     spellings somebody thought of. */
+  eq(fmtVal(0.0693, 4), "4.00", "swapped, it silently renders the decimal count — this is what the owner saw");
+  eq(fmtVal({ decimals: 4 }, 0.0693), "0.0693", "in the right order it renders the strength");
+  eq(fmtPotency(0.0693), "0.0693", "and the strength formatter takes one argument, so it cannot be swapped");
+  eq(fmtPotency.length, 1, "one argument, structurally");
 });
 
 export default s;

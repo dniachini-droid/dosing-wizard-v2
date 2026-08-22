@@ -8297,7 +8297,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `989f6af4c0385026fc50ebfa500c06b4a8647c0e82f7f78f60ac5a739e64b170` |
+| Ported SHA-256 | `a7c0ea483a9dc8bee89d2c31f8c70b0e1f4c2e31a9876e3a3ad0a3b908842d4e` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -8438,7 +8438,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +87,641 @@
+@@ -66,1155 +87,646 @@
    return out;
  }
  
@@ -9913,8 +9913,13 @@ Byte-identical to V1.
 +     reads, so it is stripped on the way to the engine like `potencyStatedAs`
 +     beside it. */
 +  const decidePotency = async (learned, accepted) => {
++    /* `inUse` is the figure this decision PUT IN FORCE — the measured one if he
++       took it, his own if he kept it. The provenance line reads it and states
++       nothing unless the configuration still holds it, so a figure he types
++       later cannot inherit "measured from your tank's response". */
++    const entered = config ? config.selectedPotencyDkhPerMl : null;
 +    const values = {
-+      potencyDecision: { accepted, learned, on: todayStr() },
++      potencyDecision: { accepted, learned, inUse: accepted ? learned : entered, on: todayStr() },
      };
 -
 -    /* What the dosing engine makes of the tank now this reading is in it. The
@@ -10127,7 +10132,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +749,26 @@
+@@ -1242,21 +754,26 @@
          }
        `}</style>
  
@@ -10164,7 +10169,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +778,35 @@
+@@ -1266,59 +783,35 @@
                );
              })}
            </nav>
@@ -10249,7 +10254,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +823,128 @@
+@@ -1335,105 +828,128 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10460,7 +10465,7 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +951,10 @@
+@@ -1440,10 +956,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -10478,7 +10483,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +968,96 @@
+@@ -1457,6 +973,96 @@
    );
  }
  

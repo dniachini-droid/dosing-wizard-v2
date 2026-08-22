@@ -521,7 +521,7 @@ export function describePlan(planned, assumption = null) {
   let withInstant = 0;
   if (assumption) {
     /* Each kind counted the way the WRITE builds it, including owner decision
-       33's readings-only assignment — the report and the record are built by
+       31's readings-only assignment — the report and the record are built by
        one function precisely so a rule that applies to one kind and not another
        cannot make them disagree. */
     for (const r of planned.readings) {

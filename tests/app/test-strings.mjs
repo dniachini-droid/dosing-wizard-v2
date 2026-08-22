@@ -267,6 +267,60 @@ s.test("STR-08", "a parameterised string keeps the value inside the sentence, no
   ok(plural.includes("3 days overdue"), `plural: "${plural}"`);
 });
 
+s.test("STR-10", "every parameter a string declares reaches the sentence it is declared for", () => {
+  /* THE SAME CLASS OF DEFECT AS THE `fmtVal` ARGUMENT SWAP: a value handed to a
+     formatter and dropped on the floor. There it printed the wrong argument;
+     here it prints none — the caller computes a figure, passes it, and the
+     sentence never mentions it.
+
+     It found two. `dosing.potency.working.observation` declared a `date` and
+     derived it by slicing the engine's observation id at fixed offsets, so the
+     cost of the omission was a fragile derivation nobody could see was unused.
+     `suggest.alreadyScheduled` declared a `day` and had done since the port.
+
+     Every function-valued string is called with a distinct sentinel per
+     parameter and every sentinel must appear in the output. A string that is
+     genuinely better without a parameter should not DECLARE it — that is the
+     whole rule, and the fix in both cases was to stop declaring it. */
+  const missing = [];
+  for (const key of keys()) {
+    const value = STRINGS[key];
+    if (typeof value !== "function") continue;
+
+    /* The declared names, read off the destructuring in the source. A string
+       taking a positional argument rather than an object is out of scope: this
+       file's convention is an object, and `STR-08` guards the rest. */
+    const declared = /^\(\s*\{([^}]*)\}/.exec(value.toString());
+    if (!declared) continue;
+    const names = declared[1]
+      .split(",")
+      .map((n) => n.split(/[:=]/)[0].trim())
+      .filter((n) => /^[A-Za-z_$][\w$]*$/.test(n));
+    if (!names.length) continue;
+
+    const args = {};
+    /* An array sentinel for a name a string joins rather than interpolates —
+       `parts` and `list` are rendered by `Array.prototype.join`, and a string
+       sentinel would render as its characters. The sentinel is still unique per
+       name, so a dropped one is still visible. */
+    names.forEach((n, i) => {
+      const token = `SENTINEL${i}${n.toUpperCase()}`;
+      args[n] = /^(parts|list|items|lines)$/.test(n) ? [token] : token;
+    });
+
+    let out;
+    try { out = String(value(args)); }
+    catch (e) { missing.push(`${key}: threw ${e && e.message}`); continue; }
+
+    for (const [i, n] of names.entries()) {
+      if (!out.includes(`SENTINEL${i}${n.toUpperCase()}`)) {
+        missing.push(`${key}: declares \`${n}\` and never renders it`);
+      }
+    }
+  }
+  eq(missing.join(" | "), "", `every declared parameter reaches its sentence: ${missing.join(" | ")}`);
+});
+
 s.test("STR-09", "the file is the only place, and it holds a substantial number of them", () => {
   ok(keys().length > 500, `the strings file holds ${keys().length} entries`);
   /* Every key is either a string or a function of its values, and nothing else. */

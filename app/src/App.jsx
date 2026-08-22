@@ -592,8 +592,13 @@ export function ReefConsoleInner() {
      reads, so it is stripped on the way to the engine like `potencyStatedAs`
      beside it. */
   const decidePotency = async (learned, accepted) => {
+    /* `inUse` is the figure this decision PUT IN FORCE — the measured one if he
+       took it, his own if he kept it. The provenance line reads it and states
+       nothing unless the configuration still holds it, so a figure he types
+       later cannot inherit "measured from your tank's response". */
+    const entered = config ? config.selectedPotencyDkhPerMl : null;
     const values = {
-      potencyDecision: { accepted, learned, on: todayStr() },
+      potencyDecision: { accepted, learned, inUse: accepted ? learned : entered, on: todayStr() },
     };
     if (accepted) {
       values.selectedPotencyDkhPerMl = learned;

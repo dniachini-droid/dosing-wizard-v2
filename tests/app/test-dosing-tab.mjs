@@ -11,12 +11,17 @@
    which states the source change that must turn it red.
    ========================================================================= */
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
 import {
-  boxes, learnerLimits, potencyBox, potencyProvenance, reasonRows, recommendation,
+  boxes, correctionPanel, learnerLimits, potencyBox, potencyProvenance, reasonRows, recommendation,
   spanInWords, statusParts, whyPanel, working,
 } from "../../app/src/present/dosing-tab.js";
-import { t } from "../../app/src/strings.js";
+import { has, t } from "../../app/src/strings.js";
+
+const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 
 const s = suite("the dosing tab");
 
@@ -381,13 +386,20 @@ s.test("DOS-10d", "it never claims a recipe the app does not hold", () => {
     "while the recipe form is kept for where there is one");
 });
 
-s.test("DOS-10e", "an accepted figure carries its provenance, and a kept one carries its own", () => {
+s.test("DOS-10e", "provenance describes the figure the decision put in force, and no other", () => {
   /* "Provenance is shown wherever the figure appears — in Setup and on the
      Dosing tab." One reader, so the two surfaces cannot describe the same
-     number differently. */
+     number differently.
+
+     `inUse` is what the decision put in force: the measured figure if he took
+     it, his own if he kept it. Owner decision 33's second requirement is that a
+     figure measured from the tank must not be confused with one he entered, and
+     without that field this function described whatever the configuration
+     currently held — so a keeper who accepted 0.0707 and later typed 0.08 was
+     told "0.08 dKH/mL — measured from your tank's response". */
   const accepted = potencyProvenance({
     selectedPotencyDkhPerMl: 0.0707,
-    potencyDecision: { accepted: true, learned: 0.0707, on: "2026-08-22" },
+    potencyDecision: { accepted: true, learned: 0.0707, inUse: 0.0707, on: "2026-08-22" },
   });
   eq(accepted.key, "dosing.potency.fromMeasured", "an accepted figure says it was measured");
   eq(accepted.value, 0.0707, "and names it");
@@ -396,9 +408,21 @@ s.test("DOS-10e", "an accepted figure carries its provenance, and a kept one car
 
   const kept = potencyProvenance({
     selectedPotencyDkhPerMl: 0.0692,
-    potencyDecision: { accepted: false, learned: 0.0740, on: "2026-08-22" },
+    potencyDecision: { accepted: false, learned: 0.0740, inUse: 0.0692, on: "2026-08-22" },
   });
   eq(kept.key, "dosing.potency.fromKept", "a kept figure says it was kept, which is also a decision he made");
+
+  /* THE ONE THAT WAS WRONG. He accepted a measured figure, then typed a
+     different one. Nothing measured 0.08 and nothing may say so. */
+  eq(potencyProvenance({
+    selectedPotencyDkhPerMl: 0.08,
+    potencyDecision: { accepted: true, learned: 0.0707, inUse: 0.0707, on: "2026-08-22" },
+  }), null, "a figure typed after the decision inherits nothing from it");
+
+  eq(potencyProvenance({
+    selectedPotencyDkhPerMl: 0.075,
+    potencyDecision: { accepted: false, learned: 0.0740, inUse: 0.0692, on: "2026-08-22" },
+  }), null, "and neither does one typed after he chose to keep his own");
 
   eq(potencyProvenance({ selectedPotencyDkhPerMl: 0.0692 }), null,
     "and a keeper who has never been asked is told nothing, because there is nothing to tell");
@@ -409,14 +433,14 @@ s.test("DOS-10f", "it keeps watching after acceptance, and asks again if it lear
      something different and is confident, it asks again." */
   const moved = potencyBox(withPotency({}), {
     ...RECIPE,
-    potencyDecision: { accepted: true, learned: 0.0707, on: "2026-08-22" },
+    potencyDecision: { accepted: true, learned: 0.0707, inUse: 0.0707, on: "2026-08-22" },
   });
   ok(moved.asksAgain, "the estimate has moved since he decided, so it asks again");
   ok(moved.offersChoice, "and offers the choice again");
 
   const unchanged = potencyBox(withPotency({}), {
     ...RECIPE,
-    potencyDecision: { accepted: true, learned: 0.0740, on: "2026-08-22" },
+    potencyDecision: { accepted: true, learned: 0.0740, inUse: 0.0740, on: "2026-08-22" },
   });
   eq(unchanged.asksAgain, false, "an estimate that has not moved does not ask him the same question twice");
 });
@@ -428,6 +452,92 @@ s.test("DOS-10g", "the working shows the arithmetic behind the estimate, and eve
   ok(/0\.0742/.test(text), "including the second one");
   ok(/0\.0740/.test(text), "and the pooled figure");
   ok(/0\.0692/.test(text), "against the one the keeper entered");
+});
+
+s.test("DOS-11", "every response the engine can reach has a keeper-facing state, and a word for it", () => {
+  /* `CORRECTION_STATE` claims to place every member of `response.py`'s closed
+     vocabulary, and the claim was true and unenforced. A classification that
+     fell through returns null from `correctionPanel` and the panel renders
+     NOTHING — the keeper who changed his dose is shown no panel at all, which
+     looks identical to having no active intervention.
+
+     Read out of the engine rather than restated here. A list copied into a test
+     is a second owner of the vocabulary and agrees only until the engine adds
+     a state — which is exactly the case this exists to catch. */
+  const block = fs.readFileSync(path.join(ROOT, "engine/alk_v2/response.py"), "utf8")
+    .split("# --- ResponseAttribution, the complete closed vocabulary")[1]
+    .split("#: The six")[0];
+  const vocabulary = [...block.matchAll(/^([A-Z_]+) = "\1"/gm)].map((m) => m[1]);
+  ok(vocabulary.length >= 15, `the engine's closed vocabulary, read from the engine: ${vocabulary.length}`);
+
+  const iv = {
+    interventionId: "IV-1", actualStartTime: "2026-08-10T09:00:00+10:00",
+    oldDoseMlPerDay: 8, newDoseMlPerDay: 10,
+  };
+  for (const classification of vocabulary) {
+    const p = correctionPanel(
+      { activeIntervention: iv, responseAssessment: { classification } },
+      "2026-08-20T09:00:00+10:00"
+    );
+    ok(p, `${classification} renders a panel rather than nothing`);
+    ok(has(`dosing.correction.${p.state}`), `${classification} -> ${p.state}, and that state has a sentence`);
+  }
+
+  /* And the reverse: the app names no state the engine cannot produce. A
+     keeper-facing sentence for an unreachable classification is dead wording
+     that reads as supported behaviour. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/present/dosing-tab.js"), "utf8");
+  const table = src.split("const CORRECTION_STATE = Object.freeze({")[1].split("});")[0];
+  const claimed = [...table.matchAll(/^\s{2}([A-Z_]+):/gm)].map((m) => m[1]);
+  eq(claimed.filter((k) => !vocabulary.includes(k)).join(", "), "",
+    "the app names no response the engine cannot reach");
+  eq(vocabulary.filter((k) => !claimed.includes(k)).join(", "), "",
+    "and the engine reaches no response the app cannot say");
+});
+
+s.test("DOS-10h", "a band the engine did not emit is not a statement that the figures disagree", () => {
+  /* `bandOf` returns null where no `POTENCY_DISCREPANCY_BAND` is in the result,
+     and null used to fall straight through to the disagreement branch — so
+     silence from `ALK-021`'s owner offered the keeper a dose change on the same
+     screen as a confident, measured, stated disagreement.
+
+     Owner decision 33 conditions the offer on the band SAYING they do not
+     broadly agree. */
+  const banded = (band) => potencyBox(withPotency({
+    reasonCodes: band ? [{ code: "POTENCY_DISCREPANCY_BAND", severity: "INFO", payload: { band } }] : [],
+  }), RECIPE);
+
+  for (const band of ["MEANINGFUL", "LARGE"]) {
+    ok(banded(band).offersChoice, `${band} is the engine saying they do not broadly agree`);
+  }
+  eq(banded("BROADLY_CONSISTENT").state, "agrees", "and this one is it saying they do");
+  eq(banded("BROADLY_CONSISTENT").offersChoice, false, "so there is nothing to choose");
+
+  const silent = banded(null);
+  eq(silent.offersChoice, false, "silence is not disagreement, so no choice is offered");
+  eq(silent.state, "notConfident", "and the estimate is still shown rather than hidden");
+});
+
+s.test("DOS-10i", "the confidence ladder is the engine's, in full, and REASSESSING never offers the choice", () => {
+  /* The app compared against a hand-written pair of state names. Read the
+     ladder out of `potency.py` instead, so a state the engine gains cannot
+     quietly fall into the wrong half — and so `REASSESSING`, which means the
+     learner is re-examining a figure it previously stood behind, is provably
+     not a state in which the keeper is asked to re-size his dose. */
+  const src = fs.readFileSync(path.join(ROOT, "engine/alk_v2/potency.py"), "utf8");
+  const ladder = [...src.split("# PotencyConfidence — closed vocabulary")[1]
+    .split("\n\n")[0].matchAll(/^([A-Z_]+) = "\1"/gm)].map((m) => m[1]);
+  eq(ladder.length, 8, `the ladder the engine declares: ${ladder.join(", ")}`);
+
+  const MOVES_THE_FIGURE = new Set(["CALIBRATED", "STRONGLY_CALIBRATED"]);
+  for (const confidence of ladder) {
+    const box = potencyBox(withPotency({ potency: { potencyConfidence: confidence } }), RECIPE);
+    eq(box.offersChoice, MOVES_THE_FIGURE.has(confidence),
+      `${confidence}: the choice is offered only where canon would itself move selectedPotency`);
+  }
+  ok(ladder.includes("REASSESSING"), "REASSESSING is in the ladder");
+  eq(potencyBox(withPotency({ potency: { potencyConfidence: "REASSESSING" } }), RECIPE).offersChoice, false,
+    "and a learner re-examining its own figure does not ask the keeper to act on it");
 });
 
 export default s;

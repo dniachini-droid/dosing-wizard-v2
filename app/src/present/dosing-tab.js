@@ -487,6 +487,29 @@ export function potencyProvenance(config) {
   const d = config.potencyDecision;
   const value = num(config.selectedPotencyDkhPerMl);
   if (value == null || !d.on) return null;
+
+  /* THE PROVENANCE DESCRIBES THE FIGURE THE DECISION PUT IN FORCE, AND ONLY
+     THAT FIGURE.
+
+     It used to describe whatever `selectedPotencyDkhPerMl` currently held. So a
+     keeper who accepted a measured 0.0707 on 22 August and then typed 0.08 into
+     Setup a week later was shown:
+
+         "0.08 dKH/mL — measured from your tank's response, accepted 22 Aug"
+
+     which is false about a number he typed himself. Owner decision 33's second
+     requirement is exactly that this must not happen — a figure measured from
+     the tank and accepted on a date must not be confused with one he entered —
+     and this function was the thing breaking it.
+
+     `inUse` is what the decision put in force: the measured figure if he took
+     it, his own if he kept it. Where the configuration no longer holds that
+     figure, the decision is not what the current number came from, so there is
+     no provenance to state and the honest answer is none. He typed it; Setup
+     already says so by being where he typed it. */
+  const decided = num(d.inUse);
+  if (decided == null || decided !== value) return null;
+
   return d.accepted
     ? { key: "dosing.potency.fromMeasured", value, date: d.on }
     : { key: "dosing.potency.fromKept", value, date: d.on };
@@ -521,8 +544,22 @@ export function potencyBox(result, config = null) {
   const confident = CONFIDENT_ENOUGH.has(pot.potencyConfidence);
   const agrees = band === "BROADLY_CONSISTENT";
 
+  /* A BAND THE ENGINE DID NOT EMIT IS NOT A STATEMENT THAT THEY DISAGREE.
+
+     `bandOf` returns null when no `POTENCY_DISCREPANCY_BAND` is in the result,
+     and null was falling straight through to the disagreement branch — so
+     silence from `ALK-021`'s owner offered the keeper a dose change, on
+     exactly the same screen as a confident, measured, stated disagreement.
+
+     Owner decision 33 conditions the offer on the band SAYING the two figures
+     do not broadly agree. Where the engine says nothing, nothing is said, and
+     the app shows the estimate without asking him to act on it. The engine
+     emits the code whenever it holds both a learned and a theoretical figure
+     (`engine.py:471`), so this is the state where it could not — and an
+     estimate the engine would not characterise is not one to re-size a dose
+     from. */
   if (agrees) return { ...base, state: "agrees", offersChoice: false };
-  if (!confident) return { ...base, state: "notConfident", offersChoice: false };
+  if (!band || !confident) return { ...base, state: "notConfident", offersChoice: false };
 
   /* It disagrees and the engine is confident. THE ONLY STATE THAT OFFERS THE
      CHOICE, and the keeper makes it. */
@@ -535,8 +572,22 @@ export function potencyBox(result, config = null) {
                     : (recipe ? "weaker" : "weakerStated"),
     offersChoice: true,
     /* He has decided before and the estimator has moved on since. It asks
-       again rather than updating: the figure in use is his. */
-    asksAgain: !!(decided && decided.learned != null && decided.learned !== learned),
+       again rather than updating: the figure in use is his.
+
+       COMPARED AT THE PRECISION HE WAS SHOWN, not at full float precision. A
+       bare `!==` re-asks the same question on a difference of 1e-17, which is a
+       figure that has not moved as far as the keeper is concerned and a
+       notification he cannot act on. `POTENCY_DECIMALS` is display precision
+       and is read back by nothing (`ALK-V2-DATA-CONTRACT.md` §0), so this
+       invents no threshold: the test is whether the number on screen changed.
+
+       Canon has `POTENCY_REASSESS_DELTA` for materially-different, but it
+       belongs to `REASSESSING`, which the engine deliberately does not run
+       (`OI-POTENCYSTATE-001` — the state has no defined exit). Borrowing it
+       here would be the app running a rule the engine refuses to. Recorded as
+       `AI-030`. */
+    asksAgain: !!(decided && decided.learned != null
+      && fmtPotency(decided.learned) !== fmtPotency(learned)),
   };
 }
 
@@ -552,8 +603,20 @@ function potencyWorking(result, config) {
     const dd = num(o.deltaDoseMlPerDay);
     const ds = num(o.deltaSlopeDkhPerDay);
     if (p == null || dd == null || ds == null) continue;
+    /* NO DATE. It was computed and thrown away — the string declared a `date`
+       parameter and never rendered it — and the way it was computed was worse
+       than the omission: `String(o.observationId).slice(-25, -15)`, positional
+       magic over an id the engine builds as `POB-IV-<instant>`. It works only
+       while `toEngineEvents` omits `eventId` on a `DOSE_CHANGE`, which the
+       READING branch's own comment argues it should not; the day it carries
+       one, the slice yields `POB-0000` and the line reads "Invalid Date".
+
+       The engine states the observation's instant in `at`, but does not put it
+       in the payload the app receives. So the line says what it can say from
+       what it was given — how much the dose moved, how much the drift moved
+       with it, and the strength that implies — and does not date it. Recorded
+       as `AI-029`. */
     lines.push(t("dosing.potency.working.observation", {
-      date: fmtDate(String(o.observationId).slice(-25, -15) || ""),
       delta: fmtMag(dd, "mlPerDay"),
       slope: fmtMag(ds),
       potency: fmtPotency(p),

@@ -1430,7 +1430,7 @@ export const STRINGS = Object.freeze({
   /* The working behind the estimate. Each line is one dose change the learner
      read, and the arithmetic is the engine's own: how much the dose moved, how
      much the tank's drift moved with it, and the strength that implies. */
-  "dosing.potency.working.observation": ({ date, delta, slope, potency }) =>
+  "dosing.potency.working.observation": ({ delta, slope, potency }) =>
     `Your dose moved ${delta} mL/day and the drift moved ${slope} dKH a day with it, ` +
     `which puts the strength at ${potency} dKH per mL.`,
   "dosing.potency.working.pooled": ({ n, potency }) =>
@@ -2407,7 +2407,10 @@ export const STRINGS = Object.freeze({
   "suggest.remember": "Remember this and don't ask again",
   "suggest.decline": "Not this time",
 
-  "suggest.alreadyScheduled": ({ day }) => `That's already your scheduled test day. Nothing to change.`,
+  /* Takes no `day`: it declared one and never rendered it, and the sentence is
+     complete without one — "already your scheduled test day" is about the day
+     the keeper just picked, which he is looking at. Found by `STR-08`. */
+  "suggest.alreadyScheduled": "That's already your scheduled test day. Nothing to change.",
   "suggest.alreadyExtra": "You have already added this as an extra test.",
 
   "suggest.appliedReplace": ({ day }) => `Your next test moved to ${day}.`,

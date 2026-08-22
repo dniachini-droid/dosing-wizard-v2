@@ -711,12 +711,24 @@ s.test("IMP-20", "every imported reading is offered to the engine with its true 
   }
 
   /* A kind the decision does NOT cover still reaches the engine with no
-     instant, and the app still refuses to invent one for it. */
-  const untimedDose = sent.find((e) => e.kind === "DOSE_STATE" && e.effectiveAtConfidence === "UNCERTAIN");
-  if (untimedDose) {
-    ok(untimedDose.effectiveAtEarliest && untimedDose.effectiveAtLatest,
-      "an uncertain dose sends the bounds rather than an invented instant");
-  }
+     instant, and the app still refuses to invent one for it.
+
+     THE FIXTURE HAS TO CARRY ONE. Every `dose-log` row in `backup()` states a
+     time, so this clause used to sit behind `if (untimedDose)` and never
+     executed — a conditional that reads as coverage and is not. The row is
+     pushed in, and the assertion that it was found is unconditional. */
+  const doc = backup();
+  doc.data["dose-log"].push({ id: "d0", date: "2026-08-09", ml: 9.5, element: "alkalinity", note: "" });
+  const withUntimed = createMemoryStore();
+  await importInto(withUntimed, doc);
+  const alsoSent = toEngineEvents(await withUntimed.ledger.projection());
+
+  const untimedDose = alsoSent.find((e) => e.kind === "DOSE_STATE" && e.effectiveAtConfidence === "UNCERTAIN");
+  ok(untimedDose, `the untimed dose reaches the engine: ${alsoSent.filter((e) => e.kind === "DOSE_STATE").length} dose states sent`);
+  ok(!untimedDose.effectiveAt || !/T\d\d:/.test(String(untimedDose.effectiveAt)),
+    "with no instant invented for it");
+  ok(untimedDose.effectiveAtEarliest && untimedDose.effectiveAtLatest,
+    "and the bounds the contract makes REQ* when the hour is unknown");
 });
 
 s.test("IMP-21", "the report the keeper reads counts exactly what the import writes", async () => {

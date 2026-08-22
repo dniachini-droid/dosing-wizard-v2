@@ -17,7 +17,7 @@
    the test it was written for is not actually checking what it claims to.
    ========================================================================= */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -179,8 +179,29 @@ async function main() {
        would have reported CAUGHT whatever they did. Only `tools/port` is
        copied: nothing here mutates the conformance harness. */
     fs.cpSync(path.join(ROOT, "tools", "port"), path.join(tree, "tools", "port"), { recursive: true });
+    /* `PORT-25` reads the build's own precache list out of it, so a mutation of
+       that list has to be able to reach the copy the checks read. */
+    fs.cpSync(path.join(ROOT, "vite.config.js"), path.join(tree, "vite.config.js"));
 
     const target = path.join(tree, m.file);
+    /* A MUTATION WHOSE TARGET IS NOT THERE MUST NOT KILL THE RUN.
+
+       `AM-P55` aimed at `app/dist/app/sw.js` — a BUILD ARTEFACT, untracked and
+       absent from any fresh checkout. `readFileSync` threw `ENOENT` at mutation
+       31 of 227, the remaining 196 never ran, and no verdict block was printed
+       at all. A gate that stops in the middle and says nothing is worse than a
+       red one: it looks like a crash rather than a result.
+
+       It is BLOCKED for the same reason a stale anchor is: the mutation did not
+       happen, so nothing can be concluded from the checks staying green. */
+    if (!fs.existsSync(target)) {
+      console.log(`\n[BLOCKED] ${m.id}  ${m.file} is not in this tree`);
+      console.log(`          ${m.why}`);
+      console.log("          Its target is a build artefact or a file that has moved. A mutation");
+      console.log("          that did not happen proves nothing about the checks that stayed green.");
+      notApplied += 1;
+      continue;
+    }
     const before = fs.readFileSync(target, "utf8");
     if (!before.includes(m.find)) {
       console.log(`\n[BLOCKED] ${m.id}  its anchor text is no longer in ${m.file}`);
@@ -212,7 +233,53 @@ async function main() {
       notApplied += 1;
       continue;
     }
-    fs.writeFileSync(target, before.replace(m.find, m.replace));
+    const after = before.replace(m.find, m.replace);
+    fs.writeFileSync(target, after);
+
+    /* A MUTATION THAT DOES NOT PARSE IS NOT A MUTATION.
+
+       `AM-L22`'s replacement left a brace and a paren unclosed. Every suite that
+       imports `record.js` then failed to LOAD — six of them, including the one
+       `AM-L22` names — so `stillGreen` was empty and the runner printed CAUGHT.
+       A negative control that reports success because it broke the parser is
+       reporting on a run that never happened, which is exactly `AM-D7`'s
+       failure wearing different clothes: the third of the three ways a mutation
+       can lie, after a stale anchor and a non-unique one.
+
+       The tell was visible in the output and nobody read it: a mutation whose
+       blast radius is six unrelated suites is a syntax error, not a behaviour
+       change. So the parse is checked rather than inferred.
+
+       JavaScript only. A mutation to a `.py`, a `.json` or a document is left
+       to the checks themselves — this is the parser this runtime has. */
+    if (/\.(js|mjs)$/.test(m.file)) {
+      /* Checked through a `.mjs` COPY, not in place. `node --check` decides
+         script-or-module from the file's extension and the nearest
+         `package.json` — and the mutation tree has no `package.json`, so a
+         `.js` file full of `import` statements would be parsed as CommonJS and
+         reported broken when it is fine. Every file this suite mutates is an ES
+         module; the copy says so unambiguously.
+
+         `.jsx` is excluded: it is not JavaScript this parser accepts, and a
+         syntax error in one shows up as the same six-suite blast radius that
+         made this check necessary. */
+      const probe = path.join(tree, `.parse-check-${i}.mjs`);
+      fs.writeFileSync(probe, after);
+      const parsed = spawnSync(process.execPath, ["--check", probe], { encoding: "utf8" });
+      fs.rmSync(probe, { force: true });
+      if (parsed.status !== 0) {
+        console.log(`\n[BLOCKED] ${m.id}  its replacement does not parse`);
+        console.log(`          ${m.why}`);
+        /* The error, not the version banner node prints after it. */
+        const why = String(parsed.stderr).split("\n").find((l) => /Error/.test(l));
+        console.log(`          ${(why || "").trim()}`);
+        console.log("          A broken parser turns every check that imports this file red, so the");
+        console.log("          checks it names go red for the wrong reason and it reports CAUGHT.");
+        fs.writeFileSync(target, before);
+        notApplied += 1;
+        continue;
+      }
+    }
 
     const results = await runFrom(path.join(tree, "tests", "app"), `${i}-${Date.now()}`);
     const stillGreen = m.breaks.filter((id) => {

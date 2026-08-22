@@ -1026,3 +1026,260 @@ how a canon acquires a dangling one.
 
 **What would close it.** The owner naming what "canon decision 12" refers to, or confirming
 that owner decision 33 stands on its own where it is.
+
+---
+
+## AI-029 — The potency working states no date, because the engine does not give it one
+
+**Where.** `app/src/present/dosing-tab.js` `potencyWorking`.
+
+**What.** Each line of the estimator's working names one dose change the learner
+read. It should say *when*, and it does not.
+
+The first version derived a date as
+`fmtDate(String(o.observationId).slice(-25, -15))` — positional magic over an id
+the engine builds as `POB-IV-<instant>`. It happened to work only because
+`toEngineEvents` omits `eventId` on a `DOSE_CHANGE`, so `intervention.build`
+falls back to naming the intervention after its instant. The `READING` branch's
+own comment argues that events SHOULD carry their id; the day a `DOSE_CHANGE`
+does, the slice yields `POB-0000` and the line reads "Invalid Date". Worse, the
+string declared a `date` parameter and never rendered it, so the derivation was
+unused and nothing could see that it was.
+
+The parameter and the derivation are both gone. `STR-10` now catches the class.
+
+**What would close it.** `potencyObservations[].at` in the engine's projection.
+`potency.Observation` already holds it — `observe()` sets `o.at` from the
+intervention — and `payload()` does not emit it. One field.
+
+---
+
+## AI-030 — "The estimate has moved" has two spellings, and the app's is the stricter
+
+**Where.** `app/src/present/dosing-tab.js` `potencyBox.asksAgain`;
+`engine/alk_v2/constants.py` `POTENCY_REASSESS_DELTA = 0.15`.
+
+**What.** After the keeper accepts a measured strength, the estimator keeps
+watching and asks again if it later learns something different (owner decision
+33, requirement 3). The app decides "different" by comparing at the precision the
+keeper was shown — `POTENCY_DECIMALS`, which is display precision and is read
+back by nothing (`ALK-V2-DATA-CONTRACT.md` §0). A bare float comparison, which is
+what it did first, re-asks on a difference of 1e-17.
+
+Canon has a constant for materially-different — `POTENCY_REASSESS_DELTA` — but it
+belongs to `REASSESSING`, a state `ALK-POTENCY-CONFIDENCE-001` defines an entry
+to and no exit from, which `OI-POTENCYSTATE-001` records as making it absorbing
+and which the engine therefore declines to run. Borrowing the constant here would
+be the application running a rule the engine refuses to.
+
+So the app is not duplicating a live rule, and it is not inventing a chemistry
+threshold. It is using display precision for a display decision. That is
+defensible and it is not obviously right.
+
+**What would close it.** `canon-conformance-auditor`'s reading of whether
+"materially different" for the purpose of ASKING THE KEEPER is the same question
+`POTENCY_REASSESS_DELTA` answers for the purpose of re-entering `REASSESSING`. If
+it is, the constant is canon's and the app should consume it; if it is not, this
+entry is the record that the difference was noticed rather than missed.
+
+---
+
+## AI-031 — CANON_DEFECT: the canon was amended under unchanged freeze identifiers
+
+**Where.** `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` §2.3A.3, §2.3A.4 and
+the owner-decision-33 section; `PROJECT-STATE.md`.
+
+**What.** This round added roughly 110 lines of new **normative** canon under the
+unchanged identifiers `SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5`. `PROJECT-STATE.md`
+is untouched and the engine still reports
+`canonVersion: "SHARED_V2_FREEZE_2 / ALK_V2_FREEZE_5"`.
+
+Canon §64 conditions deterministic replay on the same engine/canon version, and
+§47 stamps a replay with the version that produced it. Both identifiers now
+resolve to **two materially different canon texts** — the one before this round
+and the one after. A replay stamped `ALK_V2_FREEZE_5` no longer says which.
+
+The task instructed that the canon be amended rather than worked around, and it
+was. Issuing a new freeze identifier is not this session's to do:
+`CLAUDE.md` makes a canon contradiction something reported and left for the
+owner, never resolved by reinterpretation, and a freeze is the owner's
+governance act.
+
+**What would close it.** A governed reissue — new freeze identifiers, the
+coverage manifest updated (see `AI-032`), `PROJECT-STATE.md` moved on, and the
+engine's reported `canonVersion` following.
+
+---
+
+## AI-032 — CANON_DEFECT: three normative rule bodies are outside the coverage manifest
+
+**Where.** `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` §2.3A.3, §2.3A.4, the
+owner-decision-33 section; `CORE-CANON-COVERAGE-001` clause 3; `X-INV-001`.
+
+**What.** `CORE-CANON-COVERAGE-001` clause 3 requires that every active normative
+rule body appear in the canonical rule-coverage manifest. The three sections
+added this round are normative rule bodies — they state what the engine and the
+application must do — and none carries a stable rule ID, none is in the manifest,
+and none has a conformance fixture.
+
+`CHK-CANON-MANIFEST` passes, and that is the sharper half of the finding: it keys
+on rule IDs, so a normative body with no ID is structurally invisible to it. The
+checker cannot see the gap it exists to find.
+
+§2.3A.3 clause 1 makes this concrete. It declares a record carrying an assigned
+hour with no note of the assignment **malformed** — a refusal state with no
+validator, no reason code and no fixture anywhere. Today it is enforced only by
+`IMP-01` and `IMP-03`, in JavaScript, in the application suite, keyed to nothing
+in the canon.
+
+**What would close it.** Rule IDs for the three bodies, entries in the coverage
+manifest, and at least one fixture each — which is part of the same governed
+reissue as `AI-031`.
+
+---
+
+## AI-033 — The `_potency_at` fix has no fixture, and the corpus is provably blind to it
+
+**Where.** `engine/alk_v2/engine.py` `_potency_at`; the conformance corpus.
+
+**What.** `_potency_at` read `selectedPotencyDkhPerMl` directly instead of asking
+`potency.theoretical`, so a keeper stating his strength as grams per litre got
+`NO_POTENCY_AT_PREDICTION`, no prediction snapshot, and
+`LEGACY_PREDICTION_SNAPSHOT_UNAVAILABLE` for every dose change he had ever made.
+`MASTER RULE 1`: two implementations of one question that did not agree.
+
+Every corpus fixture was run before and after the fix: **211 fixtures, zero
+status differences, zero differences in any `actual` payload.** Every executable
+fixture states `selectedPotencyDkhPerMl` directly, so the corpus cannot see the
+defect or the fix. The application suite cannot cover it either — it has no
+Python and no engine, and a test there would exercise a mock.
+
+The defect's signature on the pre-fix engine is worth recording: the result
+reported `potency.selectedPotencyDkhPerMl: 0.0693` in the same payload whose
+prediction snapshot said the potency was unknown.
+
+**What would close it**, both parts, because neither is sufficient alone:
+
+- **Fixture `AD-POT-003`** (`EXECUTABLE`, `POTENCY` path). `AD-RSP-001`'s seven
+  events verbatim; configuration as `CANON_DEFAULT` with
+  `selectedPotencyDkhPerMl` removed and `chemical: "NA2CO3"`,
+  `stockConcentrationGPerL: 100.98599545798637` added, so `ALK-014`'s
+  `factor · C / V` is exactly `0.0693` and every stated intermediate of
+  `AD-RSP-001` carries across unchanged. `rulesExercised: ["ALK-014",
+  "ALK-RESPONSE-CLASSIFIER-001"]`, expecting `responseAttribution: "EXPECTED"`
+  and forbidding `LEGACY_PREDICTION_SNAPSHOT_UNAVAILABLE`. It would also be the
+  first converted `POTENCY`-path fixture, which the coverage report currently
+  reports as `converted: false`.
+- **Invariant `INV-Pxx`**: where a result reports a `selectedPotencyDkhPerMl`, no
+  intervention's `predictionSnapshot.unavailableReason` may be
+  `NO_POTENCY_AT_PREDICTION`. The fixture supplies the input; the invariant
+  generalises past this one function.
+
+---
+
+## AI-034 — Owner decision 31's identical-instant collision is untested at every layer
+
+**Where.** `app/src/store/time.js` `assignedDayInstant`; `alk_v2.observation`
+clustering.
+
+**What.** Two date-only readings on one day both become `09:00` — the *identical*
+`absoluteInstant` — and so does a date-only reading on a day the keeper also
+tested at 09:00 sharp. The owner has 325 date-only readings; he will meet this the
+first time two of them share a date.
+
+The engine handles it correctly and says so, and the answer changes:
+
+```
+[distinct instants]  slope -0.05  clusters 4  span 6.0  SET_MAINTENANCE_DOSE
+[shared instant]     slope -0.05  clusters 4  span 6.0  HOLD_CURRENT_DOSE
+                     + CLUSTER_REPEAT_NOT_INDEPENDENT, CLUSTER_ANOMALOUS_SPREAD,
+                       EVIDENCE_ANOMALOUS_HISTORICAL_CLUSTER
+```
+
+That is the right behaviour — two readings that cannot be told apart in time are
+not two independent observations — and **nothing tests that it happens**, at the
+store, at the importer, or in the corpus.
+
+**What would close it.** Three tests: a ledger check that two same-day assigned
+readings order by `eventOrdinal` and reach the engine with equal `measuredAt`
+(pinning `INV-A1`'s tie-break under the new constructor); an import check that two
+untimed readings on one date with different values both write, both at 09:00;
+and a corpus fixture straddling 08:59 / 09:00 / 09:01 asserting
+`CLUSTER_REPEAT_NOT_INDEPENDENT` and the independent-cluster count.
+
+**And a measurement, not a pass/fail.** Synthesise the owner's actual shape — a
+year of readings with roughly 30% sharing a day — and report how many
+`CLUSTER_REPEAT_NOT_INDEPENDENT` codes come back and whether
+`evidenceFacts.independentClusters` still reaches the evidence minima. That is
+owner decision 31's blast radius on his real data and nobody has measured it.
+
+---
+
+## AI-035 — Deleting a correction brings the typo back, live
+
+**Where.** `app/src/store/ledger.js` `remove`.
+
+**What.** `append` still honours `supersedes` and `ANNOTATION.SUPERSEDES` still
+exists, so a supersede chain is reachable for any imported or pre-branch ledger
+even though `correctReading` no longer creates one. Deleting the **superseding**
+record leaves the original folded back to `CURRENT`, and it is sent to the engine.
+
+Concretely: a keeper typed `89` where he meant `8.9`, corrected it on an older
+build, then deletes the correction. The typo returns to his trend.
+
+This is arguably exactly right under owner decision 32 — "the engine recalculates
+from what remains, as though the record had never been entered", and what remains
+is the original. It is also certainly surprising, and it is untested.
+
+Three neighbouring cases were checked and all behave sensibly: deleting the only
+reading leaves an empty ledger and no throw; deleting a nonexistent id returns
+`{removed: false}`; deleting the superseded original leaves the survivor `CURRENT`
+with no annotations. None is tested either.
+
+**What would close it.** The owner saying which reading he wants, and a test
+pinning it either way.
+
+---
+
+## AI-036 — Setup's re-read has no test, and the readers it needs are not exported
+
+**Where.** `app/src/components/Setup.jsx`.
+
+**What.** The fix for owner finding 3's second half — an effect keyed on
+`configVersionId` that re-reads every field — has no test. The application suite
+has no DOM and should not acquire one for a single effect, and the rule it
+encodes ("a `useState` initialiser runs once") is a React lifecycle fact rather
+than a property of this codebase.
+
+But that is not the whole reason it is uncovered. `factsFrom`, `formFrom`,
+`chemicalFrom`, `gPerLFrom` and `per100LFrom` are pure functions of `config` and
+were extracted precisely so the reading is separable from the effect — and they
+are not exported, so nothing can reach them.
+
+There is no roadmap entry and no recorded decision deferring DOM-level testing,
+so this is an uncited gap and is recorded as one rather than as accepted debt.
+
+**What would close it.** Export the five readers and test them directly, plus a
+static check that no `useState(() => …)` initialiser in that file reads `config`
+without a matching entry in the sync effect. The second is what would actually
+catch the regression, because the defect was a *missing* line rather than a wrong
+one.
+
+---
+
+## AI-037 — Nothing holds `LEARNER_ONLY` to what `capability.py` declares
+
+**Where.** `app/src/present/dosing-tab.js` `LEARNER_ONLY`.
+
+**What.** Five reason codes are suppressed from the dose working on the stated
+grounds that each declares `potency.learnedPotencyDkhPerMl` as the only output it
+touches. That claim is about `engine/alk_v2/capability.py` and nothing checks it.
+
+If one of those codes acquires a second affected output, or a new dose-affecting
+`CAPABILITY_*` code is added to the same family, a real limit on the keeper's dose
+is silently suppressed — which is the inverse of owner finding 7 and would be
+harder to notice, because the symptom is an absence.
+
+**What would close it.** Parse `capability.py`'s `Capability(...)` constructions
+and assert that every code in `LEARNER_ONLY` names exactly
+`["potency.learnedPotencyDkhPerMl"]`.
