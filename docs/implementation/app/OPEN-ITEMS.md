@@ -680,6 +680,18 @@ known only to within a day, and §3 already says "a clean segment resumes only a
 missing is a rule saying what `delivery()` may do with an event that carries the bounds and
 no instant.
 
+**It is not only dose rows.** `test-engineer` found the same shape on two more kinds after
+stage 1 closed it for readings: `WaterChange.occurredAt` and `ManualCorrection`'s time are
+`Instant` `REQ` too, and the app was writing a bare calendar day into both. The engine's
+`parse_instant` rejects a value with no offset, so the event was dropped by
+`_boundary_events` and by the water-change normalisation — a 30% water change vanishing and
+the step it caused absorbed into the consumption estimate as though the tank had done it.
+That is the owner's own 25 imported water changes.
+
+The application half is fixed: an `Instant` field now carries an instant or is absent, and
+`LED-12` states that over EVERY kind rather than the two that were wrong. **The events
+themselves are still unreadable**, for the reason above, and that is this item.
+
 **What would close it.** An owner ruling, then a canon/contract reissue. **It is chemistry
 and it is not the application's to decide** — `CLAUDE.md` is explicit that a rule the canon
 does not state may not arrive by invention. Left open deliberately.
@@ -746,8 +758,18 @@ it was redundant with position and rendered in red, which read as an alarm for g
 **What.** The spec gives safety no other home, and `jake` declined to invent one: none of
 the five recommendation stories is a breach of the safe outer limits, and copy for a state
 that outranks everything else on the screen should not arrive as a side effect of a
-language pass. `cardNotice` now raises a strip on `BREACH_LOW`/`BREACH_HIGH`, so a breach
-is not silent — but the Dosing tab itself says nothing about it. The owner's tank is
-`WITHIN_BOUNDS`, so nothing ships broken today.
+language pass. `cardNotice` raises a strip on a breach, so it is not silent — but the
+Dosing tab itself says nothing about it. The owner's tank is `WITHIN_BOUNDS`, so nothing
+ships broken today.
+
+> **The mitigation did not work when this was first written, and the entry said it did.**
+> `cardNotice` compared against `BREACH_LOW`/`BREACH_HIGH` and read `outerBoundState` from
+> the top level. The engine emits `BREACHED_LOW`/`BREACHED_HIGH` and carries them on
+> `safety`, so both halves were wrong and the branch was dead: the most severe thing this
+> application can say was unreachable, in a way that reads as working code, while this
+> entry cited it as the reason a breach is not silent. `cards.js` had it right in one line
+> all along. Found by `test-engineer`, fixed, and pinned by `NOT-01` with `AM-N1` and
+> `AM-N1b` as its controls. Recorded here rather than quietly corrected, because a
+> compensating control that does not work is worse than a gap that is known.
 
 **What would close it.** A commission for the safety story on this tab.

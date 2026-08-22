@@ -108,10 +108,22 @@ export function cardNotice(engineResult) {
   if (!engineResult) return null;
 
   const dose = engineResult.doseRecommendation;
-  const outer = engineResult.outerBoundState;
+  /* THE SPELLING, AND THE PLACE IT IS READ FROM, BOTH MATTER.
+
+     The first version of this read `engineResult.outerBoundState` and compared
+     it against `BREACH_LOW`/`BREACH_HIGH`. The engine emits `BREACHED_LOW` and
+     `BREACHED_HIGH` (`observation.py`, and the contract's `outerBoundState`),
+     and it carries them on `safety`. So both halves were wrong and the branch
+     was dead: the most severe thing this app can say was unreachable, and it
+     was unreachable in a way that reads as working code.
+
+     `cards.js` had it right all along, in one line, and it is that line —
+     `r?.safety?.outerBoundState ?? r?.outerBoundState` — rather than a second
+     opinion about where the engine puts its answer. */
+  const outer = engineResult.safety?.outerBoundState ?? engineResult.outerBoundState ?? null;
 
   let id, title, severity;
-  if (outer === "BREACH_LOW" || outer === "BREACH_HIGH") {
+  if (outer === "BREACHED_LOW" || outer === "BREACHED_HIGH") {
     id = `SAFETY:${outer}`;
     title = sayOuter(outer);
     severity = "REFUSAL";

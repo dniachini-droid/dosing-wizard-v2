@@ -542,4 +542,116 @@ s.test(
   }
 );
 
+s.test(
+  "LED-11",
+  "a reading whose zone was never proven carries its local date-time, and no instant",
+  async () => {
+    /* The other half of `dayFields`, which `LED-07` never executes.
+       `ALK-V2-DATA-CONTRACT.md` §1 as amended: `LOCAL_TIME_ZONE_UNKNOWN`
+       carries `localDateTime` — "the recorded local `YYYY-MM-DDTHH:MM`, with
+       NO offset and no zone" — and the engine reads that field and no other.
+       Send the bare day instead and the record is refused as malformed, which
+       is `AI-014` again under a different provenance. */
+    const { localTimeZoneUnknown } = await import("../../app/src/store/time.js");
+    const store = createMemoryStore();
+    await store.ledger.append(reading(8.4, localTimeZoneUnknown("2026-08-19", "07:40")));
+
+    const [sent] = toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z");
+    eq(sent.timeProvenance, PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN, "the provenance travels");
+    eq(sent.localDateTime, "2026-08-19T07:40", "the local date-time, in the field its provenance declares");
+    eq(sent.measuredAt, undefined, "and no instant at all");
+    eq(sent.calendarDate, undefined, "and not the day field either — that one is DATE_ONLY's");
+    ok(!/[+Z]/.test(sent.localDateTime), "and no offset is attached on the way out");
+  }
+);
+
+s.test(
+  "LED-12",
+  "no event reaches the engine with a bare calendar day sitting in a field the contract declares an Instant",
+  async () => {
+    /* `AI-014` WAS FIXED FOR READINGS AND LEFT EVERYWHERE ELSE.
+
+       `WaterChange.occurredAt` and `ManualCorrection`'s time are `Instant`
+       `REQ`, and `toEngineEvents` still wrote `at || e.time.localDate` into
+       both. `kernel.parse_instant` rejects a value with no offset and returns
+       `None`, so the event is dropped by `_boundary_events` and by the
+       water-change normalisation — a 30% water change VANISHES and the step it
+       caused is absorbed into the consumption estimate as though the tank had
+       done it. A V1 water-change row with no time of day imports `DATE_ONLY`,
+       so this is the owner's own 25 water changes.
+
+       Stated over EVERY kind rather than the two that were wrong, because the
+       next branch added is the one nobody remembers to check. */
+    const store = createMemoryStore();
+    const day = dateOnly("2026-08-19");
+    const at = AT("2026-08-19", "07:40");
+    const recordedAt = "2026-08-20T09:00:00Z";
+
+    await store.ledger.append({ kind: KIND.WATER_CHANGE, time: day, recordedAt,
+      detail: { litres: 50, changedFraction: 0.28 } });
+    await store.ledger.append({ kind: KIND.MANUAL_CORRECTION, parameter: "ALK", time: day, recordedAt,
+      detail: { amountMl: 40 } });
+    await store.ledger.append({ kind: KIND.WATER_CHANGE, time: at, recordedAt,
+      detail: { litres: 50, changedFraction: 0.28 } });
+    await store.ledger.append(reading(8.6, day));
+    await store.ledger.append(reading(8.7, at));
+
+    const INSTANT_FIELDS = [
+      "measuredAt", "occurredAt", "effectiveAt",
+      "effectiveAtEarliest", "effectiveAtLatest", "fromAt", "toAt",
+    ];
+    const DAY = /^\d{4}-\d{2}-\d{2}$/;
+    const sent = toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z");
+    ok(sent.length >= 5, "every event is offered");
+    for (const ev of sent) {
+      for (const f of INSTANT_FIELDS) {
+        if (!(f in ev) || ev[f] == null) continue;
+        ok(!DAY.test(String(ev[f])),
+          `${ev.kind}.${f} is a bare calendar day, which the engine reads as no time at all: ${ev[f]}`);
+        ok(/([+-]\d{2}:?\d{2}|Z)$/.test(String(ev[f])),
+          `${ev.kind}.${f} carries no offset, so the engine cannot place it: ${ev[f]}`);
+      }
+    }
+  }
+);
+
+s.test(
+  "LED-13",
+  "a hand-dosed correction states its volume in the field the engine reads",
+  async () => {
+    /* MEASURED, AND THE CONSEQUENCE IS TOTAL.
+
+       `ALK-V2-DATA-CONTRACT.md` §3 names it `actualVolumeMl` — "Actual
+       delivered. Separate from intended." — and `engine.py` reads exactly
+       that, treating a correction without it as one whose volume is UNKNOWN
+       and confounding `observedTrajectory` and `consumption` for it. The app
+       sent `amountMl`, a name the engine has no input for.
+
+       Run against the real engine on a real ledger, one 40 mL correction:
+       with `amountMl`, `SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION` and
+       `consumption: NOT_RUN`. With `actualVolumeMl`, 0.639 dKH/day. A keeper
+       who told the app the volume had his whole answer withheld for it.
+
+       The field name is read out of the ENGINE's own source rather than
+       restated, because a copy is the thing that drifts. */
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const root = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+    const engineSrc = fs.readFileSync(path.join(root, "engine/alk_v2/engine.py"), "utf8");
+    const m = engineSrc.match(/of_kind\("MANUAL_CORRECTION"\):[\s\S]{0,400}?e\.get\("(\w+)"\)/);
+    ok(m, "the engine's own read of the correction's volume was located");
+    const FIELD = m[1];
+
+    const store = createMemoryStore();
+    await store.ledger.append({
+      kind: KIND.MANUAL_CORRECTION, parameter: "ALK",
+      time: AT("2026-08-18", "07:40"), recordedAt: "2026-08-20T09:00:00Z",
+      detail: { amountMl: 40 },
+    });
+    const [sent] = toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z");
+    eq(sent[FIELD], 40, `the correction states its volume in ${FIELD}, which is what the engine reads`);
+  }
+);
+
 export default s;

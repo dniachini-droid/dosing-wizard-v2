@@ -533,7 +533,24 @@ export function toEngineEvents(projected, asOf = null) {
     } else if (e.kind === KIND.WATER_CHANGE) {
       const ev = {
         kind: "WATER_CHANGE",
-        occurredAt: at || e.time.localDate,
+        /* AN INSTANT FIELD CARRIES AN INSTANT OR CARRIES NOTHING.
+
+           `occurredAt` is a required `Instant` (`ALK-V2-DATA-CONTRACT.md` §3),
+           and an `Instant` is `ObservedTime` narrowed to the two provenances
+           that carry an `absoluteInstant`. Putting the bare calendar day there
+           is the same defect as `AI-014` and has the same shape: the engine's
+           `parse_instant` rejects a value with no offset, the event is dropped
+           by `_boundary_events` and by the water-change normalisation, and a
+           30% water change VANISHES — its step absorbed into the consumption
+           estimate as though the tank had done it.
+
+           Sending nothing does not recover the event: the engine still cannot
+           place it, and it still cannot be read. What it changes is that the
+           app stops asserting a malformed instant it knows to be malformed.
+           The event that cannot be represented is `AI-016`'s class and is
+           recorded there — it is a contract gap and it is not this layer's to
+           close by inventing a time. */
+        ...(at ? { occurredAt: at } : {}),
         changedFraction: e.detail.changedFraction,
       };
       if (e.detail.replacementAlkalinityDkh != null) {
@@ -559,8 +576,25 @@ export function toEngineEvents(projected, asOf = null) {
          changes; what changes is that a calcium one can no longer arrive. */
       out.push({
         kind: "MANUAL_CORRECTION",
-        occurredAt: at || e.time.localDate,
-        ...(e.detail.amountMl != null ? { amountMl: e.detail.amountMl } : {}),
+        /* The same rule as the water change above. */
+        ...(at ? { occurredAt: at } : {}),
+        /* THE FIELD THE ENGINE ACTUALLY READS.
+
+           The contract names it `actualVolumeMl` — "Actual delivered. Separate
+           from intended." — and `engine.py` reads exactly that, treating a
+           correction without it as one whose volume is unknown:
+
+               if e.get("actualVolumeMl") in (None, "UNKNOWN"):
+                   ... "SEGMENT_CONFOUNDED_UNKNOWN_CORRECTION"
+                       "affectedOutputs": ["observedTrajectory", "consumption"]
+
+           The app sent `amountMl`, which the engine has no input named. So a
+           keeper who recorded a 40 mL one-off — a volume he TOLD the app — had
+           his trajectory and his consumption confounded as though he had not
+           told it anything. The engine refusing to answer on data it was
+           given, because the data arrived under a name it does not know. Same
+           class as stage 1, found by `test-engineer` after it. */
+        ...(e.detail.amountMl != null ? { actualVolumeMl: e.detail.amountMl } : {}),
         ...(e.detail.expectedContributionDkh != null
           ? { expectedContributionDkh: e.detail.expectedContributionDkh }
           : {}),
