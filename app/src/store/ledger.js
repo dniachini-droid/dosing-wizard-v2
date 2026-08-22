@@ -397,6 +397,37 @@ function isAlkalinityDose(e) {
   return e.parameter == null || e.parameter === "ALK";
 }
 
+/* WHICH TIME FIELD A RECORD IS ENTITLED TO PUT ITS TIME IN.
+
+   `ALK-V2-DATA-CONTRACT.md` §1, as amended by owner decision 30: every event
+   carries exactly one `ObservedTime`, and WHICH of its three time fields is
+   present "is decided by `timeProvenance` and by nothing else".
+
+     EXACT_ABSOLUTE / RECONSTRUCTED_WITH_PROVENANCE   absoluteInstant
+     LOCAL_TIME_ZONE_UNKNOWN                          localDateTime
+     DATE_ONLY                                        calendarDate
+
+   The application used to put the calendar day in `measuredAt` — the instant
+   field — for a record that has no instant. The engine reads the field the
+   provenance declares (`ledger.py` `_DAY_FIELD`) and finds nothing there, so it
+   reported the record MALFORMED: `VALIDATION_TIMESTAMP_INVALID`, once per
+   reading. On the owner's imported history that is every one of his 325
+   date-only readings refused, and the app then had to tell him a record
+   "carries a time that could not be read" about a record whose provenance it
+   had itself declared correctly. `AI-014`.
+
+   Nothing is fabricated here and nothing is improved. The same day the record
+   already holds is written into the field the contract names for it, and the
+   provenance travels alongside so the receiver can tell which it is. */
+function dayFields(time) {
+  if (time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN) {
+    return {
+      localDateTime: time.localTime ? `${time.localDate}T${time.localTime}` : time.localDate,
+    };
+  }
+  return { calendarDate: time.localDate };
+}
+
 /* HAD THIS HAPPENED YET?
 
    An event with an instant is compared as an instant. An event with only a
@@ -459,17 +490,33 @@ export function toEngineEvents(projected, asOf = null) {
            which tells the keeper that ONE of their readings could not be used
            and not which one. */
         eventId: e.eventId,
-        measuredAt: at || e.time.localDate,
+        /* `measuredAt` is an `ObservedTime` under owner decision 30, not an
+           `Instant`. A record with a usable instant carries one; a record
+           without carries the day in the field its provenance declares, and
+           carries no instant at all — "not null, not midnight, not noon —
+           absent". */
+        ...(at ? { measuredAt: at } : dayFields(e.time)),
         rawValueDkh: e.normalizedValue,
         timeProvenance: e.time.timeProvenance,
       });
     } else if (e.kind === KIND.DOSE_STATE && isAlkalinityDose(e)) {
-      out.push({
+      const ev = {
         kind: "DOSE_STATE",
         programmedDoseMlPerDay: e.detail.doseMlPerDay,
         effectiveAt: eff,
         effectiveAtConfidence: e.detail.effectiveAtConfidence,
-      });
+      };
+      /* `ALK-V2-DATA-CONTRACT.md` §3 makes the two bounds `REQ*` — required
+         whenever `effectiveAtConfidence` is `UNCERTAIN`, because they are what
+         `M-5` reads to decide when a clean segment resumes. `DOSE_CHANGE`
+         below has always sent them; `DOSE_STATE` computed them at import,
+         stored them, and then dropped them here. A required field the sender
+         holds and does not send is the sender's defect. */
+      if (ev.effectiveAtConfidence === "UNCERTAIN") {
+        ev.effectiveAtEarliest = e.detail.effectiveAtEarliest;
+        ev.effectiveAtLatest = e.detail.effectiveAtLatest;
+      }
+      out.push(ev);
     } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {
       const ev = {
         kind: "DOSE_CHANGE",
@@ -495,7 +542,21 @@ export function toEngineEvents(projected, asOf = null) {
           e.detail.replacementAlkalinityConfidence || "MEASURED_SAME_BATCH";
       }
       out.push(ev);
-    } else if (e.kind === KIND.MANUAL_CORRECTION) {
+    } else if (e.kind === KIND.MANUAL_CORRECTION && isAlkalinityDose(e)) {
+      /* WHOSE CORRECTION IS THIS?
+
+         The same question the dose branches above ask, and it was not being
+         asked here. A `MANUAL_CORRECTION` carries `amountMl` and an expected
+         contribution in dKH; a hand-dosed calcium correction handed over
+         unmarked is read by the Alk engine as alkalinity going into the tank,
+         and the engine then attributes movement to a delivery that never
+         touched alkalinity. `DATA-PROVENANCE.md` §3 forbids exactly that
+         manufactured delivery history.
+
+         The rule is the one `isAlkalinityDose` already states: an event with
+         no parameter is alkalinity's, because that is what every correction
+         this app has ever written means. Nothing about existing records
+         changes; what changes is that a calcium one can no longer arrive. */
       out.push({
         kind: "MANUAL_CORRECTION",
         occurredAt: at || e.time.localDate,

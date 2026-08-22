@@ -323,11 +323,22 @@ s.test(
     eq(sent.length, 2, "both readings are sent");
     const dateOnlySent = sent.find((e) => e.timeProvenance === "DATE_ONLY");
     ok(dateOnlySent, "the date-only reading is sent");
-    eq(dateOnlySent.measuredAt, "2026-08-19", "and carries its calendar day, with no time invented");
+
+    /* Owner decision 30 amended `ALK-V2-DATA-CONTRACT.md` §1: a record with no
+       usable instant carries its day in `calendarDate`, and `measuredAt` — the
+       instant field — is ABSENT. This check used to assert the opposite, and
+       the opposite is what made the engine call each of the owner's 325
+       date-only readings malformed (`AI-014`). */
+    eq(dateOnlySent.calendarDate, "2026-08-19", "and carries its calendar day, with no time invented");
+    eq(dateOnlySent.measuredAt, undefined, "and carries no instant at all — not null, absent");
     ok(
-      !String(dateOnlySent.measuredAt).includes("T"),
+      !String(dateOnlySent.calendarDate).includes("T"),
       "it does not acquire a time on the way to the engine"
     );
+
+    const timed = sent.find((e) => e.timeProvenance !== "DATE_ONLY");
+    eq(timed.calendarDate, undefined, "a reading WITH an instant carries no calendar day");
+    ok(String(timed.measuredAt).includes("T"), "it carries its instant, in the instant field");
   }
 );
 
