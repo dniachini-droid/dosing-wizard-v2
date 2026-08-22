@@ -56,7 +56,7 @@ freeze identifier, not to reconcile a contradiction.
 | `adjudicator` | ✓ | ✓ | ✓ | — | — | — |
 | `jake` | ✓ | ✓ | ✓ | — | — | — |
 | `normal-operation-reviewer` | ✓ | ✓ | ✓ | — | — | — |
-| `unimpressed-reefkeeper` | ✓ | ✓ | ✓ | ✓ | — | **unrestricted — see below** |
+| `unimpressed-reefkeeper` | ✓ | ✓ | ✓ | ✓ | — | — |
 
 `Bash` goes to three agents, because their work requires executing something:
 `breaker` must reproduce a failure to be allowed to report it, `test-engineer`
@@ -75,18 +75,13 @@ to grant it `Bash` — or to have the invoking session supply engine output for
 comparison, which is the design as written — is an owner decision, not a change
 an agent or a run makes on its own initiative.
 
-**`unimpressed-reefkeeper` is the one agent whose definition declares no tool
-restriction, and it therefore does not carry the read-only guarantee the rest of
-this table describes.** Its file was supplied by the owner and is committed
-byte-for-byte as written; it has no `tools:` line, so it inherits the full tool
-set, `Edit` and `Write` included. Nothing in its brief asks it to write — it is
-told to drive the app and report — but that is prompt text, and this document is
-explicit elsewhere that prompt text is not a boundary. Until the owner decides
-otherwise the mitigation is procedural: it is dispatched to review, never to
-change anything, and its diff is expected to be empty. **Closing it properly
-means adding a `tools:` line to the agent file, which edits an owner-supplied
-document and is therefore the owner's call, not a run's.** Filed as an open
-question rather than settled here.
+`unimpressed-reefkeeper` briefly held no `tools:` line, having been committed
+exactly as supplied, and so inherited `Edit` and `Write` while this table claimed
+every agent was read-only. **The owner closed that on 2026-08-22 by authorising
+the line**, and its grant is now `Read, Grep, Glob, Bash` — the same as `breaker`
+and `test-engineer`. Nothing else in the file changed. The gap is recorded rather
+than deleted because a roster that claims a property every agent has is worth
+only as much as its worst entry, and this one was wrong for two commits.
 
 **Stated plainly: `Bash` is not a read-only grant.** It can write to disk by
 redirection, and it carries `curl` and therefore the whole GitHub API. The
@@ -138,10 +133,10 @@ the skill.
 
 | Situation | Reviewers, in order | Notes |
 |---|---|---|
-| **Any round that changed something the owner will look at** | **`unimpressed-reefkeeper`, before every other reviewer** | `/implement` step 5 and `/pr-gate` step 2. Skipped, with a stated reason, only on engine-only or canon-only rounds. Needs a driveable browser and a counted data summary, and stops without them |
+| **Any round that changed something the owner will look at** | **`unimpressed-reefkeeper`, before every other reviewer** | `/implement` step 5, `/pr-gate` step 2, `/implement-chemistry` step 4. Skipped, with a stated reason, only where the change is engine-only, canon-only or fixture-only (`DEC-027`). Needs a driveable browser and a counted data summary, and stops without them |
 | Documentation or cross-document change | `integrator` | The primary reviewer while the repository is documentation-only |
 | Ordinary implementation | one reviewer whose subject the change is in, plus specialists it triggers | `/implement` step 5 lists the triggers |
-| Chemistry, controller, dosing, safety rails | fixtures and invariants and the conformance harness, then `canon-conformance-auditor` + `breaker` concurrently, then one fix pass | `/implement-chemistry` steps 3–6. **This reviewer sequence is fixed and closed to extension.** |
+| Chemistry, controller, dosing, safety rails | fixtures and invariants and the conformance harness, then `unimpressed-reefkeeper` where the round changes anything the owner sees, then `canon-conformance-auditor` + `breaker` concurrently, then one fix pass | `/implement-chemistry` steps 3–8. **The sequence is three reviewers and stays closed to extension by a run** — `DEC-027` restated it; only the owner may restate it again. |
 | Any change to trend, dose, retest or user-visible output behaviour | `normal-operation-reviewer`, as a specialist trigger in `/implement` step 5 and `/pr-gate` step 2 | The change is in the ordinary middle (`PRC-003`), which is where the product earns its value (`DEC-018`) |
 | Any round that produced findings the owner will read | `jake`, strictly after the reviewers and before the fix pass | Sorts what matters from what does not; adds nothing new (`DEC-017`) |
 | Reviewers disagree, or a finding is contested | `adjudicator` | Not a routine stage; runs before `jake` where both run |
@@ -157,13 +152,19 @@ for the same reason: his sorting is only useful if it reaches the fix pass.
 Running him before the reviewers have finished gives him a partial finding set
 to sort, and his output looks identical either way.
 
-**`unimpressed-reefkeeper` is not in `/implement-chemistry`'s fixed sequence
-either, and for the same reason** — that sequence is closed to extension, and
-chemistry and controller work is exactly the engine-only case its own brief says
-it does not need. Where such a round *also* changes a displayed number or
-sentence, the UI half is reviewed under `/implement` or `/pr-gate`, not by
-reopening the fixed sequence. Whether that split is right is the same question
-as `OD-004` and is open with it.
+**`unimpressed-reefkeeper` *is* in `/implement-chemistry`'s sequence, as of
+`DEC-027`.** It was not, briefly, on the reasoning that chemistry work is the
+engine-only case its brief exempts. The owner narrowed that: the exemption is
+engine-only, and a chemistry round that changes anything he sees is not exempt.
+Chemistry work almost always ends as a figure on a screen, so the earlier reading
+exempted the rounds most in need of it. The sequence was **restated** by owner
+decision rather than extended by a run, which is the only route that was ever
+open — and it stays closed to a run adding a fourth.
+
+This does not settle `OD-004`. That asks the same shape of question about
+`normal-operation-reviewer`, which reasons from the specification against
+`PRODUCT-REVIEW-CRITERIA.md` where this agent reads no document and drives the
+app. `DEC-027` is evidence for the direction and not an answer.
 
 **`normal-operation-reviewer` is a reviewer, and that difference is
 load-bearing.** It is wired into `/implement` and `/pr-gate` as a specialist

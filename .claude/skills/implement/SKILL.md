@@ -97,7 +97,10 @@ output you did not see.
 
 **If this round changed anything the owner will look at — a screen, a number, a
 word, a control — `unimpressed-reefkeeper` runs before any other reviewer.**
-Rounds that touched only the engine or the canon skip it and say so.
+The exemption is engine-only (`DEC-027`): a change confined to the engine, the
+canon or the fixtures skips it and says so. Chemistry work is **not** exempt as a
+category — a chemistry change that ends as a figure on a screen runs it like any
+other, and `/implement-chemistry` carries the same step at its step 4.
 
 It drives the running app in a browser and reports what does not make sense. It
 reads no code and no canon; do not give it either, do not give it the diff, and
