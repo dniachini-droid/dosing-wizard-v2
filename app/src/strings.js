@@ -1120,9 +1120,10 @@ export const STRINGS = Object.freeze({
     `Not enough yet to check your solution against your tank. That needs readings either side of a dose ` +
     `change big enough to read the response from. Until then every figure here is built on the ` +
     `${entered} dKH per mL you entered.`,
-  /* The one that ships for the owner's tank today: `potencyLearningState` is
-     `CAPABILITY_GATED`, so `notYet` would be a lie of omission — it implies the
-     check arrives with more data, and in this build it will not. */
+  /* The one that ships wherever `potencyLearningState` is
+     `CAPABILITY_GATED` — which is this whole build, since potency learning is
+     gated on `M-2`, `M-3` and `M-9`. `notYet` would be a lie of omission
+     there: it implies the check arrives with more data, and it will not. */
   "dosing.potency.off": ({ entered }) =>
     `This build does not check your solution's strength against your tank — that is switched off by ` +
     `design, not missing. Every figure here is built on the ${entered} dKH per mL you entered.`,

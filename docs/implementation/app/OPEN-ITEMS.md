@@ -713,31 +713,56 @@ field.
 **What would close it.** `consumption.deliveredDkhPerDay` in the `EngineResult`, and
 `suppliedOf` deleted.
 
-## AI-018 — A built production app cannot start its engine (INTERFACE)
+## AI-018 — A built production app could not start its engine — FIXED
 
-**Where.** `app/src/engine/worker.js`'s `import("../../vendor/pyodide/pyodide.mjs")`,
-against `vite.config.js`'s `dosing-wizard:uncommitted-python-runtime` plugin.
+**Where.** `app/src/engine/worker.js`, the runtime import against the `indexURL` beside it.
 
-**What.** Found while verifying offline with a real browser against a real build. In the
-DEV server the worker sits at `/app/src/engine/worker.js`, so the relative specifier
-resolves to `/app/vendor/pyodide/pyodide.mjs`, which is where `vendor-runtime.py` writes it.
-In a BUILT app the worker chunk sits at `/assets/worker-*.js`, so the same specifier
-resolves to **`/vendor/pyodide/pyodide.mjs`** — one directory too high. Observed as a 404
-for that exact path.
+**What.** The worker reached the Python runtime by a RELATIVE specifier,
+`"../../vendor/pyodide/pyodide.mjs"`, while deriving its `indexURL` from `BASE`. Two
+spellings of one location, agreeing only where the worker file sits three directories
+deep — which it does in the dev server, and does not in a build, where the chunk is
+emitted to `/assets/`. Resolved as a browser resolves them:
 
-The `resolveId` plugin rewrites the specifier for the main-thread graph; the worker's
-dynamic import carries `@vite-ignore`, which is what stops the bundler touching it, and so
-nothing rewrites it there.
+```text
+                    dev  /app/src/engine/worker.js   built  /assets/worker-*.js
+  import       /app/vendor/pyodide/pyodide.mjs        /vendor/pyodide/pyodide.mjs   ✗
+  indexURL     /app/vendor/pyodide/                   /app/vendor/pyodide/          ✓
+```
 
-**Not caused by this round, and not verifiable to completion here.** The 12 MB runtime is
-deliberately not committed, so this environment cannot prove the engine boots once the path
-is right — only that the path it asks for is wrong. Recorded rather than fixed because
-fixing it blind, on the one boundary the build config exists to protect, is worse than
-naming it.
+The import 404s, `boot()` rejects, and every `assess` call returns a transport failure.
+**The engine could not start in production at all** — which is the whole of what this
+application is. Invisible in development, invisible to the suite, and invisible to a
+reader, because the line looked right and the line beside it WAS right.
+
+**How it was found.** Loading a real build in a real browser while verifying offline. The
+server logged `404 /vendor/pyodide/pyodide.mjs`.
+
+**The fix.** The runtime's location is stated once, as `RUNTIME`, and both uses derive from
+it. Not a second correct spelling — that is the same defect waiting — but one owner for a
+URL, which is `MASTER RULE 1` applied to a path.
+
+**How it was verified**, given the 12 MB runtime is deliberately not committed: a stub is
+served at the path a deployment serves, and a real browser is watched to see which URL the
+worker asks for. Before the fix it asked for `/vendor/pyodide/pyodide.mjs` and got a 404;
+after, it reaches `/app/vendor/pyodide/pyodide.mjs`. Both arms run in
+`tools/app/check-runtime-path.mjs`. `PORT-19` pins the source property in every gate, with
+`AM-C11` as its control.
+
+**What this does NOT establish.** That CPython boots and the engine answers. That needs the
+real runtime, which this environment does not hold. What is established is that the
+application asks for it in the right place — which is the defect, and was the blocker.
+
+**What remains for a deployment.** `tools/app/vendor-runtime.py` must have been run so
+`app/vendor/pyodide/` exists in what is served, and the host must serve the repository root
+alongside `app/dist` — the engine's own `.py` files and the frozen catalogue are fetched
+from it at run time, which `vite.config.js` explains at length. A host serving only
+`app/dist` will 404 every engine module.
 
 ## AI-019 — Five gating codes travel with an issued dose recommendation
 
-**Where.** The engine's own output for the owner's tank.
+**Where.** The engine's own output on the round-three reproduction fixture — a synthetic
+below-range, falling tank, not the owner's data. The state is reachable and that is what
+matters here; the numbers are the fixture's.
 
 **What.** `jake` raised it while writing the Dosing tab's wording. The result carries
 `maintenanceActionStatus: "ISSUED"` and a recommended 9.0 mL/day, and alongside it five
@@ -759,8 +784,13 @@ it was redundant with position and rendered in red, which read as an alarm for g
 the five recommendation stories is a breach of the safe outer limits, and copy for a state
 that outranks everything else on the screen should not arrive as a side effect of a
 language pass. `cardNotice` raises a strip on a breach, so it is not silent — but the
-Dosing tab itself says nothing about it. The owner's tank is `WITHIN_BOUNDS`, so nothing
-ships broken today.
+Dosing tab itself says nothing about it.
+
+**Whether anything ships broken today depends on the owner's actual outer-bound state, and
+this entry previously asserted it was `WITHIN_BOUNDS` on the strength of a SYNTHETIC
+fixture.** That was not his data and the claim was not his to make. What can be said is
+that a breach now raises a strip (`NOT-01`), and that the Dosing tab says nothing about
+safety either way.
 
 > **The mitigation did not work when this was first written, and the entry said it did.**
 > `cardNotice` compared against `BREACH_LOW`/`BREACH_HIGH` and read `outerBoundState` from

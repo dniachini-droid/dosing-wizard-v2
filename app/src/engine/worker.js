@@ -84,9 +84,35 @@ async function boot() {
      reason-code catalogue are still fetched from the repository root, and the
      build serves the repository root for exactly that reason — see
      `vite.config.js`. */
-  const { loadPyodide } = await import(/* @vite-ignore */ "../../vendor/pyodide/pyodide.mjs");
+  /* THE RUNTIME'S LOCATION HAS ONE OWNER, AND IT IS `BASE`.
+
+     This was a RELATIVE specifier — `"../../vendor/pyodide/pyodide.mjs"` —
+     while the `indexURL` on the very next line was derived from `BASE`. In the
+     dev server the two agree by luck, because the worker sits at
+     `/app/src/engine/worker.js` and both land on `/app/vendor/pyodide/`. In a
+     BUILT app they do not: the worker chunk is emitted to `/assets/`, so the
+     relative specifier resolves to `/vendor/pyodide/pyodide.mjs` — one
+     directory too high — while `indexURL` still resolves correctly to
+     `/app/vendor/pyodide/`.
+
+     The consequence was total and silent: the dynamic import 404s, `boot()`
+     rejects, and every `assess` call comes back as a transport failure. The
+     engine could not start in production AT ALL, which is the whole of what
+     this application is. It was invisible in development, invisible to the
+     test suite, and invisible to a reader — because the line looked right and
+     the line beside it WAS right.
+
+     Both are `BASE` now. Not two spellings that happen to agree in one
+     environment — canon `MASTER RULE 1`'s objection exactly — but one
+     statement of where the runtime lives, used twice.
+
+     `@vite-ignore` stays: the runtime is fetched and hash-verified by
+     `tools/app/vendor-runtime.py` and deliberately not committed, so a bundler
+     asked to resolve it at build time finds nothing and stops. */
+  const RUNTIME = new URL("app/vendor/pyodide/", BASE);
+  const { loadPyodide } = await import(/* @vite-ignore */ new URL("pyodide.mjs", RUNTIME).href);
   const py = await loadPyodide({
-    indexURL: new URL("app/vendor/pyodide/", BASE).href,
+    indexURL: RUNTIME.href,
     stdout: () => {},
     stderr: () => {},
   });

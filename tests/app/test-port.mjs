@@ -918,4 +918,59 @@ s.test("PORT-17", "the standing dose is stamped at the APP's instant, so it surv
   }
 });
 
+s.test("PORT-19", "the Python runtime's location is stated once, so a built worker and a dev worker cannot disagree about it", () => {
+  /* THE DEFECT THIS PINS COULD NOT BE SEEN BY READING THE LINE.
+
+     `worker.js` had a RELATIVE import for the runtime —
+     `"../../vendor/pyodide/pyodide.mjs"` — beside an `indexURL` derived from
+     `BASE`. Two spellings of one location, and they agree ONLY where the
+     worker file sits three directories deep. In the dev server it does. In a
+     BUILT app the worker chunk is emitted to `/assets/`, and then:
+
+         import   ../../../vendor/pyodide/pyodide.mjs  ->  /vendor/pyodide/…
+         indexURL new URL("app/vendor/pyodide/", BASE) ->  /app/vendor/pyodide/
+
+     The import 404s, `boot()` rejects, and every assessment comes back a
+     transport failure. THE ENGINE COULD NOT START IN PRODUCTION AT ALL — and
+     nothing saw it: not the dev server, not the app suite, not a reader,
+     because the line looked right and the line beside it was right.
+
+     So the check is not "is the path correct" — a second correct spelling is
+     the same defect waiting. It is that the location is stated ONCE and both
+     uses derive from it, which is `MASTER RULE 1` applied to a URL.
+
+     The end-to-end proof lives in `tools/app/check-runtime-path.mjs`, which
+     serves a stub at the path a deployment uses and watches a real browser
+     reach it. This is its cheap always-on half. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/engine/worker.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  /* No relative walk to the runtime, in either spelling. */
+  ok(!/["'`][.][.]\/[^"'`]*vendor\/pyodide/.test(code),
+    "the runtime is not reached by a relative path, which is what moved when the file did");
+
+  /* One expression names it, and both uses take it from there. */
+  const decl = code.match(/const RUNTIME = new URL\("app\/vendor\/pyodide\/", BASE\);/);
+  ok(decl, "the runtime's location is declared once, from BASE");
+  ok(/await import\([^)]*new URL\("pyodide\.mjs", RUNTIME\)/.test(code),
+    "the module import derives from it");
+  ok(/indexURL: RUNTIME\.href/.test(code),
+    "and so does the indexURL — not a second spelling that happens to agree");
+
+  /* And the property itself, as arithmetic rather than as a spelling: from
+     EVERY location the worker is served from, the two must land together. */
+  for (const where of [
+    "https://example.test/app/src/engine/worker.js",  /* the dev server */
+    "https://example.test/assets/worker-abc123.js",   /* a built bundle */
+    "https://example.test/app/dist/assets/w.js",      /* served one level in */
+  ]) {
+    const base = new URL("../../../", where);
+    const runtime = new URL("app/vendor/pyodide/", base);
+    eq(new URL("pyodide.mjs", runtime).pathname, "/app/vendor/pyodide/pyodide.mjs",
+      `the module resolves to the deployed path from ${where}`);
+    eq(runtime.pathname, "/app/vendor/pyodide/",
+      `and the indexURL agrees with it from ${where}`);
+  }
+});
+
 export default s;
