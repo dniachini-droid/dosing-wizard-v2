@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { RotateCcw } from '../icons.jsx'
 import { daysBetween } from '../lib/dates.js'
+import { groupWordKey } from '../present/episodes.js'
+import { t } from '../strings.js'
 
 /* ---------------------------------- zoomable / pannable chart ---------------------------------- */
 
@@ -78,6 +80,104 @@ export function niceAxis(min, max, padFrac = 0.18) {
    have reproduced the defect at any call site that forgot — which is how it
    survived four of them in V1. `unit` may be an empty string, because pH
    genuinely has no unit; it may not be absent. */
+/* ============================================================================
+   A TEST RUN MORE THAN ONCE, DRAWN AS ONE TEST
+   ----------------------------------------------------------------------------
+   Six readings typed inside a minute used to draw six points spread along the
+   axis, which told the keeper he had tested six times over an hour. He tested
+   once, six times over, and the chart said something that did not happen.
+
+   So a group occupies ONE x-position — the instant the engine resolved it to —
+   and its measurements are stacked vertically there. They are drawn small and
+   quiet because they are not the answer; the resolved value is drawn as a ring
+   against them because it is, and the trend line passes through it alone.
+
+   HOW THE STACK IS PLACED. Each measurement slot is its own `Line` with no
+   stroke, so recharts positions every dot through the same two axes the trace
+   uses. Reading the chart's internal scales and doing the pixel arithmetic here
+   would be a second implementation of "where does this value sit", and it would
+   be the one that drifted the day a margin changed.
+
+   A test run once is a stack of one and takes exactly this shape, so there is
+   one kind of point on the chart rather than two.
+   ========================================================================= */
+
+/* How many measurements the busiest visible group holds. */
+function maxMembers(rows) {
+  let n = 1;
+  for (const r of rows) {
+    const c = r && Array.isArray(r.members) ? r.members.length : 1;
+    if (c > n) n = c;
+  }
+  return n;
+}
+
+/* One measurement in a stack. Small, low-contrast, and never connected to
+   anything — a line through the members would be a trend nobody claimed. */
+function MemberDot({ cx, cy, payload, fill }) {
+  if (cx == null || cy == null) return null;
+  if (!payload || !payload.grouped) return null;
+  return <circle cx={cx} cy={cy} r={2.6} fill={fill} fillOpacity={0.45} stroke="none" />;
+}
+
+/* The value the engine used. A ring where the test was run more than once, so
+   it is unmistakable against the members stacked behind it; an ordinary dot
+   where there is only one measurement and nothing to distinguish it from. */
+function ResolvedDot({ cx, cy, payload, stroke, showPlainDots }) {
+  if (cx == null || cy == null) return null;
+  if (payload && payload.grouped) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={5.5} fill="#fff" stroke={stroke} strokeWidth={2.5} />
+        <circle cx={cx} cy={cy} r={1.8} fill={stroke} />
+      </g>
+    );
+  }
+  if (!showPlainDots) return null;
+  return <circle cx={cx} cy={cy} r={3} fill={stroke} stroke="none" />;
+}
+
+/* What a group says when it is tapped. Names how many measurements it holds
+   and which figure was used, because those are the two things a keeper looking
+   at a stack of dots wants to know. */
+function GroupTooltip({ active, payload, paramName, unit, formatValue }) {
+  if (!active || !payload || !payload.length) return null;
+  const row = payload[0].payload;
+  if (!row) return null;
+  const box = {
+    background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10,
+    padding: "8px 10px", maxWidth: 236,
+  };
+  if (!row.grouped) {
+    return (
+      <div style={box}>
+        <div className="text-[12px] font-extrabold text-ink">
+          {formatValue(row.value)}{unit ? ` ${unit}` : ""}
+        </div>
+        <div className="text-[11px] font-bold text-ink2">{paramName} · {row.label}</div>
+      </div>
+    );
+  }
+  const key = groupWordKey(row.count);
+  return (
+    <div style={box}>
+      <div className="text-[12px] font-extrabold text-ink leading-snug">
+        {t(`group.${key}`, { count: row.count, value: formatValue(row.value), unit })}
+      </div>
+      <div className="text-[11px] font-bold text-ink2 mt-1 leading-snug">
+        {t("group.median")}
+      </div>
+      {row.spread != null && row.spread > 0 && (
+        <div className="text-[11px] font-bold mt-1 leading-snug"
+          style={{ color: row.anomalous ? "#A2621B" : "#45605F" }}>
+          {t(row.anomalous ? "group.wideSpread" : "group.spread",
+            { spread: formatValue(row.spread), unit })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin, targetRangeMax, height = 280, events = [] }) {
   const containerRef = useRef(null);
   const [range, setRange] = useState({ start: 0, end: 1 });
@@ -191,6 +291,13 @@ export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin
 
   /* Snap each event to the nearest visible reading so the marker lands on a
      real x-axis category, then drop any that fall outside the zoom window. */
+  /* One slot per measurement position, so the busiest visible group has a
+     line to draw every one of its members through. */
+  const memberSlots = useMemo(() => {
+    const n = maxMembers(visible);
+    return Array.from({ length: n }, (_, i) => i);
+  }, [visible]);
+
   const visibleEvents = useMemo(() => {
     if (!events.length || !visible.length) return [];
     const out = [];
@@ -258,9 +365,22 @@ export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin
               <ReferenceLine key={i} x={ev.label} stroke={ev.color} strokeDasharray="4 3" strokeWidth={1.5}
                 label={{ value: ev.icon, position: "top", fontSize: 11, fill: ev.color }} />
             ))}
-            <Tooltip contentStyle={{ background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "#08191D" }}
-              formatter={(v) => [`${axis.formatValue(v)}${unit ? ` ${unit}` : ""}`, paramName]} />
-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75} dot={visible.length < 50} activeDot={{ r: 5 }} />
+            <Tooltip cursor={{ stroke: "#C7D6D3", strokeWidth: 1 }}
+              content={<GroupTooltip paramName={paramName} unit={unit} formatValue={axis.formatValue} />} />
+            {/* The measurements, stacked at their group's position and drawn
+                first so the trace and its resolved value sit over them. */}
+            {memberSlots.map((i) => (
+              <Line key={`m${i}`} type="linear" isAnimationActive={false} legendType="none"
+                dataKey={(row) => (row && row.grouped && row.members && row.members[i]
+                  ? row.members[i].value : null)}
+                stroke="none" connectNulls={false} activeDot={false}
+                dot={<MemberDot fill={color} />} />
+            ))}
+            {/* The trend runs through the resolved value and nothing else. */}
+            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75}
+              isAnimationActive={false}
+              dot={<ResolvedDot stroke={color} showPlainDots={visible.length < 50} />}
+              activeDot={{ r: 5 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -276,9 +396,26 @@ export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin
           kinds.push({ kind: ev.kind, color: ev.color, icon: ev.icon });
         }
         const hasBand = targetRangeMin != null && targetRangeMax != null;
-        if (!kinds.length && !hasBand) return null;
+        /* Only where a repeat test is actually on screen. A legend explaining
+           stacked measurements on a chart that has none is noise. */
+        const hasGroup = visible.some((d) => d && d.grouped);
+        if (!kinds.length && !hasBand && !hasGroup) return null;
         return (
           <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
+            {hasGroup && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block rounded-full" aria-hidden="true"
+                    style={{ width: 6, height: 6, background: color, opacity: 0.45 }} />
+                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.measurement")}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block rounded-full" aria-hidden="true"
+                    style={{ width: 10, height: 10, background: "#fff", border: `2.5px solid ${color}` }} />
+                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.used")}</span>
+                </span>
+              </>
+            )}
             {hasBand && (
               <span className="flex items-center gap-1.5">
                 <span className="inline-block w-4 h-2.5 rounded-sm" style={{ background: color, opacity: 0.18 }} />

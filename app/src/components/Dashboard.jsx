@@ -10,7 +10,8 @@ import { ChevronDown, ChevronUp, RotateCcw, Save, Settings2, X } from '../icons.
 import { fmtVal } from '../lib/format.js'
 import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-import { chartDataFrom, rowsFor, untimedCount } from '../lib/adapt.js'
+import { rowsFor, untimedCount } from '../lib/adapt.js'
+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 import { taskState } from '../store/schedule.js'
 import { cardContent } from '../present/card-content.js'
 import { describeRows } from '../present/spread.js'
@@ -42,7 +43,7 @@ export function Dashboard({ latestByParam, readings, paramDefs,
   onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
   remWindow = 14, setRemWindow = () => {},
   onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-  onAddReading = null, waterChanges = [] }) {
+  onAddReading = null, waterChanges = [], episodes = null }) {
 
   const [calOpen, setCalOpen] = useState(false);
 
@@ -50,9 +51,13 @@ export function Dashboard({ latestByParam, readings, paramDefs,
      rather than filtering the whole log inside each of eight cards. */
   const sparkRowsByParam = useMemo(() => {
     const m = {};
-    for (const d of paramDefs) m[d.key] = rowsFor(readings, d.key).slice(-14);
+    /* Grouped, so a repeat test is one point on the sparkline rather than
+       several — and so the last point is the figure the engine used. */
+    for (const d of paramDefs) {
+      m[d.key] = chartGroupsFrom(rowsFor(readings, d.key), episodes, (x) => x).slice(-14);
+    }
     return m;
-  }, [readings, paramDefs]);
+  }, [readings, paramDefs, episodes]);
 
   /* Where each parameter has been lately, so the range bar can show its recent
      travel rather than only where it is now. The window is a fixed number of
@@ -105,8 +110,11 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           const content = cardContent(def, engineResult, assessmentState,
             latestByParam[def.key],
             def.min != null && def.max != null ? { min: def.min, max: def.max } : null);
+          /* The figure and the words now come from the same place. */
+          const observation = currentObservationFor(def, engineResult, episodes, latestByParam[def.key]);
           return (
             <ParamCard key={def.key} def={def} reading={latestByParam[def.key]}
+              observation={observation}
               recent={recentRangeByParam[def.key]}
               position={content.position}
               statusLine={content.statusLine}
@@ -168,7 +176,7 @@ export function Dashboard({ latestByParam, readings, paramDefs,
    `docs/migration/PORT-OMISSIONS.md` records all of it. */
 export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
   chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-  onCorrectReading = null, onDeleteReading = null }) {
+  onCorrectReading = null, onDeleteReading = null, episodes = null }) {
   /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
      no way to correct a mistyped reading anywhere in the build. */
   const [fixing, setFixing] = useState(null);
@@ -251,8 +259,15 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
     () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
     [chartEvents, def.key]);
 
-  const chartData = chartDataFrom(rows, fmtShort);
+  /* One point per TEST, not per measurement — see `present/episodes.js`. A
+     repeat test is one x-position with its measurements stacked on it. */
+  const chartData = chartGroupsFrom(rows, episodes, fmtShort);
   const untimed = untimedCount(rows);
+
+  /* "Latest" means the same thing here as it does on the card and on Dosing:
+     the value the engine used. It read the raw last reading, so a repeat test
+     put 10.00 in this row while every word on the screen described 9.00. */
+  const latestShown = chartData.length ? chartData[chartData.length - 1].value : stats.latest;
 
   useEscape(onClose);
 
@@ -378,11 +393,29 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
             <div className="py-10 text-center text-ink2 font-semibold text-sm">No readings for {def.labelMid || def.label.toLowerCase()} in this window</div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-3 mb-5">
-                {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
+              {/* OWNER FINDING 25 — THESE WERE UNREADABLE.
+
+                  Four figures across a phone, each "10.00dKH" on one line at
+                  `text-lg`, in a cell that then clipped it: the row read
+                  "10.00… 9.00d… 10.00… 9.00d…", which is worse than showing
+                  nothing because it looks like data.
+
+                  The unit moves to its own line. It is the same for all four
+                  and repeating it four times across the narrowest row in the
+                  app was what cost the digits their space. Nothing is clipped
+                  now — `truncate` is gone rather than being given more room,
+                  because a number that silently loses its last digit is a
+                  number the keeper cannot trust anywhere. */}
+              <div className="grid grid-cols-4 gap-2 mb-5">
+                {[["Latest", latestShown], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
                   <div key={label} className="text-center min-w-0">
                     <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
-                    <div className="text-lg font-black text-ink mt-0.5 truncate">{fmtVal(def, v)}{def.unit}</div>
+                    <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">
+                      {fmtVal(def, v)}
+                    </div>
+                    {def.unit && (
+                      <div className="text-[9px] font-bold text-ink2 leading-none">{def.unit}</div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -1470,13 +1470,27 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `263b8560aedea7eb30023c660339d57054ecee1212800425c1f7212a888e9a20` |
 | V1 blob | `bdf2efcbadc8d004d41b4a28d7d683bb885ec9c4` |
-| Ported SHA-256 | `da328e0a8f1e6b16f85b02b8b4552c073cf2d3fdd18ec399922d63d62ef4c792` |
-| Differences | 4 |
+| Ported SHA-256 | `ddd1eb7e1c9005499e4929024aa9e66e3bf3fa5b22d26984a34e2c20c11f79cd` |
+| Differences | 7 |
 
 1. **defect fixed — the chart never received or displayed a unit or a parameter name at any of V1's four call sites; both are now required parameters**
 
 ```diff
-@@ -66,7 +66,19 @@
+@@ -2,6 +2,8 @@
+ import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+ import { RotateCcw } from '../icons.jsx'
+ import { daysBetween } from '../lib/dates.js'
++import { groupWordKey } from '../present/episodes.js'
++import { t } from '../strings.js'
+ 
+ /* ---------------------------------- zoomable / pannable chart ---------------------------------- */
+ 
+```
+
+2. **defect fixed — the same defect: the tooltip states the unit and the parameter name alongside the value**
+
+```diff
+@@ -66,7 +68,117 @@
    return { domain: [clean(lo), clean(hi)], ticks, format, formatValue, step, decimals };
  }
  
@@ -1493,16 +1507,114 @@ Byte-identical to V1.
 +   have reproduced the defect at any call site that forgot — which is how it
 +   survived four of them in V1. `unit` may be an empty string, because pH
 +   genuinely has no unit; it may not be absent. */
++/* ============================================================================
++   A TEST RUN MORE THAN ONCE, DRAWN AS ONE TEST
++   ----------------------------------------------------------------------------
++   Six readings typed inside a minute used to draw six points spread along the
++   axis, which told the keeper he had tested six times over an hour. He tested
++   once, six times over, and the chart said something that did not happen.
++
++   So a group occupies ONE x-position — the instant the engine resolved it to —
++   and its measurements are stacked vertically there. They are drawn small and
++   quiet because they are not the answer; the resolved value is drawn as a ring
++   against them because it is, and the trend line passes through it alone.
++
++   HOW THE STACK IS PLACED. Each measurement slot is its own `Line` with no
++   stroke, so recharts positions every dot through the same two axes the trace
++   uses. Reading the chart's internal scales and doing the pixel arithmetic here
++   would be a second implementation of "where does this value sit", and it would
++   be the one that drifted the day a margin changed.
++
++   A test run once is a stack of one and takes exactly this shape, so there is
++   one kind of point on the chart rather than two.
++   ========================================================================= */
++
++/* How many measurements the busiest visible group holds. */
++function maxMembers(rows) {
++  let n = 1;
++  for (const r of rows) {
++    const c = r && Array.isArray(r.members) ? r.members.length : 1;
++    if (c > n) n = c;
++  }
++  return n;
++}
++
++/* One measurement in a stack. Small, low-contrast, and never connected to
++   anything — a line through the members would be a trend nobody claimed. */
++function MemberDot({ cx, cy, payload, fill }) {
++  if (cx == null || cy == null) return null;
++  if (!payload || !payload.grouped) return null;
++  return <circle cx={cx} cy={cy} r={2.6} fill={fill} fillOpacity={0.45} stroke="none" />;
++}
++
++/* The value the engine used. A ring where the test was run more than once, so
++   it is unmistakable against the members stacked behind it; an ordinary dot
++   where there is only one measurement and nothing to distinguish it from. */
++function ResolvedDot({ cx, cy, payload, stroke, showPlainDots }) {
++  if (cx == null || cy == null) return null;
++  if (payload && payload.grouped) {
++    return (
++      <g>
++        <circle cx={cx} cy={cy} r={5.5} fill="#fff" stroke={stroke} strokeWidth={2.5} />
++        <circle cx={cx} cy={cy} r={1.8} fill={stroke} />
++      </g>
++    );
++  }
++  if (!showPlainDots) return null;
++  return <circle cx={cx} cy={cy} r={3} fill={stroke} stroke="none" />;
++}
++
++/* What a group says when it is tapped. Names how many measurements it holds
++   and which figure was used, because those are the two things a keeper looking
++   at a stack of dots wants to know. */
++function GroupTooltip({ active, payload, paramName, unit, formatValue }) {
++  if (!active || !payload || !payload.length) return null;
++  const row = payload[0].payload;
++  if (!row) return null;
++  const box = {
++    background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10,
++    padding: "8px 10px", maxWidth: 236,
++  };
++  if (!row.grouped) {
++    return (
++      <div style={box}>
++        <div className="text-[12px] font-extrabold text-ink">
++          {formatValue(row.value)}{unit ? ` ${unit}` : ""}
++        </div>
++        <div className="text-[11px] font-bold text-ink2">{paramName} · {row.label}</div>
++      </div>
++    );
++  }
++  const key = groupWordKey(row.count);
++  return (
++    <div style={box}>
++      <div className="text-[12px] font-extrabold text-ink leading-snug">
++        {t(`group.${key}`, { count: row.count, value: formatValue(row.value), unit })}
++      </div>
++      <div className="text-[11px] font-bold text-ink2 mt-1 leading-snug">
++        {t("group.median")}
++      </div>
++      {row.spread != null && row.spread > 0 && (
++        <div className="text-[11px] font-bold mt-1 leading-snug"
++          style={{ color: row.anomalous ? "#A2621B" : "#45605F" }}>
++          {t(row.anomalous ? "group.wideSpread" : "group.spread",
++            { spread: formatValue(row.spread), unit })}
++        </div>
++      )}
++    </div>
++  );
++}
++
 +export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin, targetRangeMax, height = 280, events = [] }) {
    const containerRef = useRef(null);
    const [range, setRange] = useState({ start: 0, end: 1 });
    const gestureRef = useRef(null);
 ```
 
-2. **defect fixed — the same defect: the refusal is computed after the hooks so the hook order cannot change between renders**
+3. **defect fixed — the same defect: the refusal is computed after the hooks so the hook order cannot change between renders**
 
 ```diff
-@@ -158,6 +170,11 @@
+@@ -158,6 +270,11 @@
      };
    }, [range]);
  
@@ -1516,10 +1628,29 @@ Byte-identical to V1.
    const visible = total > 0 ? data.slice(startIdx, endIdx + 1) : [];
 ```
 
-3. **defect fixed — the same defect: it refuses to render rather than drawing an unlabelled trace, and draws the parameter's name and unit above the plot**
+4. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
 
 ```diff
-@@ -189,11 +206,47 @@
+@@ -174,6 +291,13 @@
+ 
+   /* Snap each event to the nearest visible reading so the marker lands on a
+      real x-axis category, then drop any that fall outside the zoom window. */
++  /* One slot per measurement position, so the busiest visible group has a
++     line to draw every one of its members through. */
++  const memberSlots = useMemo(() => {
++    const n = maxMembers(visible);
++    return Array.from({ length: n }, (_, i) => i);
++  }, [visible]);
++
+   const visibleEvents = useMemo(() => {
+     if (!events.length || !visible.length) return [];
+     const out = [];
+```
+
+5. **defect fixed — the same defect: it refuses to render rather than drawing an unlabelled trace, and draws the parameter's name and unit above the plot**
+
+```diff
+@@ -189,11 +313,47 @@
          if (!seen.has(k)) { seen.add(k); out.push({ ...ev, label: best.label }); }
        }
      }
@@ -1570,21 +1701,69 @@ Byte-identical to V1.
            <LineChart data={visible} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
 ```
 
-4. **defect fixed — the same defect: the tooltip states the unit and the parameter name alongside the value**
+6. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
 
 ```diff
-@@ -206,7 +259,7 @@
+@@ -205,9 +365,22 @@
+               <ReferenceLine key={i} x={ev.label} stroke={ev.color} strokeDasharray="4 3" strokeWidth={1.5}
                  label={{ value: ev.icon, position: "top", fontSize: 11, fill: ev.color }} />
              ))}
-             <Tooltip contentStyle={{ background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "#08191D" }}
+-            <Tooltip contentStyle={{ background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "#08191D" }}
 -              formatter={(v) => axis.formatValue(v)} />
-+              formatter={(v) => [`${axis.formatValue(v)}${unit ? ` ${unit}` : ""}`, paramName]} />
-             <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75} dot={visible.length < 50} activeDot={{ r: 5 }} />
+-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75} dot={visible.length < 50} activeDot={{ r: 5 }} />
++            <Tooltip cursor={{ stroke: "#C7D6D3", strokeWidth: 1 }}
++              content={<GroupTooltip paramName={paramName} unit={unit} formatValue={axis.formatValue} />} />
++            {/* The measurements, stacked at their group's position and drawn
++                first so the trace and its resolved value sit over them. */}
++            {memberSlots.map((i) => (
++              <Line key={`m${i}`} type="linear" isAnimationActive={false} legendType="none"
++                dataKey={(row) => (row && row.grouped && row.members && row.members[i]
++                  ? row.members[i].value : null)}
++                stroke="none" connectNulls={false} activeDot={false}
++                dot={<MemberDot fill={color} />} />
++            ))}
++            {/* The trend runs through the resolved value and nothing else. */}
++            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75}
++              isAnimationActive={false}
++              dot={<ResolvedDot stroke={color} showPlainDots={visible.length < 50} />}
++              activeDot={{ r: 5 }} />
            </LineChart>
          </ResponsiveContainer>
+       </div>
 ```
 
----
+7. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
+
+```diff
+@@ -223,9 +396,26 @@
+           kinds.push({ kind: ev.kind, color: ev.color, icon: ev.icon });
+         }
+         const hasBand = targetRangeMin != null && targetRangeMax != null;
+-        if (!kinds.length && !hasBand) return null;
++        /* Only where a repeat test is actually on screen. A legend explaining
++           stacked measurements on a chart that has none is noise. */
++        const hasGroup = visible.some((d) => d && d.grouped);
++        if (!kinds.length && !hasBand && !hasGroup) return null;
+         return (
+           <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
++            {hasGroup && (
++              <>
++                <span className="flex items-center gap-1.5">
++                  <span className="inline-block rounded-full" aria-hidden="true"
++                    style={{ width: 6, height: 6, background: color, opacity: 0.45 }} />
++                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.measurement")}</span>
++                </span>
++                <span className="flex items-center gap-1.5">
++                  <span className="inline-block rounded-full" aria-hidden="true"
++                    style={{ width: 10, height: 10, background: "#fff", border: `2.5px solid ${color}` }} />
++                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.used")}</span>
++                </span>
++              </>
++            )}
+             {hasBand && (
+               <span className="flex items-center gap-1.5">
+                 <span className="inline-block w-4 h-2.5 rounded-sm" style={{ background: color, opacity: 0.18 }} />
+```
 
 ### `app/src/components/ErrorBoundary.jsx`
 
@@ -1918,13 +2097,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `d5fbb3a0eab2a4063a08c95ffecf850fbbd4360a62ea428f6fa9321acd9b3c35` |
-| Differences | 13 |
+| Ported SHA-256 | `9150018ee0c5ecb2eff1f935f2098cc4368701b617f1038acceb2d1419cc698f` |
+| Differences | 12 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
 
 ```diff
-@@ -1,19 +1,33 @@
+@@ -1,19 +1,34 @@
  import { useEffect, useState } from 'react'
  import { Card } from './ErrorBoundary.jsx'
  import { Activity, AlertTriangle, ArrowDown, ArrowUp, Beaker, Droplets, FlaskConical, Gauge, Plus, Scale, Target, Waves } from '../icons.jsx'
@@ -1937,6 +2116,7 @@ Byte-identical to V1.
 -import { STABILITY_COLOR } from '../lib/stability-engine.js'
 +import { fmtShort } from '../lib/dates.js'
 +import { positionTone } from '../present/position.js'
++import { t } from '../strings.js'
  
 -/* --- What to expect after a dose change ---
 +/* --- The dose-change moment ---
@@ -1973,7 +2153,7 @@ Byte-identical to V1.
 2. **wording replaced with engine output — the dose moment no longer destructures V1's own predicted value, per-day movement, retest date and staged target; in V2 the prediction is the engine's immutable snapshot and is not available at this instant**
 
 ```diff
-@@ -36,7 +50,7 @@
+@@ -36,7 +51,7 @@
    }, [result, left, held]);
  
    if (!result) return null;
@@ -1987,7 +2167,7 @@ Byte-identical to V1.
 3. **wording replaced with engine output — the chart emoji replaced by the icon set's arrow; the brief rules out emojis**
 
 ```diff
-@@ -48,7 +62,13 @@
+@@ -48,7 +63,13 @@
          style={{ boxShadow: "0 24px 60px rgba(8,25,29,0.35)" }}>
  
          <div className="px-5 pt-6 pb-5 text-center" style={{ background: tone + "12" }}>
@@ -2007,7 +2187,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — V1's predicted-value sentence and retest date replaced by a statement of what was recorded, which is what the app knows at that moment**
 
 ```diff
-@@ -68,40 +88,31 @@
+@@ -68,40 +89,31 @@
              <div className="text-center" style={{ animationDelay: "0ms" }}>
                <div className="text-[15px] font-black" style={{ color: tone }}>Recorded</div>
                <p className="text-[13px] text-ink font-medium leading-relaxed mt-1">
@@ -2067,7 +2247,7 @@ Byte-identical to V1.
 5. **defect fixed — an apostrophe escaped so the string parses after the surrounding template was rewritten**
 
 ```diff
-@@ -111,11 +122,12 @@
+@@ -111,11 +123,12 @@
              </button>
              <div className="mt-2 text-center" style={{ animationDelay: "560ms" }}>
                <span className="text-[10px] font-bold text-ink2">
@@ -2086,7 +2266,7 @@ Byte-identical to V1.
 6. **wording replaced with engine output — a notice's identity and signature are keyed on the engine's reason code and its payload instead of V1's own finding id and title**
 
 ```diff
-@@ -125,22 +137,29 @@
+@@ -125,22 +138,29 @@
     the wizard renders AlkAssessmentBlock directly, so nothing referenced it any
     more — an old screen kept alive only by being defined. */
  
@@ -2132,7 +2312,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the tone table keys on the frozen catalogue's severity (`REFUSAL` / `GATING` / `INFO`) instead of V1's own `act` / `watch` / `info`**
 
 ```diff
-@@ -155,7 +174,12 @@
+@@ -155,7 +175,12 @@
  
  export function FindingList({ items, compact = false, onDismiss = null }) {
    if (!items || !items.length) return null;
@@ -2151,7 +2331,7 @@ Byte-identical to V1.
 8. **data source rewired — the icon table is keyed by the ledger's parameter keys instead of V1's own spellings, and has no ammonia row because this build has no ammonia parameter**
 
 ```diff
-@@ -186,10 +210,14 @@
+@@ -186,10 +211,14 @@
  /* An icon per parameter, so a card is recognisable before it is read. Reusing
     the icon set already imported keeps the weight and stroke consistent with
     the rest of the app. */
@@ -2174,7 +2354,7 @@ Byte-identical to V1.
 9. **chemistry removed — the sparkline's band is drawn only where the keeper has a range, because this build ships no range it cannot source**
 
 ```diff
-@@ -198,17 +226,25 @@
+@@ -198,17 +227,25 @@
    if (!rows || rows.length < 3) return <div style={{ height: 20 }} />;
    const W = 100, H = 20, P = 2;
    const vals = rows.map((r) => r.value);
@@ -2209,7 +2389,7 @@ Byte-identical to V1.
 10. **chemistry removed — `ParamCard` no longer computes position, direction or a stability grade; all four are props decided by the engine, and the noise-floor comparison behind V1's trend arrow is deleted**
 
 ```diff
-@@ -216,18 +252,43 @@
+@@ -216,18 +253,49 @@
    );
  }
  
@@ -2248,7 +2428,13 @@ Byte-identical to V1.
 +   trajectory where there is one, and there is no arrow anywhere else.
 +   Recorded in `docs/migration/PORT-OMISSIONS.md`. */
 +export function ParamCard({ def, reading, recent, position = null, statusLine = null,
-+  direction = null, notice = null, rows, onOpen, onLog = null }) {
++  direction = null, notice = null, rows, onOpen, onLog = null, observation = null }) {
++  /* The number and the words describe the same test. `observation` is the one
++     owner of "the current value" (`present/episodes.js`); `reading` is kept
++     only for the callers that have not been given one yet. */
++  const shown = observation || (reading
++    ? { value: reading.value, date: reading.date, count: 1, resolved: false }
++    : null);
 +  const tone = positionTone(position);
    const Icon = PARAM_ICON[def.key] || Beaker;
 -  const notes = findings || [];
@@ -2268,7 +2454,7 @@ Byte-identical to V1.
 11. **chemistry removed — the trend arrow follows the engine's trajectory instead of a delta compared against `def.step`**
 
 ```diff
-@@ -248,7 +309,7 @@
+@@ -248,7 +316,7 @@
            </span>
            {moved && (
              <span className="shrink-0" style={{ color: tone, opacity: 0.8 }}>
@@ -2282,12 +2468,27 @@ Byte-identical to V1.
 12. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
 
 ```diff
-@@ -273,14 +334,20 @@
+@@ -268,44 +336,49 @@
+         <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
+           <div className="flex items-baseline gap-1">
+             <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
+-              {reading ? fmtVal(def, reading.value) : "\u2014"}
++              {shown ? fmtVal(def, shown.value) : "\u2014"}
+             </span>
              <span className="text-[10px] font-bold text-ink2">{def.unit}</span>
++            {/* A test run more than once says so, because otherwise the figure
++                shown is not one the keeper ever typed and nothing on the card
++                explains where it came from. */}
++            {shown && shown.count > 1 && (
++              <span className="text-[9px] font-extrabold rounded px-1 py-[1px] shrink-0"
++                style={{ background: def.color + "1F", color: def.color }}>
++                {t("group.badgeShort", { count: shown.count })}
++              </span>
++            )}
            </div>
  
 -          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent} compact />
-+          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent}
++          <ParamGauge def={def} value={shown ? shown.value : null} recent={recent}
 +            position={position} compact />
  
            <MicroSpark rows={rows} def={def} colour={def.color} />
@@ -2305,13 +2506,8 @@ Byte-identical to V1.
 +              {statusLine || ""}
              </span>
              <span className="text-[9px] font-bold text-ink2 shrink-0">
-               {reading ? fmtShort(reading.date) : ""}
-```
-
-13. **wording replaced with engine output — V1's dose chip and worst-finding chip replaced by one notification strip carrying the engine's own notice**
-
-```diff
-@@ -287,25 +354,15 @@
+-              {reading ? fmtShort(reading.date) : ""}
++              {shown && shown.date ? fmtShort(shown.date) : ""}
              </span>
            </div>
  
@@ -2345,8 +2541,6 @@ Byte-identical to V1.
              </div>
            )}
 ```
-
----
 
 ### `app/src/components/ReadingContext.jsx`
 
@@ -3976,13 +4170,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `ee672b9635d9fec664179d5c065d1645c345df09abafe3c28eefc4131a0b0882` |
+| Ported SHA-256 | `529a00f8b8372501ea07aa11670b33e7c64becd372d468c6a8d7c45dd5dcd23b` |
 | Differences | 11 |
 
-1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
+1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
 ```diff
-@@ -1,160 +1,118 @@
+@@ -1,160 +1,126 @@
  import { useEffect, useMemo, useState } from 'react'
 -import { Btn, FindingList, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 +import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
@@ -4008,7 +4202,8 @@ Byte-identical to V1.
 -import { reminderState } from '../lib/reminders.js'
 -import { STABILITY_RULES } from '../lib/stability-engine.js'
 +import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-+import { chartDataFrom, rowsFor, untimedCount } from '../lib/adapt.js'
++import { rowsFor, untimedCount } from '../lib/adapt.js'
++import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 +import { taskState } from '../store/schedule.js'
 +import { cardContent } from '../present/card-content.js'
 +import { describeRows } from '../present/spread.js'
@@ -4078,7 +4273,7 @@ Byte-identical to V1.
 +  onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
 +  remWindow = 14, setRemWindow = () => {},
 +  onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-+  onAddReading = null, waterChanges = [] }) {
++  onAddReading = null, waterChanges = [], episodes = null }) {
  
 -  /* The last 30 days of each parameter, so the gauge can show where it has been
 -     rather than only where it is. */
@@ -4107,12 +4302,15 @@ Byte-identical to V1.
       rather than filtering the whole log inside each of eight cards. */
    const sparkRowsByParam = useMemo(() => {
      const m = {};
--    for (const d of paramDefs) {
++    /* Grouped, so a repeat test is one point on the sparkline rather than
++       several — and so the last point is the figure the engine used. */
+     for (const d of paramDefs) {
 -      m[d.key] = readings.filter((r) => r.param === d.key).sort(byOldest).slice(-14);
--    }
-+    for (const d of paramDefs) m[d.key] = rowsFor(readings, d.key).slice(-14);
++      m[d.key] = chartGroupsFrom(rowsFor(readings, d.key), episodes, (x) => x).slice(-14);
+     }
      return m;
-   }, [readings, paramDefs]);
+-  }, [readings, paramDefs]);
++  }, [readings, paramDefs, episodes]);
  
 +  /* Where each parameter has been lately, so the range bar can show its recent
 +     travel rather than only where it is now. The window is a fixed number of
@@ -4196,9 +4394,12 @@ Byte-identical to V1.
 +          const content = cardContent(def, engineResult, assessmentState,
 +            latestByParam[def.key],
 +            def.min != null && def.max != null ? { min: def.min, max: def.max } : null);
++          /* The figure and the words now come from the same place. */
++          const observation = currentObservationFor(def, engineResult, episodes, latestByParam[def.key]);
            return (
 -            <ParamCard key={def.key} def={def} reading={reading}
 +            <ParamCard key={def.key} def={def} reading={latestByParam[def.key]}
++              observation={observation}
                recent={recentRangeByParam[def.key]}
 -              stab={tank.stabilityByParam[def.key]}
 -              findings={findingsFor(findings, def.key)}
@@ -4216,7 +4417,7 @@ Byte-identical to V1.
 2. **data source rewired — the reminders panel and calendar read V2's schedule view, tasks and completions**
 
 ```diff
-@@ -162,33 +120,24 @@
+@@ -162,33 +128,24 @@
        </div>
  
        <SectionTitle eyebrow="Schedule" title="Reminders" />
@@ -4263,10 +4464,10 @@ Byte-identical to V1.
      </div>
 ```
 
-3. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
+3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -195,13 +144,44 @@
+@@ -195,13 +152,44 @@
    );
  }
  
@@ -4295,7 +4496,7 @@ Byte-identical to V1.
 +   `docs/migration/PORT-OMISSIONS.md` records all of it. */
 +export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
 +  chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-+  onCorrectReading = null, onDeleteReading = null }) {
++  onCorrectReading = null, onDeleteReading = null, episodes = null }) {
 +  /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
 +     no way to correct a mistyped reading anywhere in the build. */
 +  const [fixing, setFixing] = useState(null);
@@ -4320,7 +4521,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — a cleared range is described as cleared rather than reverted to a default, because this build ships no default range**
 
 ```diff
-@@ -215,7 +195,7 @@
+@@ -215,7 +203,7 @@
  
    const revert = async () => {
      await onResetRange(def.key);
@@ -4334,7 +4535,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +202,35 @@
+@@ -222,36 +210,35 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4396,7 +4597,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +239,61 @@
+@@ -260,91 +247,68 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4450,9 +4651,16 @@ Byte-identical to V1.
 -  const min = values.length ? Math.min(...values) : null;
 -  const max = values.length ? Math.max(...values) : null;
 -  const avg = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : null;
-+  const chartData = chartDataFrom(rows, fmtShort);
++  /* One point per TEST, not per measurement — see `present/episodes.js`. A
++     repeat test is one x-position with its measurements stacked on it. */
++  const chartData = chartGroupsFrom(rows, episodes, fmtShort);
 +  const untimed = untimedCount(rows);
  
++  /* "Latest" means the same thing here as it does on the card and on Dosing:
++     the value the engine used. It read the raw last reading, so a repeat test
++     put 10.00 in this row while every word on the screen described 9.00. */
++  const latestShown = chartData.length ? chartData[chartData.length - 1].value : stats.latest;
++
    useEscape(onClose);
  
    return (
@@ -4532,7 +4740,7 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +302,9 @@
+@@ -353,7 +317,9 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
@@ -4548,7 +4756,7 @@ Byte-identical to V1.
 8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -360,7 +311,9 @@
+@@ -360,7 +326,9 @@
                  <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
                </button>
              </div>
@@ -4564,7 +4772,7 @@ Byte-identical to V1.
 9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +331,16 @@
+@@ -378,10 +346,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -4588,7 +4796,7 @@ Byte-identical to V1.
 10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -395,20 +354,19 @@
+@@ -395,20 +369,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -4617,7 +4825,7 @@ Byte-identical to V1.
 11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -417,280 +375,121 @@
+@@ -417,280 +390,139 @@
            </div>
  
            {rows.length === 0 ? (
@@ -4625,7 +4833,7 @@ Byte-identical to V1.
 +            <div className="py-10 text-center text-ink2 font-semibold text-sm">No readings for {def.labelMid || def.label.toLowerCase()} in this window</div>
            ) : (
              <>
-               <div className="grid grid-cols-4 gap-3 mb-5">
+-              <div className="grid grid-cols-4 gap-3 mb-5">
 -                <div className="text-center min-w-0">
 -                  <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">Latest</div>
 -                  <div className="text-lg font-black text-ink mt-0.5 truncate">{latest.value}{def.unit}</div>
@@ -4642,10 +4850,29 @@ Byte-identical to V1.
 -                  <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">Median</div>
 -                  <div className="text-lg font-black text-ink mt-0.5 truncate">
 -                    {fmtVal(def, control ? control.p50 : avg)}{def.unit}
-+                {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
++              {/* OWNER FINDING 25 — THESE WERE UNREADABLE.
++
++                  Four figures across a phone, each "10.00dKH" on one line at
++                  `text-lg`, in a cell that then clipped it: the row read
++                  "10.00… 9.00d… 10.00… 9.00d…", which is worse than showing
++                  nothing because it looks like data.
++
++                  The unit moves to its own line. It is the same for all four
++                  and repeating it four times across the narrowest row in the
++                  app was what cost the digits their space. Nothing is clipped
++                  now — `truncate` is gone rather than being given more room,
++                  because a number that silently loses its last digit is a
++                  number the keeper cannot trust anywhere. */}
++              <div className="grid grid-cols-4 gap-2 mb-5">
++                {[["Latest", latestShown], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
 +                  <div key={label} className="text-center min-w-0">
 +                    <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
-+                    <div className="text-lg font-black text-ink mt-0.5 truncate">{fmtVal(def, v)}{def.unit}</div>
++                    <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">
++                      {fmtVal(def, v)}
++                    </div>
++                    {def.unit && (
++                      <div className="text-[9px] font-bold text-ink2 leading-none">{def.unit}</div>
++                    )}
                    </div>
 -                </div>
 +                ))}
@@ -4995,13 +5222,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `afe621320207a376739e3c1c6a425c6c7eb6522e3ba849eef682021e50f7639c` |
-| Differences | 9 |
+| Ported SHA-256 | `daee6b86813e660537eca461552d2f8b5c56bd9d26a42b76e2796912681d3c38` |
+| Differences | 10 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
 
 ```diff
-@@ -2,10 +2,11 @@
+@@ -2,10 +2,12 @@
  import { Card } from './ErrorBoundary.jsx'
  import { ZoomableLineChart } from './ZoomableChart.jsx'
  import { Check, X } from '../icons.jsx'
@@ -5011,7 +5238,8 @@ Byte-identical to V1.
 +import { nowTime } from '../lib/clock.js'
  import { useEscape } from '../lib/backup.jsx'
  import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-+import { rowsFor, chartDataFrom } from '../lib/adapt.js'
++import { rowsFor } from '../lib/adapt.js'
++import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
  
  /* --- Enter every parameter on one screen ---
   *
@@ -5020,12 +5248,13 @@ Byte-identical to V1.
 2. **data source rewired — the Test Lab takes V2's schedule view instead of V1's reminders and reminder view**
 
 ```diff
-@@ -14,7 +15,7 @@
+@@ -14,7 +16,8 @@
   * Log, move on. The date applies to all of them, since a testing session
   * happens at one sitting.
   */
 -export function TestLab({ paramDefs, readings, onAdd, onOpenParam, reminders = [], reminderView = null }) {
-+export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null }) {
++export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
++  episodes = null, onDeleteReading = null }) {
    const [date, setDate] = useState(todayStr());
    const [time, setTime] = useState(nowTime());
    const [values, setValues] = useState({});
@@ -5034,7 +5263,7 @@ Byte-identical to V1.
 3. **data source rewired — the latest reading per parameter comes from the read adapter's ordering**
 
 ```diff
-@@ -24,8 +25,8 @@
+@@ -24,8 +27,8 @@
    const latest = useMemo(() => {
      const m = {};
      for (const d of paramDefs) {
@@ -5050,7 +5279,7 @@ Byte-identical to V1.
 4. **data source rewired — a logged reading carries value, date and time and nothing else**
 
 ```diff
-@@ -35,7 +36,7 @@
+@@ -35,7 +38,7 @@
      if (raw === undefined || raw === "") return;
      const v = parseFloat(raw);
      if (!isFinite(v)) return;
@@ -5064,7 +5293,7 @@ Byte-identical to V1.
 5. **data source rewired — the due state reads V2's task vocabulary**
 
 ```diff
-@@ -45,9 +46,9 @@
+@@ -45,9 +48,9 @@
    const { sessionDue, sessionDone } = useMemo(() => {
      let due = 0, done = 0;
      for (const def of paramDefs) {
@@ -5082,7 +5311,7 @@ Byte-identical to V1.
 6. **data source rewired — the session progress and the due lookup read V2's schedule view**
 
 ```diff
-@@ -54,11 +55,11 @@
+@@ -54,11 +57,11 @@
        if (testedOnDate) done += 1;
      }
      return { sessionDue: due, sessionDone: done };
@@ -5102,7 +5331,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the party emoji in the completion state replaced by the icon set's tick; the brief rules out emojis**
 
 ```diff
-@@ -104,7 +105,10 @@
+@@ -104,7 +107,10 @@
  
          {sessionDue > 0 && sessionDone >= sessionDue && (
            <div className="rounded-lg px-3 py-2 mb-2.5 flex items-center gap-2" style={{ background: "#0B7C8614" }}>
@@ -5119,24 +5348,38 @@ Byte-identical to V1.
 8. **data source rewired — All graphs builds its series through the read adapter**
 
 ```diff
-@@ -229,9 +233,8 @@
+@@ -219,7 +225,7 @@
+ 
+ /* Every chart in one place, stripped of commentary — for when you want to scan
+    the tank's whole history rather than study one parameter. */
+-export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam }) {
++export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam, episodes = null }) {
+   useEscape(onClose);
+   /* One window setting for every chart, so they're comparable at a glance —
+      charts on different timescales invite the wrong conclusion. */
+```
+
+9. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
+
+```diff
+@@ -229,9 +235,8 @@
    const series = paramDefs
      .map((def) => ({
        def,
 -      data: readings.filter((r) => r.param === def.key && (!cutoff || r.date >= cutoff))
 -        .sort(byOldest)
 -        .map((r) => ({ date: r.date, value: r.value, label: fmtShort(r.date), time: r.time })),
-+      data: chartDataFrom(
-+        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), fmtShort),
++      data: chartGroupsFrom(
++        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), episodes, fmtShort),
      }))
      .filter((x) => x.data.length >= 2);
  
 ```
 
-9. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+10. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
 
 ```diff
-@@ -279,10 +282,15 @@
+@@ -279,10 +284,15 @@
                    <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                  </span>
                  <span className="text-[11px] font-bold text-ink2 shrink-0">
@@ -5155,8 +5398,6 @@ Byte-identical to V1.
              </Card>
            ))}
 ```
-
----
 
 ### `app/src/components/LogReadingSheet.jsx`
 
@@ -5530,7 +5771,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `aafc8e0a479b22117c5322cc69f2b32a7687f51bd192d68016c995b418002b6c` |
+| Ported SHA-256 | `a87b46d50a3dda675d0df47bed6038975bbfb1814f1168e84dbb3a2505ca3630` |
 | Differences | 3 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
@@ -5549,7 +5790,7 @@ Byte-identical to V1.
 +import { ZoomableLineChart } from './ZoomableChart.jsx'
 +import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 +import { fmtDate, fmtShort } from '../lib/dates.js'
-+import { chartDataFrom } from '../lib/adapt.js'
++import { chartGroupsFrom } from '../present/episodes.js'
 +import { fmtPotency, fmtQty } from '../lib/format.js'
 +import { positionTone } from '../present/position.js'
 +import {
@@ -5695,7 +5936,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +81,463 @@
+@@ -88,203 +81,464 @@
    );
  }
  
@@ -6043,7 +6284,7 @@ Byte-identical to V1.
 +   belongs in the working, where it is named in words — a second, weaker
 +   version of it drawn on the chart is exactly the duplicate ownership
 +   `MASTER RULE 1` forbids. */
-+function DosingChart({ def, rows, chartEvents }) {
++function DosingChart({ def, rows, chartEvents, episodes = null }) {
 +  const [days, setDays] = useState(7);
 +  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 +  const shown = rows.filter((r) => r.date >= cutoff);
@@ -6056,11 +6297,12 @@ Byte-identical to V1.
 +     the axis drew no dates and the owner's four imported dose changes drew
 +     nothing — on a chart that was already being handed them.
 +
-+     `chartDataFrom` is the shape every other chart in the app uses, and it is
-+     where the label rule lives: where a day carries more than one reading the
-+     label carries the time too, so two points on one day stay distinguishable.
-+     Building a second point shape here was the defect; there is one now. */
-+  const data = chartDataFrom(shown, fmtShort);
++     `chartGroupsFrom` is the shape every other chart in the app uses, and it
++     is where the point rule lives: one x-position per TEST, with the
++     measurements of a repeat test stacked on it rather than spread along the
++     axis as if they were separate tests. Building a second point shape here
++     was the defect; there is one now. */
++  const data = chartGroupsFrom(shown, episodes, fmtShort);
 +
 +  return (
 +    <div className="mb-4">
@@ -6168,7 +6410,7 @@ Byte-identical to V1.
 +export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
 +  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
 +  asOf = null, correctionDismissed = null, onDismissCorrection = null,
-+  onAcceptPotency = null, onKeepPotency = null }) {
++  onAcceptPotency = null, onKeepPotency = null, episodes = null }) {
 +
 +  const KEYS = ["ALK", "CA", "MG"];
 +  const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -6296,7 +6538,7 @@ Byte-identical to V1.
 -          {findingsFor(findings, active.key).length > 0 && (
 -            <div className="mt-3">
 -              <FindingList items={findingsFor(findings, active.key)} compact onDismiss={onDismissFinding} />
-+          <DosingChart def={def} rows={rows} chartEvents={chartEvents} />
++          <DosingChart def={def} rows={rows} chartEvents={chartEvents} episodes={episodes} />
 +
 +          {three && (
 +            <div className="grid grid-cols-2 gap-2 mb-4">
@@ -8297,13 +8539,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `a7c0ea483a9dc8bee89d2c31f8c70b0e1f4c2e31a9876e3a3ad0a3b908842d4e` |
+| Ported SHA-256 | `7a559c4f6ec0839d303a1501595c7b68884106092e9c2a6efe8c859330da4e61` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
 
 ```diff
-@@ -1,62 +1,83 @@
+@@ -1,62 +1,84 @@
 -import React, { useEffect, useMemo, useState } from 'react'
 +import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  import { Dashboard, ParamHistoryModal } from './components/Dashboard.jsx'
@@ -8362,6 +8604,7 @@ Byte-identical to V1.
 +import { ENGINE_STATE, onEngineState, warmUp } from './engine/client.js'
 +import { cardContent, cardStatusLine } from './present/card-content.js'
 +import { selectCard, instructsDoseChange } from './present/cards.js'
++import { episodesFrom, latestEpisode } from './present/episodes.js'
 +import { positionTone } from './present/position.js'
 +import { sayVerb, sayAction, sayPosition } from './present/wording.js'
 +import { fmtAmount } from './lib/format.js'
@@ -8438,7 +8681,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +87,646 @@
+@@ -66,1155 +88,655 @@
    return out;
  }
  
@@ -9008,7 +9251,17 @@ Byte-identical to V1.
 -        loadKey("dose-log", []),
 -        loadKey("water-changes", []),
 -      ]);
--
++      await reload();
++      setLoaded(true);
++      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
++         it is started when the app is idle rather than blocking first paint:
++         logging a reading, browsing history and completing a task all work
++         before the engine has finished booting. */
++      warmUp();
++      assess();
++    })();
++  }, [reload, assess]);
+ 
 -      /* Is this a new device, or one that has been cleared? The two used to be
 -         indistinguishable — every marker below lives in the storage a clear
 -         erases, so their absence was read as "new install, seed away" and a
@@ -9023,7 +9276,12 @@ Byte-identical to V1.
 -        "light-seeded": lightSeeded, "strengths-fixed-v1": strengthsFixed,
 -      });
 -      setInstall(state);
--
++  /* ---- the record, in the shape the ported screens read ---------------- */
++  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
++  const readings = useMemo(() => readingsFrom(projection), [projection]);
++  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
++  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
+ 
 -      /* Readings are measurements somebody took, so nothing is seeded into
 -         them — a clean device starts empty. The marker is still written on the
 -         first run so the state of an install stays readable. */
@@ -9032,16 +9290,9 @@ Byte-identical to V1.
 -        await saveKey("readings", finalReadings);
 -        await saveKey("historical-seeded", true);
 -      }
-+      await reload();
-+      setLoaded(true);
-+      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
-+         it is started when the app is idle rather than blocking first paint:
-+         logging a reading, browsing history and completing a task all work
-+         before the engine has finished booting. */
-+      warmUp();
-+      assess();
-+    })();
-+  }, [reload, assess]);
++  const waterChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
  
 -      /* ICP panels are measurements too, and are seeded no more than readings
 -         are. */
@@ -9049,53 +9300,10 @@ Byte-identical to V1.
 -      if (!icpSeeded) {
 -        await saveKey("icp-seeded", true);
 -      }
-+  /* ---- the record, in the shape the ported screens read ---------------- */
-+  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
-+  const readings = useMemo(() => readingsFrom(projection), [projection]);
-+  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
-+  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
++  /* Dose CHANGES and the dose STATE the record starts from.
  
 -      /* Weekly water changes, seeded once and matched on date so anything
 -         already logged by hand is left alone.
-+  const waterChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
- 
--         Not seeded at all on a device that has been cleared, or one the check
--         above could not account for. The marker is still written, so declining
--         is remembered: without it the next load — by then with a reading on it,
--         and so no longer looking wiped — would walk back into this branch and
--         write the 25 rows after all. A missing water-change history can be
--         restored from a backup or retyped; invented maintenance events cannot
--         be told from real ones afterwards, and they feed the nutrient maths. */
--      let finalWaterChanges = wc || [];
--      if (!wcSeeded) {
--        if (state.maySeed) {
--          const have = new Set(finalWaterChanges.map((w) => w.date));
--          const add = WATER_CHANGE_SEED
--            .filter((d) => !have.has(d))
--            .map((d) => ({ id: "wc-" + d, date: d, litres: WATER_CHANGE_LITRES, note: "" }));
--          if (add.length) {
--            finalWaterChanges = [...finalWaterChanges, ...add].sort(byNewest);
--            await saveKey("water-changes", finalWaterChanges);
--          }
--        }
--        await saveKey("wc-seeded", true);
--      }
-+  /* Dose CHANGES and the dose STATE the record starts from.
- 
--      let finalLighting = lg || [];
--      if (!lightSeeded) {
--        if (state.maySeed) {
--          const haveL = new Set(finalLighting.map((x) => x.date));
--          const addL = LIGHTING_SEED.filter((x) => !haveL.has(x.date));
--          if (addL.length) {
--            finalLighting = [...finalLighting, ...addL].sort(byNewest);
--            await saveKey("lighting-log", finalLighting);
--          }
--        }
--        await saveKey("light-seeded", true);
--      }
 +     The import writes the first dose row of each parameter as a `DOSE_STATE` —
 +     what was running when the record begins — and every later one as a
 +     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
@@ -9118,16 +9326,62 @@ Byte-identical to V1.
 +      parameter: r.event.parameter || "ALK",
 +    })), [projection]);
  
--      /* Doses are seeded; product strengths are NOT, and must never be again.
--         A strength is a fact about the user's own bottle, so there is nothing
--         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
--         An unset strength is refused and named, the same as an unset net
--         volume (reef-chemistry.md §16, §12, §17).
+-         Not seeded at all on a device that has been cleared, or one the check
+-         above could not account for. The marker is still written, so declining
+-         is remembered: without it the next load — by then with a reading on it,
+-         and so no longer looking wiped — would walk back into this branch and
+-         write the 25 rows after all. A missing water-change history can be
+-         restored from a backup or retyped; invented maintenance events cannot
+-         be told from real ones afterwards, and they feed the nutrient maths. */
+-      let finalWaterChanges = wc || [];
+-      if (!wcSeeded) {
+-        if (state.maySeed) {
+-          const have = new Set(finalWaterChanges.map((w) => w.date));
+-          const add = WATER_CHANGE_SEED
+-            .filter((d) => !have.has(d))
+-            .map((d) => ({ id: "wc-" + d, date: d, litres: WATER_CHANGE_LITRES, note: "" }));
+-          if (add.length) {
+-            finalWaterChanges = [...finalWaterChanges, ...add].sort(byNewest);
+-            await saveKey("water-changes", finalWaterChanges);
+-          }
+-        }
+-        await saveKey("wc-seeded", true);
+-      }
 +  const lightingChanges = useMemo(() => projection
 +    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
 +      && r.event.detail.husbandryKind === "LIGHTING"
 +      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
 +    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
+ 
+-      let finalLighting = lg || [];
+-      if (!lightSeeded) {
+-        if (state.maySeed) {
+-          const haveL = new Set(finalLighting.map((x) => x.date));
+-          const addL = LIGHTING_SEED.filter((x) => !haveL.has(x.date));
+-          if (addL.length) {
+-            finalLighting = [...finalLighting, ...addL].sort(byNewest);
+-            await saveKey("lighting-log", finalLighting);
+-          }
+-        }
+-        await saveKey("light-seeded", true);
+-      }
++  const icps = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      note: r.event.detail.note,
++      elements: r.event.detail.elements || {},
++    })), [projection]);
+ 
+-      /* Doses are seeded; product strengths are NOT, and must never be again.
+-         A strength is a fact about the user's own bottle, so there is nothing
+-         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
+-         An unset strength is refused and named, the same as an unset net
+-         volume (reef-chemistry.md §16, §12, §17).
++  const scheduleView = useMemo(
++    () => computeSchedule(tasks, completions, todayStr(), remWindow),
++    [tasks, completions, remWindow]);
  
 -         Two blocks were removed here on 16 August, both of which wrote a
 -         default into storage and so would defeat the change entirely:
@@ -9150,14 +9404,14 @@ Byte-identical to V1.
 -        }
 -        await saveKey("tank-settings", finalSettings);
 -      }
-+  const icps = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({
-+      id: r.event.eventId,
-+      date: r.event.time.localDate,
-+      note: r.event.detail.note,
-+      elements: r.event.detail.elements || {},
-+    })), [projection]);
++  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
++  /* Why there is no engine result, when there is none. The states are
++     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
++     one this shell adds when the call itself threw. Null while the first
++     assessment is still running, which the screens render as "working it
++     out". */
++  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
++     screens get the right label without this having to correct one.
  
 -      /* Test reminders exist from the start rather than needing to be created —
 -         the app already knows which parameters exist. Only the schedule is the
@@ -9186,9 +9440,12 @@ Byte-identical to V1.
 -      setCorrectionPlans(cplans || {});
 -      setCaPlan(cap || null);
 -      setMgPlan(mgp || null);
-+  const scheduleView = useMemo(
-+    () => computeSchedule(tasks, completions, todayStr(), remWindow),
-+    [tasks, completions, remWindow]);
++     The client's own state still wins where it says the engine failed, because
++     it knows before the first assessment is even attempted — that is what
++     turns a blank card into "the engine could not start" during boot rather
++     than after it. */
++  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
++  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
  
 -      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
 -      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
@@ -9196,14 +9453,7 @@ Byte-identical to V1.
 -      setLoaded(true);
 -    })();
 -  }, []);
-+  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
-+  /* Why there is no engine result, when there is none. The states are
-+     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
-+     one this shell adds when the call itself threw. Null while the first
-+     assessment is still running, which the screens render as "working it
-+     out". */
-+  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
-+     screens get the right label without this having to correct one.
++  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
  
 -  /* A restore writes to storage directly, so mirror the merged result into
 -     state — otherwise the screen would keep showing the pre-restore data until
@@ -9212,12 +9462,12 @@ Byte-identical to V1.
 -    setReminders(next);
 -    await saveKey("reminders", next);
 -  };
-+     The client's own state still wins where it says the engine failed, because
-+     it knows before the first assessment is even attempted — that is what
-+     turns a blank card into "the engine could not start" during boot rather
-+     than after it. */
-+  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
-+  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
++     Canon treats measurements taken within half an hour as one test and
++     resolves them to their middle value. Until this existed the words on a
++     card came from that resolved observation while the number beside them came
++     straight from the ledger, so five 9.0s and a 10.0 typed in one minute drew
++     "10.00 · IN RANGE". Read, never re-derived — see `present/episodes.js`. */
++  const episodes = useMemo(() => episodesFrom(engineResult), [engineResult]);
  
 -  /* Recording a replacement retires every comparison made with the old kit. */
 -  const replaceKit = async (paramKey, date = todayStr()) => {
@@ -10132,7 +10382,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +754,26 @@
+@@ -1242,21 +764,26 @@
          }
        `}</style>
  
@@ -10169,7 +10419,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +783,35 @@
+@@ -1266,59 +793,35 @@
                );
              })}
            </nav>
@@ -10254,7 +10504,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +828,128 @@
+@@ -1335,105 +838,133 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10282,7 +10532,7 @@ Byte-identical to V1.
 +            <Dashboard
 +              latestByParam={latestByParam} readings={readings} paramDefs={paramDefs}
 +              saveRange={saveRange} resetRange={resetRange} customRanges={{}}
-+              chartEvents={chartEvents} config={config}
++              chartEvents={chartEvents} config={config} episodes={episodes}
 +              engineResult={engineResult} assessmentState={assessmentState} scheduleView={scheduleView}
 +              tasks={tasks} completions={completions} waterChanges={waterChanges}
 +              onOpenParam={setModalParam} onOpenTest={openTestFor}
@@ -10322,7 +10572,8 @@ Byte-identical to V1.
 +
 +              {testTab === "tests" ? (
 +                <TestLab paramDefs={paramDefs} readings={readings} onAdd={addReading}
-+                  onOpenParam={setModalParam} scheduleView={scheduleView} />
++                  onOpenParam={setModalParam} scheduleView={scheduleView}
++                  episodes={episodes} onDeleteReading={dropReading} />
 +              ) : (
 +                <IcpPanel icps={icps} onAdd={addIcp} />
 +              )}
@@ -10361,12 +10612,15 @@ Byte-identical to V1.
 +              onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
 +              summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
 +              latestByParam={latestByParam}
-+              config={config} readings={readings} chartEvents={chartEvents}
++              config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
 +              /* V1's, kept where a hold is recommended: a hold is advice, and
 +                 the keeper is allowed to disagree with it. It opens the same
 +                 dose-change form Setup uses; nothing here records a change by
 +                 itself (`ALK-RECOMMEND-ONLY-001`). */
-+              onChangeDoseAnyway={() => setTab("settings")} />
++              /* `"settings"` is not a tab id — `NAV` calls it `"setup"` — so this
++                 button set the tab to a value nothing renders and the screen
++                 went blank with only the bar left. Owner finding 20. */
++              onChangeDoseAnyway={() => setTab("setup")} />
            )}
 +
            {tab === "tasks" && (
@@ -10443,6 +10697,7 @@ Byte-identical to V1.
 -            <ParamHistoryModal def={paramDefs.find((d) => d.key === modalParam)} readings={readings}
 +          {allGraphs && (
 +            <AllGraphsModal paramDefs={paramDefs} readings={readings} chartEvents={chartEvents}
++              episodes={episodes}
 +              onClose={() => setAllGraphs(false)} onOpenParam={setModalParam} />
 +          )}
 +
@@ -10454,7 +10709,7 @@ Byte-identical to V1.
 -              onAddReading={addReading} reminders={reminders} onDismissFinding={dismissFinding}
 -              dose={(doseStates || []).find((d) => d.key === modalParam) || null}
 +              isCustom={!modalDef.assessed && modalDef.hasRange}
-+              chartEvents={chartEvents}
++              chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
 +              onAddReading={addReading}
 +              notice={noticeFor(modalDef)}
                onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />
@@ -10465,7 +10720,7 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +956,10 @@
+@@ -1440,10 +971,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -10483,7 +10738,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +973,96 @@
+@@ -1457,6 +988,96 @@
    );
  }
  

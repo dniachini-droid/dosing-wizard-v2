@@ -32,6 +32,7 @@ import { nowIso } from './store/time.js'
 import { ENGINE_STATE, onEngineState, warmUp } from './engine/client.js'
 import { cardContent, cardStatusLine } from './present/card-content.js'
 import { selectCard, instructsDoseChange } from './present/cards.js'
+import { episodesFrom, latestEpisode } from './present/episodes.js'
 import { positionTone } from './present/position.js'
 import { sayVerb, sayAction, sayPosition } from './present/wording.js'
 import { fmtAmount } from './lib/format.js'
@@ -306,6 +307,15 @@ export function ReefConsoleInner() {
      than after it. */
   const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
   const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
+
+  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
+
+     Canon treats measurements taken within half an hour as one test and
+     resolves them to their middle value. Until this existed the words on a
+     card came from that resolved observation while the number beside them came
+     straight from the ledger, so five 9.0s and a 10.0 typed in one minute drew
+     "10.00 · IN RANGE". Read, never re-derived — see `present/episodes.js`. */
+  const episodes = useMemo(() => episodesFrom(engineResult), [engineResult]);
 
   /* One notice per parameter, from the engine, already worded — and filtered
      by what the keeper has put away. The identity and the signature are V1's
@@ -836,7 +846,7 @@ export function ReefConsoleInner() {
             <Dashboard
               latestByParam={latestByParam} readings={readings} paramDefs={paramDefs}
               saveRange={saveRange} resetRange={resetRange} customRanges={{}}
-              chartEvents={chartEvents} config={config}
+              chartEvents={chartEvents} config={config} episodes={episodes}
               engineResult={engineResult} assessmentState={assessmentState} scheduleView={scheduleView}
               tasks={tasks} completions={completions} waterChanges={waterChanges}
               onOpenParam={setModalParam} onOpenTest={openTestFor}
@@ -872,7 +882,8 @@ export function ReefConsoleInner() {
 
               {testTab === "tests" ? (
                 <TestLab paramDefs={paramDefs} readings={readings} onAdd={addReading}
-                  onOpenParam={setModalParam} scheduleView={scheduleView} />
+                  onOpenParam={setModalParam} scheduleView={scheduleView}
+                  episodes={episodes} onDeleteReading={dropReading} />
               ) : (
                 <IcpPanel icps={icps} onAdd={addIcp} />
               )}
@@ -886,12 +897,15 @@ export function ReefConsoleInner() {
               onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
-              config={config} readings={readings} chartEvents={chartEvents}
+              config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
               /* V1's, kept where a hold is recommended: a hold is advice, and
                  the keeper is allowed to disagree with it. It opens the same
                  dose-change form Setup uses; nothing here records a change by
                  itself (`ALK-RECOMMEND-ONLY-001`). */
-              onChangeDoseAnyway={() => setTab("settings")} />
+              /* `"settings"` is not a tab id — `NAV` calls it `"setup"` — so this
+                 button set the tab to a value nothing renders and the screen
+                 went blank with only the bar left. Owner finding 20. */
+              onChangeDoseAnyway={() => setTab("setup")} />
           )}
 
           {tab === "tasks" && (
@@ -940,6 +954,7 @@ export function ReefConsoleInner() {
 
           {allGraphs && (
             <AllGraphsModal paramDefs={paramDefs} readings={readings} chartEvents={chartEvents}
+              episodes={episodes}
               onClose={() => setAllGraphs(false)} onOpenParam={setModalParam} />
           )}
 
@@ -947,7 +962,7 @@ export function ReefConsoleInner() {
             <ParamHistoryModal def={modalDef} readings={readings}
               onClose={() => setModalParam(null)} onSaveRange={saveRange} onResetRange={resetRange}
               isCustom={!modalDef.assessed && modalDef.hasRange}
-              chartEvents={chartEvents}
+              chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
               onAddReading={addReading}
               notice={noticeFor(modalDef)}
               onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />

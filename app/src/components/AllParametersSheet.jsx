@@ -6,7 +6,8 @@ import { fmtVal, fmtTime } from '../lib/format.js'
 import { nowTime } from '../lib/clock.js'
 import { useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-import { rowsFor, chartDataFrom } from '../lib/adapt.js'
+import { rowsFor } from '../lib/adapt.js'
+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 
 /* --- Enter every parameter on one screen ---
  *
@@ -15,7 +16,8 @@ import { rowsFor, chartDataFrom } from '../lib/adapt.js'
  * Log, move on. The date applies to all of them, since a testing session
  * happens at one sitting.
  */
-export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null }) {
+export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
+  episodes = null, onDeleteReading = null }) {
   const [date, setDate] = useState(todayStr());
   const [time, setTime] = useState(nowTime());
   const [values, setValues] = useState({});
@@ -223,7 +225,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
 
 /* Every chart in one place, stripped of commentary — for when you want to scan
    the tank's whole history rather than study one parameter. */
-export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam }) {
+export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam, episodes = null }) {
   useEscape(onClose);
   /* One window setting for every chart, so they're comparable at a glance —
      charts on different timescales invite the wrong conclusion. */
@@ -233,8 +235,8 @@ export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOp
   const series = paramDefs
     .map((def) => ({
       def,
-      data: chartDataFrom(
-        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), fmtShort),
+      data: chartGroupsFrom(
+        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), episodes, fmtShort),
     }))
     .filter((x) => x.data.length >= 2);
 

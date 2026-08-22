@@ -4,7 +4,7 @@ import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 import { fmtDate, fmtShort } from '../lib/dates.js'
-import { chartDataFrom } from '../lib/adapt.js'
+import { chartGroupsFrom } from '../present/episodes.js'
 import { fmtPotency, fmtQty } from '../lib/format.js'
 import { positionTone } from '../present/position.js'
 import {
@@ -307,7 +307,7 @@ function CorrectionPanel({ result, asOf, dismissed, onDismiss }) {
    belongs in the working, where it is named in words — a second, weaker
    version of it drawn on the chart is exactly the duplicate ownership
    `MASTER RULE 1` forbids. */
-function DosingChart({ def, rows, chartEvents }) {
+function DosingChart({ def, rows, chartEvents, episodes = null }) {
   const [days, setDays] = useState(7);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const shown = rows.filter((r) => r.date >= cutoff);
@@ -320,11 +320,12 @@ function DosingChart({ def, rows, chartEvents }) {
      the axis drew no dates and the owner's four imported dose changes drew
      nothing — on a chart that was already being handed them.
 
-     `chartDataFrom` is the shape every other chart in the app uses, and it is
-     where the label rule lives: where a day carries more than one reading the
-     label carries the time too, so two points on one day stay distinguishable.
-     Building a second point shape here was the defect; there is one now. */
-  const data = chartDataFrom(shown, fmtShort);
+     `chartGroupsFrom` is the shape every other chart in the app uses, and it
+     is where the point rule lives: one x-position per TEST, with the
+     measurements of a repeat test stacked on it rather than spread along the
+     axis as if they were separate tests. Building a second point shape here
+     was the defect; there is one now. */
+  const data = chartGroupsFrom(shown, episodes, fmtShort);
 
   return (
     <div className="mb-4">
@@ -432,7 +433,7 @@ function PotencyBox({ box, onAccept, onKeep }) {
 export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
   config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
   asOf = null, correctionDismissed = null, onDismissCorrection = null,
-  onAcceptPotency = null, onKeepPotency = null }) {
+  onAcceptPotency = null, onKeepPotency = null, episodes = null }) {
 
   const KEYS = ["ALK", "CA", "MG"];
   const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -520,7 +521,7 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
             </Card>
           )}
 
-          <DosingChart def={def} rows={rows} chartEvents={chartEvents} />
+          <DosingChart def={def} rows={rows} chartEvents={chartEvents} episodes={episodes} />
 
           {three && (
             <div className="grid grid-cols-2 gap-2 mb-4">

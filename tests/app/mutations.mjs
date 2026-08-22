@@ -280,7 +280,7 @@ export const MUTATIONS = [
     id: "AM-P51",
     why: "the Dosing tab builds its own chart point shape again, so the x-axis has no dates on it and not one of the keeper's dose changes is marked (finding 9)",
     file: "app/src/components/DosingWizard.jsx",
-    find: "  const data = chartDataFrom(shown, fmtShort);",
+    find: "  const data = chartGroupsFrom(shown, episodes, fmtShort);",
     replace: "  const data = shown.map((r, i) => ({ i, value: r.value, date: r.date, time: r.time }));",
     breaks: ["PORT-21"],
   },
@@ -352,8 +352,12 @@ export const MUTATIONS = [
     id: "AM-P60",
     why: "a value is handed to `fmtVal` where a parameter definition belongs, so the screen renders the decimal count instead of the number — the defect that showed the owner 4.00 dKH/mL for a 77 L tank",
     file: "app/src/components/Dashboard.jsx",
-    find: "{fmtVal(def, v)}{def.unit}",
-    replace: "{fmtVal(v.value, 4)}{def.unit}",
+    /* Re-anchored: the Latest/Min/Max/Median row was rebuilt for owner
+       finding 25 — the unit moved to its own line so the figures stopped being
+       clipped — so the old anchor text no longer exists. The check it guards
+       has not moved. */
+    find: "                      {fmtVal(def, v)}",
+    replace: "                      {fmtVal(v.value, 4)}",
     breaks: ["PORT-26"],
   },
   {
@@ -2205,6 +2209,97 @@ export const MUTATIONS = [
     find: '    ["LED-01", "pre-dates the port"], ["LED-04", "pre-dates the port"],',
     replace: '    ["LED-01", "pre-dates the port"], ["LED-04", "pre-dates the port"], ["LED-02", "stale"],',
     breaks: ["META-01"],
+  },
+
+  /* ---- ROUND FIVE: one test run more than once, and one owner of the
+         current value (owner findings 25, 26, 28, 29 and 20) --------------- */
+  {
+    id: "AM-R01",
+    why: "every measurement gets its own chart point again, so a test run three times reads as three tests spread over an hour (finding 29)",
+    file: "app/src/present/episodes.js",
+    find: "    if (!ep || ep.count <= 1) {",
+    replace: "    if (true) {",
+    breaks: ["EP-01"],
+  },
+  {
+    id: "AM-R02",
+    why: "the trend line is drawn through a raw measurement instead of the value the engine resolved the test to",
+    file: "app/src/present/episodes.js",
+    find: "        /* The figure the engine used, and the only one the trend line reads. */\n        value: ep.valueDkh,",
+    replace: "        value: r.value,",
+    breaks: ["EP-02"],
+  },
+  {
+    id: "AM-R03",
+    why: "a group takes one member's clock time rather than the instant the engine resolved the test to, so the stack sits where no test happened",
+    file: "app/src/present/episodes.js",
+    find: "      const time = ep.at ? ep.at.slice(11, 16) : r.time;",
+    replace: "      const time = r.time;",
+    breaks: ["EP-03"],
+  },
+  {
+    id: "AM-R04",
+    why: "the card takes the ledger's last row as the current value again, so five 9.0s and a 10.0 typed in one minute print \"10.00\" beside the words \"in range\" (findings 26 and 28)",
+    file: "app/src/present/episodes.js",
+    find: "  const ep = def && def.assessed && engineResult ? latestEpisode(index) : null;",
+    replace: "  const ep = null;",
+    breaks: ["EP-04"],
+  },
+  {
+    id: "AM-R05",
+    why: "a parameter with no engine claims its raw reading was resolved by one",
+    file: "app/src/present/episodes.js",
+    find: "    resolved: false,",
+    replace: "    resolved: true,",
+    breaks: ["EP-05"],
+  },
+  {
+    id: "AM-R06",
+    why: "the group is cached instead of being read afresh, so deleting one measurement of a pair leaves the old group standing everywhere — the exact fault the owner reported after deleting a reading",
+    file: "app/src/present/episodes.js",
+    find: "  index.list.sort((a, b) => (a.at === b.at ? 0 : a.at < b.at ? -1 : 1));\n  return index;",
+    replace: "  index.list.sort((a, b) => (a.at === b.at ? 0 : a.at < b.at ? -1 : 1));\n  if (globalThis.__epCache) return globalThis.__epCache;\n  globalThis.__epCache = index;\n  return index;",
+    breaks: ["EP-06"],
+  },
+  {
+    id: "AM-R07",
+    why: "the engine's finding that repeats of one test disagreed by more than its limit is dropped on the way to the screen",
+    file: "app/src/present/episodes.js",
+    find: "      anomalous: anomalous.has(clusterId),",
+    replace: "      anomalous: false,",
+    breaks: ["EP-07"],
+  },
+  {
+    id: "AM-R08",
+    why: "the thirty-minute window is written into the application, making it a second owner of a canon rule the engine already owns",
+    file: "app/src/present/episodes.js",
+    find: "function emptyIndex() {",
+    replace: "const WINDOW_MINUTES = 30;\nfunction emptyIndex() {",
+    breaks: ["EP-08"],
+  },
+  {
+    id: "AM-R09",
+    why: "a test run twice stops being called a duplicate, so the sentence explaining the group no longer names how many measurements it holds",
+    file: "app/src/present/episodes.js",
+    find: '  if (count === 2) return "duplicate";',
+    replace: '  if (count === 2) return "many";',
+    breaks: ["EP-09"],
+  },
+  {
+    id: "AM-R10",
+    why: "a test run once is drawn as a stack, so the chart claims a repeat that did not happen",
+    file: "app/src/present/episodes.js",
+    find: "        grouped: false,",
+    replace: "        grouped: true,",
+    breaks: ["EP-10"],
+  },
+  {
+    id: "AM-R11",
+    why: "\"Change the dose anyway\" names a tab that does not exist again, so the screen goes blank with only the bar on it (finding 20)",
+    file: "app/src/App.jsx",
+    find: '              onChangeDoseAnyway={() => setTab("setup")} />',
+    replace: '              onChangeDoseAnyway={() => setTab("settings")} />',
+    breaks: ["EP-11"],
   },
 
 ];

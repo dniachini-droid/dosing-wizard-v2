@@ -846,6 +846,39 @@ export const STRINGS = Object.freeze({
     `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
   "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
 
+  /* ==================================================================
+     ONE TEST, RUN MORE THAN ONCE
+     ------------------------------------------------------------------
+     Measurements of one parameter taken within half an hour are one test
+     run several times, and the figure everything is worked out from is
+     the middle one of them. The keeper is entitled to see both: the
+     values he actually typed, and which of them was used.
+
+     The middle value is deliberate and is not the average. One fumbled
+     titration drags an average and does not move the middle one, which
+     is exactly what a keeper wants from a repeat test.
+     ================================================================== */
+  "group.duplicate": ({ value, unit }) =>
+    `Two tests taken within half an hour, so they are treated as one test run in duplicate. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  "group.triplicate": ({ value, unit }) =>
+    `Three tests taken within half an hour, so they are treated as one test run in triplicate. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  "group.many": ({ count, value, unit }) =>
+    `${count} tests taken within half an hour, so they are treated as one test run ${count} times over. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  "group.median": "The middle value is the one used, not the average, so one wild result does not move it.",
+  "group.spread": ({ spread, unit }) =>
+    `They ranged ${spread}${unit ? ` ${unit}` : ""} apart.`,
+  "group.wideSpread": ({ spread, unit }) =>
+    `They ranged ${spread}${unit ? ` ${unit}` : ""} apart, which is wider than repeats of one test usually sit. `
+    + `Worth running it again.`,
+  "group.badgeShort": ({ count }) => `${count} tests`,
+  "group.legend.measurement": "each test",
+  "group.legend.used": "the value used",
+  "group.aria": ({ count, value, unit, date }) =>
+    `A test run ${count} times on ${date}; the value used is ${value}${unit ? ` ${unit}` : ""}`,
+
   "err.assumedNeedsOffset":
     "A time built from an assumption needs the offset that was assumed. Without one there is nothing to " +
     "build it from.",

@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok, throws } from "./harness.mjs";
-import { chartDataFrom } from "../../app/src/lib/adapt.js";
+import { chartGroupsFrom } from "../../app/src/present/episodes.js";
 import { ANNOTATION } from "../../app/src/store/ledger.js";
 import { fmtPotency, fmtVal } from "../../app/src/lib/format.js";
 
@@ -1036,15 +1036,16 @@ s.test("PORT-21", "the Dosing chart's points carry the label its axis and its ma
      shape, `{ i, value, date, time }`, with no label in it. Neither the axis
      nor the markers had anything to find.
 
-     `chartDataFrom` is the shape every other chart in the app takes, and it is
-     where the label rule lives. A second point shape was the defect. */
+     `chartGroupsFrom` is the shape every other chart in the app takes, and it
+     is where the point rule lives — one x-position per TEST, labelled. A second
+     point shape was the defect. */
   const chart = fs.readFileSync(path.join(ROOT, "app/src/components/ZoomableChart.jsx"), "utf8");
   ok(/dataKey="label"/.test(chart), "the axis reads `label`");
   ok(/x=\{ev\.label\}/.test(chart), "and so does an event marker");
 
   const wizard = fs.readFileSync(path.join(ROOT, "app/src/components/DosingWizard.jsx"), "utf8");
   const code = wizard.replace(/\/\*[\s\S]*?\*\//g, "");
-  ok(/chartDataFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
+  ok(/chartGroupsFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
   ok(!/\.map\(\(r, i\) => \(\{ i, value/.test(code),
     "and does not build a second point shape of its own");
 
@@ -1053,7 +1054,7 @@ s.test("PORT-21", "the Dosing chart's points carry the label its axis and its ma
     { date: "2026-08-20", time: "09:00", value: 8.9, id: "a" },
     { date: "2026-08-22", time: null, value: 9.0, id: "b" },
   ];
-  const points = chartDataFrom(rows, (d) => d.slice(5));
+  const points = chartGroupsFrom(rows, null, (d) => d.slice(5));
   ok(points.every((p) => p.label), `every point is labelled: ${JSON.stringify(points.map((p) => p.label))}`);
   ok(points.every((p) => p.date), "and keeps its date, which is what a marker matches against");
 });

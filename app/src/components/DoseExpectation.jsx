@@ -5,6 +5,7 @@ import { fmtAmount, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
 import { ParamGauge, useEscape } from '../lib/backup.jsx'
 import { fmtShort } from '../lib/dates.js'
 import { positionTone } from '../present/position.js'
+import { t } from '../strings.js'
 
 /* --- The dose-change moment ---
  *
@@ -284,7 +285,13 @@ export function MicroSpark({ rows, def, colour }) {
    trajectory where there is one, and there is no arrow anywhere else.
    Recorded in `docs/migration/PORT-OMISSIONS.md`. */
 export function ParamCard({ def, reading, recent, position = null, statusLine = null,
-  direction = null, notice = null, rows, onOpen, onLog = null }) {
+  direction = null, notice = null, rows, onOpen, onLog = null, observation = null }) {
+  /* The number and the words describe the same test. `observation` is the one
+     owner of "the current value" (`present/episodes.js`); `reading` is kept
+     only for the callers that have not been given one yet. */
+  const shown = observation || (reading
+    ? { value: reading.value, date: reading.date, count: 1, resolved: false }
+    : null);
   const tone = positionTone(position);
   const Icon = PARAM_ICON[def.key] || Beaker;
 
@@ -329,12 +336,21 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
         <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
           <div className="flex items-baseline gap-1">
             <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
-              {reading ? fmtVal(def, reading.value) : "\u2014"}
+              {shown ? fmtVal(def, shown.value) : "\u2014"}
             </span>
             <span className="text-[10px] font-bold text-ink2">{def.unit}</span>
+            {/* A test run more than once says so, because otherwise the figure
+                shown is not one the keeper ever typed and nothing on the card
+                explains where it came from. */}
+            {shown && shown.count > 1 && (
+              <span className="text-[9px] font-extrabold rounded px-1 py-[1px] shrink-0"
+                style={{ background: def.color + "1F", color: def.color }}>
+                {t("group.badgeShort", { count: shown.count })}
+              </span>
+            )}
           </div>
 
-          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent}
+          <ParamGauge def={def} value={shown ? shown.value : null} recent={recent}
             position={position} compact />
 
           <MicroSpark rows={rows} def={def} colour={def.color} />
@@ -350,7 +366,7 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
               {statusLine || ""}
             </span>
             <span className="text-[9px] font-bold text-ink2 shrink-0">
-              {reading ? fmtShort(reading.date) : ""}
+              {shown && shown.date ? fmtShort(shown.date) : ""}
             </span>
           </div>
 
