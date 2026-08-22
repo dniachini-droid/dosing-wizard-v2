@@ -40,7 +40,7 @@
    ========================================================================= */
 
 import { ANNOTATION, KIND, SOURCE } from "../store/ledger.js";
-import { PROVENANCE, dateOnly, exactInstant, localOffsetMinutes, localZone } from "../store/time.js";
+import { PROVENANCE, dateOnly, exactInstant, localOffsetMinutes, localZone, nowIso } from "../store/time.js";
 
 /* THE KEEPER GAVE A DATE AND A TIME. The device supplies the offset that was
    actually in force, so the instant is provable rather than assumed. */
@@ -152,7 +152,21 @@ export async function recordDoseState(store, { parameter = "ALK", doseMlPerDay, 
   if (!(typeof doseMlPerDay === "number" && Number.isFinite(doseMlPerDay))) {
     throw new Error("a standing dose needs a number");
   }
-  const instant = at || nowIsoExact();
+  /* THE APP'S CLOCK, NOT THE WALL CLOCK — AND THE DIFFERENCE IS NOT COSMETIC.
+
+     `store/time.js` owns "what moment is the app being asked about", and test
+     mode is exactly the case where that is not `new Date()`. Stamped from the
+     wall clock, a standing dose recorded while the app's instant sits in March
+     is effective in August; `happenedBy` then filters it out of every
+     assessment, and the engine reports that it has no record of what is being
+     dosed — the precise defect this field was added to fix, reappearing inside
+     the test mode restored in the same round. Measured: zero events reaching
+     the engine.
+
+     `recordedAt` below stays the wall clock, and must: it is when the app was
+     TOLD, the app genuinely was running at that instant, and `ledger.js` says
+     so in as many words. `time` and `effectiveTime` are not `recordedAt`. */
+  const instant = at || nowIso();
   const time = Object.freeze({
     timeProvenance: PROVENANCE.EXACT_ABSOLUTE,
     absoluteInstant: instant,

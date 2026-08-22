@@ -198,6 +198,15 @@ export const MUTATIONS = [
   },
 
   {
+    id: "AM-C10",
+    why: "the standing dose is stamped from the wall clock instead of the app's clock, so inside test mode it is effective months away from the instant being assessed, `happenedBy` filters it out, and the engine reports it has no record of what is being dosed — measured: zero events reaching it",
+    file: "app/src/lib/record.js",
+    find: "  const instant = at || nowIso();",
+    replace: "  const instant = at || nowIsoExact();",
+    breaks: ["PORT-17"],
+  },
+
+  {
     id: "AM-C6",
     why: "a LOCAL_TIME_ZONE_UNKNOWN reading is sent as a calendar day — the wrong field for its provenance, which the engine refuses as malformed. AI-014 under the other provenance",
     file: "app/src/store/ledger.js",

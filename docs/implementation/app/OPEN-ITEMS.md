@@ -773,3 +773,90 @@ ships broken today.
 > compensating control that does not work is worse than a gap that is known.
 
 **What would close it.** A commission for the safety story on this tab.
+
+
+## AI-021 — What `test-engineer` found and this round did not fix
+
+`test-engineer` reviewed round three and probed 25 source changes of its own devising.
+Three defects and one more it found are fixed and pinned (`LED-11`…`LED-13`, `NOT-01`,
+`NOT-02`, `KP-01`, `KP-02`, `PORT-17`). The brief allows one implementation-fix pass, and
+what follows is what is left. **Every item below is a source change that turns nothing red
+today**, which is the finding — not a suspicion.
+
+### Ranked by consequence
+
+- **`verdictSentence` is untested.** A two-line swap in `VERDICT_KEY` tells the keeper a
+  dose change that FAILED worked. It is the highest-consequence sentence on the Dosing tab
+  and nothing pins the map. `test-engineer` supplied a `DOS-14` body and the controls
+  `AM-D16`/`AM-D17`.
+- **The fresh-install story can be told over a live engine answer.** With
+  `HOLD_CURRENT_DOSE`, `movementEvidence: CONFOUNDED` and `currentDoseMlPerDay: "UNKNOWN"`
+  — a state `dosing.py` reaches — and 42 readings on file, the tab says *"Not enough yet to
+  size a dose … Nothing is wrong and there is nothing to fix"* and describes a 42-reading
+  history as "one or two readings". A `GATING` confounder converted into reassurance. Body
+  supplied as `DOS-13`.
+- **`whyPanel` renders "a test on or after Invalid Date"** whenever `retest.recommendedAt`
+  is not parsable — `fmtDate` has no guard.
+- **No test states that an engine absence marker never renders as a number.** `num()` in
+  `present/dosing-tab.js` is the only guard, and removing it turns nothing red. `working()`
+  itself was probed and is sound; the PROPERTY is unpinned. Body supplied as `DOS-12`.
+- **`ALK-014` can be re-implemented in Setup with nothing turning red.** The rule that keeps
+  the canon factor 0.05284 out of the application is a comment. `CFG-02` closes it by
+  reading the factors out of the engine's own constants and failing if any appears under
+  `app/src`.
+- **`potencyForThisTank` is entirely untested**, including its zero-volume guard.
+  Inverting the division makes every dose recommendation wrong by `(V/100)²` in silence.
+  Body supplied as `CFG-01`.
+- **A per-100 L strength goes stale on a volume change.** `DKH_PER_ML_PER_100L` stores the
+  DERIVED potency; changing `netVolumeL` does not rescale it, and the Setup screen's own
+  memo does recompute — so after a volume correction the screen shows one figure and the
+  engine uses another. `potencyStatedAs`/`potencyStatedValue` are stored, so a recompute is
+  possible. **Whether to recompute or to re-ask is a product decision**, which is why
+  `test-engineer` specified it and declined to pin either.
+- **`CHEMICALS` offers `COMMERCIAL`, which the engine has no factor for.** Its branch needs
+  `manufacturerPotencyDkhPerMl` and Setup never collects it, so "a bought product" plus
+  grams per litre is a silent `POTENCY_THEORETICAL_INPUTS_UNAVAILABLE`. `config.js`'s own
+  comment claims the list is exactly what the engine names; it is not.
+- **`TM-24` is a source-text test.** It would pass with the real/test ternary INVERTED —
+  the one failure the separation exists to prevent. `AM-P33` mutates the line it names, so
+  the requirement has a control; the test itself should be behavioural.
+- **Nothing checks `ENGINE_MODULES` against `engine/alk_v2/*.py`.** Add a module and the
+  app fetches 15 of 16, the Python import fails inside the runtime, and the app opens and
+  cannot answer. Neither `vite.config.js` nor `app/sw.js` is reachable by the mutation arm
+  at all — the harness does not copy the build config into the mutation tree.
+- **`check-offline.mjs` is in no gate.** It needs Playwright, a Chromium and a built
+  `app/dist`, so it is in the position `check-port-manifest.mjs` was in when it sat red
+  across two commits.
+
+### Test-quality findings worth acting on
+
+- `DOS-02` asserts no safety wording using a NON-breach, so it would pass identically if
+  safety rendering were removed altogether.
+- `DOS-01`'s fixtures all carry a numeric `latestValidValueDkh`, so the value phrase could
+  disappear with no test noticing.
+- `LED-09` proves only that an `UNCERTAIN` dose state carries bounds, never that an `EXACT`
+  one does not.
+- `DOS-06` positively asserts that a span of 43 seconds reads as "half a day". The
+  round-three defect was raw precision and the cure overstates in the other direction by
+  three orders of magnitude. **Worth an owner ruling before it is pinned harder.**
+
+### Two things for the canon-conformance-auditor, not for the application
+
+- **`ManualCorrection`'s time field.** `ALK-V2-DATA-CONTRACT.md` names `deliveredAt`; the
+  engine's `_TIME_FIELD` reads `occurredAt`. One of them is wrong and the application may
+  not choose.
+- **The contract's `ManualCorrection` has no `amountMl` at all**, while the app's own
+  ledger and forms are built on that name internally. The wire field is `actualVolumeMl`
+  and is now sent correctly; the internal naming is worth aligning.
+
+## AI-022 — `17-DOSING-TAB-SPEC.md` is cited by seven files and is not in the repository
+
+`test-engineer` could not trace stage 4's requirements to their source. The spec is
+owner-approved line by line and was supplied to the implementing session, but it is not in
+the tree or in git history, so `present/dosing-tab.js`, `card-content.js`,
+`DosingWizard.jsx`, `Setup.jsx`, `PROJECT-STATE.md`, this file and `test-dosing-tab.mjs`
+all cite a document no reviewer can read. Every other document they cite is present.
+
+The same is true of `15-ROUND-THREE-FIXES.md` and `16-CANON-TIME-AMENDMENT-BRIEF.md`.
+
+**What would close it.** Committing the three briefs, or recording where they live.
