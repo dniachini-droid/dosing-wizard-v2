@@ -36,7 +36,7 @@ import { selectCard, instructsDoseChange } from './present/cards.js'
 import { episodesFrom, latestEpisode } from './present/episodes.js'
 import { positionTone } from './present/position.js'
 import { sayVerb, sayAction, sayPosition } from './present/wording.js'
-import { fmtAmount } from './lib/format.js'
+import { fmtQty } from './lib/format.js'
 import { t } from './strings.js'
 
 /* The tab set is data in `lib/constants.js`, which imports nothing so it stays
@@ -120,7 +120,7 @@ function doseSummaries(engineResult, paramDefs, assessmentState) {
          PRESENT on results that recommend nothing at all, so reading its
          presence as a command turned a hold into "up 0.0 mL/day from 12.0". */
       headline: typeof rec === "number" && typeof cur === "number" && instructsDoseChange(engineResult)
-        ? `${fmtAmount(cur)} → ${fmtAmount(rec)}`
+        ? `${fmtQty(cur, "mlPerDay")} → ${fmtQty(rec, "mlPerDay")}`
         : sayVerb(card, dose.action),
       sub: sayPosition(engineResult.position),
       value: typeof engineResult.latestValidValueDkh === "number" ? engineResult.latestValidValueDkh : null,

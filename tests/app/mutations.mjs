@@ -2467,4 +2467,21 @@ export const MUTATIONS = [
     breaks: ["DD-12"],
   },
 
+  {
+    id: "AM-R31",
+    why: "a dose is written 8.80 mL/day again, or a reading loses a decimal place with it — two spellings of one figure on one screen",
+    file: "app/src/lib/format.js",
+    find: 'const TRIM_TRAILING = new Set(["mlPerDay"]);',
+    replace: 'const TRIM_TRAILING = new Set([]);',
+    breaks: ["DD-13"],
+  },
+  {
+    id: "AM-R32",
+    why: "the dose-change moment writes its figures with the bare-number formatter again, so \"8.8 to 9.0\" renders as \"8.8 to 9\" beside a history that writes it properly",
+    file: "app/src/components/DoseExpectation.jsx",
+    find: '<span className="text-[12px] font-black text-ink">{fmtQty(from, "mlPerDay")} mL/day</span>',
+    replace: '<span className="text-[12px] font-black text-ink">{fmtAmount(from)} mL/day</span>',
+    breaks: ["DD-14"],
+  },
+
 ];

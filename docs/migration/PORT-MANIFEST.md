@@ -2126,7 +2126,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `9150018ee0c5ecb2eff1f935f2098cc4368701b617f1038acceb2d1419cc698f` |
+| Ported SHA-256 | `d47d182a3c124df3cca30d8fccc7541bd37e67eb4d501b8a8ff5c99ecaf6fd63` |
 | Differences | 12 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
@@ -2139,7 +2139,7 @@ Byte-identical to V1.
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { fmtTime } from '../lib/analytics/time-of-day.js'
 -import { fmtFriendly } from '../lib/analytics/water-changes.js'
-+import { fmtAmount, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
++import { fmtQty, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
  import { ParamGauge, useEscape } from '../lib/backup.jsx'
 -import { STATUS_COLOR, fmtShort, paramStatus } from '../lib/dates.js'
 -import { STABILITY_COLOR } from '../lib/stability-engine.js'
@@ -2196,7 +2196,7 @@ Byte-identical to V1.
 3. **wording replaced with engine output — the chart emoji replaced by the icon set's arrow; the brief rules out emojis**
 
 ```diff
-@@ -48,7 +63,13 @@
+@@ -48,13 +63,19 @@
          style={{ boxShadow: "0 24px 60px rgba(8,25,29,0.35)" }}>
  
          <div className="px-5 pt-6 pb-5 text-center" style={{ background: tone + "12" }}>
@@ -2209,8 +2209,16 @@ Byte-identical to V1.
 +            {up ? <ArrowUp size={30} strokeWidth={2.6} /> : <ArrowDown size={30} strokeWidth={2.6} />}
 +          </div>
            <div className="mt-3 flex items-baseline justify-center gap-1.5">
-             <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
+-            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
++            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtQty(from, "mlPerDay")}</span>
              <span className="text-[15px] font-bold text-ink2">{"\u2192"}</span>
+             <span className={`rc-value text-[32px] font-black leading-none tabular-nums${phase >= 1 ? " landed" : ""}`}
+               style={{ color: tone }}>
+-              <span className="rc-sheen">{fmtAmount(to)}</span>
++              <span className="rc-sheen">{fmtQty(to, "mlPerDay")}</span>
+             </span>
+             <span className="text-[12px] font-bold text-ink2">mL/day</span>
+           </div>
 ```
 
 4. **wording replaced with engine output — V1's predicted-value sentence and retest date replaced by a statement of what was recorded, which is what the app knows at that moment**
@@ -2233,13 +2241,13 @@ Byte-identical to V1.
 -                <span className="text-[11px] font-bold text-ink2">Test again</span>
 -                <span className="text-[12px] font-black text-ink">{fmtFriendly(testOn)}</span>
 +                <span className="text-[11px] font-bold text-ink2">Was</span>
-+                <span className="text-[12px] font-black text-ink">{fmtAmount(from)} mL/day</span>
++                <span className="text-[12px] font-black text-ink">{fmtQty(from, "mlPerDay")} mL/day</span>
                </div>
                <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
 -                <span className="text-[11px] font-bold text-ink2">That's in</span>
 -                <span className="text-[12px] font-black text-ink">{days} day{days === 1 ? "" : "s"}</span>
 +                <span className="text-[11px] font-bold text-ink2">Now</span>
-+                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtAmount(to)} mL/day</span>
++                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtQty(to, "mlPerDay")} mL/day</span>
                </div>
 -              {expected != null && (
 -                <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
@@ -7094,7 +7102,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `60cf9c8d2de46382ba8d7569188ed25eb4e160c357d736b4c17fcb040c6de11f` |
+| Ported SHA-256 | `931d48d3c987b079da36bfe7749893a169ff5d35d005897b39103062915bc402` |
 | Differences | 1 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
@@ -7122,7 +7130,7 @@ Byte-identical to V1.
 +import {
 +  Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 +} from '../icons.jsx'
-+import { fmtAmount, fmtPotency, fmtTime } from '../lib/format.js'
++import { fmtAmount, fmtPotency, fmtQty, fmtTime } from '../lib/format.js'
 +import { todayStr, fmtDate } from '../lib/dates.js'
 +import { nowTime } from '../lib/clock.js'
 +import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
@@ -7870,7 +7878,7 @@ Byte-identical to V1.
 +        || (config.chemical != null && config.stockConcentrationGPerL != null));
 +    if (!hasStrength) bits.push("solution strength needed");
 +    if (standingDose == null) bits.push("current dose needed");
-+    return bits.length ? bits.join(" · ") : `${fmtAmount(standingDose)} mL/day`;
++    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
 +  }, [config, standingDose]);
  
 -      {/* --- Lighting log --- */}
@@ -8526,7 +8534,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `0ee246b9a310972efb5e455e4e126082acb0304bc38852dd7ac76ff8a772e0cc` |
+| Ported SHA-256 | `0f0b14490b1ead143d0bf7624d1e4749606ef57a7deb2c39ced71d1b934b214c` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -8595,7 +8603,7 @@ Byte-identical to V1.
 +import { episodesFrom, latestEpisode } from './present/episodes.js'
 +import { positionTone } from './present/position.js'
 +import { sayVerb, sayAction, sayPosition } from './present/wording.js'
-+import { fmtAmount } from './lib/format.js'
++import { fmtQty } from './lib/format.js'
 +import { t } from './strings.js'
  
 +/* The tab set is data in `lib/constants.js`, which imports nothing so it stays
@@ -8827,7 +8835,7 @@ Byte-identical to V1.
 +         PRESENT on results that recommend nothing at all, so reading its
 +         presence as a command turned a hold into "up 0.0 mL/day from 12.0". */
 +      headline: typeof rec === "number" && typeof cur === "number" && instructsDoseChange(engineResult)
-+        ? `${fmtAmount(cur)} → ${fmtAmount(rec)}`
++        ? `${fmtQty(cur, "mlPerDay")} → ${fmtQty(rec, "mlPerDay")}`
 +        : sayVerb(card, dose.action),
 +      sub: sayPosition(engineResult.position),
 +      value: typeof engineResult.latestValidValueDkh === "number" ? engineResult.latestValidValueDkh : null,

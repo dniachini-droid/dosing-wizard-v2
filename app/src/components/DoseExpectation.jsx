@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ErrorBoundary.jsx'
 import { Activity, AlertTriangle, ArrowDown, ArrowUp, Beaker, Droplets, FlaskConical, Gauge, Plus, Scale, Target, Waves } from '../icons.jsx'
-import { fmtAmount, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
+import { fmtQty, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
 import { ParamGauge, useEscape } from '../lib/backup.jsx'
 import { fmtShort } from '../lib/dates.js'
 import { positionTone } from '../present/position.js'
@@ -71,11 +71,11 @@ export function DoseChangePopup({ result, onClose }) {
             {up ? <ArrowUp size={30} strokeWidth={2.6} /> : <ArrowDown size={30} strokeWidth={2.6} />}
           </div>
           <div className="mt-3 flex items-baseline justify-center gap-1.5">
-            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
+            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtQty(from, "mlPerDay")}</span>
             <span className="text-[15px] font-bold text-ink2">{"\u2192"}</span>
             <span className={`rc-value text-[32px] font-black leading-none tabular-nums${phase >= 1 ? " landed" : ""}`}
               style={{ color: tone }}>
-              <span className="rc-sheen">{fmtAmount(to)}</span>
+              <span className="rc-sheen">{fmtQty(to, "mlPerDay")}</span>
             </span>
             <span className="text-[12px] font-bold text-ink2">mL/day</span>
           </div>
@@ -97,11 +97,11 @@ export function DoseChangePopup({ result, onClose }) {
             <div className="mt-3 rounded-xl p-3" style={{ background: "#F7FAFA", animationDelay: "150ms" }}>
               <div className="flex items-center justify-between gap-2 py-1">
                 <span className="text-[11px] font-bold text-ink2">Was</span>
-                <span className="text-[12px] font-black text-ink">{fmtAmount(from)} mL/day</span>
+                <span className="text-[12px] font-black text-ink">{fmtQty(from, "mlPerDay")} mL/day</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
                 <span className="text-[11px] font-bold text-ink2">Now</span>
-                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtAmount(to)} mL/day</span>
+                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtQty(to, "mlPerDay")} mL/day</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
                 <span className="text-[11px] font-bold text-ink2">Effective from</span>

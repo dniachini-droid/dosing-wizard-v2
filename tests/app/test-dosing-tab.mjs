@@ -125,7 +125,9 @@ s.test("DOS-02", "the status line never states safety", () => {
 
 s.test("DOS-03", "the recommendation reads as sentences and names the dose in its headline", () => {
   const rec = recommendation(FALLING, 180);
-  ok(/9\.00 mL\/day/.test(rec.head), `the headline states the dose: "${rec.head}"`);
+  /* A dose is written 8.8 mL/day, not 8.80 — the owner's spelling, decided
+     22 August. One decimal always survives; a reading still keeps two. */
+  ok(/9\.0 mL\/day/.test(rec.head), `the headline states the dose: "${rec.head}"`);
   const body = rec.body.join("");
   /* V1's shape: what is happening, what the gap is, what the step does. */
   ok(/7\.11 dKH/.test(body), "the body states the reading");
@@ -144,7 +146,7 @@ s.test("DOS-04", "a hold offers the keeper the chance to change the dose anyway"
     ...FALLING,
     doseRecommendation: { action: "HOLD_CURRENT_DOSE", currentDoseMlPerDay: 8.8 },
   }, 180);
-  ok(/Hold at 8\.80 mL\/day/.test(held.head), `the hold names the dose: "${held.head}"`);
+  ok(/Hold at 8\.8 mL\/day/.test(held.head), `the hold names the dose: "${held.head}"`);
   eq(held.offerChangeAnyway, true, "and the button is offered");
   eq(recommendation(FALLING, 180).offerChangeAnyway, false, "but not where a change is recommended");
 });
@@ -298,7 +300,7 @@ s.test("DOS-09", "the working shows the arithmetic, and every figure in it is th
      tank used. */
   ok(/0\.609 \+ 0\.030 = 0\.639/.test(text), `the consumption sum is shown: "${text.slice(0, 160)}"`);
   ok(/0\.030 − 0\.014 = 0\.016/.test(text), "the supported-movement subtraction is shown");
-  ok(/8\.80 \+ 0\.20 = 9\.00/.test(text), "and the dose arithmetic is shown");
+  ok(/8\.8 \+ 0\.2 = 9\.0/.test(text), "and the dose arithmetic is shown");
   ok(/approximately nine days/.test(text), "readings used, in plain English");
   ok(!/4\.99|\d\.\d{5,}/.test(text), "and no raw precision anywhere in it");
 });

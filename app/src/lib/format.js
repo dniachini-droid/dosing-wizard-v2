@@ -108,7 +108,7 @@ export const fmtFriendly = (iso) => {
    rounding; it never performs it. */
 const PRECISION = Object.freeze({
   dkh: 2,          /* a reading: 9.00 dKH */
-  mlPerDay: 2,     /* a dose: 8.80 mL/day */
+  mlPerDay: 2,     /* a dose: 8.8 mL/day — see TRIM_TRAILING below */
   dkhPerDay: 3,    /* a slope or a consumption: 0.030 dKH/day */
   dkhPerMl: 4,     /* a solution strength: 0.0692 dKH/mL */
   days: 1,         /* a span: 5.0 days — but prefer `spanInWords` in prose */
@@ -116,10 +116,27 @@ const PRECISION = Object.freeze({
   count: 0,        /* readings, clusters, periods */
 });
 
+/* Quantities whose SECOND decimal is only ever shown when it says something.
+
+   A dose is written 8.8 mL/day, not 8.80 — the owner's own spelling, and the
+   one everybody uses for a doser. The place is kept where it carries a digit,
+   so a pump set to 8.75 still reads 8.75; only a trailing zero goes.
+
+   A reading is NOT in this set and must not be. `9.00 dKH` and `9.0 dKH` say
+   different things about how the tank was measured, and alkalinity is written
+   to two places everywhere in this app and in the canon.
+
+   One decimal always survives. `9.0 mL/day` is a dose; `9 mL/day` reads like a
+   count of bottles. */
+const TRIM_TRAILING = new Set(["mlPerDay"]);
+
 export function fmtQty(v, kind = "dkh") {
   if (v == null || typeof v !== "number" || !Number.isFinite(v)) return null;
   const dp = PRECISION[kind];
-  return v.toFixed(dp === undefined ? 2 : dp);
+  const text = v.toFixed(dp === undefined ? 2 : dp);
+  if (!TRIM_TRAILING.has(kind)) return text;
+  /* Only a trailing zero, and never the last decimal place. */
+  return text.replace(/(\.\d)0+$/, "$1");
 }
 
 /* The same, as a MAGNITUDE. `jake`'s rule for this tab: prose never prints a

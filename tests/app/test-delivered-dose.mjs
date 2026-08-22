@@ -23,6 +23,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
 import { DOSE_ORIGIN, originOf } from "../../app/src/present/dose-origin.js";
+import { fmtQty } from "../../app/src/lib/format.js";
 
 const s = suite("delivered dose");
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
@@ -137,6 +138,34 @@ s.test("DD-12", "where the figure came from is history, and never reaches the en
   ok(!/origin/.test(build), "toEngineEvents names no origin");
   const rec = code("app/src/lib/record.js");
   ok(/origin,/.test(rec), "but the record keeps one");
+});
+
+s.test("DD-13", "a dose is written 8.8 mL/day, and a reading is not", () => {
+  /* The owner's own spelling. A doser set to 8.8 reads 8.8; the second place is
+     kept where it carries a digit, so 8.75 survives whole. One decimal always
+     stays, because "9 mL/day" reads like a count of bottles.
+
+     A READING is a different thing and keeps both places. `9.00 dKH` and
+     `9.0 dKH` say different things about how the tank was measured, and two
+     places is what this app and the canon write alkalinity in everywhere. */
+  eq(fmtQty(8.8, "mlPerDay"), "8.8", "the trailing zero goes");
+  eq(fmtQty(9, "mlPerDay"), "9.0", "but never the last decimal place");
+  eq(fmtQty(8.75, "mlPerDay"), "8.75", "and a real second digit stays");
+  eq(fmtQty(9, "dkh"), "9.00", "a reading keeps both places");
+  eq(fmtQty(9.1, "dkh"), "9.10", "including its own trailing zero");
+});
+
+s.test("DD-14", "every dose on every surface goes through that one formatter", () => {
+  /* Two spellings of a dose is how 8.80 and 8.8 came to be on screen at once.
+     `fmtAmount` trims to a bare number and was rendering doses beside it. */
+  for (const rel of ["app/src/App.jsx", "app/src/components/DoseExpectation.jsx",
+    "app/src/components/DeliveredDose.jsx", "app/src/components/Setup.jsx"]) {
+    const src = code(rel);
+    for (const m of src.matchAll(/fmtAmount\(([^)]*)\)[^\n]{0,24}mL\/day/g)) {
+      ok(false, `${rel} writes a dose with fmtAmount: ${m[0]}`);
+    }
+  }
+  ok(true, "no dose is written by a second formatter");
 });
 
 export default s;

@@ -4,7 +4,7 @@ import { Card, DeleteButton } from './ErrorBoundary.jsx'
 import {
   Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 } from '../icons.jsx'
-import { fmtAmount, fmtPotency, fmtTime } from '../lib/format.js'
+import { fmtAmount, fmtPotency, fmtQty, fmtTime } from '../lib/format.js'
 import { todayStr, fmtDate } from '../lib/dates.js'
 import { nowTime } from '../lib/clock.js'
 import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
@@ -269,7 +269,7 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
         || (config.chemical != null && config.stockConcentrationGPerL != null));
     if (!hasStrength) bits.push("solution strength needed");
     if (standingDose == null) bits.push("current dose needed");
-    return bits.length ? bits.join(" · ") : `${fmtAmount(standingDose)} mL/day`;
+    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
   }, [config, standingDose]);
 
   return (
