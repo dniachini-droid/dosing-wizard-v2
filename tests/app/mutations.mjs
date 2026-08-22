@@ -301,6 +301,14 @@ export const MUTATIONS = [
     breaks: ["PORT-24"],
   },
   {
+    id: "AM-P55",
+    why: "the BUILT precache list names a path the deployed app does not serve, so it 404s on every install and is skipped in silence — the same two-spellings-of-one-path defect as AI-018, and invisible to every check that reads source rather than the artefact",
+    file: "app/dist/app/sw.js",
+    find: 'const PRECACHE = [\n  "/app/index.html",',
+    replace: 'const PRECACHE = [\n  "/app/index.html",\n  "/app/manifest.webmanifest",',
+    breaks: ["PORT-25"],
+  },
+  {
     id: "AM-D12",
     why: "the potency learner's own capability rows are shown as limits on the dose again — the keeper is told the app has not been told which solution he is dosing, on a screen that is sizing his dose correctly (finding 7)",
     file: "app/src/present/dosing-tab.js",

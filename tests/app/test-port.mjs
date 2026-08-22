@@ -1112,4 +1112,64 @@ s.test("PORT-24", "no surface offers to mark a record invalid, because nothing c
     `the annotation vocabulary is ${Object.keys(ANNOTATION).join(", ")}`);
 });
 
+s.test("PORT-25", "every path the built service worker precaches exists in what is deployed", () => {
+  /* THE BUILT ARTEFACT, NOT THE SOURCE. `app/sw.js` in source carries
+     `__PRECACHE__`; the list is written at build time from the bundle and from
+     `ENGINE_MODULES`, and a stale entry in it is invisible to every check that
+     reads source — the install step is deliberately tolerant of a 404, so a
+     path that does not exist is skipped in silence.
+
+     One was. `/app/manifest.webmanifest` is where the manifest lives in SOURCE;
+     the build hashes it into `/assets/` and rewrites the `<link>` to match, so
+     the hand-written entry named a URL the built app does not serve. Nothing
+     was missing from the cache — the hashed one was already there via the
+     bundle — but a second, stale spelling of a path with one owner is the same
+     defect as `AI-018`'s two spellings of the runtime's location, and this is
+     the arm that can see it.
+
+     Skipped rather than failed where the app has not been built: a checkout
+     that has never run `npm run build` has no artefact to check, and reporting
+     that as a defect would train a reader to ignore it. */
+  const dist = path.join(ROOT, "app/dist");
+  const swPath = path.join(dist, "app/sw.js");
+  if (!fs.existsSync(swPath)) {
+    ok(true, "no built app in app/dist — nothing to check (run `npm run build`)");
+    return;
+  }
+  const sw = fs.readFileSync(swPath, "utf8");
+  ok(!/__PRECACHE__|__VERSION__/.test(sw), "the built worker carries no unfilled placeholder");
+
+  const m = /const PRECACHE = (\[[\s\S]*?\n\]);/.exec(sw);
+  ok(m, "the built worker states its precache list");
+  const list = JSON.parse(m[1]);
+  ok(list.length > 5, `and the list is not empty: ${list.length} entries`);
+
+  /* WHICH TREE ANSWERS FOR WHICH PATH, and it must not be "either" — that is
+     what let the stale entry pass a first draft of this check.
+     `/app/manifest.webmanifest` exists in SOURCE and is not what is served: the
+     build hashes it into `/assets/`. A check that accepted the source copy as
+     proof would have reported the very defect it was written for as fine.
+
+     So the shell answers for itself. `/app/` and `/assets/` are the build's
+     output and must be in `app/dist`; the engine's own Python files and the
+     frozen catalogue are served from the REPOSITORY root, which is what
+     `vite.config.js` explains the root is for. */
+  const missing = [];
+  for (const url of list) {
+    const rel = url.replace(/^\//, "");
+    const builtShell = rel.startsWith("app/") || rel.startsWith("assets/");
+    const where = builtShell ? path.join(dist, rel) : path.join(ROOT, rel);
+    if (!fs.existsSync(where)) missing.push(`${url} (looked in ${builtShell ? "app/dist" : "the repository"})`);
+  }
+  eq(missing.join(", "), "", `every precached path is served from where it is served from: missing ${missing.join(", ")}`);
+
+  /* And the manifest the HTML actually links is the one that is cached — the
+     specific pairing that was wrong. */
+  const html = fs.readFileSync(path.join(dist, "app/index.html"), "utf8");
+  const link = /<link[^>]+rel="manifest"[^>]+href="([^"]+)"/.exec(html);
+  ok(link, "the built page links a manifest");
+  ok(list.includes(link[1]),
+    `the manifest the page links (${link && link[1]}) is the one precached`);
+});
+
 export default s;

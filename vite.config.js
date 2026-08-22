@@ -97,9 +97,20 @@ export default defineConfig({
         if (!catalogue) this.error('could not read CATALOGUE_PATH out of worker.js');
 
         const assets = Object.keys(bundle).map((f) => '/' + f);
+        /* THE MANIFEST IS IN `assets`, AND IT WAS ALSO NAMED BY HAND.
+
+           `/app/manifest.webmanifest` is where the manifest lives in SOURCE.
+           The build hashes it to `/assets/manifest-<hash>.webmanifest` and
+           rewrites the `<link rel="manifest">` in `index.html` to match — so
+           the hand-written entry named a URL that does not exist in the built
+           app, 404'd on every install, and was silently skipped by the
+           tolerant install step. The hashed one was already in `assets`, so
+           nothing was actually missing from the cache; what was there was a
+           second, stale spelling of a path with one owner, which is the same
+           shape of defect as `AI-018`'s two spellings of the runtime's
+           location. `PORT-25` pins it. */
         const precache = [
           '/app/index.html',
-          '/app/manifest.webmanifest',
           ...assets,
           ...modules.map((m) => `/engine/alk_v2/${m}`),
           '/' + catalogue[1],
