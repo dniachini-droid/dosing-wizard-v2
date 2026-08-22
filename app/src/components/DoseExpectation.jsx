@@ -425,3 +425,18 @@ export function Field({ label, children, className = "" }) {
 }
 
 export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
+
+/* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
+
+   A net water volume is three digits and a pump step is two, and both had a box
+   the width of the phone. A box that big says "write me a sentence" when the
+   keeper has four characters to type, and it makes a form of short numbers read
+   as a form of essays.
+
+   Same class as `inputCls` in every other respect, because they must focus,
+   round and space identically — this only settles the width, right-aligned so
+   the digits line up with the unit beside them. It replaces the width rather
+   than being added to it: Tailwind emits both classes and the later one in the
+   stylesheet wins, not the later one in the attribute, so "w-full w-24" is a
+   coin toss. */
+export const shortInputCls = inputCls.replace("w-full", "w-24") + " text-right";

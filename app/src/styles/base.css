@@ -272,3 +272,61 @@ html, body {
   touch-action: pan-x pan-y;
   overscroll-behavior-y: none;
 }
+
+/* ============================================================================
+   THE TWO-HANDLED RANGE BAR — owner finding 18
+   ----------------------------------------------------------------------------
+   Two native range inputs stacked over one drawn track. Native, because a
+   hand-built slider loses the keyboard, the screen reader and the platform's
+   own touch handling, and this is a control used at the tank with wet hands.
+
+   The input itself is invisible: the track and the filled span are drawn
+   beneath it and only the thumb is painted. `pointer-events` is off on the
+   input and back on for the thumb, so the two inputs can overlap completely
+   and each still only responds where its own handle is.
+
+   The thumb is 26px. A 16px handle is a developer's handle; a wet thumb needs
+   the target this size.
+   ========================================================================= */
+.tw-range {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+.tw-range:focus { outline: none; }
+.tw-range::-webkit-slider-runnable-track { background: transparent; height: 32px; }
+.tw-range::-moz-range-track { background: transparent; height: 32px; }
+.tw-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 3px solid #0B7C86;
+  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
+  cursor: pointer;
+  margin-top: 3px;
+}
+.tw-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 3px solid #0B7C86;
+  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
+  cursor: pointer;
+}
+.tw-range:focus-visible::-webkit-slider-thumb { border-color: #08191D; }
+.tw-range:focus-visible::-moz-range-thumb { border-color: #08191D; }
+.tw-range:disabled::-webkit-slider-thumb { cursor: default; }

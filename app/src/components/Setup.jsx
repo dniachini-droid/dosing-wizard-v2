@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
+import { Btn, Field, SectionTitle, inputCls, shortInputCls } from './DoseExpectation.jsx'
 import { Card, DeleteButton } from './ErrorBoundary.jsx'
 import {
   Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
@@ -12,6 +12,8 @@ import { ImportPanel } from './ImportPanel.jsx'
 import { TestMode } from './TestMode.jsx'
 import { MODE, currentMode } from '../store/mode.js'
 import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
+import { LockedValue, SaveOrEdit } from './SetupLock.jsx'
+import { RangeSlider } from './RangeSlider.jsx'
 import { t } from '../strings.js'
 
 /* ---------------------------------- Setup ---------------------------------- */
@@ -127,6 +129,20 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   /* ---- the keeper's facts ---------------------------------------------- */
   const [facts, setFacts] = useState(() => factsFrom(config));
   const [factMsg, setFactMsg] = useState("");
+  /* OWNER FINDING 16. A group is locked once every value in it is on record and
+     the keeper is not editing it. Editing is a state of this screen and writes
+     nothing: the record changes when he saves and at no other moment. */
+  const [tankEditing, setTankEditing] = useState(false);
+  const tankSaved = !!(config && config.netVolumeL != null
+    && config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null);
+  const tankLocked = tankSaved && !tankEditing;
+  const [strengthEditing, setStrengthEditing] = useState(false);
+  const strengthSaved = !!(config && (config.selectedPotencyDkhPerMl != null
+    || (config.chemical != null && config.stockConcentrationGPerL != null)));
+  const strengthLocked = strengthSaved && !strengthEditing;
+  const [stepEditing, setStepEditing] = useState(false);
+  const stepSaved = !!(config && config.recommendationPrecisionMlPerDay != null);
+  const stepLocked = stepSaved && !stepEditing;
 
   const saveFacts = async (keys) => {
     const values = {};
@@ -287,20 +303,62 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
             threshold, a tolerance or a cadence — those are the canon's, and
             the app does not ask because it does not get to choose. */}
         <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-          These are the things only you know. The app will not guess at any of them, and it
-          says what it cannot work out without each one.
+          These are the things only you know. None of them is guessed at, and anything that
+          cannot be worked out without one is named rather than estimated.
         </p>
-        {ASKED_HERE.map((f) => (
-          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-            <input type="number" inputMode="decimal" className={inputCls}
-              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-              placeholder={t(f.hint)} />
-          </Field>
-        ))}
-        <Btn className="w-full mt-2"
-          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
-          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-        </Btn>
+        {tankLocked ? (
+          <>
+            {/* OWNER FINDING 16 — A SAVED VALUE LOOKS SAVED. It rendered as an
+                input that still accepted typing, so nothing on the screen said
+                the save had taken. */}
+            <LockedValue label={t("setup.volume")}
+              text={`${fmtAmount(config.netVolumeL)} ${t("setup.volumeUnit")}`} />
+            <LockedValue label={t("range.head")}
+              text={`${fmtQty(config.targetRangeMinDkh, "dkh")} \u2013 ${fmtQty(config.targetRangeMaxDkh, "dkh")} dKH`} />
+          </>
+        ) : (
+          <>
+            {/* OWNER FINDING 17 — A SHORT NUMBER LOOKS LIKE ONE. A net volume
+                is three digits and had a box the width of the screen, which
+                says "write me a sentence". */}
+            <Field label={t("setup.volume")} className="mb-3">
+              <div className="flex items-center gap-2">
+                <input type="number" inputMode="decimal"
+                  className={`${shortInputCls} shrink-0`}
+                  value={facts.netVolumeL}
+                  onChange={(e) => setFacts({ ...facts, netVolumeL: e.target.value })}
+                  placeholder={t("fact.netVolumeHint")} />
+                <span className="text-[13px] font-bold text-ink2">{t("setup.volumeUnit")}</span>
+              </div>
+            </Field>
+
+            {/* OWNER FINDING 18 — the range is a bar with two handles, and how
+                wide it is is itself the thing being judged. Graded, because
+                these are alkalinity's and the owner stated them for it. */}
+            <div className="mb-3">
+              <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-0.5">
+                {t("range.head")}
+              </div>
+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
+                {t("range.lead")}
+              </p>
+              <RangeSlider graded unit="dKH"
+                min={parseFloat(facts.targetRangeMinDkh)}
+                max={parseFloat(facts.targetRangeMaxDkh)}
+                onChange={(lo, hi) => setFacts({
+                  ...facts,
+                  targetRangeMinDkh: String(Number(lo.toFixed(2))),
+                  targetRangeMaxDkh: String(Number(hi.toFixed(2))),
+                })} />
+            </div>
+          </>
+        )}
+        <SaveOrEdit locked={tankLocked}
+          onEdit={() => setTankEditing(true)}
+          onSave={async () => {
+            await saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]);
+            setTankEditing(false);
+          }} />
         {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
       </SetupSection>
 
@@ -346,6 +404,14 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
           <>
             {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
             <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
+            {strengthLocked ? (
+              <LockedValue label={t("dosing.strengthHead")}
+                text={derived.value != null ? `${fmtPotency(derived.value)} dKH/mL`
+                  : config && config.selectedPotencyDkhPerMl != null
+                    ? `${fmtPotency(config.selectedPotencyDkhPerMl)} dKH/mL`
+                    : `${fmtAmount(config.stockConcentrationGPerL)} g/L`} />
+            ) : (
+              <>
             <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
               {t("dosing.strengthLead")}
             </p>
@@ -400,9 +466,11 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
               {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
               {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
             </p>
-            <Btn className="w-full" onClick={saveStrength}>
-              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-            </Btn>
+              </>
+            )}
+            <SaveOrEdit locked={strengthLocked}
+              onEdit={() => setStrengthEditing(true)}
+              onSave={async () => { await saveStrength(); setStrengthEditing(false); }} />
             {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
 
             {/* ---- THE DELIVERED DOSE — ONE FIELD (owner finding 19) --------
@@ -426,16 +494,30 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
 
             {/* ---- the pump's step ---------------------------------------- */}
             <div className="border-t border-app mt-4 pt-3">
-              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
-                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-                  <input type="number" inputMode="decimal" className={inputCls}
-                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-                    placeholder={t(f.hint)} />
-                </Field>
-              ))}
-              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
-                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-              </Btn>
+              {stepLocked ? (
+                <LockedValue label={t("fact.pumpStep")}
+                  text={`${fmtQty(config.recommendationPrecisionMlPerDay, "mlPerDay")} mL/day`} />
+              ) : (
+                KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
+                  <Field key={f.key} label={t(f.label)} className="mb-2">
+                    {/* A pump step is one or two characters. Finding 17's rule
+                        applies to it as much as to the volume. */}
+                    <div className="flex items-center gap-2">
+                      <input type="number" inputMode="decimal"
+                        className={`${shortInputCls} shrink-0`}
+                        value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
+                        placeholder={t(f.hint)} />
+                      <span className="text-[13px] font-bold text-ink2">{f.unit}</span>
+                    </div>
+                  </Field>
+                ))
+              )}
+              <SaveOrEdit locked={stepLocked}
+                onEdit={() => setStepEditing(true)}
+                onSave={async () => {
+                  await saveFacts(["recommendationPrecisionMlPerDay"]);
+                  setStepEditing(false);
+                }} />
             </div>
 
             {/* ---- the history, which writes itself ------------------------

@@ -61,6 +61,7 @@ const SUITES = [
   "test-episodes.mjs",
   "test-layout.mjs",
   "test-delivered-dose.mjs",
+  "test-setup-controls.mjs",
   "test-strings.mjs",
   /* The V1 interface port's own suites. Each one pins a rule the port had to
      hold, and `mutations.mjs` carries a source change that must turn each of

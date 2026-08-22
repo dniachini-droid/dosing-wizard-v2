@@ -674,7 +674,13 @@ s.test("PORT-13", "which range is the keeper's has one owner, and nobody else ch
        and states his alkalinity range in the sidebar. Writing and displaying
        what he typed is not choosing which range applies. Named explicitly so
        a THIRD file cannot join it silently. */
-    .filter((f) => rel(f) !== "app/src/App.jsx");
+    .filter((f) => rel(f) !== "app/src/App.jsx")
+    /* Setup shows a SAVED range back as plain text once it is locked (owner
+       finding 16) and hands the two edges to the slider that edits them
+       (finding 18). Reading back what the keeper typed, in the one place he
+       typed it, is not choosing which range applies — same exemption, same
+       reason, and named here so a fourth file cannot join them silently. */
+    .filter((f) => rel(f) !== "app/src/components/Setup.jsx");
   eq(others.length, 0,
     others.length ? `these choose a range themselves: ${others.map(rel).join(", ")}` : "nobody else chooses");
 });
@@ -1079,10 +1085,18 @@ s.test("PORT-22", "Setup's tank section counts only the facts it asks for", () =
     "the counter is not taken over every keeper fact");
   ok(/const missing = ASKED_HERE\.filter/.test(code),
     "it is taken over the facts this section renders");
-  /* And the same list drives the fields, so the count and the form cannot
-     disagree about which facts the section is responsible for. */
-  ok(/\{ASKED_HERE\.map\(/.test(code),
-    "and the fields are rendered from that same list");
+  /* And the section renders every fact it counts, so the count and the form
+     cannot disagree about which facts it is responsible for.
+
+     Checked by NAME rather than by the shape of the loop: owner findings 17 and
+     18 replaced one `map` over three identical boxes with a short volume field
+     and a two-handled range bar, which is three facts rendered as two controls.
+     Asserting the loop would have been asserting the markup. */
+  for (const key of ["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]) {
+    ok(new RegExp(`facts\\.${key}|facts\\[["']${key}`).test(code)
+       || new RegExp(`${key}:`).test(code),
+      `the section renders ${key}`);
+  }
 });
 
 s.test("PORT-23", "the service worker does not take over a page that is still loading a previous version", () => {

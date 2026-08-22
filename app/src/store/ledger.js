@@ -85,12 +85,21 @@ export const SOURCE = Object.freeze({
 export const PARAMETERS = Object.freeze([
   /* `label` is a lookup, not a literal: the name the keeper reads lives in the
      strings file like every other. `unit` is a symbol rather than prose and
-     stays here, beside the decimals it belongs with. */
+     stays here, beside the decimals it belongs with.
+
+     OWNER FINDING 24 — THE UNITS REEFKEEPERS ACTUALLY USE. Calcium, magnesium,
+     nitrate, phosphate and potassium read mg/L, which is chemically the same
+     quantity in seawater but is not the word on any test kit, any bottle or in
+     any conversation between keepers. They are ppm. Alkalinity stays dKH,
+     salinity ppt, pH has no unit at all.
+
+     This is a label, not a conversion: nothing is scaled, the stored numbers
+     are untouched, and no engine reads a unit from here. */
   { key: "ALK", unit: "dKH", decimals: 2, tone: "alk", assessed: true },
-  { key: "CA", unit: "mg/L", decimals: 0, tone: "ca", assessed: false },
-  { key: "MG", unit: "mg/L", decimals: 0, tone: "mg", assessed: false },
-  { key: "NO3", unit: "mg/L", decimals: 2, tone: "no3", assessed: false },
-  { key: "PO4", unit: "mg/L", decimals: 3, tone: "po4", assessed: false },
+  { key: "CA", unit: "ppm", decimals: 0, tone: "ca", assessed: false },
+  { key: "MG", unit: "ppm", decimals: 0, tone: "mg", assessed: false },
+  { key: "NO3", unit: "ppm", decimals: 2, tone: "no3", assessed: false },
+  { key: "PO4", unit: "ppm", decimals: 3, tone: "po4", assessed: false },
   { key: "SAL", unit: "ppt", decimals: 1, tone: "sal", assessed: false },
   /* pH and potassium exist here because the keeper's own history contains 17
      and 13 of them respectively, and the import's rule is that every reading
@@ -104,7 +113,7 @@ export const PARAMETERS = Object.freeze([
      has no unit; `decimals` is where the display rounds, and display rounding
      never enters a calculation (`ALK-V2-DATA-CONTRACT.md` §0). */
   { key: "PH", unit: "", decimals: 2, tone: "ph", assessed: false },
-  { key: "K", unit: "mg/L", decimals: 0, tone: "k", assessed: false },
+  { key: "K", unit: "ppm", decimals: 0, tone: "k", assessed: false },
 ]);
 
 export function parameterDef(key) {

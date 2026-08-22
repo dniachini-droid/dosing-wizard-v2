@@ -217,8 +217,8 @@ export const STRINGS = Object.freeze({
 
   "today.setup.title": "Tell the app about your tank",
   "today.setup.body":
-    "Nothing can be assessed until the app knows your net water volume, your target range, how strong " +
-    "your solution is and what step your pump makes. These are facts only you have; the app will not " +
+    "Nothing can be assessed without your net water volume, your target range, how strong " +
+    "your solution is and what step your pump makes. These are facts only you have, and none of them " +
     "guess any of them.",
   "today.setup.action": "Set the tank up",
 
@@ -1329,7 +1329,7 @@ export const STRINGS = Object.freeze({
      that is the recommendation's statement, and it is made on this tab by the
      hold. This sentence claims the first and not the second. */
   "dosing.correction.worked":
-    "The change worked. Alkalinity moved by about as much as the app predicted, " +
+    "The change worked. Alkalinity moved by about as much as the new dose was sized to move it, " +
     "so there is nothing more to watch here.",
 
   "dosing.correction.partial":
@@ -1572,6 +1572,30 @@ export const STRINGS = Object.freeze({
      in the app. The calendar answers "what did I do on this day"; it
      does not answer "where is that reading I typed wrong".
      ================================================================== */
+  /* ==================================================================
+     THE TARGET RANGE AS A BAR — owner finding 18
+     ------------------------------------------------------------------
+     The three widths are the OWNER'S, stated by him for ALKALINITY in
+     dKH. They are not canon figures and do not transfer to calcium or
+     magnesium; the bar grades itself only where the caller says they
+     apply.
+     ================================================================== */
+  "range.width": ({ width, unit }) => `${width} ${unit} wide`,
+  "range.lowAria": "The bottom of your target range",
+  "range.highAria": "The top of your target range",
+  "range.grade.tight": "Tight control.",
+  "range.grade.fair": "Acceptable control.",
+  "range.grade.loose": "Loose \u2014 a tighter range is worth considering.",
+  "range.head": "Where you want alkalinity to sit",
+  "range.lead":
+    "Drag both handles. How wide you make it is the thing being judged: a range nothing "
+    + "ever falls outside is not a target.",
+
+  "setup.save": "Save",
+  "setup.edit": "Edit",
+  "setup.volume": "Net water volume",
+  "setup.volumeUnit": "litres",
+
   "testlab.showReadings": ({ parameter }) => `Show every ${parameter} reading`,
   "testlab.hideReadings": ({ parameter }) => `Hide the ${parameter} readings`,
   "testlab.noReadings": ({ parameter }) => `No ${parameter} readings yet.`,

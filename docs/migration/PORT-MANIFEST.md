@@ -80,12 +80,21 @@ A difference may carry one of these and nothing else.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
 | V1 blob | `632afe7013fae66e08622a2adfef71c728d895f6` |
-| Ported SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
-| Differences | 0 |
+| Ported SHA-256 | `db6d8404e7f50b5d0fb64099fdeaab78a928382464e5db4629fefa837539f355` |
+| Differences | 1 |
 
-Byte-identical to V1.
+1. **defect fixed — owner finding 16: a saved value locks and its Save button becomes Edit, which needs a pencil. V1 had no icon for it.**
 
----
+```diff
+@@ -24,6 +24,7 @@
+ export const ChevronDown = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m6 9 6 6 6-6\"/>"}});
+ export const ChevronUp = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m18 15-6-6-6 6\"/>"}});
+ export const Settings2 = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M20 7h-9\"/><path d=\"M14 17H5\"/><circle cx=\"17\" cy=\"17\" r=\"3\"/><circle cx=\"7\" cy=\"7\" r=\"3\"/>"}});
++export const Pencil = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/><path d=\"m15 5 4 4\"/>"}});
+ export const Save = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\"/><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\"/><path d=\"M7 3v4a1 1 0 0 0 1 1h7\"/>"}});
+ export const Activity = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\"/>"}});
+ export const Scale = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1\"/><path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1\"/><path d=\"M7 21h10\"/><path d=\"M12 3v18\"/><path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>"}});
+```
 
 ### `app/src/main.jsx`
 
@@ -157,13 +166,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `32ffdfd42ff8a745a1f58298665fd4e606ca4da490d1686c5fbb9d6e81181a43` |
 | V1 blob | `919636df1a9c02ead8aa21e8bfc8079ef5bbfcee` |
-| Ported SHA-256 | `0d02fdaf76c372ad213b7e808c4a7d9f0ea62779da511f624e746c1e90cbb911` |
+| Ported SHA-256 | `f0cf3ac5fed94fd89c7b880fd34640f1a8f86ee2607cc40851dac62524de6ec4` |
 | Differences | 1 |
 
 1. **defect fixed — the page's own pinch-zoom fought the chart's, which handles pinch itself to zoom a time axis, so the two competed and whichever won the race decided what the keeper got. Round three item 8. `touch-action: pan-x pan-y` withholds the browser's pinch gesture; the viewport meta tag alone does not do it, because iOS Safari has ignored `user-scalable=no` since version 10**
 
 ```diff
-@@ -257,3 +257,18 @@
+@@ -257,3 +257,76 @@
            font-weight:700; font-size:14px; }
    #boot .err { color:#C4285B; font-weight:600; font-size:12px; max-width:520px;
                 white-space:pre-wrap; text-align:left; font-family:ui-monospace,monospace; }
@@ -182,9 +191,65 @@ Byte-identical to V1.
 +  touch-action: pan-x pan-y;
 +  overscroll-behavior-y: none;
 +}
++
++/* ============================================================================
++   THE TWO-HANDLED RANGE BAR — owner finding 18
++   ----------------------------------------------------------------------------
++   Two native range inputs stacked over one drawn track. Native, because a
++   hand-built slider loses the keyboard, the screen reader and the platform's
++   own touch handling, and this is a control used at the tank with wet hands.
++
++   The input itself is invisible: the track and the filled span are drawn
++   beneath it and only the thumb is painted. `pointer-events` is off on the
++   input and back on for the thumb, so the two inputs can overlap completely
++   and each still only responds where its own handle is.
++
++   The thumb is 26px. A 16px handle is a developer's handle; a wet thumb needs
++   the target this size.
++   ========================================================================= */
++.tw-range {
++  position: absolute;
++  left: 0;
++  right: 0;
++  top: 0;
++  width: 100%;
++  height: 32px;
++  margin: 0;
++  background: transparent;
++  -webkit-appearance: none;
++  appearance: none;
++  pointer-events: none;
++}
++.tw-range:focus { outline: none; }
++.tw-range::-webkit-slider-runnable-track { background: transparent; height: 32px; }
++.tw-range::-moz-range-track { background: transparent; height: 32px; }
++.tw-range::-webkit-slider-thumb {
++  -webkit-appearance: none;
++  appearance: none;
++  pointer-events: auto;
++  width: 26px;
++  height: 26px;
++  border-radius: 999px;
++  background: #FFFFFF;
++  border: 3px solid #0B7C86;
++  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
++  cursor: pointer;
++  margin-top: 3px;
++}
++.tw-range::-moz-range-thumb {
++  pointer-events: auto;
++  width: 26px;
++  height: 26px;
++  border-radius: 999px;
++  background: #FFFFFF;
++  border: 3px solid #0B7C86;
++  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
++  cursor: pointer;
++}
++.tw-range:focus-visible::-webkit-slider-thumb { border-color: #08191D; }
++.tw-range:focus-visible::-moz-range-thumb { border-color: #08191D; }
++.tw-range:disabled::-webkit-slider-thumb { cursor: default; }
 ```
-
----
 
 ### `app/src/styles/aurelia-skin.css`
 
@@ -2126,8 +2191,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `d47d182a3c124df3cca30d8fccc7541bd37e67eb4d501b8a8ff5c99ecaf6fd63` |
-| Differences | 12 |
+| Ported SHA-256 | `2581210462cf92e2374001adadc549bff723c8f3803d3be90e44179b92c97132` |
+| Differences | 13 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
 
@@ -2577,6 +2642,30 @@ Byte-identical to V1.
                </span>
              </div>
            )}
+```
+
+13. **defect fixed — owner finding 17: a short number should look like one. A net volume is three digits and a pump step is two, and both had a box the width of the phone.**
+
+```diff
+@@ -352,3 +425,18 @@
+ }
+ 
+ export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
++
++/* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
++
++   A net water volume is three digits and a pump step is two, and both had a box
++   the width of the phone. A box that big says "write me a sentence" when the
++   keeper has four characters to type, and it makes a form of short numbers read
++   as a form of essays.
++
++   Same class as `inputCls` in every other respect, because they must focus,
++   round and space identically — this only settles the width, right-aligned so
++   the digits line up with the unit beside them. It replaces the width rather
++   than being added to it: Tailwind emits both classes and the later one in the
++   stylesheet wins, not the later one in the attribute, so "w-full w-24" is a
++   coin toss. */
++export const shortInputCls = inputCls.replace("w-full", "w-24") + " text-right";
 ```
 
 ### `app/src/components/ReadingContext.jsx`
@@ -7207,16 +7296,16 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `931d48d3c987b079da36bfe7749893a169ff5d35d005897b39103062915bc402` |
+| Ported SHA-256 | `123925052c1810bdba14c1ec22f9a433d58a57355338db7edec49222a16e234a` |
 | Differences | 1 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,931 +1,559 @@
+@@ -1,931 +1,641 @@
  import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
-+import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
++import { Btn, Field, SectionTitle, inputCls, shortInputCls } from './DoseExpectation.jsx'
  import { Card, DeleteButton } from './ErrorBoundary.jsx'
 -import { InfoBlock } from './Insights.jsx'
 -import { Activity, Calculator, CheckCircle2, ChevronDown, ChevronUp, Download, Plus, RotateCcw, Save, SunMedium, Upload, Waves } from '../icons.jsx'
@@ -7243,6 +7332,8 @@ Byte-identical to V1.
 +import { TestMode } from './TestMode.jsx'
 +import { MODE, currentMode } from '../store/mode.js'
 +import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
++import { LockedValue, SaveOrEdit } from './SetupLock.jsx'
++import { RangeSlider } from './RangeSlider.jsx'
 +import { t } from '../strings.js'
  
  /* ---------------------------------- Setup ---------------------------------- */
@@ -7514,6 +7605,20 @@ Byte-identical to V1.
 +  /* ---- the keeper's facts ---------------------------------------------- */
 +  const [facts, setFacts] = useState(() => factsFrom(config));
 +  const [factMsg, setFactMsg] = useState("");
++  /* OWNER FINDING 16. A group is locked once every value in it is on record and
++     the keeper is not editing it. Editing is a state of this screen and writes
++     nothing: the record changes when he saves and at no other moment. */
++  const [tankEditing, setTankEditing] = useState(false);
++  const tankSaved = !!(config && config.netVolumeL != null
++    && config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null);
++  const tankLocked = tankSaved && !tankEditing;
++  const [strengthEditing, setStrengthEditing] = useState(false);
++  const strengthSaved = !!(config && (config.selectedPotencyDkhPerMl != null
++    || (config.chemical != null && config.stockConcentrationGPerL != null)));
++  const strengthLocked = strengthSaved && !strengthEditing;
++  const [stepEditing, setStepEditing] = useState(false);
++  const stepSaved = !!(config && config.recommendationPrecisionMlPerDay != null);
++  const stepLocked = stepSaved && !stepEditing;
  
 -  // Lighting log state
 -  const [lightDate, setLightDate] = useState(todayStr());
@@ -8008,21 +8113,6 @@ Byte-identical to V1.
 -        </form>
 -        {lighting.length === 0 ? (
 -          <p className="text-[13px] text-ink2 font-medium">No lighting changes logged yet.</p>
--        ) : (
--          <div className="divide-y divide-app">
--            {lighting.slice(0, 8).map((l) => (
--              <div key={l.id} className="flex items-start justify-between gap-2 py-2">
--                <div className="min-w-0">
--                  <div className="text-[11px] text-ink2 font-bold">{fmtDate(l.date)}</div>
--                  <div className="text-[13px] font-semibold text-ink">{l.note}</div>
--                </div>
--                <DeleteButton onDelete={() => onDeleteLighting(l.id)} />
--              </div>
--            ))}
--          </div>
--        )}
--        <p className="text-[12px] text-ink2 font-medium leading-relaxed mt-3">
--          Each change drops a marker on every parameter chart, so you can see whether a lighting tweak moved your alkalinity demand.
 +  return (
 +    <div>
 +      <SectionTitle eyebrow="Configuration" title="Setup" />
@@ -8038,21 +8128,76 @@ Byte-identical to V1.
 +            threshold, a tolerance or a cadence — those are the canon's, and
 +            the app does not ask because it does not get to choose. */}
 +        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          These are the things only you know. The app will not guess at any of them, and it
-+          says what it cannot work out without each one.
-         </p>
++          These are the things only you know. None of them is guessed at, and anything that
++          cannot be worked out without one is named rather than estimated.
++        </p>
++        {tankLocked ? (
++          <>
++            {/* OWNER FINDING 16 — A SAVED VALUE LOOKS SAVED. It rendered as an
++                input that still accepted typing, so nothing on the screen said
++                the save had taken. */}
++            <LockedValue label={t("setup.volume")}
++              text={`${fmtAmount(config.netVolumeL)} ${t("setup.volumeUnit")}`} />
++            <LockedValue label={t("range.head")}
++              text={`${fmtQty(config.targetRangeMinDkh, "dkh")} \u2013 ${fmtQty(config.targetRangeMaxDkh, "dkh")} dKH`} />
++          </>
+         ) : (
+-          <div className="divide-y divide-app">
+-            {lighting.slice(0, 8).map((l) => (
+-              <div key={l.id} className="flex items-start justify-between gap-2 py-2">
+-                <div className="min-w-0">
+-                  <div className="text-[11px] text-ink2 font-bold">{fmtDate(l.date)}</div>
+-                  <div className="text-[13px] font-semibold text-ink">{l.note}</div>
+-                </div>
+-                <DeleteButton onDelete={() => onDeleteLighting(l.id)} />
++          <>
++            {/* OWNER FINDING 17 — A SHORT NUMBER LOOKS LIKE ONE. A net volume
++                is three digits and had a box the width of the screen, which
++                says "write me a sentence". */}
++            <Field label={t("setup.volume")} className="mb-3">
++              <div className="flex items-center gap-2">
++                <input type="number" inputMode="decimal"
++                  className={`${shortInputCls} shrink-0`}
++                  value={facts.netVolumeL}
++                  onChange={(e) => setFacts({ ...facts, netVolumeL: e.target.value })}
++                  placeholder={t("fact.netVolumeHint")} />
++                <span className="text-[13px] font-bold text-ink2">{t("setup.volumeUnit")}</span>
+               </div>
+-            ))}
+-          </div>
++            </Field>
++
++            {/* OWNER FINDING 18 — the range is a bar with two handles, and how
++                wide it is is itself the thing being judged. Graded, because
++                these are alkalinity's and the owner stated them for it. */}
++            <div className="mb-3">
++              <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-0.5">
++                {t("range.head")}
++              </div>
++              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
++                {t("range.lead")}
++              </p>
++              <RangeSlider graded unit="dKH"
++                min={parseFloat(facts.targetRangeMinDkh)}
++                max={parseFloat(facts.targetRangeMaxDkh)}
++                onChange={(lo, hi) => setFacts({
++                  ...facts,
++                  targetRangeMinDkh: String(Number(lo.toFixed(2))),
++                  targetRangeMaxDkh: String(Number(hi.toFixed(2))),
++                })} />
++            </div>
++          </>
+         )}
+-        <p className="text-[12px] text-ink2 font-medium leading-relaxed mt-3">
+-          Each change drops a marker on every parameter chart, so you can see whether a lighting tweak moved your alkalinity demand.
+-        </p>
 -      </InfoBlock>
-+        {ASKED_HERE.map((f) => (
-+          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+            <input type="number" inputMode="decimal" className={inputCls}
-+              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+              placeholder={t(f.hint)} />
-+          </Field>
-+        ))}
-+        <Btn className="w-full mt-2"
-+          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
-+          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+        </Btn>
++        <SaveOrEdit locked={tankLocked}
++          onEdit={() => setTankEditing(true)}
++          onSave={async () => {
++            await saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]);
++            setTankEditing(false);
++          }} />
 +        {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
 +      </SetupSection>
  
@@ -8112,6 +8257,14 @@ Byte-identical to V1.
 -              numbers move enough to change what it says.
 +            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
 +            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
++            {strengthLocked ? (
++              <LockedValue label={t("dosing.strengthHead")}
++                text={derived.value != null ? `${fmtPotency(derived.value)} dKH/mL`
++                  : config && config.selectedPotencyDkhPerMl != null
++                    ? `${fmtPotency(config.selectedPotencyDkhPerMl)} dKH/mL`
++                    : `${fmtAmount(config.stockConcentrationGPerL)} g/L`} />
++            ) : (
++              <>
 +            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
 +              {t("dosing.strengthLead")}
              </p>
@@ -8253,9 +8406,11 @@ Byte-identical to V1.
 +              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
 +              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
 +            </p>
-+            <Btn className="w-full" onClick={saveStrength}>
-+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+            </Btn>
++              </>
++            )}
++            <SaveOrEdit locked={strengthLocked}
++              onEdit={() => setStrengthEditing(true)}
++              onSave={async () => { await saveStrength(); setStrengthEditing(false); }} />
 +            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
  
 -        <label className="block">
@@ -8322,19 +8477,34 @@ Byte-identical to V1.
 -                    {row.total} in file · <span style={{ color: row.fresh ? "#0B7C86" : "#5F7575" }}>{row.fresh} new</span>
 -                  </span>
 -                </div>
+-              ))}
 +
 +            {/* ---- the pump's step ---------------------------------------- */}
 +            <div className="border-t border-app mt-4 pt-3">
-+              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
-+                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+                  <input type="number" inputMode="decimal" className={inputCls}
-+                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+                    placeholder={t(f.hint)} />
-+                </Field>
-               ))}
-+              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
-+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+              </Btn>
++              {stepLocked ? (
++                <LockedValue label={t("fact.pumpStep")}
++                  text={`${fmtQty(config.recommendationPrecisionMlPerDay, "mlPerDay")} mL/day`} />
++              ) : (
++                KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
++                  <Field key={f.key} label={t(f.label)} className="mb-2">
++                    {/* A pump step is one or two characters. Finding 17's rule
++                        applies to it as much as to the volume. */}
++                    <div className="flex items-center gap-2">
++                      <input type="number" inputMode="decimal"
++                        className={`${shortInputCls} shrink-0`}
++                        value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
++                        placeholder={t(f.hint)} />
++                      <span className="text-[13px] font-bold text-ink2">{f.unit}</span>
++                    </div>
++                  </Field>
++                ))
++              )}
++              <SaveOrEdit locked={stepLocked}
++                onEdit={() => setStepEditing(true)}
++                onSave={async () => {
++                  await saveFacts(["recommendationPrecisionMlPerDay"]);
++                  setStepEditing(false);
++                }} />
              </div>
 -            <p className="text-[11px] text-ink2 font-medium leading-relaxed mb-2">
 -              Your readings, doses and other entries are only ever added to — nothing is overwritten
