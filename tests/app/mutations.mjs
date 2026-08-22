@@ -1860,11 +1860,26 @@ export const MUTATIONS = [
     breaks: ["PORT-12", "TIME-04"],
   },
   {
+    /* RE-POINTED WITH `TM-24` ITSELF, IN ROUND THREE.
+
+       This used to add an import of the mode module, because `TM-24` then
+       asserted that the ported shell had NO route into test mode and the
+       omission was recorded. Round three item 9 restores the surface, so
+       acquiring a route is now the correct state and mutating towards it
+       proves nothing.
+
+       What `TM-24` pins now is the property whose absence made the port's
+       version of this a real loss, and this is the mutation for it: the shell
+       goes back to building the real store unconditionally. A screen would
+       still open, test mode would still say it was on, the clock would still
+       move — and every reading entered would land in the KEEPER'S OWN TANK.
+       That is the single failure the whole real/test separation exists to
+       prevent, and it is invisible from the interface. */
     id: "AM-P33",
-    why: "the shell acquires a route into test mode while the omissions report still says it has none",
+    why: "the shell builds the real store whatever the mode says, so a test reading lands in the keeper's own tank — silently, with test mode still reporting itself on",
     file: "app/src/App.jsx",
-    find: "import { nowIso } from './store/time.js'",
-    replace: "import { nowIso } from './store/time.js'\nimport { isTestMode } from './store/mode.js'",
+    find: "    storeRef.current = mode === MODE.TEST ? storeForMode(mode) : createStore();",
+    replace: "    storeRef.current = createStore();",
     breaks: ["TM-24"],
   },
   {
