@@ -638,3 +638,116 @@ renders them. They are left because the brief forbade touching the interface, an
 named here because dead announcement wording sitting in the string table is precisely how an
 announcement comes back: the next build has a sentence ready and only needs a code to hang
 it on.
+
+
+---
+
+# Recorded during round three (22 August 2026)
+
+Stage 1 of round three closed `AI-014` and two defects beside it. What follows
+is what round three found and did **not** close, recorded rather than decided.
+
+## AI-016 — A date-only dose row is not representable, so a V1 dose history is unreadable (CONTRACT)
+
+**Where.** `ALK-V2-DATA-CONTRACT.md` §3, `MaintenanceDoseState.effectiveAt` and
+`MaintenanceDoseChange.effectiveAt`, both `REQ` `Instant`.
+
+**What.** V1 recorded each dose change with a date and no time of day, and the owner's
+six-month history is made of those rows. An `Instant` is `ObservedTime` narrowed to the
+two provenances that carry an `absoluteInstant` (§1), so a dose row dated "3 April, no
+time" **is not representable in the contract at all**. The application has three options
+and all three are wrong:
+
+  - fabricate an instant — §1 forbids it "absolutely";
+  - send `effectiveAt: null` — which is what it did, and `dosing.py` filters dose events on
+    `e.at is not None`, so **every** dose event vanished and consumption was `NOT_RUN`;
+  - not send the event — the same blindness, honestly.
+
+**Measured, not inferred.** A six-month V1-shaped history through the real importer, the
+real `toEngineEvents` and the real engine: `CONSUMPTION_NOT_RUN_DOSE_HISTORY_UNAVAILABLE`,
+`currentDoseMlPerDay: UNKNOWN`, `recommendedDoseMlPerDay: WITHHELD`.
+
+**What round three did instead.** Setup gained the standing dose (`recordDoseState`), which
+is a keeper stating a present fact at a moment genuinely known. That restores consumption
+lawfully and is not a workaround for this gap: the historical rows are still unread, so the
+engine sees the dose in force but not the dose history behind it.
+
+**What is interesting about it.** The contract already carries the shape that would work.
+`effectiveAtConfidence: UNCERTAIN` with `effectiveAtEarliest`/`effectiveAtLatest` — both
+`Instant`, both `REQ*` when confidence is `UNCERTAIN` — is exactly a dose whose moment is
+known only to within a day, and §3 already says "a clean segment resumes only after
+`effectiveAtLatest`". The importer computes those bounds today and stores them. What is
+missing is a rule saying what `delivery()` may do with an event that carries the bounds and
+no instant.
+
+**What would close it.** An owner ruling, then a canon/contract reissue. **It is chemistry
+and it is not the application's to decide** — `CLAUDE.md` is explicit that a rule the canon
+does not state may not arrive by invention. Left open deliberately.
+
+## AI-017 — The engine does not publish what the dose supplies (CONTRACT)
+
+**Where.** `EngineResult.consumption`, against `present/dosing-tab.js` `suppliedOf`.
+
+**What.** `17-DOSING-TAB-SPEC.md` puts "what your dose supplies" on the face of the Dosing
+tab, and V1 showed it. The engine computes it — `P · D` is the delivery half of `ALK-013` —
+and publishes `P` and `D` separately without their product. So the presentation layer
+multiplies two of the engine's own outputs in the engine's own equation.
+
+It decides nothing: no recommendation reads it, and changing it could not change what the
+app advises. It is named in `present/dosing-tab.js`'s header rather than hidden. But it is
+still arithmetic in a layer whose whole claim is that it does none, and the fix is one
+field.
+
+**What would close it.** `consumption.deliveredDkhPerDay` in the `EngineResult`, and
+`suppliedOf` deleted.
+
+## AI-018 — A built production app cannot start its engine (INTERFACE)
+
+**Where.** `app/src/engine/worker.js`'s `import("../../vendor/pyodide/pyodide.mjs")`,
+against `vite.config.js`'s `dosing-wizard:uncommitted-python-runtime` plugin.
+
+**What.** Found while verifying offline with a real browser against a real build. In the
+DEV server the worker sits at `/app/src/engine/worker.js`, so the relative specifier
+resolves to `/app/vendor/pyodide/pyodide.mjs`, which is where `vendor-runtime.py` writes it.
+In a BUILT app the worker chunk sits at `/assets/worker-*.js`, so the same specifier
+resolves to **`/vendor/pyodide/pyodide.mjs`** — one directory too high. Observed as a 404
+for that exact path.
+
+The `resolveId` plugin rewrites the specifier for the main-thread graph; the worker's
+dynamic import carries `@vite-ignore`, which is what stops the bundler touching it, and so
+nothing rewrites it there.
+
+**Not caused by this round, and not verifiable to completion here.** The 12 MB runtime is
+deliberately not committed, so this environment cannot prove the engine boots once the path
+is right — only that the path it asks for is wrong. Recorded rather than fixed because
+fixing it blind, on the one boundary the build config exists to protect, is worse than
+naming it.
+
+## AI-019 — Five gating codes travel with an issued dose recommendation
+
+**Where.** The engine's own output for the owner's tank.
+
+**What.** `jake` raised it while writing the Dosing tab's wording. The result carries
+`maintenanceActionStatus: "ISSUED"` and a recommended 9.0 mL/day, and alongside it five
+`GATING`-severity codes and `OUTPUT_INSUFFICIENT_DATA_ACTIONABLE`. Whatever the severity
+pills are called, a keeper reading "Increase to 9.00 mL/day" beside anything that says the
+answer was stopped will not trust either.
+
+The wording side is handled: the pills are named for what they did to the answer
+("No effect", "Limited this", "Stopped this") and they sit inside Show working rather than
+on the face of the screen. Whether the engine should be emitting both at once is a
+**behaviour** question, not a wording one. Left for the owner.
+
+## AI-020 — Safety has no home in the rebuilt Dosing tab
+
+**Where.** `17-DOSING-TAB-SPEC.md` removes safety from the wide status box — correctly:
+it was redundant with position and rendered in red, which read as an alarm for good news.
+
+**What.** The spec gives safety no other home, and `jake` declined to invent one: none of
+the five recommendation stories is a breach of the safe outer limits, and copy for a state
+that outranks everything else on the screen should not arrive as a side effect of a
+language pass. `cardNotice` now raises a strip on `BREACH_LOW`/`BREACH_HIGH`, so a breach
+is not silent — but the Dosing tab itself says nothing about it. The owner's tank is
+`WITHIN_BOUNDS`, so nothing ships broken today.
+
+**What would close it.** A commission for the safety story on this tab.
