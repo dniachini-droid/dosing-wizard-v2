@@ -436,6 +436,12 @@ const RECORDERS = Object.freeze([
   { fn: "recordLightingChange", timed: false, args: { note: "blues up 10%" } },
   { fn: "recordNote",           timed: false, args: { note: "four new frags in" } },
   { fn: "recordIcpPanel",       timed: false, args: { note: null, elements: { Iodine: 0.06 } } },
+  /* `recordDoseState` has no date box and no time box: it records what the
+     pump is running AT THE MOMENT THE KEEPER SAYS SO, so the instant is the
+     present one and is genuinely known. `now: true` marks that third shape —
+     neither "the form asked for a time" nor "the form asked for neither" — and
+     the loop below still holds it to producing a real, exact instant. */
+  { fn: "recordDoseState",      timed: true, now: true, args: { doseMlPerDay: 8.8 } },
 ]);
 
 s.test("PORT-10", "a form with no time box writes a record with no time, and cannot write one with a time", async () => {
@@ -470,7 +476,7 @@ s.test("PORT-10", "a form with no time box writes a record with no time, and can
   }
 
   for (const r of RECORDERS) {
-    const args = r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
+    const args = r.now ? { ...r.args } : r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
     const ev = await record[r.fn](store, args);
 
     if (r.timed) {

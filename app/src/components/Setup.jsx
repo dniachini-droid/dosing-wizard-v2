@@ -7,7 +7,7 @@ import {
 import { fmtAmount, fmtVal, fmtTime } from '../lib/format.js'
 import { todayStr, fmtDate } from '../lib/dates.js'
 import { nowTime } from '../lib/clock.js'
-import { KEEPER_FACTS } from '../store/config.js'
+import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
 import { ImportPanel } from './ImportPanel.jsx'
 import { t } from '../strings.js'
 
@@ -64,8 +64,8 @@ function SetupSection({ icon: Icon, category, colour, heading, subtitle, open, o
   );
 }
 
-export function Setup({ config, onSaveConfig, paramDefs = [],
-  doseChanges = [], onAddDoseChange, onDeleteEvent,
+export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
+  doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
   lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
   onExport, store = null, onImported = null,
   storageHealth = null }) {
@@ -115,10 +115,105 @@ export function Setup({ config, onSaveConfig, paramDefs = [],
     setDcFrom(""); setDcTo(""); setDcDate(todayStr()); setDcTime(nowTime());
   };
 
-  /* ---- dosing setup ----------------------------------------------------- */
+  /* ---- ONE dosing section ------------------------------------------------
+
+     "Never ask the same thing twice in different clothes." Solution strength,
+     the dose in force and the pump's step used to sit in one card while the
+     dose-change history sat in another, and "solution strength" was asked for
+     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
+     have. Both are one section now, and the strength is asked for once in
+     whichever of three forms he actually holds. */
   const DOSED = ["ALK", "CA", "MG"];
   const [dosedKey, setDosedKey] = useState("ALK");
   const dosedDef = paramDefs.find((d) => d.key === dosedKey);
+
+  const [form, setForm] = useState(
+    () => (config && config.potencyStatedAs) || POTENCY_FORM.DKH_PER_ML
+  );
+  const [chemical, setChemical] = useState(() => (config && config.chemical) || "NA2CO3");
+  const [gPerL, setGPerL] = useState(
+    () => (config && config.stockConcentrationGPerL != null ? String(config.stockConcentrationGPerL) : "")
+  );
+  const [per100L, setPer100L] = useState(
+    () => (config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
+      ? String(config.potencyStatedValue ?? "") : "")
+  );
+  const [strengthMsg, setStrengthMsg] = useState("");
+
+  const netVolumeL = parseFloat(facts.netVolumeL);
+
+  /* What the app can honestly show back as the derived figure, and where it
+     came from. For the grams-per-litre form that is the ENGINE's own number —
+     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
+     what the engine returned rather than recomputing it. */
+  const derived = useMemo(() => {
+    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
+    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
+      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
+      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
+      return { kind: "fromVolume", value: v, volume: netVolumeL };
+    }
+    const p = engineResult && engineResult.potency;
+    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
+      ? p.theoreticalPotencyDkhPerMl : null;
+    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
+  }, [form, per100L, netVolumeL, engineResult]);
+
+  const saveStrength = async () => {
+    const values = {};
+    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
+      const c = parseFloat(gPerL);
+      if (!Number.isFinite(c)) { setStrengthMsg("Enter a number."); return; }
+      /* The engine derives the potency from these two. Sending a
+         `selectedPotencyDkhPerMl` as well would override its own derivation
+         with the app's, so the app clears it rather than holding a stale one. */
+      values.chemical = chemical;
+      values.stockConcentrationGPerL = c;
+      values.selectedPotencyDkhPerMl = null;
+      values.potencyStatedValue = c;
+    } else if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
+      const stated = parseFloat(per100L);
+      const v = potencyForThisTank(stated, netVolumeL);
+      if (v == null) { setStrengthMsg("Enter your net volume above first."); return; }
+      values.selectedPotencyDkhPerMl = v;
+      values.potencyStatedValue = stated;
+    } else {
+      const v = parseFloat(facts.selectedPotencyDkhPerMl);
+      if (!Number.isFinite(v)) { setStrengthMsg("Enter a number."); return; }
+      values.selectedPotencyDkhPerMl = v;
+      values.potencyStatedValue = v;
+    }
+    values.potencyStatedAs = form;
+    await onSaveConfig(values);
+    setStrengthMsg("Saved.");
+    setTimeout(() => setStrengthMsg(""), 2500);
+  };
+
+  /* The dose in force. This is the field whose absence stopped the engine
+     working out consumption at all — see `lib/record.js` `recordDoseState`. */
+  const standing = newestFirst.length ? newestFirst[0].to : null;
+  const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
+  const [currentMsg, setCurrentMsg] = useState("");
+
+  /* What the card says about itself when it is shut: the two facts whose
+     absence stops the engine answering, named rather than counted. */
+  const dosingSubtitle = useMemo(() => {
+    const bits = [];
+    const hasStrength = config
+      && (config.selectedPotencyDkhPerMl != null
+        || (config.chemical != null && config.stockConcentrationGPerL != null));
+    if (!hasStrength) bits.push("solution strength needed");
+    if (standing == null) bits.push("current dose needed");
+    return bits.length ? bits.join(" · ") : `${fmtAmount(standing)} mL/day`;
+  }, [config, standing]);
+
+  const saveCurrent = async () => {
+    const v = parseFloat(current);
+    if (!Number.isFinite(v)) { setCurrentMsg("Enter a number."); return; }
+    await onSetStandingDose(v);
+    setCurrentMsg(t("dosing.currentSaved"));
+    setTimeout(() => setCurrentMsg(""), 2500);
+  };
 
   return (
     <div>
@@ -152,17 +247,153 @@ export function Setup({ config, onSaveConfig, paramDefs = [],
         {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
       </SetupSection>
 
-      {/* ---- dose changes, ABOVE dosing setup ---------------------------- */}
-      <SetupSection icon={Plus} category="Dosing" colour="#1D6FA5"
-        heading="Dose changes"
-        subtitle={newestFirst.length ? `${newestFirst.length} recorded` : "none recorded"}
-        open={openId === "dosechanges"} onToggle={() => toggle("dosechanges")}>
-        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-          Every change to the daily dose, newest first. The date and time matter: the engine
-          measures the tank's response from the moment the change took effect, so a change made
-          at 9am and one made at 9pm are not the same change.
-        </p>
+      {/* ---- ONE dosing section -----------------------------------------
 
+           `17-DOSING-TAB-SPEC.md`'s companion rule for Setup: one dosing
+           section, and never the same question twice in different clothes.
+           Solution strength, the dose in force, the pump's step and the record
+           of every change are one thing the keeper sets up, so they are one
+           card.
+
+           DELIVERY METHOD IS NOT ASKED. The application handles pump-delivered
+           maintenance dosing only; corrections may be by hand, maintenance is
+           not. There is no choice to make, so there is no question — and
+           nothing that can afterwards be reported as "not recorded". */}
+      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
+        heading="Dosing"
+        subtitle={dosingSubtitle}
+        open={openId === "dosing"} onToggle={() => toggle("dosing")}>
+
+        <div className="flex gap-1.5 mb-3">
+          {DOSED.map((k) => {
+            const def = paramDefs.find((d) => d.key === k);
+            if (!def) return null;
+            return (
+              <button key={k} onClick={() => setDosedKey(k)}
+                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
+                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
+                         color: dosedKey === k ? def.color : "#45605F" }}>
+                {def.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {!(dosedDef && dosedDef.assessed) ? (
+          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
+            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
+            build, so there is nothing here to set up yet. Its readings are logged and charted like
+            every other parameter's.
+          </p>
+        ) : (
+          <>
+            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
+            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
+            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
+              {t("dosing.strengthLead")}
+            </p>
+            <div className="flex gap-1.5 mb-2.5">
+              {Object.keys(POTENCY_FORM).map((k) => (
+                <button key={k} onClick={() => setForm(POTENCY_FORM[k])}
+                  className="flex-1 rounded-lg py-1.5 px-1 text-[10px] font-extrabold border-2 leading-tight"
+                  style={{ borderColor: form === POTENCY_FORM[k] ? "#0B7C86" : "#E3ECEA",
+                           color: form === POTENCY_FORM[k] ? "#0B7C86" : "#45605F" }}>
+                  {t(`dosing.form.${POTENCY_FORM[k]}`)}
+                </button>
+              ))}
+            </div>
+
+            {form === POTENCY_FORM.GRAMS_PER_LITRE && (
+              <>
+                <Field label={t("dosing.chemical")} className="mb-2">
+                  <select className={inputCls} value={chemical}
+                    onChange={(e) => setChemical(e.target.value)}>
+                    {CHEMICALS.map((c) => (
+                      <option key={c.key} value={c.key}>{t(c.label)}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("dosing.gPerL")} className="mb-2">
+                  <input type="number" inputMode="decimal" className={inputCls}
+                    value={gPerL} onChange={(e) => setGPerL(e.target.value)} />
+                </Field>
+              </>
+            )}
+
+            {form === POTENCY_FORM.DKH_PER_ML && (
+              <Field label={t("dosing.dkhPerMl")} className="mb-2">
+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
+                  value={facts.selectedPotencyDkhPerMl}
+                  onChange={(e) => setFacts({ ...facts, selectedPotencyDkhPerMl: e.target.value })} />
+              </Field>
+            )}
+
+            {form === POTENCY_FORM.DKH_PER_ML_PER_100L && (
+              <Field label={t("dosing.dkhPerMlPer100L")} className="mb-2">
+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
+                  value={per100L} onChange={(e) => setPer100L(e.target.value)} />
+              </Field>
+            )}
+
+            {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
+            <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
+              {derived.kind === "stated" && t("dosing.statedDirectly")}
+              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtVal(derived.value, 4) })}
+              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtVal(derived.value, 4), volume: fmtAmount(derived.volume) })}
+              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
+              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
+            </p>
+            <Btn className="w-full" onClick={saveStrength}>
+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
+            </Btn>
+            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
+
+            {/* ---- the dose in force -------------------------------------- */}
+            <div className="border-t border-app mt-4 pt-3">
+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.currentHead")}</h4>
+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
+                {t("dosing.currentLead")}
+              </p>
+              <Field label={t("dosing.current")} className="mb-2">
+                <input type="number" inputMode="decimal" step="0.01" className={inputCls}
+                  value={current} onChange={(e) => setCurrent(e.target.value)} />
+              </Field>
+              <p className="text-[11px] font-bold text-ink2 mb-2">
+                {standing != null ? t("dosing.currentOnRecord", { dose: fmtAmount(standing) }) : t("dosing.currentNone")}
+              </p>
+              {standing != null && (
+                <p className="text-[11px] font-medium text-ink2 leading-relaxed mb-2">
+                  {t("dosing.currentUseChange")}
+                </p>
+              )}
+              <Btn className="w-full" onClick={saveCurrent}>
+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
+              </Btn>
+              {currentMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{currentMsg}</p>}
+            </div>
+
+            {/* ---- the pump's step ---------------------------------------- */}
+            <div className="border-t border-app mt-4 pt-3">
+              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
+                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
+                  <input type="number" inputMode="decimal" className={inputCls}
+                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
+                    placeholder={t(f.hint)} />
+                </Field>
+              ))}
+              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
+              </Btn>
+            </div>
+
+            {/* ---- every change to the dose ------------------------------- */}
+            <div className="border-t border-app mt-4 pt-3">
+              <h4 className="text-[13px] font-black text-ink mb-1">Dose changes</h4>
+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
+                Every change to the daily dose, newest first. The date and time matter: the engine
+                measures the tank's response from the moment the change took effect, so a change made
+                at 9am and one made at 9pm are not the same change.
+              </p>
         <button onClick={() => setDcOpen((v) => !v)}
           className="w-full flex items-center justify-between gap-2 rounded-xl border border-app px-3 py-2.5 mb-3">
           <span className="text-[12px] font-extrabold text-teal-brand">Record a dose change</span>
@@ -226,48 +457,8 @@ export function Setup({ config, onSaveConfig, paramDefs = [],
             ))}
           </div>
         )}
-      </SetupSection>
-
-      {/* ---- dosing setup, collapsed by default, set once ---------------- */}
-      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
-        heading="Dosing setup"
-        subtitle="solution strength and pump increment"
-        open={openId === "dosingsetup"} onToggle={() => toggle("dosingsetup")}>
-        <div className="flex gap-1.5 mb-3">
-          {DOSED.map((k) => {
-            const def = paramDefs.find((d) => d.key === k);
-            if (!def) return null;
-            return (
-              <button key={k} onClick={() => setDosedKey(k)}
-                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
-                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
-                         color: dosedKey === k ? def.color : "#45605F" }}>
-                {def.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {dosedDef && dosedDef.assessed ? (
-          <>
-            {KEEPER_FACTS.filter((f) => f.key === "selectedPotencyDkhPerMl" || f.key === "recommendationPrecisionMlPerDay").map((f) => (
-              <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-                <input type="number" inputMode="decimal" className={inputCls}
-                  value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-                  placeholder={t(f.hint)} />
-              </Field>
-            ))}
-            <Btn className="w-full mt-2"
-              onClick={() => saveFacts(["selectedPotencyDkhPerMl", "recommendationPrecisionMlPerDay"])}>
-              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-            </Btn>
+            </div>
           </>
-        ) : (
-          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
-            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
-            build, so there is nothing here to set up yet. Its readings are logged and charted like
-            every other parameter's.
-          </p>
         )}
       </SetupSection>
 

@@ -925,6 +925,372 @@ export const STRINGS = Object.freeze({
   "fact.rangeLowHint": "The bottom of the band you are aiming to hold.",
   "fact.rangeHigh": "Target range, high",
   "fact.rangeHighHint": "The top of it.",
+
+  /* ==========================================================================
+     THE DOSING TAB
+     --------------------------------------------------------------------------
+     Written by `jake` for this tab, on the engine's real output for the owner's
+     tank, with authority to settle the wording. Applied as written.
+
+     Three conventions hold across every string below, and the call sites obey
+     them:
+
+       - PROSE NEVER PRINTS A MINUS SIGN. A slope is a magnitude and the
+         direction is a word: "falling 0.030 dKH a day". Box values may keep the
+         sign; sentences may not.
+       - In prose, "a day". In box values, "dKH/day".
+       - Rounding belongs to the call site: dKH 2 dp, mL/day 2 dp,
+         dKH/day 3 dp, percentages whole.
+     ====================================================================== */
+
+  /* ---- the three summary boxes ---------------------------------------- */
+  "dosing.summary.alk": "Alkalinity",
+  "dosing.summary.ca": "Calcium",
+  "dosing.summary.mg": "Magnesium",
+  /* Stands alone by design. No sub-line, no "coming soon", no last value
+     dressed up as a status — the box says the one true thing and stops. */
+  "dosing.summary.noEngine": "No engine yet",
+
+  /* ---- the wide status box --------------------------------------------
+     Rendered `{value} · {position} · {trend}`. Every one of the three phrases
+     names its own subject, so any two can be read alone: "not clear yet" on
+     its own was the defect this replaces. Safety says nothing here. */
+  "dosing.status.value": ({ value }) => `${value} dKH`,
+  "dosing.status.join": ({ parts }) => parts.join(" · "),
+
+  "dosing.status.pos.below": "below your range",
+  "dosing.status.pos.in": "in your range",
+  "dosing.status.pos.above": "above your range",
+  "dosing.status.pos.unknown": "not placed against your range",
+
+  "dosing.status.trend.falling": ({ slope }) => `alkalinity falling ${slope} dKH a day`,
+  "dosing.status.trend.rising": ({ slope }) => `alkalinity rising ${slope} dKH a day`,
+  "dosing.status.trend.flat": "alkalinity holding steady",
+  "dosing.status.trend.uncertain": "no clear alkalinity trend yet",
+  "dosing.status.trend.fallingPlain": "alkalinity falling",
+  "dosing.status.trend.risingPlain": "alkalinity rising",
+
+  "dosing.status.measured": ({ date, time }) => `Measured ${date} at ${time}`,
+  "dosing.status.measuredDateOnly": ({ date }) => `Measured ${date} · time of day not recorded`,
+  "dosing.status.noReading": "No alkalinity reading yet",
+  "dosing.status.noReadingSub": "Log a test and this box fills in.",
+
+  /* ---- the recommendation, as prose -----------------------------------
+     Where a verdict on the last change exists it is the FIRST sentence of the
+     body, under the headline and before the arithmetic: "did the last thing I
+     did work?" is the question a keeper arrives with. It never becomes its own
+     headline — the headline is always the action. */
+
+  "dosing.reco.increase.head": ({ dose }) => `Increase to ${dose} mL/day`,
+  "dosing.reco.increase.where": ({ value, slope }) =>
+    `Alkalinity is ${value} dKH, below your range, and falling ${slope} dKH a day. `,
+  "dosing.reco.increase.gap": ({ consumption, current, supplied, gap }) =>
+    `Your tank is using ${consumption} dKH a day and ${current} mL/day supplies ${supplied} — ` +
+    `about ${gap} dKH a day short. `,
+  "dosing.reco.increase.step": ({ delta, effect }) =>
+    `Another ${delta} mL/day adds ${effect} dKH a day. `,
+  /* Not decoration. Without it the screen shows a 0.030 shortfall and a step
+     that closes half of it, and looks like an arithmetic error. */
+  "dosing.reco.increase.sizedFrom": ({ supported, observed }) =>
+    `The step is sized from ${supported} dKH a day, the part of the ${observed} the readings can ` +
+    `actually stand behind, so it is deliberately smaller than the raw drift would suggest. `,
+  "dosing.reco.increase.after": ({ postSlope }) =>
+    `That should leave alkalinity falling about ${postSlope} dKH a day instead.`,
+  "dosing.reco.increase.afterLevel": "That should bring alkalinity close to level.",
+
+  "dosing.reco.decrease.head": ({ dose }) => `Reduce to ${dose} mL/day`,
+  "dosing.reco.decrease.where": ({ value, slope }) =>
+    `Alkalinity is ${value} dKH, above your range, and rising ${slope} dKH a day. `,
+  "dosing.reco.decrease.whereIn": ({ value, slope }) =>
+    `Alkalinity is ${value} dKH, in your range, and rising ${slope} dKH a day. `,
+  "dosing.reco.decrease.gap": ({ consumption, current, supplied, gap }) =>
+    `Your tank is using ${consumption} dKH a day and ${current} mL/day supplies ${supplied} — ` +
+    `about ${gap} dKH a day more than it needs. `,
+  "dosing.reco.decrease.step": ({ delta, effect }) =>
+    `Taking ${delta} mL/day off removes ${effect} dKH a day. `,
+  "dosing.reco.decrease.sizedFrom": ({ supported, observed }) =>
+    `The step is sized from ${supported} dKH a day, the part of the ${observed} the readings can ` +
+    `actually stand behind, so it is deliberately smaller than the raw drift would suggest. `,
+  "dosing.reco.decrease.after": ({ postSlope }) =>
+    `That should leave alkalinity rising about ${postSlope} dKH a day instead.`,
+  "dosing.reco.decrease.afterLevel": "That should bring alkalinity close to level.",
+
+  "dosing.reco.hold.head": ({ dose }) => `Hold at ${dose} mL/day`,
+  "dosing.reco.hold.matching": ({ consumption, supplied }) =>
+    `Your tank is using ${consumption} dKH a day and your dose supplies ${supplied}. ` +
+    `The dose is matching consumption. `,
+  "dosing.reco.hold.withinVariation": ({ slope }) =>
+    `Alkalinity is moving ${slope} dKH a day, which is within normal test variation. ` +
+    `Nothing that small can be told apart from the tests themselves. `,
+  "dosing.reco.hold.towardRange": ({ value }) =>
+    `Alkalinity is ${value} dKH and already heading back toward your range on the dose you are on. ` +
+    `Adding to it now would push past the far side. `,
+  "dosing.reco.hold.roundsToCurrent": ({ rawDelta, step }) =>
+    `The figures justify ${rawDelta} mL/day, and your pump moves in steps of ${step} mL. ` +
+    `That rounds back to the dose you are already on. `,
+  "dosing.reco.hold.isARecommendation":
+    "A hold is a recommendation. The app looked and found nothing worth changing.",
+
+  "dosing.reco.verdict.worked": ({ date, from, to, slopeBefore, slopeSince }) =>
+    `The change you made on ${date}, from ${from} to ${to} mL/day, worked: alkalinity was falling ` +
+    `${slopeBefore} dKH a day before it and is ${slopeSince} a day since. `,
+  "dosing.reco.verdict.workedRising": ({ date, from, to, slopeBefore, slopeSince }) =>
+    `The change you made on ${date}, from ${from} to ${to} mL/day, worked: alkalinity was rising ` +
+    `${slopeBefore} dKH a day before it and is ${slopeSince} a day since. `,
+  "dosing.reco.verdict.partly": ({ date, from, to, slopeBefore, slopeSince }) =>
+    `The change you made on ${date}, from ${from} to ${to} mL/day, moved things the right way but ` +
+    `not far enough: ${slopeBefore} dKH a day before it, ${slopeSince} a day since. `,
+  "dosing.reco.verdict.didNot": ({ date, from, to, expected, slopeSince }) =>
+    `The change you made on ${date}, from ${from} to ${to} mL/day, did not do what it was meant to. ` +
+    `It predicted ${expected} dKH a day and the readings since show ${slopeSince}. ` +
+    `What follows is sized from what actually happened, not from what was expected. `,
+  "dosing.reco.verdict.tooEarly": ({ date, from, to }) =>
+    `Too early to say whether the change you made on ${date}, from ${from} to ${to} mL/day, worked — ` +
+    `not enough has happened since it to tell its effect apart from ordinary test variation. `,
+  "dosing.reco.verdict.tooEarlyWhen": ({ date }) => `A test on or after ${date} should settle it. `,
+  "dosing.reco.verdict.confounded": ({ date }) =>
+    `The change you made on ${date} cannot be graded. Something else happened in the same window, ` +
+    `and the app will not credit the change with a result that may not be its. `,
+  "dosing.reco.verdict.unknownTime": ({ date }) =>
+    `The change recorded on ${date} cannot be graded, because the time it took effect is not known. ` +
+    `Nothing can be measured from a moment the app does not have. `,
+  "dosing.reco.verdict.expired":
+    "The watching window on the last change closed without a verdict. It is not counted either way. ",
+
+  /* No "you need 4 readings over 5 days" anywhere below. Evidence minima are
+     canon's, and a sentence here asserting one would be a chemistry rule
+     living in the strings file. */
+  "dosing.reco.fresh.head": "Not enough yet to size a dose",
+  "dosing.reco.fresh.body": ({ n }) =>
+    `You have ${n} alkalinity reading${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
+    `and tell the app what your pump is set to — those two things are all it needs. ` +
+    `The recommendation appears here on its own when your readings can carry one.`,
+  "dosing.reco.fresh.bodyNone":
+    "No alkalinity readings are recorded yet. Log tests as you do them, and tell the app what your " +
+    "pump is set to — those two things are all it needs. The recommendation appears here on its own " +
+    "when your readings can carry one.",
+  "dosing.reco.fresh.nothingWrong":
+    "Nothing is wrong and there is nothing to fix. A dose sized from one or two readings would be a " +
+    "guess with a decimal point on it.",
+  "dosing.reco.fresh.needsFacts": ({ list }) => `The app also has not been told: ${list}.`,
+
+  "dosing.reco.note":
+    "This is what is recommended. The app cannot see your pump and does not record the change as made " +
+    "until you say so.",
+  "dosing.reco.showWorking": "Show working",
+  "dosing.reco.why": "Why?",
+  "dosing.reco.changeAnyway": "Change the dose anyway",
+
+  /* ---- the three boxes -------------------------------------------------
+     "Current calculated consumption" became "What your tank uses": "calculated"
+     is the app talking about itself, and the sub-line already says where the
+     figure came from. */
+  "dosing.boxes.uses": "What your tank uses",
+  "dosing.boxes.usesSub": "dKH/day, from your readings and what was dosed",
+  "dosing.boxes.supplies": "What your dose supplies",
+  "dosing.boxes.suppliesSub": ({ dose, potency }) =>
+    `dKH/day, from ${dose} mL/day at ${potency} dKH per mL`,
+  "dosing.boxes.difference": "The difference",
+
+  "dosing.boxes.diff.short": ({ gap }) => `${gap} dKH/day short`,
+  "dosing.boxes.diff.shortSub": "your dose supplies less than the tank uses",
+  "dosing.boxes.diff.excess": ({ gap }) => `${gap} dKH/day in excess`,
+  "dosing.boxes.diff.excessSub": "your dose supplies more than the tank uses",
+  "dosing.boxes.diff.matching": "dosing is matching consumption",
+  "dosing.boxes.diff.matchingSub": "no difference the readings can show",
+
+  "dosing.boxes.notWorkedOut": "Not worked out",
+  "dosing.boxes.notWorkedOutSub": ({ missing }) => `needs ${missing}`,
+
+  /* ---- the potency estimator ------------------------------------------- */
+  "dosing.potency.title": "Your solution's real strength",
+  "dosing.potency.agrees": ({ periods, learned, entered }) =>
+    `Your tank's response across ${periods} dosing periods puts the real effect at about ${learned} dKH ` +
+    `per mL, against the ${entered} you entered, which agrees closely.`,
+  "dosing.potency.differsSome": ({ periods, learned, entered, pct }) =>
+    `Your tank's response across ${periods} dosing periods puts the real effect at about ${learned} dKH ` +
+    `per mL, against the ${entered} you entered — ${pct}% apart. Worth watching; the app is still using ` +
+    `the figure you entered and will not overwrite it.`,
+  "dosing.potency.differsALot": ({ periods, learned, entered, pct }) =>
+    `Your tank's response across ${periods} dosing periods puts the real effect at about ${learned} dKH ` +
+    `per mL, against the ${entered} you entered — ${pct}% apart, which is a real disagreement. ` +
+    `Check the recipe, the batch and your net water volume; one of those three is usually behind it. ` +
+    `The app is still using the figure you entered and will not overwrite it.`,
+  "dosing.potency.notYet": ({ entered }) =>
+    `Not enough yet to check your solution against your tank. That needs readings either side of a dose ` +
+    `change big enough to read the response from. Until then every figure here is built on the ` +
+    `${entered} dKH per mL you entered.`,
+  /* The one that ships for the owner's tank today: `potencyLearningState` is
+     `CAPABILITY_GATED`, so `notYet` would be a lie of omission — it implies the
+     check arrives with more data, and in this build it will not. */
+  "dosing.potency.off": ({ entered }) =>
+    `This build does not check your solution's strength against your tank — that is switched off by ` +
+    `design, not missing. Every figure here is built on the ${entered} dKH per mL you entered.`,
+
+  /* ---- show working ----------------------------------------------------
+     Arithmetic and nothing else. No footer note, no restatement of the
+     recommendation, no list of rules that did not fire. */
+  "dosing.working.uses": "What your tank uses",
+  "dosing.working.movement": "The movement we can stand behind",
+  "dosing.working.dose": "The dose",
+  "dosing.working.readings": "The readings used",
+
+  "dosing.working.uses.falling": ({ dose, potency, supplied, slope, consumption }) =>
+    `${dose} mL/day at ${potency} dKH per mL puts in ${supplied} dKH a day. Your readings fell ` +
+    `${slope} dKH a day over the same stretch. The tank used both: ${supplied} + ${slope} = ` +
+    `${consumption} dKH a day.`,
+  "dosing.working.uses.rising": ({ dose, potency, supplied, slope, consumption }) =>
+    `${dose} mL/day at ${potency} dKH per mL puts in ${supplied} dKH a day. Your readings rose ` +
+    `${slope} dKH a day over the same stretch, so the tank used less than went in: ${supplied} − ` +
+    `${slope} = ${consumption} dKH a day.`,
+  "dosing.working.uses.flat": ({ dose, potency, supplied, consumption }) =>
+    `${dose} mL/day at ${potency} dKH per mL puts in ${supplied} dKH a day, and your readings held ` +
+    `level, so the tank used what went in: ${consumption} dKH a day.`,
+  "dosing.working.uses.doseFrom": ({ dose }) =>
+    `The ${dose} mL/day is the schedule you told the app your pump is running.`,
+  /* Must not claim the figure was derived from a recipe the app does not hold:
+     `POTENCY_SELECTED_THEORETICAL`'s payload carries `chemical` and
+     `concentrationGPerL` as UNKNOWN whenever the keeper stated a potency
+     directly. "The figure you entered" is what is true. */
+  "dosing.working.uses.potencyFrom": ({ potency }) =>
+    `The ${potency} dKH per mL is the figure you entered at setup, not one measured from this tank.`,
+
+  "dosing.working.movement.line": ({ observed, margin, supported }) =>
+    `Your readings drift ${observed} dKH a day. ${margin} of that is inside the uncertainty of the ` +
+    `readings themselves, and it is taken off rather than assumed away: ${observed} − ${margin} = ` +
+    `${supported} dKH a day. Only that second figure sizes a dose change.`,
+  /* Pre-empts the keeper who works out first-minus-last and gets a different
+     number. The counts ("n=10, 45 pairwise slopes") are method trivia and go. */
+  "dosing.working.movement.method":
+    "The drift is the middle of every pair of your readings, so one odd result cannot drag it.",
+  "dosing.working.movement.floor": ({ scatter, floor }) =>
+    `Your readings scattered ${scatter} dKH, less than the ${floor} an alkalinity test is worked to, ` +
+    `so ${floor} was used instead. That is why the figure taken off is larger than your own scatter.`,
+
+  "dosing.working.dose.line": ({ supported, potency, rawDelta, step, delta, current, dose }) =>
+    `Closing ${supported} dKH a day at ${potency} dKH per mL needs ${rawDelta} mL/day. Your pump ` +
+    `moves in steps of ${step} mL, so that rounds to ${delta}: ${current} + ${delta} = ${dose} mL/day.`,
+  "dosing.working.dose.lineDown": ({ supported, potency, rawDelta, step, delta, current, dose }) =>
+    `Removing ${supported} dKH a day at ${potency} dKH per mL needs ${rawDelta} mL/day. Your pump ` +
+    `moves in steps of ${step} mL, so that rounds to ${delta}: ${current} − ${delta} = ${dose} mL/day.`,
+  "dosing.working.dose.after": ({ dose, postSlope, observed }) =>
+    `At ${dose} mL/day the tank should drift about ${postSlope} dKH a day instead of ${observed}.`,
+  "dosing.working.dose.capped": ({ uncapped, dose }) =>
+    `The figures alone gave ${uncapped} mL/day. Each step is kept modest, so the recommendation is ` +
+    `${dose}.`,
+
+  "dosing.working.readings.line": ({ n, span, first, last }) =>
+    `${n} readings over approximately ${span}, from ${first} to ${last}.`,
+  "dosing.working.readings.lineOne": ({ first }) => `One reading, on ${first}.`,
+
+  "dosing.working.excluded.tooClose": ({ date }) =>
+    `The ${date} reading wasn't used — it was taken too close to the one before it.`,
+  "dosing.working.excluded.noTime": ({ date }) =>
+    `The ${date} reading wasn't used — it has a date but no time of day, so the gap to the next one ` +
+    `isn't a known length of time. It stays in your history.`,
+  "dosing.working.excluded.invalid": ({ date }) =>
+    `The ${date} reading wasn't used — you marked it invalid.`,
+  "dosing.working.excluded.beforeChange": ({ date }) =>
+    `Readings before ${date} weren't used — the dose changed then, and the stretch starts clean.`,
+  "dosing.working.excluded.confounded": ({ from, to }) =>
+    `Readings between ${from} and ${to} weren't used — something happened in that window that the ` +
+    `trend can't be read through.`,
+
+  /* Days in words, to the nearest half day. Never "4.99 days". */
+  "dosing.span.halfDay": "half a day",
+  "dosing.span.oneDay": "one day",
+  "dosing.span.oneAndHalf": "a day and a half",
+  "dosing.span.word": ({ word }) => `${word} days`,
+  "dosing.span.wordAndHalf": ({ word }) => `${word} and a half days`,
+  "dosing.span.numeric": ({ n }) => `${n} days`,
+
+  /* ---- when the app cannot state anything ------------------------------
+     The button reads "Why?", and the panel names what is missing and stops.
+     More than two missing items is not a wording problem, it is the setup
+     screen; the panel links there rather than listing five nouns. */
+  "dosing.why.oneMissing": ({ a }) => `One thing is missing: ${a}.`,
+  "dosing.why.twoMissing": ({ a, b }) => `Two things are missing: ${a} and ${b}.`,
+  "dosing.why.manyMissing": "Several things are still missing. Setup lists them.",
+  "dosing.why.nothingElse": "Nothing else is holding this up.",
+
+  "dosing.why.item.readings": "more alkalinity readings, a few days apart",
+  "dosing.why.item.doseState": "what your pump is set to",
+  "dosing.why.item.potency": "how much one millilitre of your solution raises this tank",
+  "dosing.why.item.volume": "your net water volume",
+  "dosing.why.item.range": "the target range you are aiming to hold",
+  "dosing.why.item.pumpStep": "the smallest step your pump makes",
+  "dosing.why.item.doseTime": "when the last dose change actually took effect",
+  "dosing.why.item.time": ({ date }) => `a test on or after ${date}`,
+
+  /* ---- the severity pills ----------------------------------------------
+     `INFO`, `LIMITING` and `BLOCKING` are programming language. Each pill below
+     answers one question — what did this do to the answer? — so the three read
+     as a scale a keeper can order at a glance. "Limited this" also already
+     exists in the app's voice (`assessment.missing.limits`), so the tab is not
+     inventing a second dialect. */
+  "dosing.pill.info": "No effect",
+  "dosing.pill.limiting": "Limited this",
+  "dosing.pill.blocking": "Stopped this",
+
+  /* ---- correction in progress ------------------------------------------ */
+  "dosing.correction.title": "Correction in progress",
+  "dosing.correction.body": ({ date, from, to }) =>
+    `You changed the dose on ${date}, from ${from} to ${to} mL/day, and the app is watching what ` +
+    `alkalinity does next.`,
+  "dosing.correction.ends":
+    "This ends on its own — when the dose settles, or when a new change starts a new one. " +
+    "There is nothing here to cancel.",
+  "dosing.correction.nextTest": ({ date }) => `The next useful test is ${date}.`,
+
+  "dosing.graph.7": "7 days",
+  "dosing.graph.14": "14 days",
+  "dosing.graph.aria": "How long a stretch to show",
+
+  "dosing.fresh.sentence":
+    "There is not enough yet to size a dose — keep logging your alkalinity tests, and the recommendation " +
+    "will appear here on its own when your readings can carry one.",
+
+  /* ---- the dosing section: one fact, three ways of saying it ------------
+     Grams per litre of soda ash and dKH per millilitre are the same fact in
+     different clothes. Setup asks once and derives the rest, and says which
+     figure it derived and from what. */
+  "dosing.strengthHead": "How strong is your solution?",
+  "dosing.strengthLead":
+    "Grams per litre and dKH per millilitre are the same fact said two ways. Tell the app "
+    + "whichever you know and it works out the rest.",
+  "dosing.form.GRAMS_PER_LITRE": "Grams per litre",
+  "dosing.form.DKH_PER_ML": "dKH per mL",
+  "dosing.form.DKH_PER_ML_PER_100L": "dKH per mL per 100 L",
+  "dosing.chemical": "What is in it",
+  "dosing.gPerL": "Grams per litre of solution",
+  "dosing.dkhPerMl": "dKH per mL, in this tank",
+  "dosing.dkhPerMlPer100L": "dKH per mL per 100 L",
+  "dosing.derivedFromEngine": ({ value }) =>
+    `Worked out from what you entered: ${value} dKH per mL in this tank.`,
+  "dosing.derivedFromVolume": ({ value, volume }) =>
+    `Worked out for your ${volume} L: ${value} dKH per mL.`,
+  "dosing.derivedNeedsVolume":
+    "Enter your net volume above and the app can work out what that is for this tank.",
+  "dosing.derivedAfterSave":
+    "Save it and the app will show you what one millilitre gives in this tank.",
+  "dosing.statedDirectly": "This is the figure the app uses, exactly as you typed it.",
+  "chem.na2co3": "Soda ash (Na₂CO₃)",
+  "chem.nahco3": "Baking soda (NaHCO₃)",
+  "chem.naoh": "Caustic soda (NaOH)",
+  "chem.commercial": "A bought product",
+
+  "dosing.currentHead": "What your pump is running now",
+  "dosing.currentLead":
+    "The daily dose your doser is set to at this moment. The app needs it to work out what "
+    + "your tank uses — without it there is nothing to weigh the readings against.",
+  "dosing.current": "Daily dose (mL/day)",
+  "dosing.currentOnRecord": ({ dose }) => `On record: ${dose} mL/day.`,
+  "dosing.currentNone": "Nothing on record yet.",
+  "dosing.currentUseChange":
+    "There is already a dose on record. If you have changed it, record the change below with "
+    + "the date it happened — that way the app knows which readings sit either side of it.",
+  "dosing.currentSaved": "Recorded.",
+
   "fact.potency": "Solution strength",
   "fact.potencyHint": "How much one millilitre raises this tank.",
   "fact.pumpStep": "Smallest step your pump makes",

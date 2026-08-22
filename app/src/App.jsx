@@ -17,7 +17,7 @@ import {
   chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
-  recordDoseChange, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
+  recordDoseChange, recordDoseState, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
   recordReading, recordWaterChange, markInvalid,
 } from './lib/record.js'
 import { createStore } from './store/index.js'
@@ -342,6 +342,18 @@ export function ReefConsoleInner() {
     notify("Dose change recorded");
     const def = paramDefs.find((d) => d.key === "ALK");
     setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
+    assess();
+  };
+
+  /* The dose the keeper says his pump is running now. Stage 1 established, by
+     measurement, that the engine had no readable record of this at all on a
+     V1-imported history — and without it `consumption` is `NOT_RUN` and every
+     figure that depends on it is withheld. */
+  const setStandingDose = async (doseMlPerDay) => {
+    try { await recordDoseState(store, { doseMlPerDay }); }
+    catch (e) { setStorageMsg(e && e.message); return; }
+    await reload();
+    notify("Current dose recorded");
     assess();
   };
 
@@ -707,7 +719,9 @@ export function ReefConsoleInner() {
 
           {tab === "setup" && (
             <Setup config={config} onSaveConfig={saveConfig} paramDefs={paramDefs}
+              engineResult={engineResult}
               doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
+              onSetStandingDose={setStandingDose}
               lightingChanges={lightingChanges}
               hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}
               onRestoreAllNotices={restoreAllNotices}
