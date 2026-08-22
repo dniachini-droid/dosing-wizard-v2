@@ -252,6 +252,12 @@ s.test("RL-05", "a reading that was one of several says so, and names the figure
   ok(/episodeForReading\(episodes, r\.id\)/.test(lab), "each row asks whether it was grouped");
   ok(/testlab\.partOf\./.test(lab), "and says so where it was");
   ok(/ep\.valueDkh/.test(lab), "naming the figure the engine used");
+  /* And the answer comes from the episode rather than being fixed. A constant
+     here reads as "no reading was ever grouped", which is a sentence about the
+     tank and would be false. */
+  const rows = lab.slice(lab.indexOf("function ReadingRows"), lab.indexOf("export function TestLab"));
+  const decided = /const grouped = [^;]*\bep\b[^;]*;/.exec(rows);
+  ok(decided, `whether a row is grouped is read off its episode: ${(/const grouped = [^;]*/.exec(rows) || [])[0]}`);
 });
 
 export default s;
