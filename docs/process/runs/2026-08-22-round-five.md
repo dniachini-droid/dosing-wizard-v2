@@ -112,10 +112,104 @@ read ticks and noticed; five read readings and had nothing to notice.
 
 ---
 
+## The unimpressed reefkeeper
+
+He was run on this round's work before the pull request was opened, as the owner
+asked, with the app running in a browser he could drive and a written summary of
+what was in the tank's data. **Twenty-three findings.** What follows is all of
+them, with what happened to each.
+
+### Fixed
+
+| # | What he found | What changed |
+|---|---|---|
+| 1 | Tapping any parameter card on a tank with no readings took the whole application down | **Mine**, introduced with the fix for finding 25: `latestShown` was lifted out of the guard that exists for the empty case. Put back, and `EP-13` now covers the empty branch |
+| 2 | Set the tank up, save 77 L, import history — and the volume is gone, silently | The import wrote its planned volume unconditionally, and an absence written over a number is a deletion. An import may ADD what the record lacks; it may not remove what is there (`IMP-44`) |
+| 3 | The parameter sheet's Latest/Min/Max/Median and its in-range count described raw measurements while the chart above them described tests | Both read the one resolved set now — the sheet describes the very array the chart is drawn from (`EP-14`) |
+| 4 | The median of an even number of measurements was the lower of the two middle ones | It is their average. `middleValue` in `present/spread.js` |
+| 5 | A negative solution strength was shown as an observation | Suppressed. A strength below zero is not a thing a bottle can have |
+| 6 | Blockers the keeper could actually clear were listed among things he could not | `KEEPER_CAN_ACT` splits them |
+| 7 | "The readings used" counted test runs and called them readings | It counts tests; it says tests, and says why the number can be smaller than his list |
+| 8 | "The full result is in the developer view at the foot of this screen" — there is no developer view | Three further sentences named the same imaginary surface and were never rendered at all. `STR-11` refuses any sentence that names a screen the application does not have |
+| 9 | Water changes showed `undefined` litres, and a task read `t-skimmer` | A key mismatch the round exposed by making water changes visible at all; and the raw task id where a name should be |
+| 10 | The Test tab's own row printed the ledger's last measurement | `shownReading` asks the episode index what that reading resolved to. Same for the Dosing tab's "Measured … at 09:07" line, which took its instant from the ledger's last row while the figure above it came from the test (`EP-15`) |
+| 11 | The confirmation popup's headline figure counted through readings from weeks ago for four and a half seconds | A line moving is a drawing; a number moving is a claim. The dot still travels (`VP-11`) |
+| 12 | The two range handles could coincide and strand each other against the ceiling | The handle with room to move is the one on top (`SC-11`) |
+| 13 | "Saved." over empty required fields | It refuses to say it |
+| 14 | "dosing is matching consumption" beside two boxes plainly showing a difference | The engine's margin is still the verdict; where he can SEE the gap, the gap is named (`DOS-12`) |
+| 16 | The tab went on offering a dose he had already set, so he set it again and the history recorded a change from 9.0 to 9.0 | `alreadyAtDose`, beside the rule that decides whether a saved dose was the recommendation (`DD-15`) |
+| 17 | The baseline of his whole imported history was stamped today | The import seeded "what was running" from the LATEST row on record — a figure he had typed minutes earlier — so the oldest change in his history was a move away from a number that did not exist when it happened (`IMP-45`) |
+| 19 | A card with no readings said nothing about having none | `card.status.noReadings` |
+| 21 | Fifty-four controls under 44px across five surfaces, on an app used one-handed with wet fingers | Measured in a browser by `tools/app/check-touch.mjs`, fixed, and the floor set in the two places every screen is built from (`VP-10`) |
+| 22 | `9.10dKH`, `0.30dKH spread`, `target range 8.60–9.20dKH` | The same app spells `9.10 dKH` correctly in a dozen sentences: the decision lived in the sentences and the markup never learned it. One owner now (`SC-12`) |
+
+Two more, found in a screenshot rather than by him, while verifying his:
+
+- the blocker's sentences were joined with nothing — "…can carry one.Nothing is
+  wrong…";
+- three template literals ran a figure into its unit through a spelling the
+  first version of `SC-12` did not cover. The check was widened before the fix
+  was kept.
+
+### To the owner, not settled here
+
+The brief named three kinds of finding that come to the owner rather than being
+decided: anything touching chemistry or the canon, anything he flagged as "was
+this decided?", and anything where he gave two options rather than one answer.
+These are those.
+
+**15 — no warning on a large jump.** He expected the app to say something when a
+recommended dose moves a long way in one step. How far is a long way is a
+threshold about alkalinity, thresholds about alkalinity are canon's, and there
+is none. The engine already caps a step (`MAINTENANCE_STEP_CAP_APPLIED`) and the
+app states when it has; what he is asking for is a second, larger figure that
+nobody has stated.
+
+**18 — no way to record a water change.** True: they arrive by import and are
+drawn on the chart, and there is no form. Whether this build should grow one is
+a scope decision, not a defect — and a water change entered by hand becomes an
+input the engine reads through a segment boundary, so it is not a small form.
+
+**23 — "Tight control" on a 0.10 dKH range.** The three width thresholds are the
+owner's own, stated by him for alkalinity in dKH, and 0.10 falls in the tightest
+band by his own rule. The reefkeeper's point is that a 0.10 range is one nobody
+sets on purpose — it is what you get by dragging two handles together. That is a
+FOURTH threshold ("below this, you have not set a range"), and it is his to
+state.
+
+**20 — the register.** He wrote out a table of wordings he would accept in place
+of "the app", "the engine" and "we". It is the same sweep already recorded below
+as the largest thing left open: roughly 180 sentences. His table is the missing
+half of it — the register stated once — and it should govern that pass rather
+than be spent in a tail-end sweep. **Not done. It is the next round's first
+commit, and it now has a specification.**
+
+---
+
 ## The conformance gate
 
 **RED, unchanged.** Baseline taken before any work: 31 fixture failures, 5 check
 failures, 8 invariant failures, reporting `NO ENGINE SUPPLIED` because it is run
-without the `--engine` argument. This round changed none of those counts. The
-application suite is the gate this round moved: 259 checks green, 281 mutations
-defined and all caught.
+without the `--engine` argument. This round changed none of those counts, and
+none of this round's work touched the engine.
+
+The application suite is the gate this round moved: **273 checks green, 300
+mutations defined and every one caught.** Three browser checks stand behind the
+things a source scan cannot see:
+
+    node tools/app/check-viewport.mjs     the bar, the sheets, the close control
+    node tools/app/check-touch.mjs        every control, measured against 44px
+    node tools/app/check-offline.mjs      the shell, with the network off
+
+### A hole in the harness, found by the arm itself
+
+`AM-R55` named `IMP-40` and stayed green through a mutation that plainly broke
+the check written for it. There were TWO tests called `IMP-40` — the one written
+for the defect, and one about reminder counts written months earlier. The runner
+keys results by identifier, so the second silently overwrote the first, and
+every question asked about that name was answered about the wrong test.
+`META-01` would have counted the id as covered, too.
+
+`META-03` refuses duplicates now. Worth saying plainly: **the duplicate PASSED**.
+Had the reminders test been the one failing, the volume test's green would have
+hidden it.
