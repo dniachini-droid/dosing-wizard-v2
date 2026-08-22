@@ -373,7 +373,12 @@ export function spanInWords(days) {
   if (half === 1) return t("dosing.span.oneDay");
   if (half === 1.5) return t("dosing.span.oneAndHalf");
   const whole = Math.floor(half);
-  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(half) });
+  /* Past fourteen the span goes back to a numeral, and it is rounded from the
+     ORIGINAL rather than from `half`. Rounding twice — to the nearest half day
+     and then to the nearest whole — turns 20.4 days into 21, which is a 3%
+     error introduced by the formatting itself. Item 4's whole point is that a
+     number renders to the precision it is known to. */
+  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(d) });
   return half === whole
     ? t("dosing.span.word", { word: NUMBER_WORD[whole] })
     : t("dosing.span.wordAndHalf", { word: NUMBER_WORD[whole] });

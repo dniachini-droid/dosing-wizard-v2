@@ -159,6 +159,18 @@ s.test("DOS-06", "a span of days renders in plain English, never as a raw decima
   eq(spanInWords(1.5), "a day and a half", "a half span");
   eq(spanInWords(0.0004976851851851852), "half a day", "and the raw precision defect itself");
   ok(!/\d/.test(spanInWords(3.5)), `no digits below fifteen days: "${spanInWords(3.5)}"`);
+
+  /* Past fourteen it goes back to a numeral, and it must not round TWICE —
+     to the nearest half day and then to the nearest whole. That turns 20.4
+     days into 21, a 3% error introduced by the formatting itself, which is
+     precisely what item 4 exists to stop. */
+  eq(spanInWords(20.4), "20 days", "a long span rounds from the original, not from the half-rounded figure");
+  eq(spanInWords(20.6), "21 days", "and still rounds up when it should");
+
+  /* And a figure it cannot render is withheld rather than guessed at. */
+  for (const bad of [null, undefined, NaN, -1, "5"]) {
+    eq(spanInWords(bad), null, `${JSON.stringify(bad)} is not a span and produces nothing`);
+  }
 });
 
 s.test("DOS-07", "an INFO code that carries no calculation never reaches the screen", () => {

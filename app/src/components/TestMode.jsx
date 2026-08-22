@@ -51,18 +51,34 @@ export function TestMode({ onModeChange }) {
   const goTo = () => { const next = setTestInstant({ date, time }); setDate(next.date); setTime(next.time); refresh(); };
 
   /* The series is PREVIEWED before it is written. `plan` and `summarise` are
-     the seeding module's own; nothing here decides what a line means. */
+     the seeding module's own; nothing here decides what a line means, and both
+     of `plan`'s outputs are read — it returns `{ planned, problems }`, and a
+     caller that reads only the first silently previews a plan the seeder has
+     already refused. */
   const look = () => {
-    const { rows, problems } = parseSeries(series);
+    const parsed = parseSeries(series);
+    if (parsed.problems.length) { setPreview({ problems: parsed.problems }); return; }
+    const { planned, problems } = plan(parsed.rows);
     if (problems.length) { setPreview({ problems }); return; }
-    const planned = plan(rows);
     setPreview({ planned, summary: summarise(planned) });
   };
 
+  /* `applySeries` THROWS on a problem rather than returning one, and
+     deliberately: it raises before the loop so nothing is half-written, and
+     its own comment explains that a refusal from the middle would leave the
+     keeper holding every earlier line twice when he pasted the fixed text
+     again. So the throw is caught here and shown, not left to the boundary. */
   const add = async (store) => {
-    const { rows, problems } = parseSeries(series);
-    if (problems.length) { setMsg(t("testmode.series.fixFirst")); return; }
-    const written = await applySeries(store, rows, { config: null });
+    const parsed = parseSeries(series);
+    if (parsed.problems.length) { setMsg(t("testmode.series.fixFirst")); return; }
+    let written;
+    try {
+      written = await applySeries(store, parsed.rows, { config: null });
+    } catch (e) {
+      setPreview({ problems: (e && e.problems) || [{ line: 0, why: (e && e.message) || "" }] });
+      setMsg(t("testmode.series.fixFirst"));
+      return;
+    }
     setMsg(t("testmode.series.added", { n: written.length }));
     setSeries(""); setPreview(null);
     refresh();

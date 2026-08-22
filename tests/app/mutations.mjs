@@ -157,6 +157,14 @@ export const MUTATIONS = [
     breaks: ["DOS-06"],
   },
   {
+    id: "AM-D11",
+    why: "a long span is rounded twice — to the nearest half day and then to the nearest whole — so 20.4 days renders as 21, a 3% error introduced by the formatter that item 4 exists to prevent",
+    file: "app/src/present/dosing-tab.js",
+    find: '  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(d) });',
+    replace: '  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(half) });',
+    breaks: ["DOS-06"],
+  },
+  {
     id: "AM-D7",
     why: "every INFO code reaches the screen again, including the engine narrating its own filing — CONFIG_VERSION_RESOLVED, AUDIT_TRACE_WRITTEN and the rest",
     file: "app/src/present/dosing-tab.js",
