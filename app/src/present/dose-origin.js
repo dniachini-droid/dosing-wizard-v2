@@ -34,6 +34,22 @@ export function originOf(suggested, saved) {
   return same ? DOSE_ORIGIN.RECOMMENDATION : DOSE_ORIGIN.RECOMMENDATION_ADJUSTED;
 }
 
+/* IS THE RECOMMENDATION THE DOSE HE IS ALREADY ON?
+
+   REEFKEEPER FINDING 16. He took the recommendation, set 9.0, and the tab went
+   on offering "Set the dose to 9.0 mL/day" — because the engine's answer does
+   not change until readings taken on the new dose arrive, which is correct of
+   the engine and unreadable on the screen. He set it again. The history then
+   carried a change from 9.0 to 9.0.
+
+   Same comparison as `originOf`, at the precision the figure is shown in, and
+   deliberately the same function's neighbour: two answers to "are these the
+   same dose" that could drift apart is the defect this file exists to avoid. */
+export function alreadyAtDose(suggested, standing) {
+  if (suggested == null || standing == null) return false;
+  return fmtQty(suggested, "mlPerDay") === fmtQty(standing, "mlPerDay");
+}
+
 export function originSentence(origin) {
   if (origin === DOSE_ORIGIN.RECOMMENDATION) return t("dose.origin.recommendation");
   if (origin === DOSE_ORIGIN.RECOMMENDATION_ADJUSTED) return t("dose.origin.adjusted");

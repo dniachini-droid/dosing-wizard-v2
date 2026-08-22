@@ -7,7 +7,7 @@ import { QuickLog } from './LogReadingSheet.jsx'
 import { RemindersPanel, TodayPanel } from './TodayPanel.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { ChevronDown, ChevronUp, RotateCcw, Save, Settings2, X } from '../icons.jsx'
-import { fmtVal } from '../lib/format.js'
+import { fmtVal, fmtWithUnit } from '../lib/format.js'
 import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 import { rowsFor, untimedCount } from '../lib/adapt.js'
@@ -355,6 +355,10 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
      it is inside a guard for that: a regression the reefkeeper found on the
      first tap of a new install took the whole application down. */
   const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
+  /* The whole log, resolved the same way, so "12 of 40" counts the same kind of
+     thing on both sides of the "of". */
+  const allTests = useMemo(
+    () => chartGroupsFrom(allRows, episodes, fmtShort).length, [allRows, episodes]);
 
   useEscape(onClose);
 
@@ -416,11 +420,11 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
               <h2 className="text-2xl font-display text-ink">{def.label}</h2>
               <div className="text-[11px] text-ink2 font-bold mt-0.5">
                 {range
-                  ? `target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}${def.unit}`
-                  : "no target range set"} · {rows.length} of {allRows.length} readings
+                  ? `target range ${fmtVal(def, def.min)}–${fmtWithUnit(def, def.max)}`
+                  : "no target range set"} · {chartData.length} of {allTests} tests
                 {isCustom && <span className="ml-1 text-teal-brand">· custom</span>}
               </div>
-              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
+              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 min-h-[44px] text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
                 <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
               </button>
             </div>
@@ -476,7 +480,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                       <span className={`text-[11px] font-extrabold ${active ? "text-teal-brand" : "text-ink"}`}>{label}</span>
                     </div>
                     <div className="text-[11px] font-bold text-ink mt-0.5 truncate">
-                      {c ? `${fmtVal(def, c.spread)}${def.unit} spread` : "no data"}
+                      {c ? `${fmtWithUnit(def, c.spread)} spread` : "no data"}
                     </div>
                     <div className="text-[10px] font-semibold text-ink2">
                       {c ? (c.pct == null ? `${c.n} reading${c.n === 1 ? "" : "s"}` : `${c.pct}% in range`) : "—"}
@@ -527,7 +531,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                     {winLabel}
                   </span>
                   <span className="text-[12px] font-black text-ink">
-                    usually {fmtVal(def, stats.p05)}–{fmtVal(def, stats.p95)}{def.unit}
+                    usually {fmtVal(def, stats.p05)}–{fmtWithUnit(def, stats.p95)}
                   </span>
                 </div>
 
@@ -537,7 +541,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                     <div className="h-full rounded-full" style={{ width: "100%", background: def.color + "55" }} />
                   </div>
                   <span className="text-[10px] font-bold w-24 text-right shrink-0" style={{ color: def.color }}>
-                    {fmtVal(def, stats.spread)}{def.unit} spread
+                    {fmtWithUnit(def, stats.spread)} spread
                   </span>
                 </div>
 
@@ -561,7 +565,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                 )}
 
                 <button onClick={() => setDetailOpen((v) => !v)}
-                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 border-t"
+                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 min-h-[44px] border-t"
                   style={{ borderColor: def.color + "26" }}>
                   <span className="text-[11px] font-extrabold" style={{ color: def.color }}>
                     {detailOpen ? "Hide detail" : "Where these figures come from"}

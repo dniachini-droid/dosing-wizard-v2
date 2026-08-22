@@ -322,12 +322,22 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
               cannot land on top of the trend arrow. Nested inside the card's
               own button, so it stops the event to log rather than open. */}
           {onLog && (
+            /* REEFKEEPER FINDING 21. Drawn at 18px and hit at 18px: the
+               smallest control in the application, on the card he taps most,
+               used one-handed at the tank with wet fingers. The BADGE is still
+               18px — it is a marker on a dense card and making it big would
+               take the card's room. The TARGET is 44, and the negative margin
+               gives the header row its spacing back, so the finger has
+               somewhere to land and the picture is unchanged. */
             <span role="button" tabIndex={0}
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onLog(def.key); }}
               aria-label={`Log a ${def.label.toLowerCase()} reading`}
-              className="shrink-0 rounded-md flex items-center justify-center cursor-pointer"
-              style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
-              <Plus size={11} strokeWidth={3} />
+              className="shrink-0 flex items-center justify-center cursor-pointer -my-[13px] -mr-[13px]"
+              style={{ width: 44, height: 44 }}>
+              <span className="rounded-md flex items-center justify-center"
+                style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
+                <Plus size={11} strokeWidth={3} />
+              </span>
             </span>
           )}
         </div>
@@ -408,7 +418,9 @@ export function Btn({ children, onClick, variant = "primary", type = "button", c
   };
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={`px-3.5 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
+      /* REEFKEEPER FINDING 21. Every button in the application comes through
+         here, so the floor is set here once rather than on each of them. */
+      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
       {children}
     </button>
   );
@@ -423,7 +435,7 @@ export function Field({ label, children, className = "" }) {
   );
 }
 
-export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
+export const inputCls = "w-full min-w-0 max-w-full min-h-[44px] bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
 
 /* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
 

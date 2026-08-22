@@ -149,4 +149,47 @@ s.test("VP-09", "the close control on a sheet is pinned outside the scrolling co
   ok(closeAt < scroller, "and outside the box that scrolls");
 });
 
+s.test("VP-10", "the shared controls carry the touch floor, so nothing has to remember it", () => {
+  /* REEFKEEPER FINDING 21. Fifty-four controls across five surfaces were under
+     44px, measured in a real browser at a phone size by
+     `tools/app/check-touch.mjs` — which is the half of this that matters and
+     the half that cannot run everywhere.
+
+     This is the half that stops it coming back through a file the browser check
+     never opens. It pins the floor where it is set ONCE — the button every
+     screen builds on, and the input class every field uses — rather than
+     counting `min-h` classes across the application, which would go green the
+     day somebody added one to the wrong element. */
+  const de = read("app/src/components/DoseExpectation.jsx");
+  const btn = de.slice(de.indexOf("export function Btn"), de.indexOf("export function Field"));
+  ok(/min-h-\[44px\]/.test(btn), "every button in the application starts at 44px tall");
+  const input = /export const inputCls = "([^"]+)"/.exec(de);
+  ok(input, "there is one class for a field");
+  ok(/min-h-\[44px\]/.test(input[1]), "and it starts at 44px tall too");
+
+  /* And the close control every sheet is escaped by, which is its own element
+     and not built on either of those. */
+  const close = read("app/src/components/SheetClose.jsx");
+  ok(/w-11 h-11/.test(close), "the sheet's close control is 44px square");
+});
+
+s.test("VP-11", "the figure on the confirmation popup is the reading, and it does not move", () => {
+  /* REEFKEEPER FINDING 11. The headline number was drawn from the sparkline's
+     travelling dot, so for four and a half seconds a popup headed "Reading
+     saved" counted through readings from weeks ago at 34px in the tank's own
+     colour. He watched it settle and could not say what it had settled on.
+
+     A LINE MOVING IS A DRAWING. A NUMBER MOVING IS A CLAIM: every frame of it
+     is a figure the app is putting on screen as this tank's alkalinity, and
+     none of them was measured just now. The dot still travels. */
+  const rc = read("app/src/components/ReadingConfirmation.jsx")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+  const headline = rc.slice(rc.indexOf('className="rc-sheen"'), rc.indexOf('className="rc-sheen"') + 200);
+  ok(/fmtVal\(def, value\)/.test(headline), "the figure is the reading that was saved");
+  ok(!/progress/.test(headline), `and nothing about it is read from the clock: ${headline.trim().slice(0, 80)}`);
+  /* The drawing is still on the clock — removing the animation was never the
+     fix, and a check that passed once it was gone would invite that. */
+  ok(/progress=\{progress\}/.test(rc), "the sparkline still animates");
+});
+
 export default s;

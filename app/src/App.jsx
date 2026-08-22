@@ -960,7 +960,7 @@ export function ReefConsoleInner() {
                 <div className="flex gap-1.5">
                   {[["tests", "My tests", readings.length], ["icp", "ICP panels", icps.length]].map(([k, label, n]) => (
                     <button key={k} onClick={() => setTestTab(k)}
-                      className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
+                      className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
                       style={{ borderColor: testTab === k ? "#0B7C86" : "#E3ECEA",
                                color: testTab === k ? "#0B7C86" : "#45605F",
                                background: testTab === k ? "#0B7C8610" : "#fff" }}>
@@ -969,7 +969,7 @@ export function ReefConsoleInner() {
                   ))}
                 </div>
                 <button onClick={() => setAllGraphs(true)}
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
+                  className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
                   style={{ borderColor: "#E3ECEA", color: "#45605F" }}>
                   All graphs
                 </button>

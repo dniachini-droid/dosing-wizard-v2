@@ -3,7 +3,7 @@ import { DeleteControl } from './DeleteControl.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
-import { fmtVal, fmtTime } from '../lib/format.js'
+import { fmtVal, fmtTime, fmtWithUnit } from '../lib/format.js'
 import { nowTime } from '../lib/clock.js'
 import { useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
@@ -187,13 +187,13 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Date</span>
             <input type="date" value={date} max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
           </label>
           <label className="block">
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Time</span>
             <input type="time" value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
           </label>
         </div>
       </div>
@@ -224,7 +224,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
               style={{ background: rowBg, borderLeft: `3px solid ${stripe}`,
                        opacity: idle ? 0.62 : 1 }}>
               <div className="flex items-center gap-2">
-                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left">
+                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left min-h-[44px]">
                   <div className="flex items-center gap-1.5">
                     {doneToday ? (
                       <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 tp-tick"
@@ -248,14 +248,14 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                     style={{ color: doneToday ? "#0B7C86" : "#45605F" }}>
                     {doneToday ? (
                       <span className="font-extrabold">
-                        Done · {fmtVal(def, last.value)}{def.unit}
+                        Done · {fmtWithUnit(def, last.value)}
                         {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
                         {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
                       </span>
                     ) : (
                       <>
                         {last
-                          ? `last ${fmtVal(def, last.value)}${def.unit} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
+                          ? `last ${fmtWithUnit(def, last.value)} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
                           : "no readings yet"}
                         {st && st.daysOut > 0 && (
                           <span className="ml-1">· next {fmtShort(st.due)}</span>
@@ -269,7 +269,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                   value={values[def.key] ?? ""} onChange={(e) => setVal(def.key, e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") log(def); }}
                   placeholder={def.unit}
-                  className="w-20 shrink-0 rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
+                  className="w-20 shrink-0 min-h-[44px] rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
 
                 <button onClick={() => log(def)} disabled={!filled}
                   className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-extrabold transition-colors"
@@ -296,7 +296,9 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                   aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
                     { parameter: def.labelMid || def.label.toLowerCase() })}
                   aria-expanded={openKey === def.key}
-                  className="shrink-0 p-1.5 rounded-lg text-ink2 active:bg-app">
+                  /* REEFKEEPER FINDING 21: 27px, beside seven others like it,
+                     on a list read one-handed at the tank. */
+                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-ink2 active:bg-app">
                   {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 </button>
               </div>
@@ -374,7 +376,7 @@ export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOp
                   <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                 </span>
                 <span className="text-[11px] font-bold text-ink2 shrink-0">
-                  {fmtVal(def, data[data.length - 1].value)}{def.unit}
+                  {fmtWithUnit(def, data[data.length - 1].value)}
                   {def.min != null && def.max != null
                     ? ` · target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}`
                     : ""}

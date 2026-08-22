@@ -2239,8 +2239,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `1a6a86043e462c07afc87954516c8018abd804be5f8366cc43c463fa8c2c1557` |
-| Differences | 13 |
+| Ported SHA-256 | `64de189754b5c3f1a2f6fe6f9daddc946f77de6366edb75ff21dbe6dcf17f16a` |
+| Differences | 15 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
 
@@ -2614,10 +2614,41 @@ Byte-identical to V1.
            {/* Sits in the header row rather than floating over the card, so it
 ```
 
-12. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
+12. **defect fixed — owner finding 17: a short number should look like one. A net volume is three digits and a pump step is two, and both had a box the width of the phone.**
 
 ```diff
-@@ -268,44 +335,49 @@
+@@ -255,12 +322,22 @@
+               cannot land on top of the trend arrow. Nested inside the card's
+               own button, so it stops the event to log rather than open. */}
+           {onLog && (
++            /* REEFKEEPER FINDING 21. Drawn at 18px and hit at 18px: the
++               smallest control in the application, on the card he taps most,
++               used one-handed at the tank with wet fingers. The BADGE is still
++               18px — it is a marker on a dense card and making it big would
++               take the card's room. The TARGET is 44, and the negative margin
++               gives the header row its spacing back, so the finger has
++               somewhere to land and the picture is unchanged. */
+             <span role="button" tabIndex={0}
+               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onLog(def.key); }}
+               aria-label={`Log a ${def.label.toLowerCase()} reading`}
+-              className="shrink-0 rounded-md flex items-center justify-center cursor-pointer"
+-              style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
+-              <Plus size={11} strokeWidth={3} />
++              className="shrink-0 flex items-center justify-center cursor-pointer -my-[13px] -mr-[13px]"
++              style={{ width: 44, height: 44 }}>
++              <span className="rounded-md flex items-center justify-center"
++                style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
++                <Plus size={11} strokeWidth={3} />
++              </span>
+             </span>
+           )}
+         </div>
+```
+
+13. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
+
+```diff
+@@ -268,44 +345,49 @@
          <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
            <div className="flex items-baseline gap-1">
              <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
@@ -2691,13 +2722,31 @@ Byte-identical to V1.
            )}
 ```
 
-13. **defect fixed — owner finding 17: a short number should look like one. A net volume is three digits and a pump step is two, and both had a box the width of the phone.**
+14. **defect fixed — controls under the 44px touch floor, measured in a browser at 390x844 (reefkeeper finding 21)**
 
 ```diff
-@@ -352,3 +424,18 @@
+@@ -336,7 +418,9 @@
+   };
+   return (
+     <button type={type} onClick={onClick} disabled={disabled}
+-      className={`px-3.5 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
++      /* REEFKEEPER FINDING 21. Every button in the application comes through
++         here, so the floor is set here once rather than on each of them. */
++      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
+       {children}
+     </button>
+   );
+```
+
+15. **defect fixed — controls under the 44px touch floor, measured in a browser at 390x844 (reefkeeper finding 21)**
+
+```diff
+@@ -351,4 +435,19 @@
+   );
  }
  
- export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
+-export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
++export const inputCls = "w-full min-w-0 max-w-full min-h-[44px] bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
 +
 +/* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
 +
@@ -2871,7 +2920,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6e3afc520f3ea9c578d157ee1f654a5cc8e5d820d0dd3ad74520c480e963c51a` |
 | V1 blob | `93ec64d731adde6d4ec2173be8841468a7a03cd2` |
-| Ported SHA-256 | `998d4250b8eb45d0bc4150500dcf4ac66ca5a3f9773a87beb81beeb4a40b5beb` |
+| Ported SHA-256 | `89c321567d24ce883c8fbd1d1a155ea8155575b32a4a4959f486b1c3ff59224e` |
 | Differences | 7 |
 
 1. **data source rewired — imports repointed onto V2's formatting and task store; V1's findings, narrative engine and stability rules deleted**
@@ -2885,7 +2934,7 @@ Byte-identical to V1.
  import { Check } from '../icons.jsx'
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { fmtFriendly } from '../lib/analytics/water-changes.js'
-+import { fmtVal, fmtFriendly } from '../lib/format.js'
++import { fmtVal, fmtFriendly, fmtWithUnit } from '../lib/format.js'
  import { useEscape } from '../lib/backup.jsx'
 -import { SAFE_BOUNDS } from '../lib/findings.js'
 -import { isCorrectionState } from '../lib/narrative-engine.js'
@@ -3306,7 +3355,7 @@ Byte-identical to V1.
 +   forbids", and its instruction is "Keep the moment; rebuild the reasoning."
  
 +   That is what has happened. The moment is here in full — the timing, the
-+   easing, the one progress value driving chart, dot and counter, the closing
++   easing, the one progress value driving the chart and the dot, the closing
 +   countdown with its shrinking bar, the tap-to-keep-open. Every word it says
 +   arrives as a prop, from `app/src/present/`, out of what V2's engine
 +   returned. This file no longer contains a single sentence about what a
@@ -3350,10 +3399,33 @@ Byte-identical to V1.
       eight more to actually look at the result. */
 ```
 
-3. **wording replaced with engine output — the moment's headline and line arrive as a prop built from the engine's answer; where the engine has not answered yet it acknowledges the save and claims nothing**
+3. **wording replaced with engine output — the emoji and the celebration burst removed; the brief rules out emojis, ticks, confetti and stars**
 
 ```diff
-@@ -510,9 +122,16 @@
+@@ -464,9 +76,14 @@
+       ? readingGeometry(result.def, series, 260, 108, 12) : null),
+     [result, series]);
+ 
+-  /* One clock for everything. The dot's position, the length of drawn line and
+-     the number on screen are all read from this single progress value, so they
+-     move as one rather than as three animations that happen to start together. */
++  /* One clock for the DRAWING. The dot's position and the length of drawn line
++     are read from this single progress value, so they move as one rather than
++     as two animations that happen to start together.
++
++     The figure on screen is deliberately not on this clock — see finding 11
++     below. V1 counted it up along the line and it was one of the things this
++     rebuild was told to keep; it turned out to be one of the things worth
++     losing. */
+   const [progress, setProgress] = useState(0);
+   const [sheenDone, setSheenDone] = useState(false);
+   const landed = progress >= 1;
+```
+
+4. **wording replaced with engine output — the moment's headline and line arrive as a prop built from the engine's answer; where the engine has not answered yet it acknowledges the save and claims nothing**
+
+```diff
+@@ -510,9 +127,16 @@
  
    if (!result || !result.def) return null;
  
@@ -3375,10 +3447,10 @@ Byte-identical to V1.
      <div className="fixed inset-0 flex items-center justify-center p-5" onClick={onClose}
 ```
 
-4. **wording replaced with engine output — the emoji and the celebration burst removed; the brief rules out emojis, ticks, confetti and stars**
+5. **chemistry removed — the previous reading is stated as a fact instead of being compared against `def.step`, which is a noise floor**
 
 ```diff
-@@ -523,9 +142,7 @@
+@@ -523,21 +147,30 @@
  
          {/* A tinted cap so the result reads before any words do. */}
          <div className="px-5 pt-6 pb-5 text-center relative" style={{ background: v.tone + "12" }}>
@@ -3388,13 +3460,22 @@ Byte-identical to V1.
 +          <div className="flex items-baseline justify-center gap-1">
              <span className={`rc-value text-[34px] font-black leading-none tabular-nums${landed && !sheenDone ? " landed" : ""}`}
                style={{ color: v.tone }}>
++              {/* REEFKEEPER FINDING 11. This number used to travel along the
++                  sparkline with the dot, so for four and a half seconds the
++                  headline figure on a confirmation popup counted through
++                  readings from weeks ago — in the tank's colour, at 34px, under
++                  the words "Reading saved". He watched it settle and could not
++                  say what it had settled on.
++
++                  A LINE MOVING IS A DRAWING. A NUMBER MOVING IS A CLAIM. The
++                  dot still travels; the figure is the reading he just typed and
++                  it does not move, because that is the one thing this moment
++                  exists to confirm. */}
                <span className="rc-sheen">
-```
-
-5. **chemistry removed — the previous reading is stated as a fact instead of being compared against `def.step`, which is a noise floor**
-
-```diff
-@@ -535,9 +152,9 @@
+-                {fmtVal(def, geo ? geo.at(progress).value : value)}
++                {fmtVal(def, value)}
+               </span>
+             </span>
              <span className="text-[14px] font-bold text-ink2">{def.unit}</span>
            </div>
            <div className="text-[13px] font-black text-ink mt-1">{def.label}</div>
@@ -3402,7 +3483,7 @@ Byte-identical to V1.
 +          {showPrev && (
              <div className="text-[11px] font-bold text-ink2 mt-1">
 -              {delta > 0 ? "\u2191" : "\u2193"} {fmtVal(def, +Math.abs(delta).toFixed(4))}{def.unit} from {fmtVal(def, prev)}
-+              previous {fmtVal(def, prev)}{def.unit}
++              previous {fmtWithUnit(def, prev)}
              </div>
            )}
  
@@ -3411,7 +3492,7 @@ Byte-identical to V1.
 6. **wording replaced with engine output — the hand-off button's label and variant no longer depend on V1's celebrate verdict**
 
 ```diff
-@@ -563,9 +180,8 @@
+@@ -563,9 +196,8 @@
                never drift out of step with it. */}
            {v.goto === "dosing" && onOpenDosing && (
              <div className="mt-3">
@@ -3428,7 +3509,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the parameter's mid-sentence name comes from the strings file instead of lowercasing its heading form**
 
 ```diff
-@@ -573,7 +189,7 @@
+@@ -573,7 +205,7 @@
            {nextDue && (
              <div className="mt-3 pt-3 border-t border-app" style={{ animationDelay: "500ms" }}>
                <div className="text-[11px] font-bold text-ink2">
@@ -3438,8 +3519,6 @@ Byte-identical to V1.
                <div className="text-[13px] font-black text-ink">
                  {fmtFriendly(nextDue)}
 ```
-
----
 
 ### `app/src/components/TaskCompletion.jsx`
 
@@ -4366,8 +4445,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `5b3c0ceacd39997d0fa2be2456fc8165bbe85fb80d1ca8e75491d7f4cf0d2fab` |
-| Differences | 11 |
+| Ported SHA-256 | `4c64f4ae132cb881a8eff08da29c677e7b74a7aeadf7d3565b9452df0887b72b` |
+| Differences | 10 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
@@ -4391,7 +4470,7 @@ Byte-identical to V1.
 -import { byOldest, fmtTime, windowRows } from '../lib/analytics/time-of-day.js'
 -import { DEFAULT_SETTINGS, fmtFriendly } from '../lib/analytics/water-changes.js'
 +import { ChevronDown, ChevronUp, RotateCcw, Save, Settings2, X } from '../icons.jsx'
-+import { fmtVal } from '../lib/format.js'
++import { fmtVal, fmtWithUnit } from '../lib/format.js'
  import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 -import { addDaysFromToday, fmtShort, paramStatus, todayStr } from '../lib/dates.js'
 -import { findingsFor } from '../lib/dosing/corrected-strength.js'
@@ -4860,7 +4939,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +319,94 @@
+@@ -260,91 +319,98 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4937,6 +5016,10 @@ Byte-identical to V1.
 +     it is inside a guard for that: a regression the reefkeeper found on the
 +     first tap of a new install took the whole application down. */
 +  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
++  /* The whole log, resolved the same way, so "12 of 40" counts the same kind of
++     thing on both sides of the "of". */
++  const allTests = useMemo(
++    () => chartGroupsFrom(allRows, episodes, fmtShort).length, [allRows, episodes]);
  
    useEscape(onClose);
  
@@ -5030,23 +5113,18 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +415,9 @@
+@@ -353,14 +419,18 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
 -                target range {def.min}–{def.max}{def.unit} · {rows.length} of {allRows.length} readings
 +                {range
-+                  ? `target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}${def.unit}`
-+                  : "no target range set"} · {rows.length} of {allRows.length} readings
++                  ? `target range ${fmtVal(def, def.min)}–${fmtWithUnit(def, def.max)}`
++                  : "no target range set"} · {chartData.length} of {allTests} tests
                  {isCustom && <span className="ml-1 text-teal-brand">· custom</span>}
                </div>
-               <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
-```
-
-8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
-
-```diff
-@@ -360,7 +424,9 @@
+-              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
++              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 min-h-[44px] text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
                  <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
                </button>
              </div>
@@ -5059,10 +5137,10 @@ Byte-identical to V1.
            {editing && (
 ```
 
-9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
+8. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +444,16 @@
+@@ -378,10 +448,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -5083,10 +5161,10 @@ Byte-identical to V1.
            )}
 ```
 
-10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
+9. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -395,20 +467,19 @@
+@@ -395,20 +471,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -5102,7 +5180,7 @@ Byte-identical to V1.
                      </div>
                      <div className="text-[11px] font-bold text-ink mt-0.5 truncate">
 -                      {c ? c.metricLabel : "no data"}
-+                      {c ? `${fmtVal(def, c.spread)}${def.unit} spread` : "no data"}
++                      {c ? `${fmtWithUnit(def, c.spread)} spread` : "no data"}
                      </div>
                      <div className="text-[10px] font-semibold text-ink2">
 -                      {c ? `${c.pct}% in range` : "\u2014"}
@@ -5112,10 +5190,10 @@ Byte-identical to V1.
                  );
 ```
 
-11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
+10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -417,280 +488,139 @@
+@@ -417,280 +492,139 @@
            </div>
  
            {rows.length === 0 ? (
@@ -5186,7 +5264,7 @@ Byte-identical to V1.
 +                    {winLabel}
 +                  </span>
 +                  <span className="text-[12px] font-black text-ink">
-+                    usually {fmtVal(def, stats.p05)}–{fmtVal(def, stats.p95)}{def.unit}
++                    usually {fmtVal(def, stats.p05)}–{fmtWithUnit(def, stats.p95)}
 +                  </span>
 +                </div>
 +
@@ -5196,7 +5274,7 @@ Byte-identical to V1.
 +                    <div className="h-full rounded-full" style={{ width: "100%", background: def.color + "55" }} />
                    </div>
 +                  <span className="text-[10px] font-bold w-24 text-right shrink-0" style={{ color: def.color }}>
-+                    {fmtVal(def, stats.spread)}{def.unit} spread
++                    {fmtWithUnit(def, stats.spread)} spread
 +                  </span>
 +                </div>
  
@@ -5284,7 +5362,7 @@ Byte-identical to V1.
 -                      : <ChevronDown size={12} style={{ color: control.tone }} />}
 -                  </button>
 +                <button onClick={() => setDetailOpen((v) => !v)}
-+                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 border-t"
++                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 min-h-[44px] border-t"
 +                  style={{ borderColor: def.color + "26" }}>
 +                  <span className="text-[11px] font-extrabold" style={{ color: def.color }}>
 +                    {detailOpen ? "Hide detail" : "Where these figures come from"}
@@ -5512,8 +5590,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `447d693dcda035938e7c122ec2a3a02ac3bd2569f965d5daeb7b45773d7a3d85` |
-| Differences | 13 |
+| Ported SHA-256 | `158338c734032661ae318bfbba15c3ab9d2a038b77126ad55bdeabfe93482e31` |
+| Differences | 16 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
 
@@ -5527,7 +5605,7 @@ Byte-identical to V1.
 -import { fmtVal } from '../lib/analytics/time-in-range.js'
 -import { byNewest, byOldest, fmtTime, nowTime } from '../lib/analytics/time-of-day.js'
 +import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
-+import { fmtVal, fmtTime } from '../lib/format.js'
++import { fmtVal, fmtTime, fmtWithUnit } from '../lib/format.js'
 +import { nowTime } from '../lib/clock.js'
  import { useEscape } from '../lib/backup.jsx'
  import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
@@ -5705,6 +5783,27 @@ Byte-identical to V1.
 8. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
 
 ```diff
+@@ -119,13 +187,13 @@
+             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Date</span>
+             <input type="date" value={date} max={todayStr()}
+               onChange={(e) => setDate(e.target.value)}
+-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
++              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+           </label>
+           <label className="block">
+             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Time</span>
+             <input type="time" value={time}
+               onChange={(e) => setTime(e.target.value)}
+-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
++              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+           </label>
+         </div>
+       </div>
+```
+
+9. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
+
+```diff
 @@ -132,7 +200,12 @@
  
        <div className="divide-y divide-app">
@@ -5721,23 +5820,60 @@ Byte-identical to V1.
            /* Tested today: the row reads as ticked off rather than merely
 ```
 
-9. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
+10. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
 
 ```diff
-@@ -177,6 +250,7 @@
+@@ -151,7 +224,7 @@
+               style={{ background: rowBg, borderLeft: `3px solid ${stripe}`,
+                        opacity: idle ? 0.62 : 1 }}>
+               <div className="flex items-center gap-2">
+-                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left">
++                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left min-h-[44px]">
+                   <div className="flex items-center gap-1.5">
+                     {doneToday ? (
+                       <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 tp-tick"
+```
+
+11. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+
+```diff
+@@ -175,13 +248,14 @@
+                     style={{ color: doneToday ? "#0B7C86" : "#45605F" }}>
+                     {doneToday ? (
                        <span className="font-extrabold">
-                         Done · {fmtVal(def, last.value)}{def.unit}
+-                        Done · {fmtVal(def, last.value)}{def.unit}
++                        Done · {fmtWithUnit(def, last.value)}
                          {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
 +                        {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
                        </span>
                      ) : (
                        <>
+                         {last
+-                          ? `last ${fmtVal(def, last.value)}${def.unit} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
++                          ? `last ${fmtWithUnit(def, last.value)} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
+                           : "no readings yet"}
+                         {st && st.daysOut > 0 && (
+                           <span className="ml-1">· next {fmtShort(st.due)}</span>
 ```
 
-10. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
+12. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
 
 ```diff
-@@ -206,9 +280,31 @@
+@@ -195,7 +269,7 @@
+                   value={values[def.key] ?? ""} onChange={(e) => setVal(def.key, e.target.value)}
+                   onKeyDown={(e) => { if (e.key === "Enter") log(def); }}
+                   placeholder={def.unit}
+-                  className="w-20 shrink-0 rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
++                  className="w-20 shrink-0 min-h-[44px] rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
+ 
+                 <button onClick={() => log(def)} disabled={!filled}
+                   className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-extrabold transition-colors"
+```
+
+13. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
+
+```diff
+@@ -206,9 +280,33 @@
                      : { background: "#EDF3F2", color: "#9FB0AE" }}>
                    {doneToday && !filled ? "Again" : "Log"}
                  </button>
@@ -5758,7 +5894,9 @@ Byte-identical to V1.
 +                  aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
 +                    { parameter: def.labelMid || def.label.toLowerCase() })}
 +                  aria-expanded={openKey === def.key}
-+                  className="shrink-0 p-1.5 rounded-lg text-ink2 active:bg-app">
++                  /* REEFKEEPER FINDING 21: 27px, beside seven others like it,
++                     on a list read one-handed at the tank. */
++                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-ink2 active:bg-app">
 +                  {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
 +                </button>
 +              </div>
@@ -5772,10 +5910,10 @@ Byte-identical to V1.
          })}
 ```
 
-11. **data source rewired — All graphs builds its series through the read adapter**
+14. **data source rewired — All graphs builds its series through the read adapter**
 
 ```diff
-@@ -219,7 +315,7 @@
+@@ -219,7 +317,7 @@
  
  /* Every chart in one place, stripped of commentary — for when you want to scan
     the tank's whole history rather than study one parameter. */
@@ -5786,10 +5924,10 @@ Byte-identical to V1.
       charts on different timescales invite the wrong conclusion. */
 ```
 
-12. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
+15. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
 
 ```diff
-@@ -229,16 +325,15 @@
+@@ -229,16 +327,15 @@
    const series = paramDefs
      .map((def) => ({
        def,
@@ -5812,15 +5950,15 @@ Byte-identical to V1.
          {/* The header sticks, so the window control stays reachable however far
 ```
 
-13. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+16. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
 
 ```diff
-@@ -279,10 +374,15 @@
+@@ -279,10 +376,15 @@
                    <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                  </span>
                  <span className="text-[11px] font-bold text-ink2 shrink-0">
 -                  {fmtVal(def, data[data.length - 1].value)}{def.unit} · target range {fmtVal(def, def.min)}–{fmtVal(def, def.max)}
-+                  {fmtVal(def, data[data.length - 1].value)}{def.unit}
++                  {fmtWithUnit(def, data[data.length - 1].value)}
 +                  {def.min != null && def.max != null
 +                    ? ` · target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}`
 +                    : ""}
@@ -5843,7 +5981,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `1638a9ec9cc18458cb084f1679d7b4f921fb21a8f0414d492ed5c70def543038` |
 | V1 blob | `205c56b8fe0d98d88631ee5cbd789644dc45318c` |
-| Ported SHA-256 | `85885009bdc3113068fba2cc597bbf4de4ea4a4dd39f9e2f7fc944b61cddb091` |
+| Ported SHA-256 | `da25d2cf556db32bad69cc4c9803ec36845e30cb8b5d41e720728e5b5655998c` |
 | Differences | 4 |
 
 1. **data source rewired — the clock comes from the application's, not V1's time-of-day analytics module**
@@ -5900,7 +6038,12 @@ Byte-identical to V1.
 3. **defect fixed — V1 wrote "Log a alkalinity reading"; the article now follows the word**
 
 ```diff
-@@ -33,7 +39,11 @@
+@@ -29,11 +35,15 @@
+   return (
+     <div className="rounded-xl border border-app overflow-hidden mb-4">
+       <button onClick={() => setOpen((v) => !v)}
+-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left active:bg-app">
++        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] text-left active:bg-app">
          <span className="flex items-center gap-1.5">
            <Plus size={13} style={{ color: def.color }} />
            <span className="text-[12px] font-extrabold" style={{ color: def.color }}>
@@ -5928,8 +6071,6 @@ Byte-identical to V1.
            <div className="grid grid-cols-2 gap-2 mt-2">
              <Field label="Date">
 ```
-
----
 
 ### `app/src/components/IcpPanel.jsx`
 
@@ -6207,27 +6348,28 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `17226b404a667bd33637e58ce36b94419087b4d17f3ef56dd2494f4850d821a8` |
+| Ported SHA-256 | `28841e446a9c3dd5b313e2e9177646289c352c42255f6c829d0665f528320307` |
 | Differences | 3 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,46 +1,60 @@
- import { useState } from 'react'
+@@ -1,46 +1,61 @@
+-import { useState } from 'react'
 -import { Btn, FindingList, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 -import { AlkAssessmentBlock, Card } from './ErrorBoundary.jsx'
 -import { Beaker, ChevronDown, ChevronUp, X } from '../icons.jsx'
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { STATUS_COLOR, paramStatus } from '../lib/dates.js'
 -import { findingsFor } from '../lib/dosing/corrected-strength.js'
++import { useMemo, useState } from 'react'
 +import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 +import { Card } from './ErrorBoundary.jsx'
 +import { ZoomableLineChart } from './ZoomableChart.jsx'
 +import { DeliveredDoseField } from './DeliveredDose.jsx'
 +import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 +import { fmtDate, fmtShort } from '../lib/dates.js'
-+import { chartGroupsFrom } from '../present/episodes.js'
++import { chartGroupsFrom, shownReading } from '../present/episodes.js'
 +import { fmtPotency, fmtQty } from '../lib/format.js'
 +import { positionTone } from '../present/position.js'
 +import {
@@ -6235,6 +6377,7 @@ Byte-identical to V1.
 +  statusParts, whyPanel, working,
 +} from '../present/dosing-tab.js'
 +import { sayPayloadKey, sayPayloadValue, sayReason } from '../present/wording.js'
++import { alreadyAtDose } from '../present/dose-origin.js'
 +import { t } from '../strings.js'
  
 -/* ---------------------------------- Dosing Wizard ---------------------------------- */
@@ -6314,7 +6457,7 @@ Byte-identical to V1.
 2. **chemistry removed — the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes are V1's layout; everything inside is what V2's engine returned**
 
 ```diff
-@@ -47,41 +61,21 @@
+@@ -47,41 +62,21 @@
              <Icon size={11} style={{ color: def.color }} strokeWidth={2.6} />
            </span>
            <span className="text-[11px] font-black text-ink truncate flex-1 min-w-0">{def.label}</span>
@@ -6373,7 +6516,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +82,501 @@
+@@ -88,203 +83,536 @@
    );
  }
  
@@ -6590,7 +6733,7 @@ Byte-identical to V1.
 -      <SectionTitle eyebrow="Two-part" title="Dosing Wizard" />
 +    <div className="mt-2">
 +      <button onClick={() => setOpen((v) => !v)}
-+        className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
++        className="flex items-center gap-1 min-h-[44px] text-[12px] font-extrabold text-teal-brand">
 +        {canExplain ? t("dosing.reco.showWorking") : t("dosing.reco.why")}
 +        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
 +      </button>
@@ -6746,7 +6889,7 @@ Byte-identical to V1.
 +      <div className="flex gap-1.5 mb-2" role="group" aria-label={t("dosing.graph.aria")}>
 +        {[[7, t("dosing.graph.7")], [14, t("dosing.graph.14")]].map(([d, label]) => (
 +          <button key={d} onClick={() => setDays(d)}
-+            className="rounded-lg px-3 py-1.5 text-[11px] font-extrabold border-2"
++            className="rounded-lg px-3 min-h-[44px] text-[11px] font-extrabold border-2"
 +            style={{ borderColor: days === d ? def.color : "#E3ECEA",
 +                     color: days === d ? def.color : "#45605F" }}>
 +            {label}
@@ -6864,11 +7007,22 @@ Byte-identical to V1.
 +  const def = active ? active.def : null;
 +
 +  const rows = readings.filter((r) => def && r.param === def.key);
-+  const latest = def ? latestByParam[def.key] : null;
++  /* THE INSTANT THE FIGURE ABOVE IT WAS TAKEN AT — findings 26 and 28's fifth
++     surface. The headline said 9.10 dKH, the line beneath it said "Measured 19
++     August at 09:08", and 09:08 is when the 10.00 was typed. The figure came
++     from the resolved test at 09:07 and the timestamp came from the ledger's
++     last row: two sources, one sentence. */
++  const latest = shownReading(episodes, def ? latestByParam[def.key] : null);
 +  const assessed = def && def.assessed && engineResult;
 +
 +  const status = assessed ? statusParts(engineResult) : null;
-+  const rec = assessed ? recommendation(engineResult, rows.length) : null;
++  /* TESTS, NOT MEASUREMENTS — reefkeeper findings 3, 7 and 10, on the last
++     surface that still counted the other thing. "You have 7 alkalinity readings
++     recorded" beside a chart drawing five points is the app disagreeing with
++     itself about how much it has been told. */
++  const testCount = useMemo(
++    () => chartGroupsFrom(rows, episodes, fmtShort).length, [rows, episodes]);
++  const rec = assessed ? recommendation(engineResult, testCount) : null;
 +  const three = assessed ? boxes(engineResult) : null;
 +  const potency = assessed ? potencyBox(engineResult, config) : null;
 +
@@ -6953,7 +7107,14 @@ Byte-identical to V1.
 +          {rec && (
 +            <Card className="p-4 mb-4">
 +              <h3 className="text-[17px] font-black text-ink leading-tight mb-1.5">{rec.head}</h3>
-+              <p className="text-[13px] text-ink font-medium leading-relaxed">{rec.body.join("")}</p>
++              {/* JOINED WITH A SPACE, not with nothing. Some of these sentences
++                  carry a trailing space and some do not, so the screen read
++                  "...your readings can carry one.Nothing is wrong..." — found in
++                  a screenshot, not by any check. Trimmed first so the ones that
++                  do carry a space do not end up with two. */}
++              <p className="text-[13px] text-ink font-medium leading-relaxed">
++                {rec.body.map((s) => String(s).trim()).filter(Boolean).join(" ")}
++              </p>
 +              <ShowWorking result={engineResult} config={config} canExplain={rec.canExplain} />
 +              <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
 +                {t("dosing.reco.note")}
@@ -6985,6 +7146,23 @@ Byte-identical to V1.
 +                    <DeliveredDoseField standing={standingDose}
 +                      suggested={rec.suggestedDose} autoFocus compact
 +                      onSave={async (args) => { await onSetDeliveredDose(args); setDoseOpen(false); }} />
++                  </div>
++                ) : alreadyAtDose(rec.suggestedDose, standingDose) ? (
++                  /* REEFKEEPER FINDING 16. He took the recommendation, set 9.0,
++                     and the button went on saying "Set the dose to 9.0 mL/day".
++                     The engine's answer does not move until readings taken on
++                     the new dose arrive — correct of the engine, unreadable on
++                     the screen — so he set it again and the history carried a
++                     change from 9.0 to 9.0. The screen says where he is, and
++                     leaves the door open rather than removing it. */
++                  <div className="mt-3">
++                    <p className="text-[12px] font-bold text-ink leading-relaxed">
++                      {t("dosing.reco.alreadyThere", { dose: fmtQty(standingDose, "mlPerDay") })}
++                    </p>
++                    <button onClick={() => setDoseOpen(true)}
++                      className="text-[11px] font-extrabold text-ink2 underline mt-1 min-h-[44px]">
++                      {t("dosing.reco.changeAnyway")}
++                    </button>
 +                  </div>
 +                ) : (
 +                  <Btn className="w-full mt-3" onClick={() => setDoseOpen(true)}>
@@ -7049,7 +7227,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2482249ce03e14404f2f75c9f72a24d140e695c9de908d878fafec0df747d593` |
 | V1 blob | `83583c09cea5fa4080582555219756f49e0cb2e7` |
-| Ported SHA-256 | `231f55c46c75daf96904e5d907a91494fc1a4830ce603f26a245bee28a7c9158` |
+| Ported SHA-256 | `644677b6ab2d2444eb11a70fad6f0ae174106cf945a4811e38a05e1de612c676` |
 | Differences | 5 |
 
 1. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
@@ -7326,13 +7504,23 @@ Byte-identical to V1.
 5. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
 
 ```diff
-@@ -180,25 +187,144 @@
+@@ -180,25 +187,154 @@
              <input type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)} className={inputCls} />
            </Field>
          </div>
-+        <label className="flex items-center gap-2 mt-2">
-+          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)} />
-+          <span className="text-[12px] font-bold text-ink2">Just the once — turn it off after it is done</span>
++        {/* REEFKEEPER FINDING 21. A 13px checkbox is the browser's default and
++            it is the smallest target in the application. The whole label is the
++            control — a `<label>` wrapping its input already is one — so it is
++            given the height. But the BOX is what the finger lands on, and a
++            check that an ancestor can satisfy proves nothing — nor does a
++            transform, because hit-testing follows the transform and a box
++            scaled to look right is a box that is small again. So it is 44, and
++            it looks like 44. A control that can be hit is worth more than a
++            control that is the size the desktop drew it. */}
++        <label className="flex items-center gap-2 mt-2 min-h-[44px]">
++          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)}
++            className="w-11 h-11 shrink-0 accent-teal-brand" />
++          <span className="text-[13px] font-bold text-ink2">Just the once — turn it off after it is done</span>
 +        </label>
          <Btn onClick={submit} className="w-full mt-3">
 -          <span className="flex items-center justify-center gap-1.5"><Plus size={14} /> Add reminder</span>
@@ -7362,7 +7550,7 @@ Byte-identical to V1.
 +            it would create a wrong record rather than an incomplete one.
 +            Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */}
 +        <button onClick={() => setOoOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app first:border-0">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app first:border-0">
 +          <Plus size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">A one-off addition by hand</span>
 +        </button>
@@ -7397,7 +7585,7 @@ Byte-identical to V1.
 +        )}
 +
 +        <button onClick={() => setLightOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
 +          <SunMedium size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">A lighting change</span>
 +        </button>
@@ -7426,7 +7614,7 @@ Byte-identical to V1.
 +        )}
 +
 +        <button onClick={() => setNoteOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
 +          <StickyNote size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">Something that changed what the tank uses</span>
 +        </button>
@@ -9019,7 +9207,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `3dbffac0860694695dd97446b8f261f725e84bb24b48b75f1ba216818910024d` |
+| Ported SHA-256 | `946413e161276ce449ca02822240fb524262e3a2c536a1bb3167442269f52e53` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -11128,7 +11316,7 @@ Byte-identical to V1.
 +                <div className="flex gap-1.5">
 +                  {[["tests", "My tests", readings.length], ["icp", "ICP panels", icps.length]].map(([k, label, n]) => (
 +                    <button key={k} onClick={() => setTestTab(k)}
-+                      className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
++                      className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
 +                      style={{ borderColor: testTab === k ? "#0B7C86" : "#E3ECEA",
 +                               color: testTab === k ? "#0B7C86" : "#45605F",
 +                               background: testTab === k ? "#0B7C8610" : "#fff" }}>
@@ -11137,7 +11325,7 @@ Byte-identical to V1.
 +                  ))}
 +                </div>
 +                <button onClick={() => setAllGraphs(true)}
-+                  className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
++                  className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
 +                  style={{ borderColor: "#E3ECEA", color: "#45605F" }}>
 +                  All graphs
 +                </button>

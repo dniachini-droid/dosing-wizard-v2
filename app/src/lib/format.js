@@ -17,9 +17,30 @@
 /* A reading, at the precision its parameter is recorded to. `decimals` comes
    from `PARAMETERS` in the ledger, where it sits beside the unit it belongs
    with — it is not a judgement made here. */
+export const EM_DASH = "\u2014";
+
 export function fmtVal(def, v) {
-  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return "—";
+  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return EM_DASH;
   return v.toFixed(def && Number.isFinite(def.decimals) ? def.decimals : 2);
+}
+
+/* A VALUE AND ITS UNIT, WITH THE SPACE BETWEEN THEM — REEFKEEPER FINDING 22.
+
+   `9.10dKH`. `0.20dKH spread`. `usually 8.90–9.20dKH`. Five places on the
+   screens he used ran the figure into its unit, and the same app writes
+   `9.10 dKH` correctly in more than a dozen sentences in `strings.js` — so it
+   is not that nobody decided, it is that the decision lived in the sentences
+   and the markup never learned it.
+
+   It lives here now, and it handles the case that makes hand-written spacing
+   go wrong: pH has NO unit, and `${value} ${""}` leaves a trailing space that
+   pushes a centred figure off-centre. */
+export function fmtWithUnit(def, v) {
+  const shown = fmtVal(def, v);
+  /* An em dash is `fmtVal`'s way of saying there is no figure, and "— dKH" is
+     a unit on a measurement that does not exist. */
+  if (shown === EM_DASH) return shown;
+  return def && def.unit ? `${shown} ${def.unit}` : shown;
 }
 
 /* A SOLUTION STRENGTH, IN dKH PER MILLILITRE — ONE ARGUMENT, SO THERE IS

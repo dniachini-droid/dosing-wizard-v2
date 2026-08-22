@@ -1055,6 +1055,12 @@ export const STRINGS = Object.freeze({
   "dosing.reco.hold.roundsToCurrent": ({ rawDelta, step }) =>
     `The figures justify ${rawDelta} mL/day, and your pump moves in steps of ${step} mL. ` +
     `That rounds back to the dose you are already on. `,
+  /* REEFKEEPER FINDING 16. The engine's recommendation does not move until
+     readings taken on the new dose arrive, so the tab kept offering a dose he
+     had already set. It says where he is instead. */
+  "dosing.reco.alreadyThere": ({ dose }) =>
+    `You are already on ${dose} mL/day. Nothing to change until your next readings come in on it.`,
+
   "dosing.reco.hold.isARecommendation":
     "A hold is a recommendation. The app looked and found nothing worth changing.",
 
@@ -1088,8 +1094,11 @@ export const STRINGS = Object.freeze({
      canon's, and a sentence here asserting one would be a chemistry rule
      living in the strings file. */
   "dosing.reco.fresh.head": "Not enough yet to size a dose",
+  /* TESTS, not measurements — reefkeeper findings 3, 7 and 10. This counted raw
+     readings while the chart beside it drew one point per test, so a keeper who
+     tests in duplicate was told he had more than the app could see. */
   "dosing.reco.fresh.body": ({ n }) =>
-    `You have ${n} alkalinity reading${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
+    `You have ${n} alkalinity test${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
     `and tell the app what your pump is set to — those two things are all it needs. ` +
     `The recommendation appears here on its own when your readings can carry one.`,
   "dosing.reco.fresh.bodyNone":

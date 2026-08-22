@@ -32,7 +32,10 @@ export function SheetClose({ onClose, label = "Close" }) {
     <button
       aria-label={label}
       onClick={onClose}
-      className="absolute top-3 right-3 z-30 rounded-full p-2 bg-card text-ink2 shadow-md border border-app active:opacity-70">
+      /* REEFKEEPER FINDING 21: 36px, and it is the control every sheet is
+         escaped by. The circle is still 36 — the padding around it carries the
+         target to 44 without moving anything. */
+      className="absolute top-1.5 right-1.5 z-30 w-11 h-11 flex items-center justify-center rounded-full bg-card text-ink2 shadow-md border border-app active:opacity-70">
       <X size={18} />
     </button>
   );

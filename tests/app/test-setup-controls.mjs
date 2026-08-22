@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
 import { gradeWidth } from "../../app/src/present/range-grade.js";
+import { fmtWithUnit } from "../../app/src/lib/format.js";
 import { PARAMETERS } from "../../app/src/store/ledger.js";
 
 const s = suite("setup controls");
@@ -130,6 +131,37 @@ s.test("SC-11", "the handle with room to move is the one the thumb lands on", ()
      of them only is the same bug with an extra line. */
   ok(/zIndex: loOnTop \? 3 : 2/.test(slider), "the low handle rises past the middle");
   ok(/zIndex: loOnTop \? 2 : 3/.test(slider), "and the high one falls at the same moment");
+});
+
+s.test("SC-12", "a figure and its unit are not run together", () => {
+  /* REEFKEEPER FINDING 22. `9.10dKH`. `0.20dKH spread`. `usually
+     8.90–9.20dKH`. The same application writes `9.10 dKH` correctly in more
+     than a dozen sentences in `strings.js`, so the decision had been taken —
+     it lived in the sentences and the markup never learned it.
+
+     It has one owner now, and the owner handles the case hand-written spacing
+     gets wrong: pH has no unit, and a trailing space pushes a centred figure
+     off centre. */
+  eq(fmtWithUnit({ decimals: 2, unit: "dKH" }, 9.1), "9.10 dKH", "a space, always");
+  eq(fmtWithUnit({ decimals: 0, unit: "ppm" }, 430), "430 ppm", "for every unit");
+  eq(fmtWithUnit({ decimals: 2, unit: "" }, 8.2), "8.20", "and nothing trailing where there is no unit");
+  eq(fmtWithUnit({ decimals: 2, unit: "dKH" }, null), "\u2014", "and no unit on an em dash");
+
+  /* And no surface may spell it out for itself again. */
+  for (const rel of ["app/src/components/Dashboard.jsx",
+                     "app/src/components/AllParametersSheet.jsx",
+                     "app/src/components/ReadingConfirmation.jsx"]) {
+    const src = code(rel);
+    /* BOTH SPELLINGS. The first version of this check looked only for the JSX
+       one and went green while three template literals on the same screens —
+       `target range 8.60–9.20dKH`, `0.30dKH spread` — still ran them together.
+       A screenshot found them; the check had not. */
+    const run = [
+      ...src.matchAll(/\}\{(?:def|p)\.unit\}/g),
+      ...src.matchAll(/\}\$\{(?:def|p)\.unit\}/g),
+    ].map((m) => m[0]);
+    eq(run.join(", "), "", `${rel} runs a figure into its unit`);
+  }
 });
 
 s.test("SC-08", "reefkeeping units, on every parameter that has one", () => {

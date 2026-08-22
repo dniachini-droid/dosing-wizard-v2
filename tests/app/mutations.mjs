@@ -891,7 +891,7 @@ export const MUTATIONS = [
     id: "AM-42",
     why: "an untranslated payload value is printed verbatim — the leak that reached a real screen during the build",
     file: "app/src/present/wording.js",
-    find: "  if (CONTRACT_SHAPED.test(s)) return null; /* to the developer view instead */",
+    find: "  if (CONTRACT_SHAPED.test(s)) return null; /* not shown at all, rather than shown raw */",
     replace: "  /* mutation: print it anyway */",
     breaks: ["STR-03"],
   },
@@ -2728,6 +2728,59 @@ export const MUTATIONS = [
     find: '    const visibleGap = fmtQty(c, "dkhPerDay") !== fmtQty(supplied, "dkhPerDay");',
     replace: "    const visibleGap = false;",
     breaks: ["DOS-12"],
+  },
+
+  {
+    id: "AM-R63",
+    why: "the Dosing tab goes on offering a dose the keeper has already set, so he sets it again and the history records a change from 9.0 to 9.0 — reefkeeper finding 16",
+    file: "app/src/present/dose-origin.js",
+    find: '  return fmtQty(suggested, "mlPerDay") === fmtQty(standing, "mlPerDay");',
+    replace: "  return false;",
+    breaks: ["DD-15"],
+  },
+
+  {
+    id: "AM-R64",
+    why: "the touch floor comes off the button every screen in the application is built on, so controls go back under 44px everywhere at once — reefkeeper finding 21, which is what standing at the tank with wet hands actually feels like",
+    file: "app/src/components/DoseExpectation.jsx",
+    find: "      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors",
+    replace: "      className={`px-3.5 py-2 rounded-lg text-sm transition-colors",
+    breaks: ["VP-10"],
+  },
+
+  {
+    id: "AM-R65",
+    why: "the headline figure on the confirmation popup travels along the sparkline again, so for four and a half seconds it counts through readings from weeks ago under the words \"Reading saved\" — reefkeeper finding 11",
+    file: "app/src/components/ReadingConfirmation.jsx",
+    find: "                {fmtVal(def, value)}",
+    replace: "                {fmtVal(def, geo ? geo.at(progress).value : value)}",
+    breaks: ["VP-11"],
+  },
+
+  {
+    id: "AM-R66",
+    why: "a figure runs into its unit again — 9.10dKH, 0.20dKH spread — on screens the same application writes 9.10 dKH on elsewhere, so the app disagrees with itself about how a measurement is spelled (reefkeeper finding 22)",
+    file: "app/src/lib/format.js",
+    find: "  return def && def.unit ? `${shown} ${def.unit}` : shown;",
+    replace: "  return def && def.unit ? `${shown}${def.unit}` : shown;",
+    breaks: ["SC-12"],
+  },
+  {
+    id: "AM-R67",
+    why: "the parameter sheet spells the unit out for itself again rather than asking the one thing that knows how, which is how the five that were wrong got that way",
+    file: "app/src/components/Dashboard.jsx",
+    find: "                    {fmtWithUnit(def, stats.spread)} spread",
+    replace: "                    {fmtVal(def, stats.spread)}{def.unit} spread",
+    breaks: ["SC-12"],
+  },
+
+  {
+    id: "AM-R68",
+    why: "the Dosing tab stamps its headline figure with the ledger's last row again, so \"9.10 dKH\" is dated at the minute the 10.00 was typed — one sentence, two sources, which is findings 26 and 28 exactly",
+    file: "app/src/components/DosingWizard.jsx",
+    find: "  const latest = shownReading(episodes, def ? latestByParam[def.key] : null);",
+    replace: "  const latest = def ? latestByParam[def.key] : null;",
+    breaks: ["EP-15"],
   },
 
   {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Btn } from './DoseExpectation.jsx'
 import { ReadingSparkline, buildReadingSeries, readingGeometry } from './ReadingContext.jsx'
 import { Check } from '../icons.jsx'
-import { fmtVal, fmtFriendly } from '../lib/format.js'
+import { fmtVal, fmtFriendly, fmtWithUnit } from '../lib/format.js'
 import { useEscape } from '../lib/backup.jsx'
 import { intervalLabel } from '../store/schedule.js'
 
@@ -26,7 +26,7 @@ import { intervalLabel } from '../store/schedule.js'
    forbids", and its instruction is "Keep the moment; rebuild the reasoning."
 
    That is what has happened. The moment is here in full — the timing, the
-   easing, the one progress value driving chart, dot and counter, the closing
+   easing, the one progress value driving the chart and the dot, the closing
    countdown with its shrinking bar, the tap-to-keep-open. Every word it says
    arrives as a prop, from `app/src/present/`, out of what V2's engine
    returned. This file no longer contains a single sentence about what a
@@ -76,9 +76,14 @@ export function LogResultPopup({ result, onClose, readings = [], onOpenDosing, v
       ? readingGeometry(result.def, series, 260, 108, 12) : null),
     [result, series]);
 
-  /* One clock for everything. The dot's position, the length of drawn line and
-     the number on screen are all read from this single progress value, so they
-     move as one rather than as three animations that happen to start together. */
+  /* One clock for the DRAWING. The dot's position and the length of drawn line
+     are read from this single progress value, so they move as one rather than
+     as two animations that happen to start together.
+
+     The figure on screen is deliberately not on this clock — see finding 11
+     below. V1 counted it up along the line and it was one of the things this
+     rebuild was told to keep; it turned out to be one of the things worth
+     losing. */
   const [progress, setProgress] = useState(0);
   const [sheenDone, setSheenDone] = useState(false);
   const landed = progress >= 1;
@@ -145,8 +150,19 @@ export function LogResultPopup({ result, onClose, readings = [], onOpenDosing, v
           <div className="flex items-baseline justify-center gap-1">
             <span className={`rc-value text-[34px] font-black leading-none tabular-nums${landed && !sheenDone ? " landed" : ""}`}
               style={{ color: v.tone }}>
+              {/* REEFKEEPER FINDING 11. This number used to travel along the
+                  sparkline with the dot, so for four and a half seconds the
+                  headline figure on a confirmation popup counted through
+                  readings from weeks ago — in the tank's colour, at 34px, under
+                  the words "Reading saved". He watched it settle and could not
+                  say what it had settled on.
+
+                  A LINE MOVING IS A DRAWING. A NUMBER MOVING IS A CLAIM. The
+                  dot still travels; the figure is the reading he just typed and
+                  it does not move, because that is the one thing this moment
+                  exists to confirm. */}
               <span className="rc-sheen">
-                {fmtVal(def, geo ? geo.at(progress).value : value)}
+                {fmtVal(def, value)}
               </span>
             </span>
             <span className="text-[14px] font-bold text-ink2">{def.unit}</span>
@@ -154,7 +170,7 @@ export function LogResultPopup({ result, onClose, readings = [], onOpenDosing, v
           <div className="text-[13px] font-black text-ink mt-1">{def.label}</div>
           {showPrev && (
             <div className="text-[11px] font-bold text-ink2 mt-1">
-              previous {fmtVal(def, prev)}{def.unit}
+              previous {fmtWithUnit(def, prev)}
             </div>
           )}
 

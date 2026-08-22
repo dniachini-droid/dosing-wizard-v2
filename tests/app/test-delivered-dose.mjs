@@ -22,7 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
-import { DOSE_ORIGIN, originOf } from "../../app/src/present/dose-origin.js";
+import { DOSE_ORIGIN, originOf, alreadyAtDose } from "../../app/src/present/dose-origin.js";
 import { fmtQty } from "../../app/src/lib/format.js";
 
 const s = suite("delivered dose");
@@ -166,6 +166,32 @@ s.test("DD-14", "every dose on every surface goes through that one formatter", (
     }
   }
   ok(true, "no dose is written by a second formatter");
+});
+
+s.test("DD-15", "the tab does not offer a dose the keeper is already on", () => {
+  /* REEFKEEPER FINDING 16. He took the recommendation and set 9.0. The button
+     went on reading "Set the dose to 9.0 mL/day", because the engine's answer
+     does not move until readings taken on the new dose arrive — right of the
+     engine, unreadable on the screen. He pressed it again, and the history
+     recorded a change from 9.0 to 9.0.
+
+     Compared at the precision the figure is SHOWN in, and by the same rule that
+     decides whether a saved dose was the recommendation: two answers to "are
+     these the same dose" that could drift apart is exactly what that file
+     exists to prevent. */
+  ok(alreadyAtDose(9.0, 9.0), "the same figure");
+  ok(alreadyAtDose(9.001, 9.0), "and the same figure once it reaches the screen");
+  ok(!alreadyAtDose(9.2, 9.0), "a real difference is a real difference");
+  eq(alreadyAtDose(null, 9.0), false, "nothing recommended is not \"already there\"");
+  eq(alreadyAtDose(9.0, null), false, "and nor is nothing on record");
+
+  /* The screen has to actually ask, and it must not remove the way out: a
+     keeper who wants to change the dose anyway can still do it. */
+  const wiz = code("app/src/components/DosingWizard.jsx");
+  ok(/alreadyAtDose\(rec\.suggestedDose, standingDose\)/.test(wiz), "the tab asks");
+  const branch = wiz.slice(wiz.indexOf("alreadyAtDose(rec.suggestedDose"));
+  ok(/dosing\.reco\.alreadyThere/.test(branch.slice(0, 900)), "and says where he is");
+  ok(/dosing\.reco\.changeAnyway/.test(branch.slice(0, 1200)), "with the door still open");
 });
 
 export default s;

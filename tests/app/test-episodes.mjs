@@ -344,10 +344,16 @@ s.test("EP-15", "the Test tab's row for a parameter shows the test's figure, not
   eq(alone.resolved, false, "and it does not claim to have been resolved");
   eq(shownReading(index, null), null, "and nothing at all where there is nothing");
 
-  /* The other half: the row has to actually ask. */
+  /* The other half: the rows have to actually ask. Two surfaces do — the Test
+     tab's per-parameter row, and the Dosing tab's "Measured ... at 09:08" line,
+     which took its INSTANT from the ledger's last row while the figure above it
+     came from the resolved test. One sentence, two sources. */
   const sheet = code("app/src/components/AllParametersSheet.jsx");
   ok(/const last = shownReading\(episodes, latest\[def\.key\]\)/.test(sheet),
-    "the row reads the resolved figure");
+    "the Test tab's row reads the resolved figure");
+  const wiz = code("app/src/components/DosingWizard.jsx");
+  ok(/const latest = shownReading\(episodes,/.test(wiz),
+    "and so does the line that stamps the Dosing tab's headline with a time");
 });
 
 export default s;
