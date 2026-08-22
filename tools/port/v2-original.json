@@ -13,6 +13,7 @@
   "app/src/present/attention.js",
   "app/src/present/card-content.js",
   "app/src/present/cards.js",
+  "app/src/present/dosing-tab.js",
   "app/src/present/position.js",
   "app/src/present/spread.js",
   "app/src/present/why-retest.js",

@@ -19,7 +19,7 @@ import {
 import {
   correctReading, markInvalid,
   recordDoseChange, recordDoseState, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
-  recordReading, recordWaterChange, markInvalid,
+  recordReading, recordWaterChange,
 } from './lib/record.js'
 import { createStore } from './store/index.js'
 import { KIND } from './store/ledger.js'
@@ -726,8 +726,12 @@ export function ReefConsoleInner() {
             <DosingWizard paramDefs={paramDefs} engineResult={engineResult}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
-              notices={[noticeFor(paramDefs.find((d) => d.key === "ALK") || {})].filter(Boolean)}
-              onDismissFinding={dismissNotice} />
+              config={config} readings={readings} chartEvents={chartEvents}
+              /* V1's, kept where a hold is recommended: a hold is advice, and
+                 the keeper is allowed to disagree with it. It opens the same
+                 dose-change form Setup uses; nothing here records a change by
+                 itself (`ALK-RECOMMEND-ONLY-001`). */
+              onChangeDoseAnyway={() => setTab("settings")} />
           )}
 
           {tab === "tasks" && (
