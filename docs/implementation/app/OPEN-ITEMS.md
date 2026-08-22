@@ -890,3 +890,139 @@ all cite a document no reviewer can read. Every other document they cite is pres
 The same is true of `15-ROUND-THREE-FIXES.md` and `16-CANON-TIME-AMENDMENT-BRIEF.md`.
 
 **What would close it.** Committing the three briefs, or recording where they live.
+
+---
+
+## AI-023 — Owner decision 31 conflicts with a rule the canon states absolutely (CANON)
+
+**Where.** `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` Part II §2.3A;
+`DATA-PROVENANCE.md` §2 and §61; owner decision 30.
+
+**What.** Owner decision 31 assigns **09:00** to a reading that carries only a
+date, and that reading is thereafter a fully timed reading for every purpose.
+`DATA-PROVENANCE.md` §61 forbids precisely this: *"no defaulting an unknown time
+to midnight, midday, or any other placeholder that would later be read as a real
+timestamp."* §2 and owner decision 30 say the same in different words.
+
+The owner has been told and has decided. His reasoning is recorded in
+`app/src/store/time.js` beside the constructor: across a whole history the time
+of day changes almost nothing, every interval between two assigned readings
+stays exact, and a complete record is worth more than a scrupulous gap.
+
+**What is NOT in conflict.** The rule exists because a fabricated time becomes
+indistinguishable from a real one. The assignment is recorded on every record it
+touches — the hour, that it was assumed, and that nobody stated it — so it stays
+distinguishable. That is a reading of the rule, not a licence, and it is why the
+conflict is recorded here rather than argued away.
+
+**Scope, and it is narrower than the decision could have been.** READINGS only.
+A dose change's `effectiveAtConfidence` is derived from whether the hour is
+known and the engine measures the whole response window from that instant;
+assigning 09:00 there would turn `UNCERTAIN` into `EXACT` and assert a time
+nobody stated. The owner decided readings. `IMP-01b` pins the limit.
+
+**What would close it.** A governed canon reissue amending §2.3A and
+`DATA-PROVENANCE.md` §2/§61 to state the assignment, its recording requirement
+and its scope. Until then the canon and the application disagree, deliberately,
+and this entry is the record of it.
+
+---
+
+## AI-024 — Owner decision 32 contradicts the append-only event ledger (CANON)
+
+**Where.** `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` — the append-only
+event ledger; `app/src/store/ledger.js` `remove`/`replace`.
+
+**What.** A deleted record is **gone**: the event, every annotation targeting it,
+and every stored assessment that read it. No tombstone, no supersede
+annotation, no audit trail. Editing rewrites the record in place rather than
+appending a superseding one.
+
+The canon makes the event ledger append-only, and canon §64 conditions
+deterministic replay on the same event ledger. A deletion changes the ledger a
+replay would be run against, so an assessment stored before it could no longer
+be reproduced — which is why the assessments that read the record are removed
+with it rather than left to fail.
+
+The owner has been told and has decided. His reasoning: this is a hobby app for
+one person's tank, not a medical record.
+
+**What would close it.** A governed canon reissue stating that the keeper's
+ledger is his to amend, and what that does to §64's replay guarantee. Until then
+the canon and the application disagree, deliberately.
+
+---
+
+## AI-025 — A notice at import saying times were assigned (INTERFACE, DEFERRED)
+
+**What.** Owner finding 11: *"Not now, but note it: a notice at import saying
+times were assigned. The owner does not want it yet — it goes on the list for
+later."*
+
+The count is already computed and carried: `describePlan` returns
+`assignedTimeOfDay`, checked against the record by `IMP-21`. Nothing renders it.
+The timezone explanation that used to sit in that place was removed this round
+(owner finding 1) and this is deliberately not a replacement for it.
+
+**What would close it.** The owner asking for it.
+
+---
+
+## AI-026 — `state !== "INVALID"` survives in six filters that can no longer match
+
+**Where.** `app/src/App.jsx` (four), `app/src/store/import-v1.js` (two),
+`app/src/store/seed.js`, `app/src/store/ledger.js`, `app/src/lib/adapt.js`,
+`app/src/assess.js`.
+
+**What.** Owner decision 32 removed `MARK_INVALID` from the annotation
+vocabulary and from the fold, so `project()` can no longer produce the `INVALID`
+state. The guards that exclude it are now conditions that can never be true.
+
+They are harmless — each is one disjunct of a filter whose other disjunct
+(`SUPERSEDED`) is still reachable — and they were left in place rather than
+removed mid-round because several are the anchor text of existing mutations, and
+re-anchoring them is churn with no behavioural consequence. `PORT-24` pins that
+no surface OFFERS the act; this is about dead defensive text, not behaviour.
+
+**What would close it.** Removing the `INVALID` disjunct from each filter and
+re-anchoring the mutations that name those lines.
+
+---
+
+## AI-027 — Only `DOSE_CHANGE` is marked on a chart, not `DOSE_STATE`
+
+**Where.** `app/src/lib/adapt.js` `chartEventsFrom`.
+
+**What.** Owner finding 9 asked for dose-change markers on the Dosing chart, and
+they are drawn. But the importer writes the FIRST dose row of a history as a
+`DOSE_STATE` — the standing dose the record begins at — and only subsequent rows
+as `DOSE_CHANGE`. `chartEventsFrom` marks `DOSE_CHANGE` and not `DOSE_STATE`, so
+the beginning of a keeper's dose record carries no marker.
+
+This is arguably correct: a standing dose is where the record starts, not a
+change the tank responded to. It is recorded because the owner counted four dose
+changes and may count the marks.
+
+**What would close it.** The owner saying whether the start of the dose record
+should be marked, and if so how it should differ from a change.
+
+---
+
+## AI-028 — "Canon decision 12" is cited by the task and does not exist (CANON)
+
+**What.** The round-four task states that the potency estimator *"resolves what canon
+decision 12 left open: a learned strength may size a dose, but only when the keeper accepts
+it."* No section of `docs/canon/REEF-CHEMISTRY-ENGINE-V2-CANON.md` carries that identifier,
+and none was found under `Decision 12`, `D-12` or `DEC-12`.
+
+The open question is real and is in
+`ALK-POTENCY-CAPABILITY-GATE-001` — "Activation strategy" defers the learner without saying
+what may activate it. Owner decision 33 is recorded there, against the section that actually
+holds the question.
+
+**What was NOT done.** The identifier was not written into the canon. A cross-reference that
+cannot be verified is worse than none, and inventing a section number to satisfy a citation is
+how a canon acquires a dangling one.
+
+**What would close it.** The owner naming what "canon decision 12" refers to, or confirming
+that owner decision 33 stands on its own where it is.

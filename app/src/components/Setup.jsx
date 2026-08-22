@@ -141,7 +141,27 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
     setTimeout(() => setFactMsg(""), 2500);
   };
 
-  const missing = KEEPER_FACTS.filter((f) => !config || config[f.key] == null).length;
+  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
+
+     Owner finding 4: "'One more left' persisted; the owner had to press save
+     repeatedly before the step completed." It was not a save that failed. This
+     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
+     and this section renders three of them — the volume and the two range
+     edges. The strength and the pump's step are asked for in the DOSING section
+     below.
+
+     Worse, the strength can be legitimately absent. A keeper who states his
+     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
+     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
+     itself and the app storing one as well would override `ALK-014`'s owner
+     with a copy. That is `store/config.js`'s own rule, and it made this counter
+     permanently stuck at one however many times he pressed save — a screen
+     telling him something was missing that he had already supplied, on the same
+     screen he had supplied it. */
+  const ASKED_HERE = KEEPER_FACTS.filter(
+    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
+  );
+  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
 
   /* ---- dose changes ----------------------------------------------------- */
   const [dcOpen, setDcOpen] = useState(false);
@@ -300,7 +320,7 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
           These are the things only you know. The app will not guess at any of them, and it
           says what it cannot work out without each one.
         </p>
-        {KEEPER_FACTS.filter((f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")).map((f) => (
+        {ASKED_HERE.map((f) => (
           <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
             <input type="number" inputMode="decimal" className={inputCls}
               value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}

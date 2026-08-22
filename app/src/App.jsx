@@ -396,7 +396,7 @@ export function ReefConsoleInner() {
     assess();
   };
 
-  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 34.
+  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 32.
 
      The record is gone: the event, its annotations, and every assessment that
      read it. `deleteRecord` owns all three so that no caller can do one and
@@ -468,6 +468,17 @@ export function ReefConsoleInner() {
   };
 
   const deleteEvent = (eventId, said = null) => deleteRecordById(eventId, said);
+
+  /* Something the keeper recorded on his calendar, taken back off it (owner
+     finding 16). A completion is the task store's own record rather than a
+     ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
+     act is the same one and the keeper is told the same way. */
+  const deleteCompletion = async (item) => {
+    if (!item || !item.taskId || !item.date) return;
+    await store.tasks.uncomplete(item.taskId, item.date);
+    await reload();
+    notify(t("delete.done.entry"));
+  };
 
   /* ---- the schedule ----------------------------------------------------- */
   const markDone = async (taskId, date = todayStr(), detail = null) => {
@@ -674,13 +685,43 @@ export function ReefConsoleInner() {
        ride anywhere: the content scrolls inside `<main>` and the bar is
        always the last row of the viewport.
 
-       `min-h-screen` is kept as the fallback for a browser with no `dvh`. */
-    <div className="bg-app text-ink font-body flex flex-col min-h-screen"
-      style={{ height: "100dvh" }}>
+       ROUND FOUR, ITEM 5 — AND IT WAS THE FALLBACK THAT BROKE IT.
+
+       The flex column above was right. What was wrong sat beside it:
+       `min-h-screen` is `min-height: 100vh`, and it was kept "as the fallback
+       for a browser with no `dvh`". A `min-height` is not a fallback for a
+       `height` — it is a FLOOR, and it wins. On iOS Safari `100vh` is the
+       viewport with the toolbars hidden, so it is TALLER than `100dvh`: the
+       shell was forced past the visual viewport, the document scrolled as a
+       whole, and the nav — the last row of a box taller than the screen — sat
+       below the fold. Which is exactly what the owner described: the bar
+       disappears as you scroll and "only reappears after scrolling all the way
+       to the bottom and continuing".
+
+       The fallback is now a `height` too, and it is written in CSS rather than
+       in a style object — a JS object cannot hold the same key twice, so
+       `{ height: "100vh", height: "100dvh" }` is not two declarations with the
+       second preferred, it is one declaration with the first silently dropped.
+       In the stylesheet below they are two declarations on one property: a
+       browser that understands `dvh` takes the second, one that does not takes
+       the first, which is what a fallback means.
+
+       `overflow: hidden` on the shell means the DOCUMENT cannot scroll at all.
+       Scrolling happens inside `<main>`, so there is no page-level scroll for
+       the bar to ride on however the viewport units resolve, and nothing can
+       run underneath it. */
+    <div className="bg-app text-ink font-body flex flex-col app-shell">
       <style>{`
         .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
         .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
         .bg-app { background-color: #F3F7F6; }
+        /* A raised surface on the pale-teal page. bg-card was USED by the
+           correction sheet and the pinned close control and was never defined,
+           so both rendered with no background at all - the sheet showed the
+           dark overlay through its own text. Defined once, here, beside the
+           page colour it has to stand out from (owner finding 10). */
+        .bg-card { background-color: #FFFFFF; }
         .border-app { border-color: #E3ECEA; }
         .text-ink { color: #08191D; }
         .text-ink2 { color: #45605F; }
@@ -713,7 +754,7 @@ export function ReefConsoleInner() {
           so `<main>` inside it is the only thing that scrolls. */}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar - desktop */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-app px-4 py-6 bg-white">
+        <aside className="hidden md:flex flex-col w-56 shrink-0 h-full overflow-y-auto border-r border-app px-4 py-6 bg-white">
           <div className="flex items-center gap-2 px-2 mb-8">
             <div className="w-9 h-9 rounded-xl bg-teal-brand flex items-center justify-center shadow-sm">
               <Waves size={17} className="text-white" />
@@ -856,7 +897,8 @@ export function ReefConsoleInner() {
               onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval} onSkipTask={skipTask}
               onAddWaterChange={addWaterChange} onAddOneOff={addOneOff}
               onAddLightingChange={addLightingChange} onAddNote={addNote}
-              waterChanges={waterChanges} onOpenTest={openTestFor} />
+              waterChanges={waterChanges} onOpenTest={openTestFor}
+              onDeleteDone={deleteCompletion} />
           )}
 
           {tab === "setup" && (

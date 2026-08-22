@@ -833,13 +833,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
 | V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
-| Ported SHA-256 | `63ebde7f432dcab50f56b2427e341147522ffab7ad4e69c8c0efaacb5de0c20e` |
-| Differences | 7 |
+| Ported SHA-256 | `76b04f5e863ee3a8ec6de31963541488ff58a867d21d3d0a8a8da97e7f133ae2` |
+| Differences | 11 |
 
-1. **data source rewired — V1's backup, restore and merge (lines 1-344) deleted because V2's storage is not going anywhere; imports repointed at V2's formatting, position presenter, clock and task store**
+1. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -2,362 +2,70 @@
+@@ -2,362 +2,72 @@
  import { Btn, Field, inputCls } from '../components/DoseExpectation.jsx'
  import { Card } from '../components/ErrorBoundary.jsx'
  import { Check, ChevronDown, Save, Settings2, X } from '../icons.jsx'
@@ -1150,7 +1150,9 @@ Byte-identical to V1.
 -   home screen since, which is precisely what flips the answer on the
 -   platforms where it matters. */
 -let persistenceAsked = null;
++import { DeleteControl } from '../components/DeleteControl.jsx'
 +import { fmtVal, fmtFriendly } from './format.js'
++import { t } from '../strings.js'
 +import { positionTone, positionWord, positionIsInRange } from '../present/position.js'
 +import { todayStr, fmtShort } from './dates.js'
 +import { addDays, now as appNow } from '../store/time.js'
@@ -1253,7 +1255,7 @@ Byte-identical to V1.
 2. **chemistry removed — the target band is drawn only where the keeper has a range, and its fill follows the engine's position rather than `paramStatus`**
 
 ```diff
-@@ -377,10 +85,12 @@
+@@ -377,10 +87,12 @@
          <div className="absolute rounded-full" style={{ left: 0, right: 0, top: compact ? 6 : 9, height: compact ? 4 : 5, background: "#E9EFEE" }} />
  
          {/* Target range — the only region that should read as "good" */}
@@ -1275,7 +1277,7 @@ Byte-identical to V1.
 3. **chemistry removed — the centred status word is the engine's position, looked up in the strings file, instead of V1's own "in band" / "below band" verdict**
 
 ```diff
-@@ -399,11 +109,16 @@
+@@ -399,11 +111,16 @@
        </div>
  
        <div className="flex items-center justify-between mt-0.5">
@@ -1301,7 +1303,7 @@ Byte-identical to V1.
 4. **chemistry removed — `StatusPill` deleted; it rendered the same `paramStatus` vocabulary and every caller went with the surfaces that computed chemistry**
 
 ```diff
-@@ -410,27 +125,23 @@
+@@ -410,27 +127,23 @@
  }
  
  
@@ -1348,7 +1350,7 @@ Byte-identical to V1.
 5. **chemistry removed — `pinReasonLabel` and its use deleted; it named why V1's own protocol had pinned a retest date, and in V2 the retest date is the engine's**
 
 ```diff
-@@ -454,7 +165,6 @@
+@@ -454,7 +167,6 @@
            <div className="text-[11px] font-bold" style={{ color: tone }}>
              {off ? "turned off"
                : `${intervalLabel(rem.intervalDays)}${state ? ` · ${due < 0 ? `${Math.abs(due)}d overdue` : due === 0 ? "due today" : `next ${fmtShort(state.due)}`}` : ""}`}
@@ -1361,7 +1363,7 @@ Byte-identical to V1.
 6. **chemistry removed — the second use of the same pin label, in the reschedule sheet's header**
 
 ```diff
-@@ -526,8 +236,6 @@
+@@ -526,8 +238,6 @@
            <div className="text-[15px] font-black text-ink">{rem.label}</div>
            <div className="text-[12px] font-bold mt-0.5" style={{ color: tone }}>
              {!rem.enabled ? "Turned off — no reminders until you turn it back on"
@@ -1372,10 +1374,16 @@ Byte-identical to V1.
                : `Due ${fmtFriendly(state.due)}`}
 ```
 
-7. **data source rewired — the calendar's current month follows the application's clock instead of the wall clock**
+7. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -630,7 +338,10 @@
+@@ -626,11 +336,15 @@
+   );
+ }
+ 
+-export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTask = null }) {
++export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTask = null,
++  onDeleteDone = null }) {
    const [monthOffset, setMonthOffset] = useState(0);
    const [picked, setPicked] = useState(null);
  
@@ -1389,7 +1397,70 @@ Byte-identical to V1.
    const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 ```
 
----
+8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+
+```diff
+@@ -647,7 +361,7 @@
+     for (const l of taskLog || []) {
+       if (!l.date) continue;
+       (map[l.date] = map[l.date] || []).push({
+-        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, auto: !!l.auto, done: true,
++        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
+       });
+     }
+     for (const w of waterChanges || []) {
+```
+
+9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+
+```diff
+@@ -756,11 +470,15 @@
+           ) : (
+             <div className="space-y-1">
+               {(byDay[picked] || []).map((it) => (
+-                <div key={it.id} className="flex items-center gap-2">
++                <div key={it.id} className="flex flex-wrap items-center gap-2">
+                   <Check size={13} style={{ color: "#0B7C86" }} className="shrink-0" />
+                   <span className="text-[13px] font-bold text-ink">{it.label}</span>
+                   {it.detail && <span className="text-[12px] font-bold text-ink2">· {it.detail}</span>}
+                   {it.auto && <span className="text-[10px] font-bold text-ink2">· from a logged test</span>}
++                  <span className="flex-1" />
++                  {onDeleteDone && (
++                    <DeleteControl size={13} onDelete={() => onDeleteDone(it)} />
++                  )}
+                 </div>
+               ))}
+               {/* Scheduled items are tappable: seeing a task on a day you
+```
+
+10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+
+```diff
+@@ -803,7 +521,8 @@
+ 
+ /* The calendar as an overlay, so it can be reached from the dashboard without
+    losing your place. */
+-export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPickTask = null }) {
++export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPickTask = null,
++  onDeleteDone = null }) {
+   useEscape(onClose);
+   return (
+     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+```
+
+11. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+
+```diff
+@@ -821,7 +540,7 @@
+         </div>
+         <div className="px-4 pb-4">
+           <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
+-            onPickTask={onPickTask} />
++            onPickTask={onPickTask} onDeleteDone={onDeleteDone} />
+         </div>
+       </div>
+     </div>
+```
 
 ### `app/src/components/ZoomableChart.jsx`
 
@@ -3905,16 +3976,17 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `08c7d93ce85e08e77332e0ec81c7ff4a6f7fdc4d8af7d3eddd9a0fd869b5b0cd` |
+| Ported SHA-256 | `ee672b9635d9fec664179d5c065d1645c345df09abafe3c28eefc4131a0b0882` |
 | Differences | 11 |
 
-1. **chemistry removed — the whole `Dashboard` body: the overview card, the score, the briefing, the hidden-count reconciliation, the out-of-range alert strip and the snooze machinery, replaced by the due bar, the parameter grid and the reminders panel reading V2's store and one `EngineResult`**
+1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,160 +1,117 @@
+@@ -1,160 +1,118 @@
  import { useEffect, useMemo, useState } from 'react'
 -import { Btn, FindingList, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 +import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
++import { SheetClose } from './SheetClose.jsx'
 +import { Btn, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
  import { Card } from './ErrorBoundary.jsx'
  import { QuickLog } from './LogReadingSheet.jsx'
@@ -4144,7 +4216,7 @@ Byte-identical to V1.
 2. **data source rewired — the reminders panel and calendar read V2's schedule view, tasks and completions**
 
 ```diff
-@@ -162,33 +119,24 @@
+@@ -162,33 +120,24 @@
        </div>
  
        <SectionTitle eyebrow="Schedule" title="Reminders" />
@@ -4194,7 +4266,7 @@ Byte-identical to V1.
 3. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
 ```diff
-@@ -195,13 +143,44 @@
+@@ -195,13 +144,44 @@
    );
  }
  
@@ -4248,7 +4320,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — a cleared range is described as cleared rather than reverted to a default, because this build ships no default range**
 
 ```diff
-@@ -215,7 +194,7 @@
+@@ -215,7 +195,7 @@
  
    const revert = async () => {
      await onResetRange(def.key);
@@ -4262,7 +4334,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +201,35 @@
+@@ -222,36 +202,35 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4321,10 +4393,10 @@ Byte-identical to V1.
    const winLabel = activeWin >= 99999 ? "your whole log"
 ```
 
-6. **chemistry removed — `computeControl` and `computeRates` replaced by `describeRows`, which reports minimum, maximum, median, spread and an in-range count and grades nothing**
+6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,49 +238,20 @@
+@@ -260,91 +239,61 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4383,14 +4455,13 @@ Byte-identical to V1.
  
    useEscape(onClose);
  
-```
-
-7. **wording replaced with engine output — V1's dose banner, which rendered its own dose state and predicted value, replaced by the engine's own notice with the strings file's wording**
-
-```diff
-@@ -310,41 +259,37 @@
+   return (
      <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
+-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
++      {/* `relative`, so the pinned close control below has this box to sit
++          against rather than the scrolling content inside it (finding 6). */}
++      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
++        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
          <Card className="p-5 max-h-[85vh] overflow-y-auto">
 -          {/* Whatever the dosing wizard currently believes about this element,
 -              said here too — the dashboard was previously silent about a change
@@ -4458,10 +4529,10 @@ Byte-identical to V1.
  
 ```
 
-8. **chemistry removed — the target range is stated only where the keeper has one**
+7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +298,9 @@
+@@ -353,7 +302,9 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
@@ -4474,10 +4545,26 @@ Byte-identical to V1.
                <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
 ```
 
+8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
+
+```diff
+@@ -360,7 +311,9 @@
+                 <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
+               </button>
+             </div>
+-            <button aria-label="Close" onClick={onClose} className="text-ink2 hover:text-ink p-2 -m-2 rounded-lg active:bg-app"><X size={22} /></button>
++            {/* The close control is pinned outside the scroll region now, so
++                there is no second one here to scroll away. */}
++            <div className="w-9 shrink-0" />
+           </div>
+ 
+           {editing && (
+```
+
 9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +325,16 @@
+@@ -378,10 +331,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -4501,7 +4588,7 @@ Byte-identical to V1.
 10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -395,20 +348,19 @@
+@@ -395,20 +354,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -4527,10 +4614,10 @@ Byte-identical to V1.
                  );
 ```
 
-11. **chemistry removed — V1's verdict box, its rate rows, its two narrative paragraphs, its suggested replacement range and its consumption-and-dosing block deleted; the statistics box is two ungraded rows, the chart is passed its unit and parameter name, and one note beneath it reports how many readings have no time**
+11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -417,280 +369,120 @@
+@@ -417,280 +375,121 @@
            </div>
  
            {rows.length === 0 ? (
@@ -4882,7 +4969,8 @@ Byte-identical to V1.
 +                  already looking. `PORT-OMISSIONS.md` records the absence of
 +                  this route as the most serious loss in the port. */}
 +              {onCorrectReading && (
-+                <ReadingList rows={[...rows].reverse()} def={def} onPick={setFixing} />
++                <ReadingList rows={[...rows].reverse()} def={def} onPick={setFixing}
++                  onDelete={onDeleteReading} />
                )}
              </>
            )}
@@ -4898,8 +4986,6 @@ Byte-identical to V1.
    );
  }
 ```
-
----
 
 ### `app/src/components/AllParametersSheet.jsx`
 
@@ -5444,13 +5530,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `71631289a94470473a5a1c3f5ffd5d0adecc8f65a35957bab64c8dd3ad573012` |
+| Ported SHA-256 | `aafc8e0a479b22117c5322cc69f2b32a7687f51bd192d68016c995b418002b6c` |
 | Differences | 3 |
 
-1. **chemistry removed — V1's alkalinity assessment block, correction panel and dose-state imports deleted; the imports are V2's engine-result readers and wording helpers**
+1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,46 +1,58 @@
+@@ -1,46 +1,59 @@
  import { useState } from 'react'
 -import { Btn, FindingList, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 -import { AlkAssessmentBlock, Card } from './ErrorBoundary.jsx'
@@ -5462,7 +5548,8 @@ Byte-identical to V1.
 +import { Card } from './ErrorBoundary.jsx'
 +import { ZoomableLineChart } from './ZoomableChart.jsx'
 +import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
-+import { fmtDate } from '../lib/dates.js'
++import { fmtDate, fmtShort } from '../lib/dates.js'
++import { chartDataFrom } from '../lib/adapt.js'
 +import { fmtPotency, fmtQty } from '../lib/format.js'
 +import { positionTone } from '../present/position.js'
 +import {
@@ -5549,7 +5636,7 @@ Byte-identical to V1.
 2. **chemistry removed — the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes are V1's layout; everything inside is what V2's engine returned**
 
 ```diff
-@@ -47,41 +59,21 @@
+@@ -47,41 +60,21 @@
              <Icon size={11} style={{ color: def.color }} strokeWidth={2.6} />
            </span>
            <span className="text-[11px] font-black text-ink truncate flex-1 min-w-0">{def.label}</span>
@@ -5605,22 +5692,15 @@ Byte-identical to V1.
      </button>
 ```
 
-3. **wording replaced with engine output — the tab is rebuilt to `17-DOSING-TAB-SPEC.md`, which is owner-approved line by line. V2's own first attempt rendered the engine's answer as nine blocks of labelled figures and sixty-three reason codes; the recommendation is prose again, in V1's shape, with the arithmetic behind Show working. Every sentence is `jake`'s and every figure is read from the engine through `present/dosing-tab.js`, which is the one owner of that reading**
+3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +80,411 @@
+@@ -88,203 +81,463 @@
    );
  }
  
 +/* ---- a light-teal information panel, V1's surface ---------------------- */
-+function Panel({ children, className = "" }) {
-+  return (
-+    <div className={`rounded-2xl p-3.5 ${className}`}
-+      style={{ background: "#F3F7F6", border: "1px solid #E3ECEA" }}>
-+      {children}
-+    </div>
-+  );
-+}
++/* A PANEL STANDS OUT FROM THE PAGE — owner finding 10.
  
 -/* The correction control. Three states, and only one is ever on screen:
 -   nothing running and the level is out of band -> offer it;
@@ -5637,21 +5717,12 @@ Byte-identical to V1.
 -  if (!def) return null;
 -  const st = state || {};
 -  const plan = st.correctionPlan;
-+/* ---- a grey secondary box, V1's surface -------------------------------- */
-+function Box({ label, value, sub, prose = false, tone = null }) {
-+  return (
-+    <div className="rounded-xl p-3 bg-app border border-app">
-+      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink2 leading-tight">
-+        {label}
-+      </div>
-+      <div className={`${prose ? "text-[13px]" : "text-[18px] tabular-nums"} font-black mt-1 leading-tight`}
-+        style={{ color: tone || "#12312F" }}>
-+        {value == null ? t("dosing.boxes.notWorkedOut") : value}
-+      </div>
-+      {sub && <div className="text-[10px] font-bold text-ink2 mt-0.5 leading-snug">{sub}</div>}
-+    </div>
-+  );
-+}
++   It was `#F3F7F6` on a `#F3F7F6` page: the same pale teal as the ground behind
++   it, so nothing on this tab read as a distinct element and the screen looked
++   flat rather than designed. The owner's instruction is a choice between two
++   schemes — "either a white page with teal boxes, or a teal page with white
++   boxes, not teal on teal" — and the page is already the teal one, so the
++   panels are the white ones.
  
 -  if (plan && st.state === "correction-done") {
 -    return (
@@ -5666,18 +5737,16 @@ Byte-identical to V1.
 -      </Card>
 -    );
 -  }
-+/* ---- the severity pill -------------------------------------------------
-+   `INFO`, `LIMITING` and `BLOCKING` are programming language and meant nothing
-+   to a reef keeper. `jake`'s names answer the question the keeper actually
-+   has — what did this do to the answer? — and they render as pills rather than
-+   as coloured text with a dot beside it. */
-+const PILL_STYLE = {
-+  REFUSAL: { bg: "#FBE9EF", fg: "#C4285B" },
-+  BLOCKING: { bg: "#FBE9EF", fg: "#C4285B" },
-+  GATING: { bg: "#FBF1E4", fg: "#A2621B" },
-+  LIMITING: { bg: "#FBF1E4", fg: "#A2621B" },
-+  INFO: { bg: "#EDF3F2", fg: "#45605F" },
-+};
++   White, a border and a soft shadow, which is the same surface `Card` uses.
++   Two definitions of "a raised surface" would drift apart, so this is deliberately
++   the same three values. */
++function Panel({ children, className = "" }) {
++  return (
++    <div className={`rounded-2xl p-3.5 bg-card border border-app shadow-[0_1px_2px_rgba(15,40,45,0.04)] ${className}`}>
++      {children}
++    </div>
++  );
++}
  
 -  if (plan) {
 -    const pct = plan.movedSoFar != null && plan.remaining != null
@@ -5700,21 +5769,17 @@ Byte-identical to V1.
 -      </Card>
 -    );
 -  }
-+function Pill({ severity }) {
-+  const st = PILL_STYLE[severity] || PILL_STYLE.INFO;
-+  return (
-+    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide"
-+      style={{ background: st.bg, color: st.fg }}>
-+      {t(PILL[severity] || "dosing.pill.info")}
-+    </span>
-+  );
-+}
++/* THE THREE CONSUMPTION BOXES, RAISED — owner finding 10, in his own terms:
++   "darker teal, a shadow, and text chosen for contrast against whatever ground
++   they sit on."
  
 -  const offer = offers && offers[chosen];
 -  if (!offer) return null;
-+/* ---- show working ------------------------------------------------------
-+   EXPANDS IN PLACE, collapsed by default. Not a sheet: the number being
-+   explained stays visible while the explanation is read.
++   They were `bg-app` on a `bg-app` page, which is why they disappeared into it.
++   They are the most-looked-at figures on the tab — what the tank uses, what the
++   dose supplies, and the difference — so they are the one surface here that is
++   deeper than the page rather than lighter than it, and they carry their own
++   shadow.
  
 -  if (!offer.possible) {
 -    return (
@@ -5724,15 +5789,16 @@ Byte-identical to V1.
 -      </Card>
 -    );
 -  }
-+   The button reads "Show working" where the app can state something and
-+   "Why?" where it cannot — the second is a different promise and the label
-+   should not pretend otherwise. */
-+function ShowWorking({ result, config, canExplain }) {
-+  const [open, setOpen] = useState(false);
-+  const sections = canExplain ? working(result, config) : [];
-+  const why = canExplain ? [] : whyPanel(result);
-+  const rows = reasonRows(result);
++   THE TEXT IS CHOSEN FOR THE GROUND, and that is not decoration. `tone` is
++   passed in by `boxes()` for a figure that carries a position colour, and a
++   position colour picked for dark text on a pale card is not legible on deep
++   teal. So a toned value keeps a pale card to sit on and an untoned one takes
++   the deep ground — rather than printing the engine's own colour on a
++   background it was never chosen against. */
++const DEEP_TEAL = "#0A6570";
  
++function Box({ label, value, sub, prose = false, tone = null }) {
++  const onDeep = !tone;
    return (
 -    <Card className="p-4 mt-3">
 -      <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Bring it back to range</div>
@@ -5756,7 +5822,15 @@ Byte-identical to V1.
 -            </button>
 -          );
 -        })}
--      </div>
++    <div className="rounded-xl p-3 border shadow-[0_2px_6px_rgba(8,25,29,0.12)] h-full"
++      style={{
++        background: onDeep ? DEEP_TEAL : "#FFFFFF",
++        borderColor: onDeep ? "#08525C" : "#E3ECEA",
++      }}>
++      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] leading-tight"
++        style={{ color: onDeep ? "#B7E2E3" : "#45605F" }}>
++        {label}
+       </div>
 -      <p className="text-[11px] text-ink2 mt-2 leading-snug">
 -        Dose {fmtAmount(offer.dose)} mL/day for about {offer.days} day{offer.days === 1 ? "" : "s"},
 -        then back to {fmtAmount(offer.returnDose)} mL/day. You will be told when it arrives,
@@ -5764,15 +5838,92 @@ Byte-identical to V1.
 -      </p>
 -      <div className="mt-3">
 -        <Btn onClick={() => onStart(offer)}>Start the correction</Btn>
--      </div>
++      <div className={`${prose ? "text-[13px]" : "text-[18px] tabular-nums"} font-black mt-1 leading-tight`}
++        style={{ color: onDeep ? "#FFFFFF" : (tone || "#12312F") }}>
++        {value == null ? t("dosing.boxes.notWorkedOut") : value}
+       </div>
 -    </Card>
++      {sub && (
++        <div className="text-[10px] font-bold mt-0.5 leading-snug"
++          style={{ color: onDeep ? "#CDEBEB" : "#45605F" }}>
++          {sub}
++        </div>
++      )}
++    </div>
+   );
+ }
+ 
+-export function DosingWizard({ paramDefs, alkAssessment, caAssessment, mgAssessment, findings = [],
+-  onDismissFinding, onApplyAlkDose, onApplyCaDose, onApplyMgDose,
+-  onClearAlkPlan, onClearCaPlan, onClearMgPlan,
+-  onLogCorrection, onApplyEffect, onApplyCaEffect, onApplyMgEffect,
+-  correctionOffers = {}, doseStates = [],
+-  onStartCorrection, onCancelCorrection, onFinishCorrection }) {
++/* ---- the severity pill -------------------------------------------------
++   `INFO`, `LIMITING` and `BLOCKING` are programming language and meant nothing
++   to a reef keeper. `jake`'s names answer the question the keeper actually
++   has — what did this do to the answer? — and they render as pills rather than
++   as coloured text with a dot beside it. */
++const PILL_STYLE = {
++  REFUSAL: { bg: "#FBE9EF", fg: "#C4285B" },
++  BLOCKING: { bg: "#FBE9EF", fg: "#C4285B" },
++  GATING: { bg: "#FBF1E4", fg: "#A2621B" },
++  LIMITING: { bg: "#FBF1E4", fg: "#A2621B" },
++  INFO: { bg: "#EDF3F2", fg: "#45605F" },
++};
+ 
+-  const items = [
+-    { key: "alkalinity", a: alkAssessment, apply: onApplyAlkDose, clear: onClearAlkPlan, effect: onApplyEffect },
+-    { key: "calcium", a: caAssessment, apply: onApplyCaDose, clear: onClearCaPlan, effect: onApplyCaEffect },
+-    { key: "magnesium", a: mgAssessment, apply: onApplyMgDose, clear: onClearMgPlan, effect: onApplyMgEffect },
+-  ];
++function Pill({ severity }) {
++  const st = PILL_STYLE[severity] || PILL_STYLE.INFO;
++  return (
++    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide"
++      style={{ background: st.bg, color: st.fg }}>
++      {t(PILL[severity] || "dosing.pill.info")}
++    </span>
++  );
++}
+ 
+-  /* Opens on whichever element actually wants attention, so the common case
+-     needs no navigation at all. */
+-  const firstNeeding = items.find((x) => x.a && (x.a.action === "increase" || x.a.action === "decrease"));
+-  const [openKey, setOpenKey] = useState(firstNeeding ? firstNeeding.key : null);
++/* ---- show working ------------------------------------------------------
++   EXPANDS IN PLACE, collapsed by default. Not a sheet: the number being
++   explained stays visible while the explanation is read.
+ 
+-  const needing = items.filter((x) => x.a && (x.a.action === "increase" || x.a.action === "decrease")).length;
+-  const active = items.find((x) => x.key === openKey);
+-  const activeDef = active ? paramDefs.find((d) => d.key === active.key) : null;
++   The button reads "Show working" where the app can state something and
++   "Why?" where it cannot — the second is a different promise and the label
++   should not pretend otherwise. */
++function ShowWorking({ result, config, canExplain }) {
++  const [open, setOpen] = useState(false);
++  const sections = canExplain ? working(result, config) : [];
++  const why = canExplain ? [] : whyPanel(result);
++  const rows = reasonRows(result);
+ 
+   return (
+-    <div>
+-      <SectionTitle eyebrow="Two-part" title="Dosing Wizard" />
 +    <div className="mt-2">
 +      <button onClick={() => setOpen((v) => !v)}
 +        className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
 +        {canExplain ? t("dosing.reco.showWorking") : t("dosing.reco.why")}
 +        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
 +      </button>
-+
+ 
+-      <div className="rounded-2xl p-3.5 mb-4"
+-        style={{ background: needing ? "#0B7C860F" : "#F3F7F6",
+-                 border: `1px solid ${needing ? "#0B7C8633" : "#E3ECEA"}` }}>
+-        <p className="text-[13px] text-ink font-medium leading-relaxed">
+-          {needing
+-            ? `${needing === 1 ? "One element looks" : `${needing} elements look`} like the dose no longer matches what the tank is using. Tap one below for the working — you set the amount yourself.`
+-            : "Every dose is currently matching what the tank uses. Nothing needs changing."}
 +      {open && (
 +        <div className="mt-2 rounded-xl border border-app p-3">
 +          {sections.map((s) => (
@@ -5812,21 +5963,9 @@ Byte-identical to V1.
 +        </div>
 +      )}
 +    </div>
-   );
- }
- 
--export function DosingWizard({ paramDefs, alkAssessment, caAssessment, mgAssessment, findings = [],
--  onDismissFinding, onApplyAlkDose, onApplyCaDose, onApplyMgDose,
--  onClearAlkPlan, onClearCaPlan, onClearMgPlan,
--  onLogCorrection, onApplyEffect, onApplyCaEffect, onApplyMgEffect,
--  correctionOffers = {}, doseStates = [],
--  onStartCorrection, onCancelCorrection, onFinishCorrection }) {
--
--  const items = [
--    { key: "alkalinity", a: alkAssessment, apply: onApplyAlkDose, clear: onClearAlkPlan, effect: onApplyEffect },
--    { key: "calcium", a: caAssessment, apply: onApplyCaDose, clear: onClearCaPlan, effect: onApplyCaEffect },
--    { key: "magnesium", a: mgAssessment, apply: onApplyMgDose, clear: onClearMgPlan, effect: onApplyMgEffect },
--  ];
++  );
++}
++
 +/* ---- correction in progress --------------------------------------------
 +   V1's panel, above the recommendation. THERE IS NO CANCEL LINK: a correction
 +   is a fact about what the keeper did, not a mode he is in. It ends when the
@@ -5834,11 +5973,7 @@ Byte-identical to V1.
 +   one — and the panel says so rather than offering to undo a thing that
 +   already happened. */
 +/* THE CHANGE YOU MADE, AND WHAT CAME OF IT.
- 
--  /* Opens on whichever element actually wants attention, so the common case
--     needs no navigation at all. */
--  const firstNeeding = items.find((x) => x.a && (x.a.action === "increase" || x.a.action === "decrease"));
--  const [openKey, setOpenKey] = useState(firstNeeding ? firstNeeding.key : null);
++
 +   Finding 12. It renders `correctionPanel()`'s output and holds no rule: which
 +   state applies, whether the engine has finished with it, and whether a test is
 +   due now are all decided in `present/dosing-tab.js` from what the engine said.
@@ -5847,19 +5982,14 @@ Byte-identical to V1.
 +  const p = correctionPanel(result, asOf);
 +  if (!p) return null;
 +  if (p.canDismiss && dismissed === p.signature) return null;
- 
--  const needing = items.filter((x) => x.a && (x.a.action === "increase" || x.a.action === "decrease")).length;
--  const active = items.find((x) => x.key === openKey);
--  const activeDef = active ? paramDefs.find((d) => d.key === active.key) : null;
++
 +  const stateLine =
 +    p.state === "tooEarly"
 +      ? (p.posts != null ? t("dosing.correction.tooEarly", { posts: p.posts })
 +                         : t("dosing.correction.tooEarlyPlain"))
 +      : t(`dosing.correction.${p.state}`);
- 
-   return (
--    <div>
--      <SectionTitle eyebrow="Two-part" title="Dosing Wizard" />
++
++  return (
 +    <Panel className="mb-3">
 +      <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.correction.title")}</h4>
 +      {p.from != null && p.to != null && (
@@ -5869,16 +5999,9 @@ Byte-identical to V1.
 +            from: fmtQty(p.from, "mlPerDay"),
 +            to: fmtQty(p.to, "mlPerDay"),
 +          })}
-+        </p>
+         </p>
 +      )}
- 
--      <div className="rounded-2xl p-3.5 mb-4"
--        style={{ background: needing ? "#0B7C860F" : "#F3F7F6",
--                 border: `1px solid ${needing ? "#0B7C8633" : "#E3ECEA"}` }}>
--        <p className="text-[13px] text-ink font-medium leading-relaxed">
--          {needing
--            ? `${needing === 1 ? "One element looks" : `${needing} elements look`} like the dose no longer matches what the tank is using. Tap one below for the working — you set the amount yourself.`
--            : "Every dose is currently matching what the tank uses. Nothing needs changing."}
++
 +      <p className="text-[12px] text-ink font-bold leading-relaxed mt-1">{stateLine}</p>
 +
 +      {/* The next test, and never as a date the keeper has already met. */}
@@ -5887,7 +6010,7 @@ Byte-identical to V1.
 +          {p.nextTest.now
 +            ? t("dosing.correction.nextTestNow")
 +            : t("dosing.correction.nextTest", { date: fmtDate(String(p.nextTest.at).slice(0, 10)) })}
-         </p>
++        </p>
 +      )}
 +
 +      {p.offersNewDose && (
@@ -5924,7 +6047,20 @@ Byte-identical to V1.
 +  const [days, setDays] = useState(7);
 +  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 +  const shown = rows.filter((r) => r.date >= cutoff);
-+  const data = shown.map((r, i) => ({ i, value: r.value, date: r.date, time: r.time }));
++
++  /* THE DATES AND THE DOSE-CHANGE MARKERS — owner finding 9, and one cause.
++
++     This built its own point shape: `{ i, value, date, time }`. The chart's
++     x-axis is `dataKey="label"` and its event markers place themselves by
++     matching an event's date to a point's `label`. Neither could find one, so
++     the axis drew no dates and the owner's four imported dose changes drew
++     nothing — on a chart that was already being handed them.
++
++     `chartDataFrom` is the shape every other chart in the app uses, and it is
++     where the label rule lives: where a day carries more than one reading the
++     label carries the time too, so two points on one day stay distinguishable.
++     Building a second point shape here was the defect; there is one now. */
++  const data = chartDataFrom(shown, fmtShort);
 +
 +  return (
 +    <div className="mb-4">
@@ -6197,10 +6333,10 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2482249ce03e14404f2f75c9f72a24d140e695c9de908d878fafec0df747d593` |
 | V1 blob | `83583c09cea5fa4080582555219756f49e0cb2e7` |
-| Ported SHA-256 | `5517153b5fb655663fd129a3b8a4ad4d1a23283e5c2bb460baa4850326e0bcfd` |
+| Ported SHA-256 | `231f55c46c75daf96904e5d907a91494fc1a4830ce603f26a245bee28a7c9158` |
 | Differences | 5 |
 
-1. **chemistry removed — the water-change dilution preview (`predictAfterChange`) deleted, and the imports repointed onto V2's task store and application clock; completing a water change asks for litres and nothing else**
+1. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
 
 ```diff
 @@ -1,124 +1,122 @@
@@ -6265,7 +6401,7 @@ Byte-identical to V1.
 +  onMarkDone, onAddTask, onDeleteTask, onUpdateTask,
 +  onSetTaskDue, onSetTaskInterval, onSkipTask,
 +  onAddWaterChange, onAddOneOff, onAddLightingChange, onAddNote,
-+  waterChanges = [], onOpenTest = () => {} }) {
++  waterChanges = [], onOpenTest = () => {}, onDeleteDone = null }) {
 +
 +  /* ---- the water-change prompt: litres, and nothing else ---------------- */
 +  const [wcOpen, setWcOpen] = useState(null);
@@ -6471,7 +6607,7 @@ Byte-identical to V1.
              className={inputCls} placeholder="e.g. Clean filter sock" />
 ```
 
-5. **data source rewired — a custom task may be a one-off, and the three unscheduled records the brief puts here are added: a one-off addition by hand, a lighting change, and a dated note for anything that changed what the tank uses**
+5. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
 
 ```diff
 @@ -180,25 +187,144 @@
@@ -6609,8 +6745,9 @@ Byte-identical to V1.
 +          glance. */}
        <SectionTitle eyebrow="History" title="Done & coming up" />
 -      <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
+-        onPickTask={onPickTask} />
 +      <CompletionCalendar taskLog={completions} reminders={tasks} waterChanges={waterChanges}
-         onPickTask={onPickTask} />
++        onPickTask={onPickTask} onDeleteDone={onDeleteDone} />
  
 -      {sheetRem && (
 -        <ReminderSheet rem={sheetRem} state={sheetState} onClose={closeSheet}
@@ -6633,8 +6770,6 @@ Byte-identical to V1.
      </div>
 ```
 
----
-
 ### `app/src/components/Setup.jsx`
 
 | | |
@@ -6643,13 +6778,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `0a2422f415ab5adf9c2f3f994ef599b2ac3252f64e4de597b0da47a184147177` |
+| Ported SHA-256 | `613483ec4b12f1d1de81d852f540482ea6b63170579696dae7b5dcb5c2cdfd0f` |
 | Differences | 2 |
 
-1. **chemistry removed — V1's Setup was 931 lines importing the magnesium gate, a settle-window function, kit-noise figures and a fourth correction calculator. All of it is deleted. What replaces it is the keeper's facts, dosing, lighting changes, hidden notices, backup and the import, in the expandable card pattern the brief describes**
+1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,205 +1,285 @@
+@@ -1,205 +1,305 @@
  import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
 +import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
@@ -6930,7 +7065,27 @@ Byte-identical to V1.
 -    await onSaveSettings({ ...settings, kitSigma: { ...(settings.kitSigma || {}), [elem.key]: v } });
 -    setSaveMsg("Kit precision saved.");
 -    setTimeout(() => setSaveMsg(null), 2500);
-+  const missing = KEEPER_FACTS.filter((f) => !config || config[f.key] == null).length;
++  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
++
++     Owner finding 4: "'One more left' persisted; the owner had to press save
++     repeatedly before the step completed." It was not a save that failed. This
++     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
++     and this section renders three of them — the volume and the two range
++     edges. The strength and the pump's step are asked for in the DOSING section
++     below.
++
++     Worse, the strength can be legitimately absent. A keeper who states his
++     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
++     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
++     itself and the app storing one as well would override `ALK-014`'s owner
++     with a copy. That is `store/config.js`'s own rule, and it made this counter
++     permanently stuck at one however many times he pressed save — a screen
++     telling him something was missing that he had already supplied, on the same
++     screen he had supplied it. */
++  const ASKED_HERE = KEEPER_FACTS.filter(
++    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
++  );
++  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
 +
 +  /* ---- dose changes ----------------------------------------------------- */
 +  const [dcOpen, setDcOpen] = useState(false);
@@ -7112,10 +7267,10 @@ Byte-identical to V1.
    return (
 ```
 
-2. **defect fixed — the app had no way to state the dose the pump is running, and no way to state a solution strength in grams per litre. Round three stages 1 and 2: measured on the owner's imported history, every dose event reached the engine unplaceable on a clock, so consumption was NOT_RUN and every figure downstream of it was withheld. One dosing section now takes the strength in whichever of three forms the keeper holds and derives the rest, takes the standing dose, and carries the dose-change record. Test mode's screen is restored in the same file (round three item 9)**
+2. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -206,726 +286,343 @@
+@@ -206,726 +306,343 @@
      <div>
        <SectionTitle eyebrow="Configuration" title="Setup" />
  
@@ -7168,7 +7323,7 @@ Byte-identical to V1.
 +          These are the things only you know. The app will not guess at any of them, and it
 +          says what it cannot work out without each one.
 +        </p>
-+        {KEEPER_FACTS.filter((f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")).map((f) => (
++        {ASKED_HERE.map((f) => (
 +          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
 +            <input type="number" inputMode="decimal" className={inputCls}
 +              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
@@ -8142,8 +8297,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `1fbd273b6e2de54680fc6f0729f9e44e317f96eedb89a0838a68db5c3ff16eba` |
-| Differences | 8 |
+| Ported SHA-256 | `989f6af4c0385026fc50ebfa500c06b4a8647c0e82f7f78f60ac5a739e64b170` |
+| Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
 
@@ -8283,7 +8438,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1151 +87,596 @@
+@@ -66,1155 +87,641 @@
    return out;
  }
  
@@ -9321,7 +9476,7 @@ Byte-identical to V1.
 -    await saveKey(cfg.key, nextPlan);
 -    await saveReminders(reminders.map((r) => (r.id === cfg.rem
 -      ? { ...r, dueOverride: testOn, dueTime: time, dueReason: "dose", adjustDays: 0 } : r)));
-+  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 34.
++  /* ONE DELETE, USED BY EVERY SURFACE THAT OFFERS ONE — owner decision 32.
  
 -    /* What this dose should do, so the next reading confirms it or doesn't.
 -       Uses the dose actually entered, not the one suggested. */
@@ -9466,6 +9621,29 @@ Byte-identical to V1.
  
 -  const updateReminder = async (id, patch) => {
 -    await saveReminders(reminders.map((r) => (r.id === id ? { ...r, ...patch } : r)));
++  /* Something the keeper recorded on his calendar, taken back off it (owner
++     finding 16). A completion is the task store's own record rather than a
++     ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
++     act is the same one and the keeper is told the same way. */
++  const deleteCompletion = async (item) => {
++    if (!item || !item.taskId || !item.date) return;
++    await store.tasks.uncomplete(item.taskId, item.date);
++    await reload();
++    notify(t("delete.done.entry"));
+   };
+ 
+-  /* Nudging shifts only the next occurrence. The one after it is scheduled from
+-     the actual completion, so this never permanently skews the rhythm. */
+-  /* Moving a task sets an explicit date rather than accumulating a relative
+-     offset. The old model nudged by N days, which meant the date you saw was
+-     the result of arithmetic you could not inspect, and editing a task that
+-     already had completion history did nothing at all — the due date was
+-     derived from the last completion and the offset was quietly ignored. */
+-  const setReminderDue = async (id, iso) => {
+-    if (!iso) return;
+-    await updateReminder(id, { dueOverride: iso, dueReason: "manual", adjustDays: 0 });
+-    const r = reminders.find((x) => x.id === id);
+-    notify(`${r ? r.label : "Task"} moved to ${fmtShort(iso)}`);
 +  /* ---- the schedule ----------------------------------------------------- */
 +  const markDone = async (taskId, date = todayStr(), detail = null) => {
 +    const task = tasks.find((t) => t.id === taskId);
@@ -9482,36 +9660,17 @@ Byte-identical to V1.
 +    });
    };
  
--  /* Nudging shifts only the next occurrence. The one after it is scheduled from
--     the actual completion, so this never permanently skews the rhythm. */
--  /* Moving a task sets an explicit date rather than accumulating a relative
--     offset. The old model nudged by N days, which meant the date you saw was
--     the result of arithmetic you could not inspect, and editing a task that
--     already had completion history did nothing at all — the due date was
--     derived from the last completion and the offset was quietly ignored. */
--  const setReminderDue = async (id, iso) => {
--    if (!iso) return;
--    await updateReminder(id, { dueOverride: iso, dueReason: "manual", adjustDays: 0 });
--    const r = reminders.find((x) => x.id === id);
--    notify(`${r ? r.label : "Task"} moved to ${fmtShort(iso)}`);
-+  const addTask = async (spec) => {
-+    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
-+    await store.tasks.saveTask(task);
-+    await reload();
-+    notify("Task added");
-   };
- 
 -  const setReminderInterval = async (id, days) => {
 -    if (!isFinite(days) || days < 1) return;
 -    /* Changing the rhythm also releases any one-off move, or the new interval
 -       would appear to do nothing until the pinned date passed. */
 -    await updateReminder(id, { intervalDays: days, dueOverride: null, dueReason: null });
 -    notify(`Now ${intervalLabel(days).toLowerCase()}`);
-+  const updateTask = async (id, patch) => {
-+    const task = tasks.find((t) => t.id === id);
-+    if (!task) return;
-+    await store.tasks.saveTask({ ...task, ...patch });
++  const addTask = async (spec) => {
++    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
++    await store.tasks.saveTask(task);
 +    await reload();
++    notify("Task added");
    };
  
 -  const skipReminder = async (id) => {
@@ -9522,10 +9681,11 @@ Byte-identical to V1.
 -       the history stays honest about what was actually tested. */
 -    await updateReminder(id, { dueOverride: addDays(st.due, r.intervalDays), dueReason: "skipped", adjustDays: 0 });
 -    notify(`Skipped — next ${fmtShort(addDays(st.due, r.intervalDays))}`);
-+  const deleteTask = async (id) => {
-+    await store.tasks.removeTask(id);
++  const updateTask = async (id, patch) => {
++    const task = tasks.find((t) => t.id === id);
++    if (!task) return;
++    await store.tasks.saveTask({ ...task, ...patch });
 +    await reload();
-+    notify("Task deleted");
    };
  
 -  /* Kept for the existing +1 day controls. */
@@ -9534,15 +9694,10 @@ Byte-identical to V1.
 -    if (!r) return;
 -    const st = reminderState(r, taskLog, todayStr());
 -    await setReminderDue(id, addDays(st.due, days));
-+  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
-+     made against. `schedule.js` owns that rule; this passes the anchor. */
-+  const nudgeTask = async (id, days) => {
-+    const task = tasks.find((t) => t.id === id);
-+    if (!task) return;
-+    const st = scheduleView.states.find((s) => s.task.id === id);
-+    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
++  const deleteTask = async (id) => {
++    await store.tasks.removeTask(id);
 +    await reload();
-+    notify("Moved to tomorrow");
++    notify("Task deleted");
    };
  
 -  const completeReminder = async (id, date = todayStr()) => {
@@ -9564,15 +9719,15 @@ Byte-identical to V1.
 -        history,
 -      });
 -    }
-+  const setTaskDue = async (id, date) => {
++  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
++     made against. `schedule.js` owns that rule; this passes the anchor. */
++  const nudgeTask = async (id, days) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
 +    const st = scheduleView.states.find((s) => s.task.id === id);
-+    const base = st ? st.due : task.startDate;
-+    const shift = Math.round((new Date(date) - new Date(base)) / 86400000);
-+    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + shift, adjustAnchor: st ? st.lastDone ?? null : null });
++    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
 +    await reload();
-+    notify(`Moved to ${fmtShort(date)}`);
++    notify("Moved to tomorrow");
    };
  
 -  const applyRestore = (merged) => {
@@ -9589,12 +9744,15 @@ Byte-identical to V1.
 -    if (merged["kit-changes"]) setKitChanges(merged["kit-changes"]);
 -    if (merged["findings-dismissed"]) setDismissed(merged["findings-dismissed"]);
 -    if (merged["correction-plans"]) setCorrectionPlans(merged["correction-plans"]);
-+  const setTaskInterval = async (id, n) => {
++  const setTaskDue = async (id, date) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
-+    await store.tasks.saveTask({ ...task, intervalDays: n, adjustDays: 0, adjustAnchor: null });
++    const st = scheduleView.states.find((s) => s.task.id === id);
++    const base = st ? st.due : task.startDate;
++    const shift = Math.round((new Date(date) - new Date(base)) / 86400000);
++    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + shift, adjustAnchor: st ? st.lastDone ?? null : null });
 +    await reload();
-+    notify("Schedule changed");
++    notify(`Moved to ${fmtShort(date)}`);
    };
  
 -  /* Reminders replaced the old task list, so anything that used to look up a
@@ -9617,7 +9775,14 @@ Byte-identical to V1.
 -  const reminderView = useMemo(
 -    () => computeReminders(reminders, taskLog, todayStr(), remWindow),
 -    [reminders, taskLog, remWindow]);
--
++  const setTaskInterval = async (id, n) => {
++    const task = tasks.find((t) => t.id === id);
++    if (!task) return;
++    await store.tasks.saveTask({ ...task, intervalDays: n, adjustDays: 0, adjustAnchor: null });
++    await reload();
++    notify("Schedule changed");
++  };
+ 
 -  /* The reminder engine replaced this; nothing renders it any more. */
 -  const dueList = [];
 +  const skipTask = async (id) => {
@@ -9917,18 +10082,52 @@ Byte-identical to V1.
 +       ride anywhere: the content scrolls inside `<main>` and the bar is
 +       always the last row of the viewport.
 +
-+       `min-h-screen` is kept as the fallback for a browser with no `dvh`. */
-+    <div className="bg-app text-ink font-body flex flex-col min-h-screen"
-+      style={{ height: "100dvh" }}>
++       ROUND FOUR, ITEM 5 — AND IT WAS THE FALLBACK THAT BROKE IT.
++
++       The flex column above was right. What was wrong sat beside it:
++       `min-h-screen` is `min-height: 100vh`, and it was kept "as the fallback
++       for a browser with no `dvh`". A `min-height` is not a fallback for a
++       `height` — it is a FLOOR, and it wins. On iOS Safari `100vh` is the
++       viewport with the toolbars hidden, so it is TALLER than `100dvh`: the
++       shell was forced past the visual viewport, the document scrolled as a
++       whole, and the nav — the last row of a box taller than the screen — sat
++       below the fold. Which is exactly what the owner described: the bar
++       disappears as you scroll and "only reappears after scrolling all the way
++       to the bottom and continuing".
++
++       The fallback is now a `height` too, and it is written in CSS rather than
++       in a style object — a JS object cannot hold the same key twice, so
++       `{ height: "100vh", height: "100dvh" }` is not two declarations with the
++       second preferred, it is one declaration with the first silently dropped.
++       In the stylesheet below they are two declarations on one property: a
++       browser that understands `dvh` takes the second, one that does not takes
++       the first, which is what a fallback means.
++
++       `overflow: hidden` on the shell means the DOCUMENT cannot scroll at all.
++       Scrolling happens inside `<main>`, so there is no page-level scroll for
++       the bar to ride on however the viewport units resolve, and nothing can
++       run underneath it. */
++    <div className="bg-app text-ink font-body flex flex-col app-shell">
        <style>{`
          .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
          .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
++        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+         .bg-app { background-color: #F3F7F6; }
++        /* A raised surface on the pale-teal page. bg-card was USED by the
++           correction sheet and the pinned close control and was never defined,
++           so both rendered with no background at all - the sheet showed the
++           dark overlay through its own text. Defined once, here, beside the
++           page colour it has to stand out from (owner finding 10). */
++        .bg-card { background-color: #FFFFFF; }
+         .border-app { border-color: #E3ECEA; }
+         .text-ink { color: #08191D; }
+         .text-ink2 { color: #45605F; }
 ```
 
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,7 +708,10 @@
+@@ -1242,21 +749,26 @@
          }
        `}</style>
  
@@ -9938,14 +10137,10 @@ Byte-identical to V1.
 +          so `<main>` inside it is the only thing that scrolls. */}
 +      <div className="flex flex-1 min-h-0">
          {/* Sidebar - desktop */}
-         <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-app px-4 py-6 bg-white">
+-        <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-app px-4 py-6 bg-white">
++        <aside className="hidden md:flex flex-col w-56 shrink-0 h-full overflow-y-auto border-r border-app px-4 py-6 bg-white">
            <div className="flex items-center gap-2 px-2 mb-8">
-```
-
-4. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
-
-```diff
-@@ -1250,13 +719,15 @@
+             <div className="w-9 h-9 rounded-xl bg-teal-brand flex items-center justify-center shadow-sm">
                <Waves size={17} className="text-white" />
              </div>
              <div>
@@ -9966,10 +10161,10 @@ Byte-identical to V1.
                  <button key={n.id} onClick={() => setTab(n.id)}
 ```
 
-5. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
+4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +737,35 @@
+@@ -1266,59 +778,35 @@
                );
              })}
            </nav>
@@ -10051,10 +10246,10 @@ Byte-identical to V1.
                <div className="flex items-start justify-between gap-3">
 ```
 
-6. **data source rewired — every tab is wired to V2's store and the engine result, the tab set is five rather than six, and the Test tab carries the my-tests / ICP-panels toggle and All graphs**
+5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +782,127 @@
+@@ -1335,105 +823,128 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10187,7 +10382,8 @@ Byte-identical to V1.
 +              onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval} onSkipTask={skipTask}
 +              onAddWaterChange={addWaterChange} onAddOneOff={addOneOff}
 +              onAddLightingChange={addLightingChange} onAddNote={addNote}
-+              waterChanges={waterChanges} onOpenTest={openTestFor} />
++              waterChanges={waterChanges} onOpenTest={openTestFor}
++              onDeleteDone={deleteCompletion} />
            )}
 +
            {tab === "setup" && (
@@ -10261,10 +10457,10 @@ Byte-identical to V1.
          </main>
 ```
 
-7. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
+6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +909,10 @@
+@@ -1440,10 +951,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -10279,10 +10475,10 @@ Byte-identical to V1.
              <button key={n.id} onClick={() => setTab(n.id)} className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-[56px] rounded-lg active:bg-app">
 ```
 
-8. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
+7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +926,96 @@
+@@ -1457,6 +968,96 @@
    );
  }
  

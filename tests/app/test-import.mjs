@@ -147,7 +147,7 @@ async function importInto(store, doc, opts = {}) {
    ---------------------------------------------------------------------- */
 
 s.test("IMP-01", "a reading with no time in the file is assigned 09:00, and says so", async () => {
-  /* OWNER DECISION 33, replacing the rule this test used to pin. A reading
+  /* OWNER DECISION 31, replacing the rule this test used to pin. A reading
      carrying only a date is assigned 09:00 and is a fully timed reading for
      every purpose thereafter — the owner's 325 date-only readings become
      analytically eligible, which is the whole point of the decision.
@@ -172,7 +172,7 @@ s.test("IMP-01", "a reading with no time in the file is assigned 09:00, and says
 });
 
 s.test("IMP-01b", "the assignment is readings only — a dose keeps its uncertainty about when it took effect", async () => {
-  /* The limit of owner decision 33, and it is load-bearing. The decision names
+  /* The limit of owner decision 31, and it is load-bearing. The decision names
      READINGS. A dose change's `effectiveAtConfidence` is derived from whether
      the hour is known and the engine measures the whole response window from
      that instant, so assigning 09:00 to a dose dated 11 August would turn
@@ -224,7 +224,7 @@ s.test("IMP-03", "a time is either the file's, or assigned and declared — neve
      change, an ICP panel, a dose — and a per-kind check would not cover the
      kind nobody thought of.
 
-     Owner decision 33 changed what the sweep asserts and not what it is for.
+     Owner decision 31 changed what the sweep asserts and not what it is for.
      Before, no record could carry a time the file did not give. Now a READING
      may, and only if the record says the hour was assigned, says nobody stated
      it, and names the hour. Everything else is unchanged. */
@@ -694,7 +694,7 @@ s.test("IMP-20", "every imported reading is offered to the engine with its true 
 
   const readings = sent.filter((e) => e.kind === "READING");
   eq(readings.length, 3, "all three alkalinity readings are sent");
-  /* Under owner decision 33 every reading reaches the engine with an instant,
+  /* Under owner decision 31 every reading reaches the engine with an instant,
      which is the decision's whole purpose: the one that carried only a date is
      no longer set aside from the trend. It still travels with the provenance
      that says the hour was assigned. */
@@ -735,7 +735,7 @@ s.test("IMP-21", "the report the keeper reads counts exactly what the import wri
   eq(written.readings, described.total, "as many readings written as the report promised");
 
   const stored = events.filter((e) => e.kind === KIND.READING);
-  /* Under owner decision 33 the report's `dateOnly` count is no longer a count
+  /* Under owner decision 31 the report's `dateOnly` count is no longer a count
      of DATE_ONLY records — every one of those readings is written with 09:00
      assigned. It is the count of readings the FILE gave no time for, which is
      what the keeper will be told at import, and `assignedTimeOfDay` names it
@@ -874,7 +874,7 @@ s.test("IMP-24", "an hour daylight saving skipped or repeated is imported like a
 
   /* And the report counts them, because they are not a special case. Every
      reading now has an instant — the ones the file timed and, under owner
-     decision 33, the ones it did not — plus each dose the file timed. */
+     decision 31, the ones it did not — plus each dose the file timed. */
   const described = describePlan(planImport(doc, { assumption: ASSUMED }), ASSUMED);
   eq(
     described.exactElapsedAvailable,

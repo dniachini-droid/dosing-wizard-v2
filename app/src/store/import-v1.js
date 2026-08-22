@@ -537,7 +537,7 @@ export function describePlan(planned, assumption = null) {
     parameters: [...byParameter.values()].sort((a, b) => b.total - a.total),
     total: planned.readings.length,
     withTime,
-    /* Readings the FILE gave no time for. Under owner decision 33 each of them
+    /* Readings the FILE gave no time for. Under owner decision 31 each of them
        is written with 09:00 assigned, so this is no longer the number of
        DATE_ONLY records in the ledger — it is the number of records that carry
        an assigned hour, which is what the keeper will be told at import when
@@ -590,7 +590,7 @@ export function naturalKeyOfEvent(e) {
   if (!date) return null;
   /* AN ASSIGNED TIME IS NOT PART OF A RECORD'S IDENTITY.
 
-     Owner decision 33 gives a date-only reading 09:00, so a reading imported
+     Owner decision 31 gives a date-only reading 09:00, so a reading imported
      from a file with no time now carries `localTime: "09:00"` in the ledger
      while the FILE still says nothing. The key on the way in is built from the
      file's row and the key on the way out from the stored event; if the stored
@@ -1049,7 +1049,7 @@ function byWhen(a, b) {
 export function timeFor(row, assumption = null, { assignTimeOfDay = false } = {}) {
   if (!assumption) throw new Error(t("err.assumptionNeedsRecord"));
   if (!row.time) {
-    /* OWNER DECISION 33, AND IT APPLIES TO READINGS ONLY.
+    /* OWNER DECISION 31, AND IT APPLIES TO READINGS ONLY.
 
        The decision names readings: "any READING carrying only a date is
        assigned 09:00". It is not extended here to doses, water changes, ICP

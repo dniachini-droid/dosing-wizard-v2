@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
+import { SheetClose } from './SheetClose.jsx'
 import { Btn, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { QuickLog } from './LogReadingSheet.jsx'
@@ -257,7 +258,10 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
 
   return (
     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
+      {/* `relative`, so the pinned close control below has this box to sit
+          against rather than the scrolling content inside it (finding 6). */}
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
+        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
         <Card className="p-5 max-h-[85vh] overflow-y-auto">
 
           {/* The notice sits at the top, as V1's dose banner did, and carries
@@ -307,7 +311,9 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                 <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
               </button>
             </div>
-            <button aria-label="Close" onClick={onClose} className="text-ink2 hover:text-ink p-2 -m-2 rounded-lg active:bg-app"><X size={22} /></button>
+            {/* The close control is pinned outside the scroll region now, so
+                there is no second one here to scroll away. */}
+            <div className="w-9 shrink-0" />
           </div>
 
           {editing && (
@@ -471,7 +477,8 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                   already looking. `PORT-OMISSIONS.md` records the absence of
                   this route as the most serious loss in the port. */}
               {onCorrectReading && (
-                <ReadingList rows={[...rows].reverse()} def={def} onPick={setFixing} />
+                <ReadingList rows={[...rows].reverse()} def={def} onPick={setFixing}
+                  onDelete={onDeleteReading} />
               )}
             </>
           )}

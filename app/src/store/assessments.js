@@ -217,7 +217,7 @@ export function createAssessmentStore(backend) {
     return { stored: true, record: rec };
   }
 
-  /* EVERY ASSESSMENT THAT READ A DELETED RECORD GOES WITH IT — owner decision 34.
+  /* EVERY ASSESSMENT THAT READ A DELETED RECORD GOES WITH IT — owner decision 32.
 
      "Assessments that used a deleted reading go with it. They describe a past
      that no longer exists."

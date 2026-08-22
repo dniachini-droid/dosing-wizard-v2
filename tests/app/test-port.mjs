@@ -23,6 +23,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok, throws } from "./harness.mjs";
+import { chartDataFrom } from "../../app/src/lib/adapt.js";
+import { ANNOTATION } from "../../app/src/store/ledger.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(path.dirname(HERE));
@@ -975,6 +977,139 @@ s.test("PORT-19", "the Python runtime's location is stated once, so a built work
     eq(runtime.pathname, "/app/vendor/pyodide/",
       `and the indexURL agrees with it from ${where}`);
   }
+});
+
+/* ---------------------------------------------------------------------------
+   ROUND FOUR — the interface faults, each pinned by the property that was
+   actually wrong rather than by the appearance it produced. Every one of these
+   was reported by the owner using the app on his own tank.
+   ------------------------------------------------------------------------- */
+
+s.test("PORT-20", "the shell's viewport height has a fallback, not a floor", () => {
+  /* OWNER FINDING 5, reported done in round three and still wrong. The flex
+     column was right; `min-h-screen` beside it was not. `min-height: 100vh` is
+     not a fallback for `height: 100dvh`, it is a FLOOR — and on iOS Safari
+     `100vh` is the taller of the two, so the shell was forced past the visual
+     viewport, the document scrolled as a whole, and the tab bar sat below the
+     fold until you scrolled to the very bottom.
+
+     The two declarations must be on ONE property so the second supersedes the
+     first, and they cannot live in a style object: a JS object cannot hold the
+     same key twice, so `{ height: "100vh", height: "100dvh" }` is one
+     declaration with the first silently dropped. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/App.jsx"), "utf8");
+
+  ok(!/className="[^"]*\bmin-h-screen\b[^"]*"[^>]*app-shell/.test(src)
+     && !/app-shell[^>]*min-h-screen/.test(src),
+    "the shell does not carry a 100vh floor beside its dynamic height");
+
+  const rule = /\.app-shell\s*\{([^}]*)\}/.exec(src);
+  ok(rule, "the shell's height is a CSS rule, where one property may be declared twice");
+  const decls = rule[1].split(";").map((d) => d.trim()).filter(Boolean);
+  const heights = decls.filter((d) => /^height\s*:/.test(d));
+  eq(heights.length, 2, `two height declarations, the fallback and the dynamic one: ${heights.join("; ")}`);
+  ok(/100vh/.test(heights[0]), "the fallback comes first");
+  ok(/100dvh/.test(heights[1]), "and the dynamic one supersedes it");
+  ok(decls.some((d) => /^overflow\s*:\s*hidden$/.test(d)),
+    "and the document itself cannot scroll, so nothing can run underneath the bar");
+});
+
+s.test("PORT-21", "the Dosing chart's points carry the label its axis and its markers both read", () => {
+  /* OWNER FINDING 9 — no dates on the x-axis and none of his four imported
+     dose changes marked — and it is ONE cause, not two. The chart draws its
+     axis from `dataKey="label"` and places an event marker by matching the
+     event's date to a point's `label`. The Dosing tab built its own point
+     shape, `{ i, value, date, time }`, with no label in it. Neither the axis
+     nor the markers had anything to find.
+
+     `chartDataFrom` is the shape every other chart in the app takes, and it is
+     where the label rule lives. A second point shape was the defect. */
+  const chart = fs.readFileSync(path.join(ROOT, "app/src/components/ZoomableChart.jsx"), "utf8");
+  ok(/dataKey="label"/.test(chart), "the axis reads `label`");
+  ok(/x=\{ev\.label\}/.test(chart), "and so does an event marker");
+
+  const wizard = fs.readFileSync(path.join(ROOT, "app/src/components/DosingWizard.jsx"), "utf8");
+  const code = wizard.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(/chartDataFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
+  ok(!/\.map\(\(r, i\) => \(\{ i, value/.test(code),
+    "and does not build a second point shape of its own");
+
+  /* And the shared builder does produce what the chart reads. */
+  const rows = [
+    { date: "2026-08-20", time: "09:00", value: 8.9, id: "a" },
+    { date: "2026-08-22", time: null, value: 9.0, id: "b" },
+  ];
+  const points = chartDataFrom(rows, (d) => d.slice(5));
+  ok(points.every((p) => p.label), `every point is labelled: ${JSON.stringify(points.map((p) => p.label))}`);
+  ok(points.every((p) => p.date), "and keeps its date, which is what a marker matches against");
+});
+
+s.test("PORT-22", "Setup's tank section counts only the facts it asks for", () => {
+  /* OWNER FINDING 4: "'One more left' persisted; the owner had to press save
+     repeatedly before the step completed." Nothing failed to save. The counter
+     read every one of `KEEPER_FACTS` while the section renders three of them,
+     and one of the other two — the solution strength — is legitimately ABSENT
+     for a keeper who states his solution in grams per litre, because the engine
+     derives the potency and the app storing a copy would override `ALK-014`'s
+     owner. The count could never reach zero. */
+  const src = fs.readFileSync(path.join(ROOT, "app/src/components/Setup.jsx"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(!/const missing = KEEPER_FACTS\.filter/.test(code),
+    "the counter is not taken over every keeper fact");
+  ok(/const missing = ASKED_HERE\.filter/.test(code),
+    "it is taken over the facts this section renders");
+  /* And the same list drives the fields, so the count and the form cannot
+     disagree about which facts the section is responsible for. */
+  ok(/\{ASKED_HERE\.map\(/.test(code),
+    "and the fields are rendered from that same list");
+});
+
+s.test("PORT-23", "the service worker does not take over a page that is still loading a previous version", () => {
+  /* OWNER FINDING 2: "On the first visit after a fresh deploy, the app
+     rendered the dashboard with no bottom tab bar — no way to reach any other
+     screen. A reload fixed it."
+
+     `skipWaiting`, deleting every superseded cache, and `clients.claim()` are
+     each right on their own. Together they move a page that is STILL LOADING
+     onto a worker that has never heard of the hashed assets its HTML names,
+     and the previous deploy's files are gone from the server. Every module the
+     page had not yet fetched 404s and React renders half an app.
+
+     The page is reloaded, and only where a previous version actually existed —
+     a genuine first install has no mismatch to correct. */
+  const src = fs.readFileSync(path.join(ROOT, "app/sw.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  ok(/superseded/.test(code), "the activate step knows whether it replaced a previous version");
+  ok(/if \(superseded\.length\)/.test(code),
+    "and reloads clients only where it did, so a first install is left alone");
+  ok(/client\.navigate\(/.test(code), "the reload re-requests the document");
+
+  /* The claim still happens — the point is not to stop claiming, it is to stop
+     leaving a claimed page on assets that no longer exist. */
+  ok(/clients\.claim\(\)/.test(code), "the new worker still takes control");
+  const claimAt = code.indexOf("clients.claim()");
+  const reloadAt = code.indexOf("if (superseded.length)");
+  ok(claimAt < reloadAt, "and the reload comes after the claim, not instead of it");
+});
+
+s.test("PORT-24", "no surface offers to mark a record invalid, because nothing can produce that state", () => {
+  /* OWNER DECISION 32: "Mark as invalid is removed everywhere it appears." A
+     screen offering an act the store cannot perform is the same class of fault
+     as a screen showing a number the engine is not using. */
+  const files = [
+    "app/src/store/ledger.js", "app/src/lib/record.js", "app/src/App.jsx",
+    "app/src/components/CorrectReadingSheet.jsx", "app/src/components/Dashboard.jsx",
+  ];
+  for (const f of files) {
+    const code = fs.readFileSync(path.join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    ok(!/MARK_INVALID/.test(code), `${f} does not name the annotation`);
+    ok(!/markInvalid/.test(code), `${f} does not call the recorder`);
+  }
+  /* And the ledger's own vocabulary no longer declares it, so no caller could
+     spell one even if it wanted to. */
+  ok(!Object.keys(ANNOTATION).includes("MARK_INVALID"),
+    `the annotation vocabulary is ${Object.keys(ANNOTATION).join(", ")}`);
 });
 
 export default s;

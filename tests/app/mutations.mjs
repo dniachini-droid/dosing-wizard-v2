@@ -174,7 +174,7 @@ export const MUTATIONS = [
   },
   {
     id: "AM-L20",
-    why: "a deletion removes the event and leaves everything that pointed at it — annotations dangling and assessments still describing a past that no longer exists, which is the tombstone owner decision 34 says must not remain",
+    why: "a deletion removes the event and leaves everything that pointed at it — annotations dangling and assessments still describing a past that no longer exists, which is the tombstone owner decision 32 says must not remain",
     file: "app/src/store/ledger.js",
     find: "      if (a.targetEventId === eventId) await backend.del(ANNOTATIONS, a.annotationId);",
     replace: "      if (false) await backend.del(ANNOTATIONS, a.annotationId);",
@@ -198,7 +198,7 @@ export const MUTATIONS = [
   },
   {
     id: "AM-T15",
-    why: "the import report counts readings the way it did before owner decision 33, so it promises the keeper N records with no time and then writes N records carrying an assigned 09:00 — the report and the record disagree, which is worse than no report because he agreed to something that did not happen",
+    why: "the import report counts readings the way it did before owner decision 31, so it promises the keeper N records with no time and then writes N records carrying an assigned 09:00 — the report and the record disagree, which is worse than no report because he agreed to something that did not happen",
     file: "app/src/store/import-v1.js",
     find: "      if (timeFor(r, assumption, { assignTimeOfDay: true }).absoluteInstant) withInstant += 1;",
     replace: "      if (timeFor(r, assumption, { assignTimeOfDay: false }).absoluteInstant) withInstant += 1;",
@@ -206,7 +206,7 @@ export const MUTATIONS = [
   },
   {
     id: "AM-T14",
-    why: "owner decision 33 is applied to doses as well as readings, so a dose change dated 11 August asserts it took effect at nine in the morning — turning UNCERTAIN into EXACT and giving the response classifier an instant nobody stated",
+    why: "owner decision 31 is applied to doses as well as readings, so a dose change dated 11 August asserts it took effect at nine in the morning — turning UNCERTAIN into EXACT and giving the response classifier an instant nobody stated",
     file: "app/src/store/import-v1.js",
     find: "    return assignTimeOfDay\n      ? assignedDayInstant(row.date, assumption.offsetMinutes, assumption)\n      : dateOnly(row.date);",
     replace: "    return assignedDayInstant(row.date, assumption.offsetMinutes, assumption);",
@@ -259,6 +259,46 @@ export const MUTATIONS = [
     find: "    lines.push(t(\"dosing.potency.working.observation\", {",
     replace: "    if (true) continue;\n    lines.push(t(\"dosing.potency.working.observation\", {",
     breaks: ["DOS-10g"],
+  },
+  {
+    id: "AM-P50",
+    why: "the 100vh floor is restored beside the dynamic height, so on iOS Safari the shell overhangs the visual viewport, the document scrolls as a whole and the tab bar rides below the fold again (finding 5)",
+    file: "app/src/App.jsx",
+    find: ".app-shell { height: 100vh; height: 100dvh; overflow: hidden; }",
+    replace: ".app-shell { min-height: 100vh; height: 100dvh; }",
+    breaks: ["PORT-20"],
+  },
+  {
+    id: "AM-P51",
+    why: "the Dosing tab builds its own chart point shape again, so the x-axis has no dates on it and not one of the keeper's dose changes is marked (finding 9)",
+    file: "app/src/components/DosingWizard.jsx",
+    find: "  const data = chartDataFrom(shown, fmtShort);",
+    replace: "  const data = shown.map((r, i) => ({ i, value: r.value, date: r.date, time: r.time }));",
+    breaks: ["PORT-21"],
+  },
+  {
+    id: "AM-P52",
+    why: "Setup's tank section counts every keeper fact again, including the solution strength that is legitimately absent for a grams-per-litre keeper — so \"one more left\" never clears however many times he saves (finding 4)",
+    file: "app/src/components/Setup.jsx",
+    find: "  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;",
+    replace: "  const missing = KEEPER_FACTS.filter((f) => !config || config[f.key] == null).length;",
+    breaks: ["PORT-22"],
+  },
+  {
+    id: "AM-P53",
+    why: "a new service worker claims a page that is still loading the previous deploy's hashed assets, so every module it has not yet fetched 404s and the app renders without its tab bar (finding 2)",
+    file: "app/sw.js",
+    find: "      if (superseded.length) {",
+    replace: "      if (false) {",
+    breaks: ["PORT-23"],
+  },
+  {
+    id: "AM-P54",
+    why: "`MARK_INVALID` is back in the ledger's vocabulary, so a screen can offer to annotate a record the owner asked to have deleted",
+    file: "app/src/store/ledger.js",
+    find: '  MARK_SUSPECT: "MARK_SUSPECT",',
+    replace: '  MARK_SUSPECT: "MARK_SUSPECT",\n  MARK_INVALID: "MARK_INVALID",',
+    breaks: ["PORT-24"],
   },
   {
     id: "AM-D12",
@@ -1038,7 +1078,7 @@ export const MUTATIONS = [
 
   {
     id: "AM-69",
-    why: "a seeded reading with no time is given midnight as an EXACT_ABSOLUTE, so the hour the app supplied is afterwards indistinguishable from one the keeper measured — owner decision 33 assigns an hour, it does not licence hiding that it was assigned",
+    why: "a seeded reading with no time is given midnight as an EXACT_ABSOLUTE, so the hour the app supplied is afterwards indistinguishable from one the keeper measured — owner decision 31 assigns an hour, it does not licence hiding that it was assigned",
     file: "app/src/store/seed.js",
     find: "  if (row.time) return exactInstant(row.date, row.time, undefined, localZone());",
     replace: '  return exactInstant(row.date, row.time || "00:00", undefined, localZone());',

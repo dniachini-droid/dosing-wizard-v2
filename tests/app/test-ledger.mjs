@@ -284,7 +284,7 @@ s.test(
     await store.ledger.append(
       reading(8.65, AT("2026-08-19", "07:40"), { supersedes: replaced.eventId, recordedAt: "2026-08-22T09:00:00Z" })
     );
-    /* Owner decision 34: the reading that should not have been counted is
+    /* Owner decision 32: the reading that should not have been counted is
        DELETED, not annotated. There is no `MARK_INVALID` to annotate it with. */
     await store.ledger.remove(deleted.eventId);
     await store.ledger.annotate({
@@ -449,7 +449,7 @@ s.test(
   "correcting a value is not a statement about when, so no time box is honoured",
   async () => {
     /* Correcting a NUMBER is not new information about WHEN. Under owner
-       decision 33 a reading corrected without a time is assigned 09:00 like
+       decision 31 a reading corrected without a time is assigned 09:00 like
        every other reading, with the assignment written onto it — what this
        pins is that the corrected record still says the hour was assigned and
        still says nobody stated it. A correction may not turn an assumed hour
@@ -472,7 +472,7 @@ s.test(
   "COR-03",
   "a deleted reading is gone — from the ledger, from the engine, and from every assessment that read it",
   async () => {
-    /* OWNER DECISION 34, replacing the rule this test used to pin. "A deleted
+    /* OWNER DECISION 32, replacing the rule this test used to pin. "A deleted
        record is gone. From the ledger, from storage, from every screen. No
        tombstone, no marked invalid, no supersede annotation, no audit trail.
        Nothing anywhere says it ever existed." */

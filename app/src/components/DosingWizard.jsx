@@ -3,7 +3,8 @@ import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
-import { fmtDate } from '../lib/dates.js'
+import { fmtDate, fmtShort } from '../lib/dates.js'
+import { chartDataFrom } from '../lib/adapt.js'
 import { fmtPotency, fmtQty } from '../lib/format.js'
 import { positionTone } from '../present/position.js'
 import {
@@ -81,27 +82,66 @@ export function DoseElementCard({ def, summary, selected, onSelect }) {
 }
 
 /* ---- a light-teal information panel, V1's surface ---------------------- */
+/* A PANEL STANDS OUT FROM THE PAGE — owner finding 10.
+
+   It was `#F3F7F6` on a `#F3F7F6` page: the same pale teal as the ground behind
+   it, so nothing on this tab read as a distinct element and the screen looked
+   flat rather than designed. The owner's instruction is a choice between two
+   schemes — "either a white page with teal boxes, or a teal page with white
+   boxes, not teal on teal" — and the page is already the teal one, so the
+   panels are the white ones.
+
+   White, a border and a soft shadow, which is the same surface `Card` uses.
+   Two definitions of "a raised surface" would drift apart, so this is deliberately
+   the same three values. */
 function Panel({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl p-3.5 ${className}`}
-      style={{ background: "#F3F7F6", border: "1px solid #E3ECEA" }}>
+    <div className={`rounded-2xl p-3.5 bg-card border border-app shadow-[0_1px_2px_rgba(15,40,45,0.04)] ${className}`}>
       {children}
     </div>
   );
 }
 
-/* ---- a grey secondary box, V1's surface -------------------------------- */
+/* THE THREE CONSUMPTION BOXES, RAISED — owner finding 10, in his own terms:
+   "darker teal, a shadow, and text chosen for contrast against whatever ground
+   they sit on."
+
+   They were `bg-app` on a `bg-app` page, which is why they disappeared into it.
+   They are the most-looked-at figures on the tab — what the tank uses, what the
+   dose supplies, and the difference — so they are the one surface here that is
+   deeper than the page rather than lighter than it, and they carry their own
+   shadow.
+
+   THE TEXT IS CHOSEN FOR THE GROUND, and that is not decoration. `tone` is
+   passed in by `boxes()` for a figure that carries a position colour, and a
+   position colour picked for dark text on a pale card is not legible on deep
+   teal. So a toned value keeps a pale card to sit on and an untoned one takes
+   the deep ground — rather than printing the engine's own colour on a
+   background it was never chosen against. */
+const DEEP_TEAL = "#0A6570";
+
 function Box({ label, value, sub, prose = false, tone = null }) {
+  const onDeep = !tone;
   return (
-    <div className="rounded-xl p-3 bg-app border border-app">
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink2 leading-tight">
+    <div className="rounded-xl p-3 border shadow-[0_2px_6px_rgba(8,25,29,0.12)] h-full"
+      style={{
+        background: onDeep ? DEEP_TEAL : "#FFFFFF",
+        borderColor: onDeep ? "#08525C" : "#E3ECEA",
+      }}>
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] leading-tight"
+        style={{ color: onDeep ? "#B7E2E3" : "#45605F" }}>
         {label}
       </div>
       <div className={`${prose ? "text-[13px]" : "text-[18px] tabular-nums"} font-black mt-1 leading-tight`}
-        style={{ color: tone || "#12312F" }}>
+        style={{ color: onDeep ? "#FFFFFF" : (tone || "#12312F") }}>
         {value == null ? t("dosing.boxes.notWorkedOut") : value}
       </div>
-      {sub && <div className="text-[10px] font-bold text-ink2 mt-0.5 leading-snug">{sub}</div>}
+      {sub && (
+        <div className="text-[10px] font-bold mt-0.5 leading-snug"
+          style={{ color: onDeep ? "#CDEBEB" : "#45605F" }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -271,7 +311,20 @@ function DosingChart({ def, rows, chartEvents }) {
   const [days, setDays] = useState(7);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const shown = rows.filter((r) => r.date >= cutoff);
-  const data = shown.map((r, i) => ({ i, value: r.value, date: r.date, time: r.time }));
+
+  /* THE DATES AND THE DOSE-CHANGE MARKERS — owner finding 9, and one cause.
+
+     This built its own point shape: `{ i, value, date, time }`. The chart's
+     x-axis is `dataKey="label"` and its event markers place themselves by
+     matching an event's date to a point's `label`. Neither could find one, so
+     the axis drew no dates and the owner's four imported dose changes drew
+     nothing — on a chart that was already being handed them.
+
+     `chartDataFrom` is the shape every other chart in the app uses, and it is
+     where the label rule lives: where a day carries more than one reading the
+     label carries the time too, so two points on one day stay distinguishable.
+     Building a second point shape here was the defect; there is one now. */
+  const data = chartDataFrom(shown, fmtShort);
 
   return (
     <div className="mb-4">

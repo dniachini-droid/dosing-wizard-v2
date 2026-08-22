@@ -47,7 +47,7 @@ export const KIND = Object.freeze({
   NOTE: "NOTE",
 });
 
-/* `MARK_INVALID` IS GONE, AND ITS ABSENCE IS OWNER DECISION 34.
+/* `MARK_INVALID` IS GONE, AND ITS ABSENCE IS OWNER DECISION 32.
 
    "Mark as invalid" annotated a record and erased nothing — the opposite of
    what the owner wants from a delete. There is no annotation for it any more,
@@ -308,7 +308,7 @@ export function createLedger(backend) {
   }
 
   /* ============================================================================
-     DELETION IS REAL DELETION — OWNER DECISION 34
+     DELETION IS REAL DELETION — OWNER DECISION 32
      ----------------------------------------------------------------------------
      THE DECISION, AND WHAT IT CONTRADICTS.
 
@@ -376,7 +376,7 @@ export function createLedger(backend) {
      the one place that difference has to be stated. It guarded a SUPERSEDE
      chain, where the danger was a later record silently claiming precision the
      original never had while both remained readable. There is no chain now, and
-     under owner decision 33 a reading corrected without a time is assigned 09:00
+     under owner decision 31 a reading corrected without a time is assigned 09:00
      with the assignment written onto it — which is a declared assumption, not an
      acquired precision. The guard still stands on `append`, where superseding is
      still possible. */
@@ -418,7 +418,7 @@ export function sortLedger(events) {
      SUPERSEDED  a later event replaced it — still in the record, still readable
      SUSPECT     the keeper flagged it; kept, and the engine still sees it
 
-   There is no INVALID any more (owner decision 34): a record the keeper says
+   There is no INVALID any more (owner decision 32): a record the keeper says
    should not have been recorded is DELETED, not annotated.
 
    SUSPECT is the keeper's judgement about his own data. What it DOES to an

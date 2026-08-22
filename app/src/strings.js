@@ -1466,7 +1466,7 @@ export const STRINGS = Object.freeze({
   "correct.save": "Save the correction",
   "correct.saved": "Reading corrected",
   "correct.deleteHead": "Or take it out of your results",
-  /* Owner decision 34: it is deleted, so the sentence says deleted. The
+  /* Owner decision 32: it is deleted, so the sentence says deleted. The
      previous wording promised the record kept it — "it stops counting" — which
      was true of the annotation this replaced and is a lie about what now
      happens. */
@@ -1479,7 +1479,7 @@ export const STRINGS = Object.freeze({
   "correct.readingsHead": "Your readings",
   "correct.tapToFix": "Tap any reading to fix it or take it out.",
   /* ---- deleting a record, and it is deleted ---------------------------
-     Owner decision 34. There is no "marked invalid" anywhere any more, so
+     Owner decision 32. There is no "marked invalid" anywhere any more, so
      there is no wording for one either — `correct.superseded` and
      `correct.invalid` were badges for two states nothing can now produce.
 

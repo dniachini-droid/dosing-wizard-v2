@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Btn, Field, inputCls } from './DoseExpectation.jsx'
 import { fmtDate } from '../lib/dates.js'
-import { Trash2 } from '../icons.jsx'
+import { DeleteControl } from './DeleteControl.jsx'
+import { SheetClose } from './SheetClose.jsx'
 import { PROVENANCE } from '../store/time.js'
 import { t } from '../strings.js'
 
@@ -21,7 +22,7 @@ import { t } from '../strings.js'
      Correcting  — the measurement happened and the number is wrong. The record
                    holds the corrected value (owner finding 17).
      Deleting    — the reading should never have been counted at all: a botched
-                   test, or one entered twice. It is GONE (owner decision 34).
+                   test, or one entered twice. It is GONE (owner decision 32).
 
    BOTH OF THESE CHANGED THIS ROUND, AND THE SCREEN'S WORDING WITH THEM.
 
@@ -35,7 +36,7 @@ import { t } from '../strings.js'
 
    NO TIME BOX ON A DATE-ONLY READING. Correcting a NUMBER is not new
    information about WHEN, and a form that asked would be inviting a
-   fabrication. Under owner decision 33 such a reading is assigned 09:00 when it
+   fabrication. Under owner decision 31 such a reading is assigned 09:00 when it
    is written, so what this branch now suppresses is an offer to state an hour
    the keeper still does not know.
    ========================================================================= */
@@ -47,7 +48,6 @@ export function CorrectReadingSheet({ reading, def, onCorrect, onDelete, onClose
 
   const [value, setValue] = useState(String(reading.value));
   const [msg, setMsg] = useState("");
-  const [confirming, setConfirming] = useState(false);
 
   const save = async () => {
     const v = parseFloat(value);
@@ -66,8 +66,13 @@ export function CorrectReadingSheet({ reading, def, onCorrect, onDelete, onClose
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
       onClick={onClose}>
-      <div className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl p-4 max-h-[88vh] overflow-y-auto"
+      {/* `relative` on the sheet, so the close control sits against the sheet
+          and not against the content scrolling inside it (finding 6). The
+          scroll region is the inner box. */}
+      <div className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl relative max-h-[88vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}>
+        <SheetClose onClose={onClose} label={t("correct.title")} />
+        <div className="p-4 overflow-y-auto">
         <h3 className="text-[16px] font-black text-ink mb-1">{t("correct.title")}</h3>
         <p className="text-[12px] font-bold text-ink2 mb-3">
           {t("correct.original", {
@@ -97,34 +102,19 @@ export function CorrectReadingSheet({ reading, def, onCorrect, onDelete, onClose
           <p className="text-[12px] font-medium text-ink2 leading-relaxed mb-2">
             {t("correct.deleteBody")}
           </p>
-          {confirming ? (
-            <>
-              <p className="text-[12px] font-bold text-ink leading-relaxed mb-2">
-                {t("delete.confirm.reading")}
-              </p>
-              <button
-                className="w-full rounded-xl py-2.5 text-[13px] font-extrabold text-white bg-rose-600"
-                onClick={async () => { await onDelete(reading.id); onClose(); }}>
-                {t("delete.confirm.yes")}
-              </button>
-              <button
-                className="w-full mt-2 py-2 text-[12px] font-extrabold text-ink2"
-                onClick={() => setConfirming(false)}>
-                {t("delete.confirm.no")}
-              </button>
-            </>
-          ) : (
-            <button
-              className="w-full rounded-xl py-2.5 text-[13px] font-extrabold text-rose-600 border-2 border-rose-200"
-              onClick={() => setConfirming(true)}>
-              {t("correct.delete")}
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] font-extrabold text-rose-600 flex-1">{t("correct.delete")}</span>
+            <DeleteControl
+              onDelete={async () => { await onDelete(reading.id); onClose(); }}
+              label={t("delete.aria.reading", { date: fmtDate(reading.date) })}
+              ask={t("delete.confirm.reading")} />
+          </div>
         </div>
 
         <button className="w-full mt-3 py-2 text-[12px] font-extrabold text-ink2" onClick={onClose}>
           {t("correct.cancel")}
         </button>
+        </div>
       </div>
     </div>
   );
@@ -145,11 +135,10 @@ export function CorrectReadingSheet({ reading, def, onCorrect, onDelete, onClose
 
    NO STATE BADGES. There used to be an INVALID badge and a SUPERSEDED one.
    Neither state is reachable any more — a deleted record is gone rather than
-   annotated (owner decision 34) and a correction rewrites the record rather
+   annotated (owner decision 32) and a correction rewrites the record rather
    than superseding it (finding 17) — so a badge for either would be a label
    nothing can produce. */
 export function ReadingList({ rows, def, onPick, onDelete = null }) {
-  const [confirming, setConfirming] = useState(null);
   if (!rows.length) return null;
   return (
     <div className="mt-4">
@@ -157,44 +146,19 @@ export function ReadingList({ rows, def, onPick, onDelete = null }) {
       <p className="text-[11px] font-medium text-ink2 mb-2">{t("correct.tapToFix")}</p>
       <div className="space-y-1">
         {rows.map((r) => (
-          <div key={r.id} className="rounded-lg bg-app">
-            <div className="flex items-center gap-2 px-2.5 py-2">
-              <button onClick={() => onPick(r)} className="flex items-center gap-2 flex-1 text-left active:opacity-70">
-                <span className="text-[13px] font-black text-ink tabular-nums">
-                  {r.value}<span className="text-ink2 font-bold text-[11px] ml-0.5">{def ? def.unit : ""}</span>
-                </span>
-                <span className="text-[11px] font-bold text-ink2 flex-1 truncate">
-                  {fmtDate(r.date)}{r.time ? ` · ${r.time}` : ""}
-                </span>
-              </button>
-              {onDelete && (
-                <button
-                  aria-label={t("delete.aria.reading", { date: fmtDate(r.date) })}
-                  onClick={() => setConfirming(confirming === r.id ? null : r.id)}
-                  className="shrink-0 p-1.5 rounded-lg text-rose-600 active:opacity-70">
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </div>
-            {confirming === r.id && (
-              <div className="px-2.5 pb-2.5">
-                <p className="text-[12px] font-bold text-ink leading-relaxed mb-2">
-                  {t("delete.confirm.reading")}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-white bg-rose-600"
-                    onClick={async () => { setConfirming(null); await onDelete(r.id); }}>
-                    {t("delete.confirm.yes")}
-                  </button>
-                  <button
-                    className="flex-1 rounded-xl py-2 text-[12px] font-extrabold text-ink2 border-2 border-app"
-                    onClick={() => setConfirming(null)}>
-                    {t("delete.confirm.no")}
-                  </button>
-                </div>
-              </div>
-            )}
+          <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-app px-2.5 py-2">
+            <button onClick={() => onPick(r)} className="flex items-center gap-2 flex-1 text-left active:opacity-70">
+              <span className="text-[13px] font-black text-ink tabular-nums">
+                {r.value}<span className="text-ink2 font-bold text-[11px] ml-0.5">{def ? def.unit : ""}</span>
+              </span>
+              <span className="text-[11px] font-bold text-ink2 flex-1 truncate">
+                {fmtDate(r.date)}{r.time ? ` · ${r.time}` : ""}
+              </span>
+            </button>
+            <DeleteControl
+              onDelete={() => onDelete(r.id)}
+              label={t("delete.aria.reading", { date: fmtDate(r.date) })}
+              ask={t("delete.confirm.reading")} />
           </div>
         ))}
       </div>

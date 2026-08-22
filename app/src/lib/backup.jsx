@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Btn, Field, inputCls } from '../components/DoseExpectation.jsx'
 import { Card } from '../components/ErrorBoundary.jsx'
 import { Check, ChevronDown, Save, Settings2, X } from '../icons.jsx'
+import { DeleteControl } from '../components/DeleteControl.jsx'
 import { fmtVal, fmtFriendly } from './format.js'
+import { t } from '../strings.js'
 import { positionTone, positionWord, positionIsInRange } from '../present/position.js'
 import { todayStr, fmtShort } from './dates.js'
 import { addDays, now as appNow } from '../store/time.js'
@@ -334,7 +336,8 @@ export function ReminderSheet({ rem, state, onClose, onSetDue, onSetInterval, on
   );
 }
 
-export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTask = null }) {
+export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTask = null,
+  onDeleteDone = null }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [picked, setPicked] = useState(null);
 
@@ -358,7 +361,7 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
     for (const l of taskLog || []) {
       if (!l.date) continue;
       (map[l.date] = map[l.date] || []).push({
-        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, auto: !!l.auto, done: true,
+        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
       });
     }
     for (const w of waterChanges || []) {
@@ -467,11 +470,15 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
           ) : (
             <div className="space-y-1">
               {(byDay[picked] || []).map((it) => (
-                <div key={it.id} className="flex items-center gap-2">
+                <div key={it.id} className="flex flex-wrap items-center gap-2">
                   <Check size={13} style={{ color: "#0B7C86" }} className="shrink-0" />
                   <span className="text-[13px] font-bold text-ink">{it.label}</span>
                   {it.detail && <span className="text-[12px] font-bold text-ink2">· {it.detail}</span>}
                   {it.auto && <span className="text-[10px] font-bold text-ink2">· from a logged test</span>}
+                  <span className="flex-1" />
+                  {onDeleteDone && (
+                    <DeleteControl size={13} onDelete={() => onDeleteDone(it)} />
+                  )}
                 </div>
               ))}
               {/* Scheduled items are tappable: seeing a task on a day you
@@ -514,7 +521,8 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
 
 /* The calendar as an overlay, so it can be reached from the dashboard without
    losing your place. */
-export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPickTask = null }) {
+export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPickTask = null,
+  onDeleteDone = null }) {
   useEscape(onClose);
   return (
     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -532,7 +540,7 @@ export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPic
         </div>
         <div className="px-4 pb-4">
           <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
-            onPickTask={onPickTask} />
+            onPickTask={onPickTask} onDeleteDone={onDeleteDone} />
         </div>
       </div>
     </div>

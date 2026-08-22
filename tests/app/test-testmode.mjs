@@ -362,7 +362,7 @@ s.test("TM-09", "a seeded reading with no time is assigned 09:00, and a seeded d
   eq(s0.dateOnly, 1, "one is date-only");
   eq(s0.withTime, 1, "one carries a time");
 
-  /* OWNER DECISION 33. A seeded READING with no time is assigned 09:00 like an
+  /* OWNER DECISION 31. A seeded READING with no time is assigned 09:00 like an
      imported or hand-entered one — a seed that produced records the rest of the
      app cannot produce would be testing something the app does not do. */
   const t0 = timeFor(rows[0]);

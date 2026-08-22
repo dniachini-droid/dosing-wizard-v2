@@ -232,11 +232,11 @@ export const ASSUMPTION = Object.freeze({
      does not move. Not a statement by anybody. */
   DEVICE_ZONE: "ASSUMED_DEVICE_ZONE",
   /* The time of day itself, assigned to a record that carried only a date.
-     Owner decision 33 — see `ASSIGNED_TIME_OF_DAY` below. */
+     Owner decision 31 — see `ASSIGNED_TIME_OF_DAY` below. */
   TIME_OF_DAY: "ASSIGNED_TIME_OF_DAY",
 });
 
-/* --- OWNER DECISION 33: A DATE-ONLY READING IS ASSIGNED 09:00 -------------
+/* --- OWNER DECISION 31: A DATE-ONLY READING IS ASSIGNED 09:00 -------------
 
    THE DECISION, IN THE OWNER'S WORDS AND WITH HIS REASONING.
 

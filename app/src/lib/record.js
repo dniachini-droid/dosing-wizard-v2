@@ -69,7 +69,7 @@ function undated(date) {
   return dateOnly(date);
 }
 
-/* A READING whose form had no time box — OWNER DECISION 33.
+/* A READING whose form had no time box — OWNER DECISION 31.
 
    A third constructor rather than a change to `undated`, and the split is the
    decision's own: it names READINGS. `undated` is still what a lighting note or
@@ -312,7 +312,7 @@ export async function correctReading(store, { eventId, param, value, date, time 
   });
 }
 
-/* DELETE A RECORD. It is gone — owner decision 34.
+/* DELETE A RECORD. It is gone — owner decision 32.
 
    This replaced `markInvalid`, which annotated the record and erased nothing.
    There is no note to record because there is nothing left for a note to be

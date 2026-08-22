@@ -199,21 +199,25 @@ export function ImportPanel({ store, onImported }) {
             </div>
           </div>
 
-          {/* THE ASSUMPTION, NAMED, WITH ITS OFFSET, BEFORE ANYTHING IS
-              WRITTEN. This is the whole of what makes the reconstruction
-              legitimate rather than a fabrication. */}
-          <div className="rounded-xl p-3 mb-3" style={{ background: "#A2621B10", border: "1px solid #A2621B44" }}>
-            <div className="text-[10px] font-extrabold uppercase tracking-wide mb-1" style={{ color: "#A2621B" }}>
-              What is being assumed
-            </div>
-            <p className="text-[12px] text-ink font-medium leading-relaxed">
-              The {report.withTime} readings that carry a wall-clock time have no record of which
-              offset was in force. This device's offset is applied to all of them —
-              {" "}{report.assumedZoneId || "your timezone"}, {report.assumedOffsetMinutes} minutes
-              from UTC — and every record it touches carries that assumption with it.
-              The {report.dateOnly} readings with no time are left with no time.
-            </p>
-          </div>
+          {/* THE TIMEZONE EXPLANATION IS GONE — owner finding 1.
+
+              It said which offset was being applied to his timed readings, and
+              that his date-only ones would be left alone. The owner's own
+              answer: "The keeper does not need to be told this. It is correct
+              behaviour, correctly recorded in provenance, and it does not
+              require his attention or consent."
+
+              THE PROVENANCE RECORD ITSELF STAYS, and it is the half that
+              matters. Every record built with an assumed offset still carries
+              `reconstruction` — the offset used, that it WAS assumed, and that
+              nobody stated it — which is what `store/time.js` says makes the
+              reconstruction legitimate rather than a fabrication. What went is
+              the announcement, not the record.
+
+              A notice saying that times were ASSIGNED (owner decision 31) is
+              wanted, and the owner has said later rather than now. It is on the
+              list in `docs/implementation/app/OPEN-ITEMS.md`; nothing here
+              anticipates it. */}
 
           <div className="grid grid-cols-2 gap-2">
             <Btn variant="ghost" onClick={reset}>Cancel</Btn>

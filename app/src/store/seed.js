@@ -192,7 +192,7 @@ export function parseSeries(text) {
    itself rather than passed in from the device's offset today, because a date
    six months away can sit on the other side of a daylight-saving change. */
 export function timeFor(row) {
-  /* OWNER DECISION 33: a READING with no time is assigned 09:00. Seeded data
+  /* OWNER DECISION 31: a READING with no time is assigned 09:00. Seeded data
      goes through the same rule as imported and hand-entered data, because a
      seed that produced records the rest of the app cannot produce would be
      testing something the app does not do — including the rule's own limit.
