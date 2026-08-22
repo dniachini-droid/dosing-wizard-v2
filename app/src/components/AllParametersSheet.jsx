@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
+import { DeleteControl } from './DeleteControl.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
-import { Check, X } from '../icons.jsx'
+import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
 import { fmtVal, fmtTime } from '../lib/format.js'
 import { nowTime } from '../lib/clock.js'
 import { useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 import { rowsFor } from '../lib/adapt.js'
-import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
+import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey } from '../present/episodes.js'
+import { t } from '../strings.js'
 
 /* --- Enter every parameter on one screen ---
  *
@@ -16,11 +18,71 @@ import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
  * Log, move on. The date applies to all of them, since a testing session
  * happens at one sitting.
  */
+/* This parameter's readings, newest first.
+
+   `rowsFor` is the app's one answer to "this parameter's readings, in order",
+   and the ledger's order is the app's one answer to which is most recent — so
+   this reverses that rather than sorting on a date, which is the mistake that
+   put the dose history in the wrong order. */
+function readingsNewestFirst(readings, key) {
+  return [...rowsFor(readings, key)].reverse();
+}
+
+/* Value, date, time and a trash icon each — the owner's own list.
+
+   A reading that was one of several taken close together says so, because
+   otherwise the keeper sees three rows at 09:07 and cannot tell why the card
+   above shows a figure that is none of them. Deleting one recomputes the group
+   from the ledger: the engine forms the episode again from what is left, and
+   every surface follows. Nothing here is cached and nothing is patched. */
+function ReadingRows({ rows, def, episodes, onDelete }) {
+  if (!rows.length) {
+    return (
+      <p className="text-[12px] font-medium text-ink2 px-1 pb-2 pt-1">
+        {t("testlab.noReadings", { parameter: def.labelMid || def.label.toLowerCase() })}
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-1 pt-2 pb-1">
+      {rows.map((r) => {
+        const ep = episodeForReading(episodes, r.id);
+        const grouped = !!(ep && ep.count > 1);
+        return (
+          <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-app px-2.5 py-2">
+            <span className="text-[13px] font-black text-ink tabular-nums shrink-0">
+              {fmtVal(def, r.value)}
+              <span className="text-ink2 font-bold text-[11px] ml-0.5">{def.unit}</span>
+            </span>
+            <span className="text-[11px] font-bold text-ink2 flex-1 min-w-0">
+              {fmtShort(r.date)}{fmtTime(r.time) ? ` · ${fmtTime(r.time)}` : ""}
+              {grouped && (
+                <span className="block text-[10px] font-bold" style={{ color: def.color }}>
+                  {t(`testlab.partOf.${groupWordKey(ep.count)}`, {
+                    count: ep.count, value: fmtVal(def, ep.valueDkh), unit: def.unit })}
+                </span>
+              )}
+            </span>
+            {onDelete && (
+              <DeleteControl onDelete={() => onDelete(r.id)}
+                label={t("delete.aria.reading", { date: fmtShort(r.date) })}
+                ask={t("delete.confirm.reading")} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
   episodes = null, onDeleteReading = null }) {
   const [date, setDate] = useState(todayStr());
   const [time, setTime] = useState(nowTime());
   const [values, setValues] = useState({});
+  /* Which parameter's readings are showing. One at a time: eight open lists on
+     a phone is a page nobody can find anything in. */
+  const [openKey, setOpenKey] = useState(null);
 
   const setVal = (k, v) => setValues((p) => ({ ...p, [k]: v }));
 
@@ -212,9 +274,31 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                     : { background: "#EDF3F2", color: "#9FB0AE" }}>
                   {doneToday && !filled ? "Again" : "Log"}
                 </button>
+
+                {/* OWNER FINDINGS 8, 11 AND 27 — THE RAW READINGS, REACHABLE.
+
+                    There was no list of readings anywhere he could get to. The
+                    calendar answers "what did I do on this day"; it does not
+                    answer "where is that reading I typed wrong", and its trash
+                    icon deletes the TICK rather than the reading — which is why
+                    deleting from it changed one surface and nothing else.
+
+                    So the readings live here, under the parameter they belong
+                    to, which is how he asked for them: expand a parameter, see
+                    its own readings newest first. */}
+                <button onClick={() => setOpenKey(openKey === def.key ? null : def.key)}
+                  aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
+                    { parameter: def.labelMid || def.label.toLowerCase() })}
+                  aria-expanded={openKey === def.key}
+                  className="shrink-0 p-1.5 rounded-lg text-ink2 active:bg-app">
+                  {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </button>
               </div>
 
-
+              {openKey === def.key && (
+                <ReadingRows rows={readingsNewestFirst(readings, def.key)} def={def}
+                  episodes={episodes} onDelete={onDeleteReading} />
+              )}
             </div>
           );
         })}

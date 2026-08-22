@@ -5261,24 +5261,28 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `1cb533440fbeabcdc078430e906f7ceef46aabf31bac0f2e97848323846c5e4c` |
-| Differences | 10 |
+| Ported SHA-256 | `1aa2c5e29fe2d99ca6088b91403e254696821aef563052ff77a9fcb38303153a` |
+| Differences | 11 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
 
 ```diff
-@@ -2,10 +2,12 @@
+@@ -1,11 +1,15 @@
+ import { useMemo, useState } from 'react'
++import { DeleteControl } from './DeleteControl.jsx'
  import { Card } from './ErrorBoundary.jsx'
  import { ZoomableLineChart } from './ZoomableChart.jsx'
- import { Check, X } from '../icons.jsx'
+-import { Check, X } from '../icons.jsx'
 -import { fmtVal } from '../lib/analytics/time-in-range.js'
 -import { byNewest, byOldest, fmtTime, nowTime } from '../lib/analytics/time-of-day.js'
++import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
 +import { fmtVal, fmtTime } from '../lib/format.js'
 +import { nowTime } from '../lib/clock.js'
  import { useEscape } from '../lib/backup.jsx'
  import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 +import { rowsFor } from '../lib/adapt.js'
-+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
++import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey } from '../present/episodes.js'
++import { t } from '../strings.js'
  
  /* --- Enter every parameter on one screen ---
   *
@@ -5287,22 +5291,85 @@ Byte-identical to V1.
 2. **data source rewired — the Test Lab takes V2's schedule view instead of V1's reminders and reminder view**
 
 ```diff
-@@ -14,7 +16,8 @@
+@@ -14,10 +18,71 @@
   * Log, move on. The date applies to all of them, since a testing session
   * happens at one sitting.
   */
 -export function TestLab({ paramDefs, readings, onAdd, onOpenParam, reminders = [], reminderView = null }) {
++/* This parameter's readings, newest first.
++
++   `rowsFor` is the app's one answer to "this parameter's readings, in order",
++   and the ledger's order is the app's one answer to which is most recent — so
++   this reverses that rather than sorting on a date, which is the mistake that
++   put the dose history in the wrong order. */
++function readingsNewestFirst(readings, key) {
++  return [...rowsFor(readings, key)].reverse();
++}
++
++/* Value, date, time and a trash icon each — the owner's own list.
++
++   A reading that was one of several taken close together says so, because
++   otherwise the keeper sees three rows at 09:07 and cannot tell why the card
++   above shows a figure that is none of them. Deleting one recomputes the group
++   from the ledger: the engine forms the episode again from what is left, and
++   every surface follows. Nothing here is cached and nothing is patched. */
++function ReadingRows({ rows, def, episodes, onDelete }) {
++  if (!rows.length) {
++    return (
++      <p className="text-[12px] font-medium text-ink2 px-1 pb-2 pt-1">
++        {t("testlab.noReadings", { parameter: def.labelMid || def.label.toLowerCase() })}
++      </p>
++    );
++  }
++  return (
++    <div className="space-y-1 pt-2 pb-1">
++      {rows.map((r) => {
++        const ep = episodeForReading(episodes, r.id);
++        const grouped = !!(ep && ep.count > 1);
++        return (
++          <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++            <span className="text-[13px] font-black text-ink tabular-nums shrink-0">
++              {fmtVal(def, r.value)}
++              <span className="text-ink2 font-bold text-[11px] ml-0.5">{def.unit}</span>
++            </span>
++            <span className="text-[11px] font-bold text-ink2 flex-1 min-w-0">
++              {fmtShort(r.date)}{fmtTime(r.time) ? ` · ${fmtTime(r.time)}` : ""}
++              {grouped && (
++                <span className="block text-[10px] font-bold" style={{ color: def.color }}>
++                  {t(`testlab.partOf.${groupWordKey(ep.count)}`, {
++                    count: ep.count, value: fmtVal(def, ep.valueDkh), unit: def.unit })}
++                </span>
++              )}
++            </span>
++            {onDelete && (
++              <DeleteControl onDelete={() => onDelete(r.id)}
++                label={t("delete.aria.reading", { date: fmtShort(r.date) })}
++                ask={t("delete.confirm.reading")} />
++            )}
++          </div>
++        );
++      })}
++    </div>
++  );
++}
++
 +export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
 +  episodes = null, onDeleteReading = null }) {
    const [date, setDate] = useState(todayStr());
    const [time, setTime] = useState(nowTime());
    const [values, setValues] = useState({});
++  /* Which parameter's readings are showing. One at a time: eight open lists on
++     a phone is a page nobody can find anything in. */
++  const [openKey, setOpenKey] = useState(null);
+ 
+   const setVal = (k, v) => setValues((p) => ({ ...p, [k]: v }));
+ 
 ```
 
 3. **data source rewired — the latest reading per parameter comes from the read adapter's ordering**
 
 ```diff
-@@ -24,8 +27,8 @@
+@@ -24,8 +89,8 @@
    const latest = useMemo(() => {
      const m = {};
      for (const d of paramDefs) {
@@ -5318,7 +5385,7 @@ Byte-identical to V1.
 4. **data source rewired — a logged reading carries value, date and time and nothing else**
 
 ```diff
-@@ -35,7 +38,7 @@
+@@ -35,7 +100,7 @@
      if (raw === undefined || raw === "") return;
      const v = parseFloat(raw);
      if (!isFinite(v)) return;
@@ -5332,7 +5399,7 @@ Byte-identical to V1.
 5. **data source rewired — the due state reads V2's task vocabulary**
 
 ```diff
-@@ -45,9 +48,9 @@
+@@ -45,9 +110,9 @@
    const { sessionDue, sessionDone } = useMemo(() => {
      let due = 0, done = 0;
      for (const def of paramDefs) {
@@ -5350,7 +5417,7 @@ Byte-identical to V1.
 6. **data source rewired — the session progress and the due lookup read V2's schedule view**
 
 ```diff
-@@ -54,11 +57,11 @@
+@@ -54,11 +119,11 @@
        if (testedOnDate) done += 1;
      }
      return { sessionDue: due, sessionDone: done };
@@ -5370,7 +5437,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the party emoji in the completion state replaced by the icon set's tick; the brief rules out emojis**
 
 ```diff
-@@ -104,7 +107,10 @@
+@@ -104,7 +169,10 @@
  
          {sessionDue > 0 && sessionDone >= sessionDue && (
            <div className="rounded-lg px-3 py-2 mb-2.5 flex items-center gap-2" style={{ background: "#0B7C8614" }}>
@@ -5384,10 +5451,48 @@ Byte-identical to V1.
              </span>
 ```
 
-8. **data source rewired — All graphs builds its series through the read adapter**
+8. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
 
 ```diff
-@@ -219,7 +225,7 @@
+@@ -206,9 +274,31 @@
+                     : { background: "#EDF3F2", color: "#9FB0AE" }}>
+                   {doneToday && !filled ? "Again" : "Log"}
+                 </button>
+-              </div>
+ 
++                {/* OWNER FINDINGS 8, 11 AND 27 — THE RAW READINGS, REACHABLE.
+ 
++                    There was no list of readings anywhere he could get to. The
++                    calendar answers "what did I do on this day"; it does not
++                    answer "where is that reading I typed wrong", and its trash
++                    icon deletes the TICK rather than the reading — which is why
++                    deleting from it changed one surface and nothing else.
++
++                    So the readings live here, under the parameter they belong
++                    to, which is how he asked for them: expand a parameter, see
++                    its own readings newest first. */}
++                <button onClick={() => setOpenKey(openKey === def.key ? null : def.key)}
++                  aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
++                    { parameter: def.labelMid || def.label.toLowerCase() })}
++                  aria-expanded={openKey === def.key}
++                  className="shrink-0 p-1.5 rounded-lg text-ink2 active:bg-app">
++                  {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
++                </button>
++              </div>
++
++              {openKey === def.key && (
++                <ReadingRows rows={readingsNewestFirst(readings, def.key)} def={def}
++                  episodes={episodes} onDelete={onDeleteReading} />
++              )}
+             </div>
+           );
+         })}
+```
+
+9. **data source rewired — All graphs builds its series through the read adapter**
+
+```diff
+@@ -219,7 +309,7 @@
  
  /* Every chart in one place, stripped of commentary — for when you want to scan
     the tank's whole history rather than study one parameter. */
@@ -5398,10 +5503,10 @@ Byte-identical to V1.
       charts on different timescales invite the wrong conclusion. */
 ```
 
-9. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
+10. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
 
 ```diff
-@@ -229,16 +235,15 @@
+@@ -229,16 +319,15 @@
    const series = paramDefs
      .map((def) => ({
        def,
@@ -5424,10 +5529,10 @@ Byte-identical to V1.
          {/* The header sticks, so the window control stays reachable however far
 ```
 
-10. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+11. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
 
 ```diff
-@@ -279,10 +284,15 @@
+@@ -279,10 +368,15 @@
                    <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                  </span>
                  <span className="text-[11px] font-bold text-ink2 shrink-0">

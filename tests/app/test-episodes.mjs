@@ -38,6 +38,8 @@ import {
 
 const s = suite("episodes");
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+const code = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
 
 /* An engine answer shaped exactly as the real one: a repeat test of three on
    22 August, resolved to its middle value, and a single test a week earlier. */
@@ -198,6 +200,58 @@ s.test("EP-11", "\"Change the dose anyway\" names a tab that exists", () => {
   for (const m of app.matchAll(/setTab\("([a-z]+)"\)/g)) {
     ok(ids.has(m[1]), `setTab("${m[1]}") names a tab that exists`);
   }
+});
+
+/* ============================================================================
+   THE RAW READINGS LIST — OWNER FINDINGS 8, 11 AND 27
+   ----------------------------------------------------------------------------
+   "There is no list of raw readings anywhere in the app." The calendar answers
+   "what did I do on this day"; it does not answer "where is that reading I
+   typed wrong", and its trash icon deletes the TICK rather than the reading —
+   which is why deleting from it changed the due list and nothing else.
+   ========================================================================= */
+
+s.test("RL-01", "the Test tab can show every reading of a parameter", () => {
+  const lab = code("app/src/components/AllParametersSheet.jsx");
+  ok(/readingsNewestFirst\(readings, def\.key\)/.test(lab), "grouped by parameter, as asked");
+  ok(/testlab\.showReadings/.test(lab), "with a control that opens it");
+  ok(/<ReadingRows/.test(lab), "and a list to open");
+});
+
+s.test("RL-02", "every reading in it carries value, date, time and a trash icon", () => {
+  const lab = code("app/src/components/AllParametersSheet.jsx");
+  const rows = lab.slice(lab.indexOf("function ReadingRows"), lab.indexOf("export function TestLab"));
+  ok(/fmtVal\(def, r\.value\)/.test(rows), "the value");
+  ok(/fmtShort\(r\.date\)/.test(rows), "the date");
+  ok(/fmtTime\(r\.time\)/.test(rows), "the time");
+  ok(/<DeleteControl/.test(rows), "and a trash icon");
+});
+
+s.test("RL-03", "deleting a reading uses the one control, with its confirmation", () => {
+  /* Three implementations of "trash icon, then a confirmation" is three chances
+     for one of them to skip the confirmation. */
+  const lab = code("app/src/components/AllParametersSheet.jsx");
+  ok(!/confirm\(/.test(lab), "no confirmation of its own");
+  ok(/delete\.confirm\.reading/.test(lab), "the shared wording");
+  const app = code("app/src/App.jsx");
+  ok(/onDeleteReading=\{dropReading\}/.test(app), "and the shell's one delete path");
+});
+
+s.test("RL-04", "the list is newest first from the ledger, never sorted by date", () => {
+  /* The mistake that put the dose history in the wrong order, not repeated. */
+  const lab = code("app/src/components/AllParametersSheet.jsx");
+  const fn = lab.slice(lab.indexOf("function readingsNewestFirst"), lab.indexOf("function ReadingRows"));
+  ok(/rowsFor\(readings, key\)\]\.reverse\(\)/.test(fn), "the ledger's own order, reversed");
+  ok(!/\.sort\(/.test(fn), "and no second opinion about which is most recent");
+});
+
+s.test("RL-05", "a reading that was one of several says so, and names the figure used", () => {
+  /* Otherwise the keeper sees three rows at 09:07 and cannot tell why the card
+     above them shows a figure that is none of the three. */
+  const lab = code("app/src/components/AllParametersSheet.jsx");
+  ok(/episodeForReading\(episodes, r\.id\)/.test(lab), "each row asks whether it was grouped");
+  ok(/testlab\.partOf\./.test(lab), "and says so where it was");
+  ok(/ep\.valueDkh/.test(lab), "naming the figure the engine used");
 });
 
 export default s;

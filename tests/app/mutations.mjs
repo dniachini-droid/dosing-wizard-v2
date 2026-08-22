@@ -2484,4 +2484,46 @@ export const MUTATIONS = [
     breaks: ["DD-14"],
   },
 
+  /* ---- ROUND FIVE: the raw readings list (findings 8, 11, 27) -------- */
+  {
+    id: "AM-R33",
+    why: "the Test tab loses its readings list, so there is nowhere in the app to find a reading that was typed wrong (findings 8 and 27)",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: "                <ReadingRows rows={readingsNewestFirst(readings, def.key)} def={def}",
+    replace: "                <ReadingRows rows={[]} def={def}",
+    breaks: ["RL-01"],
+  },
+  {
+    id: "AM-R34",
+    why: "a reading in the list loses its time, so two tests on one day are indistinguishable in the only place he can delete one",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: "              {fmtShort(r.date)}{fmtTime(r.time) ? ` \u00b7 ${fmtTime(r.time)}` : \"\"}",
+    replace: "              {fmtShort(r.date)}",
+    breaks: ["RL-02"],
+  },
+  {
+    id: "AM-R35",
+    why: "the readings list grows its own confirmation instead of the shared one, which is how one of them comes to skip the confirmation entirely",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: '                ask={t("delete.confirm.reading")} />',
+    replace: "                ask={null} />",
+    breaks: ["RL-03"],
+  },
+  {
+    id: "AM-R36",
+    why: "the readings list sorts itself by date, so several readings on one day keep storage order — the mistake that put the dose history upside down",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: "  return [...rowsFor(readings, key)].reverse();",
+    replace: "  return [...rowsFor(readings, key)].sort((a, b) => (a.date < b.date ? 1 : -1));",
+    breaks: ["RL-04"],
+  },
+  {
+    id: "AM-R37",
+    why: "a reading that was one of several stops saying so, so the keeper sees three rows at one time and nothing explaining the figure on the card above them",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: "        const grouped = !!(ep && ep.count > 1);",
+    replace: "        const grouped = false;",
+    breaks: ["RL-05"],
+  },
+
 ];

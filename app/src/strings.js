@@ -1565,6 +1565,23 @@ export const STRINGS = Object.freeze({
   "dose.change.head": "Change the dose",
   "dose.change.close": "Never mind",
 
+  /* ==================================================================
+     THE RAW READINGS, WHERE THE KEEPER CAN REACH THEM
+     ------------------------------------------------------------------
+     Owner findings 8, 11 and 27. There was no list of readings anywhere
+     in the app. The calendar answers "what did I do on this day"; it
+     does not answer "where is that reading I typed wrong".
+     ================================================================== */
+  "testlab.showReadings": ({ parameter }) => `Show every ${parameter} reading`,
+  "testlab.hideReadings": ({ parameter }) => `Hide the ${parameter} readings`,
+  "testlab.noReadings": ({ parameter }) => `No ${parameter} readings yet.`,
+  "testlab.partOf.duplicate": ({ value, unit }) =>
+    `one of two tests half an hour apart \u00b7 ${value}${unit} used`,
+  "testlab.partOf.triplicate": ({ value, unit }) =>
+    `one of three tests half an hour apart \u00b7 ${value}${unit} used`,
+  "testlab.partOf.many": ({ count, value, unit }) =>
+    `one of ${count} tests half an hour apart \u00b7 ${value}${unit} used`,
+
   "delete.confirm.reading": "Delete this reading? It will be gone, and everything is worked out again without it.",
   "delete.confirm.dose": "Delete this dose change? It will be gone, and everything is worked out again without it.",
   "delete.confirm.entry": "Delete this entry? It will be gone, and everything is worked out again without it.",
