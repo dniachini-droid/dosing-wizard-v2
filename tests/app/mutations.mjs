@@ -198,6 +198,15 @@ export const MUTATIONS = [
   },
 
   {
+    id: "AM-C11",
+    why: "the Python runtime is reached by a relative path again, which agrees with the indexURL in the dev server and resolves one directory too high in a BUILT app — the engine then cannot start in production at all, silently, and every assessment returns a transport failure",
+    file: "app/src/engine/worker.js",
+    find: '  const { loadPyodide } = await import(/* @vite-ignore */ new URL("pyodide.mjs", RUNTIME).href);',
+    replace: '  const { loadPyodide } = await import(/* @vite-ignore */ "../../vendor/pyodide/pyodide.mjs");',
+    breaks: ["PORT-19"],
+  },
+
+  {
     id: "AM-C10",
     why: "the standing dose is stamped from the wall clock instead of the app's clock, so inside test mode it is effective months away from the instant being assessed, `happenedBy` filters it out, and the engine reports it has no record of what is being dosed — measured: zero events reaching it",
     file: "app/src/lib/record.js",

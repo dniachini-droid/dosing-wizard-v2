@@ -18,8 +18,18 @@ import {
 
 const s = suite("the dosing tab");
 
-/* The owner's tank, as the engine actually answered for it: below range,
-   falling, an increase recommended. Trimmed to the fields the tab reads. */
+/* A SYNTHETIC TANK, and it is important that it says so.
+
+   This is NOT the owner's data. It is a fixture built to exercise the
+   below-range / falling / increase-recommended path, run through the real
+   engine so the figures in it are the engine's own — 0.639 dKH/day of
+   consumption against 8.80 mL/day at 0.0692 dKH/mL is arithmetic the engine
+   performed, not numbers typed here.
+
+   The distinction matters and was got wrong once: the round-three report
+   quoted this fixture's output as "what the Dosing tab says for the owner's
+   tank". The engine was real; the tank was not. His range is 8.6-9.2 and this
+   fixture's is 8.0-9.5, which is how it was caught. */
 const FALLING = Object.freeze({
   position: "BELOW_RANGE",
   latestValidValueDkh: 7.11,
