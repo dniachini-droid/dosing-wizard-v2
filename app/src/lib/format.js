@@ -54,3 +54,47 @@ export const fmtFriendly = (iso) => {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
+
+/* ============================================================================
+   ONE FUNCTION FOR EVERY NUMBER ON SCREEN
+   ----------------------------------------------------------------------------
+   Round three, item 4: `days covered 0.0004976851851851852`, `3.58 days`,
+   `+0.0839`. Three different renderings of "a number", none of them the
+   precision the quantity is actually known to, and all of them reaching a
+   keeper.
+
+   A number renders to the precision it is KNOWN to, and what it is known to
+   follows from what KIND of quantity it is. So the precision lives here, once,
+   against the kind — not at each of the forty call sites that print one.
+
+   These are display conventions, not chemistry. `ALK-V2-DATA-CONTRACT.md` §0
+   is explicit that display rounding never enters a calculation, and nothing
+   here is read back by anything.
+
+   `recommendationPrecisionMlPerDay` is a DIFFERENT thing and is not here: that
+   is the keeper's pump step, it is the engine's input, and the engine rounds
+   the recommendation to it. This function would render the result of that
+   rounding; it never performs it. */
+const PRECISION = Object.freeze({
+  dkh: 2,          /* a reading: 9.00 dKH */
+  mlPerDay: 2,     /* a dose: 8.80 mL/day */
+  dkhPerDay: 3,    /* a slope or a consumption: 0.030 dKH/day */
+  dkhPerMl: 4,     /* a solution strength: 0.0692 dKH/mL */
+  days: 1,         /* a span: 5.0 days — but prefer `spanInWords` in prose */
+  percent: 0,      /* a discrepancy: 2% */
+  count: 0,        /* readings, clusters, periods */
+});
+
+export function fmtQty(v, kind = "dkh") {
+  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return null;
+  const dp = PRECISION[kind];
+  return v.toFixed(dp === undefined ? 2 : dp);
+}
+
+/* The same, as a MAGNITUDE. `jake`'s rule for this tab: prose never prints a
+   minus sign — a slope is a magnitude and the direction is a word. */
+export function fmtMag(v, kind = "dkhPerDay") {
+  return v == null || typeof v !== "number" || !Number.isFinite(v)
+    ? null
+    : fmtQty(Math.abs(v), kind);
+}

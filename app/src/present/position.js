@@ -34,6 +34,42 @@ export function positionTone(position) {
   return TONE[position] || STATUS_COLOR.unknown;
 }
 
+/* WHERE A READING SITS IN THE KEEPER'S OWN RANGE — AND WHY THAT IS NOT
+   CHEMISTRY.
+
+   Round three, item 13: the seven parameters this build does not assess
+   rendered their value, their range marker and their status line in grey,
+   which reads as broken. It is not broken. A reading is a fact — 410 mg/L is
+   410 mg/L whether or not an engine has an opinion about it — and where it
+   sits between 400 and 450 is arithmetic against two numbers the KEEPER typed.
+
+   The distinction that makes this lawful is the one `store/config.js` already
+   draws and `keeperRange` already owns: alkalinity's range lives in the two
+   fields the ENGINE reads, and every other parameter's lives in
+   `parameterRanges`, which `forEngine` strips before the engine sees it.
+   Those are the keeper's own preference. No engine reads them, no
+   recommendation depends on one, and NONE OF THEM IS A CANON BAND EDGE. A
+   target range that governed behaviour would have to come from the canon and
+   from nowhere else; one that only says "this is where I like to keep it" is a
+   keeper fact, like the tank's volume.
+
+   So this function is never called for an assessed parameter. Alkalinity's
+   position comes from the engine and from nothing else — passing alkalinity
+   through here would be the second owner `MASTER RULE 1` forbids, and
+   `cardContent` is the one caller and does not.
+
+   What these parameters still do NOT get is a trajectory claim, a dose, a
+   response class or a notification strip. Those are inferences and they have
+   an owner. Where the reading sits between two numbers the keeper wrote down
+   is not an inference. */
+export function keeperPosition(value, range) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (!range || !Number.isFinite(range.min) || !Number.isFinite(range.max)) return null;
+  if (value < range.min) return "BELOW_RANGE";
+  if (value > range.max) return "ABOVE_RANGE";
+  return "IN_RANGE";
+}
+
 export function knownPosition(position) {
   return typeof position === "string" && position in TONE;
 }

@@ -40,7 +40,7 @@
    ========================================================================= */
 
 import { ANNOTATION, KIND, SOURCE } from "../store/ledger.js";
-import { dateOnly, exactInstant, localOffsetMinutes, localZone } from "../store/time.js";
+import { PROVENANCE, dateOnly, exactInstant, localOffsetMinutes, localZone, nowIso } from "../store/time.js";
 
 /* THE KEEPER GAVE A DATE AND A TIME. The device supplies the offset that was
    actually in force, so the instant is provable rather than assumed. */
@@ -127,6 +127,71 @@ export async function recordWaterChange(store, { date, time, litres, netVolumeL 
 
 /* A one-off addition by hand. Alkalinity's, in this build — see the note on
    the form in `Tasks.jsx` for why it is not offered for anything else. */
+/* THE DOSE IN FORCE, AS THE KEEPER STATES IT IN SETUP.
+
+   The application had no way to say this at all, and the consequence was the
+   whole of round three's stage 1: with a V1 history whose dose rows carry a
+   date and no time of day, EVERY dose event reached the engine with
+   `effectiveAt: null` — the engine keeps only dose events it can place on a
+   clock — so it reported "the app has no record of what was being dosed" while
+   the same screen displayed the dose. Measured, not assumed.
+
+   This is the input the engine was missing and the app genuinely lacked. It is
+   not a workaround for the date-only dose rows: those stay unreadable and are
+   recorded as an open contract gap. It is a keeper stating a present fact —
+   "my doser is set to 8.80 mL/day" — at a moment that is genuinely known,
+   which is the moment he says it. The instant is therefore real and
+   `EXACT`; nothing is back-dated and nothing is inferred.
+
+   `dosing.py` is explicit that this is a first-class shape rather than a
+   degraded one: "A `DOSE_STATE` is a declaration of the standing rate; one of
+   them inside the window says the interval is uniform", written for "the
+   commonest first-run ledger there is (a few back-entered readings, then
+   'here is what my doser is set to')." */
+export async function recordDoseState(store, { parameter = "ALK", doseMlPerDay, at = null }) {
+  if (!(typeof doseMlPerDay === "number" && Number.isFinite(doseMlPerDay))) {
+    throw new Error("a standing dose needs a number");
+  }
+  /* THE APP'S CLOCK, NOT THE WALL CLOCK — AND THE DIFFERENCE IS NOT COSMETIC.
+
+     `store/time.js` owns "what moment is the app being asked about", and test
+     mode is exactly the case where that is not `new Date()`. Stamped from the
+     wall clock, a standing dose recorded while the app's instant sits in March
+     is effective in August; `happenedBy` then filters it out of every
+     assessment, and the engine reports that it has no record of what is being
+     dosed — the precise defect this field was added to fix, reappearing inside
+     the test mode restored in the same round. Measured: zero events reaching
+     the engine.
+
+     `recordedAt` below stays the wall clock, and must: it is when the app was
+     TOLD, the app genuinely was running at that instant, and `ledger.js` says
+     so in as many words. `time` and `effectiveTime` are not `recordedAt`. */
+  const instant = at || nowIso();
+  const time = Object.freeze({
+    timeProvenance: PROVENANCE.EXACT_ABSOLUTE,
+    absoluteInstant: instant,
+    localDate: instant.slice(0, 10),
+    localTime: instant.slice(11, 16),
+    displayTimeZoneId: localZone(),
+  });
+  return store.ledger.append({
+    kind: KIND.DOSE_STATE,
+    parameter,
+    time,
+    effectiveTime: time,
+    recordedAt: nowIsoExact(),
+    source: SOURCE.KEEPER_ENTRY,
+    detail: {
+      doseMlPerDay,
+      /* The keeper is stating what is running NOW. He knows that to the
+         minute, so the record says so rather than hedging — and `M-5` is
+         entitled to read it as a clean boundary. */
+      effectiveAtConfidence: "EXACT",
+      origin: "MANUAL",
+    },
+  });
+}
+
 export async function recordOneOff(store, { amountMl, date, time }) {
   const at = stamp(date, time);
   return store.ledger.append({
@@ -178,6 +243,45 @@ export async function recordIcpPanel(store, { date, note, elements }) {
     recordedAt: nowIsoExact(),
     source: SOURCE.KEEPER_ENTRY,
     detail: { note: note || null, elements },
+  });
+}
+
+/* CORRECT A READING THAT WAS TYPED WRONG.
+
+   `PORT-OMISSIONS.md` calls this "the most useful thing on this list" and the
+   most serious loss in the port: type 89 instead of 8.9 and it was in the
+   ledger permanently, skewing every chart and every assessment, with no
+   surface anywhere in the build to fix it.
+
+   The mechanism the canon already provides is supersession, and it is the
+   whole of what happens here. The original is NOT overwritten and is NOT
+   deleted: it stays in the ledger exactly as it was written, and a new reading
+   is appended naming it. The projection then folds the old one to `SUPERSEDED`
+   and the new one is what the app reads. Every assessment already stored still
+   names the event it actually used, so what the app said last week remains
+   true of the record it said it about.
+
+   TIME PROVENANCE STILL MAY NOT IMPROVE. A correction to a date-only reading
+   is itself date-only; the store refuses anything else (`assertProvenanceNotImproved`,
+   `PORT-12`, `TIME-02`) and this function does not try. Correcting the VALUE
+   is not new information about WHEN, and a form that offered a time box here
+   would be offering to fabricate one. */
+export async function correctReading(store, { eventId, param, value, date, time = null, note = null }) {
+  if (!(typeof value === "number" && Number.isFinite(value))) {
+    throw new Error("a reading needs a number");
+  }
+  return store.ledger.append({
+    kind: KIND.READING,
+    parameter: param,
+    rawValue: String(value),
+    normalizedValue: value,
+    /* The form offers a time box only where the original had one, so this
+       branches on what is being corrected rather than on what was typed. */
+    time: time ? stamp(date, time) : undated(date),
+    recordedAt: nowIsoExact(),
+    source: SOURCE.KEEPER_ENTRY,
+    supersedes: eventId,
+    ...(note ? { detail: { note } } : {}),
   });
 }
 

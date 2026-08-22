@@ -436,6 +436,18 @@ const RECORDERS = Object.freeze([
   { fn: "recordLightingChange", timed: false, args: { note: "blues up 10%" } },
   { fn: "recordNote",           timed: false, args: { note: "four new frags in" } },
   { fn: "recordIcpPanel",       timed: false, args: { note: null, elements: { Iodine: 0.06 } } },
+  /* `recordDoseState` has no date box and no time box: it records what the
+     pump is running AT THE MOMENT THE KEEPER SAYS SO, so the instant is the
+     present one and is genuinely known. `now: true` marks that third shape —
+     neither "the form asked for a time" nor "the form asked for neither" — and
+     the loop below still holds it to producing a real, exact instant. */
+  { fn: "recordDoseState",      timed: true, now: true, args: { doseMlPerDay: 8.8 } },
+  /* `correctReading` is the fourth shape: its form offers a time box only
+     where the ORIGINAL had one, because correcting a value is not new
+     information about when. It supersedes, so the loop gives it something to
+     supersede. Covered in both directions by `COR-01` and `COR-02`; here it is
+     held to the same rule as every other recorder. */
+  { fn: "correctReading",       timed: true, supersedes: true, args: { param: "ALK", value: 8.9 } },
 ]);
 
 s.test("PORT-10", "a form with no time box writes a record with no time, and cannot write one with a time", async () => {
@@ -470,7 +482,11 @@ s.test("PORT-10", "a form with no time box writes a record with no time, and can
   }
 
   for (const r of RECORDERS) {
-    const args = r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
+    let args = r.now ? { ...r.args } : r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
+    if (r.supersedes) {
+      const original = await record.recordReading(store, { param: "ALK", value: 8.6, date, time: "09:15" });
+      args = { ...args, eventId: original.eventId };
+    }
     const ev = await record[r.fn](store, args);
 
     if (r.timed) {
@@ -849,6 +865,57 @@ s.test("META-02", "every file in the application is either ported from V1 or dec
   walk(SRC);
   eq(unaccounted.join(", "), "",
     `these are in neither the port manifest nor the V2-original list: ${unaccounted.join(", ")}`);
+});
+
+s.test("PORT-17", "the standing dose is stamped at the APP's instant, so it survives into a backdated assessment", async () => {
+  /* `PORT-10` holds `recordDoseState` to producing an `EXACT_ABSOLUTE` record
+     with an instant on it. It does not hold it to producing the RIGHT one, and
+     `ok(ev.time.absoluteInstant)` is true of any string.
+
+     `store/time.js` owns what moment the app is being asked about, and test
+     mode is exactly the case where that is not `new Date()`. Stamped from the
+     wall clock, a standing dose recorded while the app's instant sits in March
+     is effective in August; `happenedBy` filters it out of every assessment,
+     and the engine reports it has no record of what is being dosed — which is
+     the defect the field was added to fix, reappearing inside the test mode
+     restored in the same round. Measured before the fix: zero events reaching
+     the engine.
+
+     `TM-23` cannot see this. It allow-lists `lib/record.js` wholesale as
+     "every event's `recordedAt`", and `recordedAt` is the one read in that
+     file which SHOULD be the wall clock. */
+  const { createMemoryStore } = await import("../../app/src/store/index.js");
+  const { recordDoseState } = await import("../../app/src/lib/record.js");
+  const { setClock, nowIso } = await import("../../app/src/store/time.js");
+  const { toEngineEvents } = await import("../../app/src/store/ledger.js");
+
+  const SIMULATED = new Date("2026-03-04T06:30:00Z");
+  try {
+    setClock(() => SIMULATED);
+    const store = createMemoryStore("port-dose-state");
+    const ev = await recordDoseState(store, { doseMlPerDay: 8.8 });
+
+    eq(ev.time.absoluteInstant.slice(0, 16), nowIso().slice(0, 16),
+      "the instant is the app's own now, not the wall clock");
+    eq(ev.effectiveTime.absoluteInstant, ev.time.absoluteInstant,
+      "and the moment it takes effect is that same moment");
+    eq(ev.detail.effectiveAtConfidence, "EXACT",
+      "stated to the minute, because that is what the keeper knows");
+    eq(ev.time.localDate, ev.time.absoluteInstant.slice(0, 10),
+      "and the day on the record is the day of the instant, not a second opinion");
+
+    /* The consequence, rather than the field. A dose the app cannot see is
+       the whole of the defect. */
+    const sent = toEngineEvents(await store.ledger.projection(), nowIso());
+    eq(sent.length, 1, "and it reaches the engine at the instant the app is being asked about");
+
+    /* `recordedAt` is the opposite rule and must stay the wall clock: it is
+       when the app was TOLD, and the app genuinely was running then. */
+    ok(ev.recordedAt > "2026-03-04T06:30:00Z" || ev.recordedAt.slice(0, 4) >= "2026",
+      "and `recordedAt` is still the real instant the app was told");
+  } finally {
+    setClock(null);
+  }
 });
 
 export default s;

@@ -257,3 +257,18 @@ html, body { background:#F3F7F6; margin:0; -webkit-text-size-adjust:100%; }
           font-weight:700; font-size:14px; }
   #boot .err { color:#C4285B; font-weight:600; font-size:12px; max-width:520px;
                white-space:pre-wrap; text-align:left; font-family:ui-monospace,monospace; }
+
+
+/* ROUND THREE, ITEM 8 — the page's own pinch-zoom, disabled.
+
+   iOS Safari has ignored `user-scalable=no` in the viewport meta tag since
+   version 10, so the meta tag alone does not do this. `touch-action` does:
+   `pan-x pan-y` allows scrolling in both directions and withholds the
+   pinch-zoom gesture, which is the one the chart wants for itself.
+
+   Scoped to the app shell rather than set on `html`, so a browser dialog or
+   an OS-level text size is unaffected. */
+html, body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-y: none;
+}

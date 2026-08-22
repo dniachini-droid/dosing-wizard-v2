@@ -107,6 +107,227 @@ export const MUTATIONS = [
     breaks: ["LED-07"],
   },
 
+  /* --- the dosing tab ----------------------------------------------------- */
+  {
+    id: "AM-D1",
+    why: "an unknown trend goes back to saying `not clear yet` — a phrase that never names what is not clear, which is the defect the spec calls out by name",
+    file: "app/src/strings.js",
+    find: '"dosing.status.trend.uncertain": "no clear alkalinity trend yet",',
+    replace: '"dosing.status.trend.uncertain": "not clear yet",',
+    breaks: ["DOS-01"],
+  },
+  {
+    id: "AM-D2",
+    why: "safety returns to the wide status box, where it is redundant with position and renders as an alarm for good news",
+    file: "app/src/present/dosing-tab.js",
+    find: "  parts.push(trendPhrase(result));",
+    replace: "  parts.push(trendPhrase(result));\n  if (result.outerBoundState) parts.push(String(result.outerBoundState));",
+    breaks: ["DOS-02"],
+  },
+  {
+    id: "AM-D3",
+    why: "prose prints a signed slope, so the keeper reads `falling -0.030 dKH a day` — a magnitude with a direction word AND a minus sign in front of it",
+    file: "app/src/lib/format.js",
+    find: "    : fmtQty(Math.abs(v), kind);",
+    replace: "    : fmtQty(v, kind);",
+    breaks: ["DOS-03"],
+  },
+  {
+    id: "AM-D4",
+    why: "the `Change the dose anyway` button is dropped from a hold, so a keeper who disagrees with the app has nowhere to go — V1 had it",
+    file: "app/src/present/dosing-tab.js",
+    find: "      offerChangeAnyway: true,",
+    replace: "      offerChangeAnyway: false,",
+    breaks: ["DOS-04"],
+  },
+  {
+    id: "AM-D5",
+    why: "the difference box prints a bare signed number instead of naming the gap, so `-0.030` has to be interpreted by the keeper",
+    file: "app/src/present/dosing-tab.js",
+    find: '    difference = matching\n      ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.matching"),',
+    replace: '    difference = false\n      ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.matching"),',
+    breaks: ["DOS-05"],
+  },
+  {
+    id: "AM-D6",
+    why: "a span renders as a raw decimal again — `4 readings over 4.99 days`, the round-three defect verbatim",
+    file: "app/src/present/dosing-tab.js",
+    find: "  const half = Math.round(d * 2) / 2;",
+    replace: "  return t(\"dosing.span.numeric\", { n: d });\n  const half = Math.round(d * 2) / 2;",
+    breaks: ["DOS-06"],
+  },
+  {
+    id: "AM-D11",
+    why: "a long span is rounded twice — to the nearest half day and then to the nearest whole — so 20.4 days renders as 21, a 3% error introduced by the formatter that item 4 exists to prevent",
+    file: "app/src/present/dosing-tab.js",
+    find: '  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(d) });',
+    replace: '  if (whole > 14) return t("dosing.span.numeric", { n: Math.round(half) });',
+    breaks: ["DOS-06"],
+  },
+  {
+    id: "AM-D7",
+    why: "every INFO code reaches the screen again, including the engine narrating its own filing — CONFIG_VERSION_RESOLVED, AUDIT_TRACE_WRITTEN and the rest",
+    file: "app/src/present/dosing-tab.js",
+    find: "    if (c.severity === \"INFO\" && !KEEPS_A_CALCULATION.has(c.code)) continue;",
+    replace: "    if (false) continue;",
+    breaks: ["DOS-07", "DOS-08"],
+  },
+  {
+    id: "AM-D8",
+    why: "identical reason codes stop collapsing, so 28 EPISODE_RESOLVED events become 28 rows on one screen",
+    file: "app/src/present/dosing-tab.js",
+    find: "    if (row) { row.count += 1; continue; }",
+    replace: "    if (row) { continue; }",
+    breaks: ["DOS-08"],
+  },
+  {
+    id: "AM-D9",
+    why: "the working stops showing the consumption sum, so the keeper is given a figure and no way to check it — which is the point of the product",
+    file: "app/src/present/dosing-tab.js",
+    find: "      slope < 0 ? t(\"dosing.working.uses.falling\", args)",
+    replace: "      slope < 0 ? \"\"",
+    breaks: ["DOS-09"],
+  },
+  {
+    id: "AM-D10",
+    why: "a gated potency check is described as `not enough yet`, which promises a check that in this build will never arrive",
+    file: "app/src/present/dosing-tab.js",
+    find: '      ? (enteredText ? t("dosing.potency.off", { entered: enteredText }) : null)',
+    replace: '      ? (enteredText ? t("dosing.potency.notYet", { entered: enteredText }) : null)',
+    breaks: ["DOS-10"],
+  },
+
+  {
+    id: "AM-C10",
+    why: "the standing dose is stamped from the wall clock instead of the app's clock, so inside test mode it is effective months away from the instant being assessed, `happenedBy` filters it out, and the engine reports it has no record of what is being dosed — measured: zero events reaching it",
+    file: "app/src/lib/record.js",
+    find: "  const instant = at || nowIso();",
+    replace: "  const instant = at || nowIsoExact();",
+    breaks: ["PORT-17"],
+  },
+
+  {
+    id: "AM-C6",
+    why: "a LOCAL_TIME_ZONE_UNKNOWN reading is sent as a calendar day — the wrong field for its provenance, which the engine refuses as malformed. AI-014 under the other provenance",
+    file: "app/src/store/ledger.js",
+    find: "  if (time.timeProvenance === PROVENANCE.LOCAL_TIME_ZONE_UNKNOWN) {",
+    replace: "  if (false) {",
+    breaks: ["LED-11"],
+  },
+  {
+    id: "AM-C7",
+    why: "the local date-time is sent as the day alone, dropping the time of day the record does hold",
+    file: "app/src/store/ledger.js",
+    find: "      localDateTime: time.localTime ? `${time.localDate}T${time.localTime}` : time.localDate,",
+    replace: "      localDateTime: time.localDate,",
+    breaks: ["LED-11"],
+  },
+  {
+    id: "AM-C8",
+    why: "a date-only water change puts its calendar day in `occurredAt`, an Instant field — the engine reads no time, drops the event, and the step a 30% change caused is absorbed into the consumption estimate as though the tank had done it",
+    file: "app/src/store/ledger.js",
+    find: "        ...(at ? { occurredAt: at } : {}),\n        changedFraction: e.detail.changedFraction,",
+    replace: "        occurredAt: at || e.time.localDate,\n        changedFraction: e.detail.changedFraction,",
+    breaks: ["LED-12"],
+  },
+  {
+    id: "AM-C9",
+    why: "the correction's volume is sent under a name the engine has no input for, so a keeper who TOLD the app he dosed 40 mL has his trajectory and his whole consumption estimate confounded for it — measured: consumption NOT_RUN instead of 0.639",
+    file: "app/src/store/ledger.js",
+    find: "        ...(e.detail.amountMl != null ? { actualVolumeMl: e.detail.amountMl } : {}),",
+    replace: "        ...(e.detail.amountMl != null ? { amountMl: e.detail.amountMl } : {}),",
+    breaks: ["LED-13"],
+  },
+  {
+    id: "AM-N1",
+    why: "the safety strip goes back to a vocabulary the engine does not emit, so a breach of the safe outer limits is silent on every screen — while OPEN-ITEMS cites that strip as the reason a breach is not silent",
+    file: "app/src/present/card-content.js",
+    find: '  if (outer === "BREACHED_LOW" || outer === "BREACHED_HIGH") {',
+    replace: '  if (outer === "BREACH_LOW" || outer === "BREACH_HIGH") {',
+    breaks: ["NOT-01"],
+  },
+  {
+    id: "AM-N1b",
+    why: "the strip reads the outer-bound state from the top level only, where the engine does not put it",
+    file: "app/src/present/card-content.js",
+    find: "  const outer = engineResult.safety?.outerBoundState ?? engineResult.outerBoundState ?? null;",
+    replace: "  const outer = engineResult.outerBoundState ?? null;",
+    breaks: ["NOT-01"],
+  },
+  {
+    id: "AM-N2",
+    why: "the strip is built by ranking reason codes again, so `A RECORD CARRIES A TIME ...` returns to the face of the Today card",
+    file: "app/src/present/card-content.js",
+    find: "  const dose = engineResult.doseRecommendation;\n  /* THE SPELLING",
+    replace: "  const first = (engineResult.reasonCodes || [])[0];\n  if (first) return { id: first.code, title: sayReason(first.code), text: first.code, detail: first.code, severity: first.severity, severityWord: saySeverity(first.severity), payload: first.payload || {}, tone: SEVERITY_TONE.INFO, goDosing: false };\n  const dose = engineResult.doseRecommendation;\n  /* THE SPELLING",
+    breaks: ["NOT-02"],
+  },
+  {
+    id: "AM-N3",
+    why: "the keeper's own range decides the position of an ASSESSED parameter too, making the application a second owner of alkalinity's position",
+    file: "app/src/present/card-content.js",
+    find: "  const position = assessed\n    ? (result && knownPosition(result.position) ? result.position : null)",
+    replace: "  const position = false\n    ? (result && knownPosition(result.position) ? result.position : null)",
+    breaks: ["KP-02"],
+  },
+  {
+    id: "AM-N4",
+    why: "a reading exactly on the keeper's minimum is reported as below his range, so a tank held precisely at target reads as failing",
+    file: "app/src/present/position.js",
+    find: '  if (value < range.min) return "BELOW_RANGE";',
+    replace: '  if (value <= range.min) return "BELOW_RANGE";',
+    breaks: ["KP-01"],
+  },
+
+  {
+    id: "AM-C0",
+    why: "the pre-amendment wire shape returns: a record with no usable instant puts its calendar day in `measuredAt`, the instant field, and the engine calls all 325 of the owner's date-only readings malformed (AI-014)",
+    file: "app/src/store/ledger.js",
+    find: "        ...(at ? { measuredAt: at } : dayFields(e.time)),",
+    replace: "        measuredAt: at || e.time.localDate,",
+    breaks: ["LED-07"],
+  },
+  {
+    id: "AM-C1",
+    why: "a correction overwrites the original in place instead of superseding it — the ledger stops being append-only and every stored assessment's input set becomes a lie",
+    file: "app/src/lib/record.js",
+    find: "    supersedes: eventId,",
+    replace: "    eventId,",
+    breaks: ["COR-01"],
+  },
+  {
+    id: "AM-C2",
+    why: "the correction form offers a time for a date-only reading, fabricating a precision the record never had",
+    file: "app/src/lib/record.js",
+    find: "    time: time ? stamp(date, time) : undated(date),",
+    replace: "    time: stamp(date, time || \"12:00\"),",
+    breaks: ["COR-02"],
+  },
+  {
+    id: "AM-C3",
+    why: "an invalid reading is still sent to the engine, so a reading the keeper disowned still moves his trend",
+    file: "app/src/store/ledger.js",
+    find: '    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;',
+    replace: '    if (row.state === "SUPERSEDED") continue;',
+    breaks: ["COR-03", "LED-06"],
+  },
+  {
+    id: "AM-C4",
+    why: "a DOSE_STATE with an UNCERTAIN effective time is sent without the bounds the contract makes REQ*, so M-5 cannot tell where a clean segment resumes",
+    file: "app/src/store/ledger.js",
+    find: "      if (ev.effectiveAtConfidence === \"UNCERTAIN\") {\n        ev.effectiveAtEarliest = e.detail.effectiveAtEarliest;\n        ev.effectiveAtLatest = e.detail.effectiveAtLatest;\n      }\n      out.push(ev);\n    } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {",
+    replace: "      out.push(ev);\n    } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {",
+    breaks: ["LED-09"],
+  },
+  {
+    id: "AM-C5",
+    why: "a calcium hand-dose is handed to the alkalinity engine as alkalinity entering the tank — manufactured delivery history, which DATA-PROVENANCE.md forbids by name",
+    file: "app/src/store/ledger.js",
+    find: "    } else if (e.kind === KIND.MANUAL_CORRECTION && isAlkalinityDose(e)) {",
+    replace: "    } else if (e.kind === KIND.MANUAL_CORRECTION) {",
+    breaks: ["LED-10"],
+  },
+
   /* --- time provenance ---------------------------------------------------- */
   {
     id: "AM-07",
@@ -1729,11 +1950,26 @@ export const MUTATIONS = [
     breaks: ["PORT-12", "TIME-04"],
   },
   {
+    /* RE-POINTED WITH `TM-24` ITSELF, IN ROUND THREE.
+
+       This used to add an import of the mode module, because `TM-24` then
+       asserted that the ported shell had NO route into test mode and the
+       omission was recorded. Round three item 9 restores the surface, so
+       acquiring a route is now the correct state and mutating towards it
+       proves nothing.
+
+       What `TM-24` pins now is the property whose absence made the port's
+       version of this a real loss, and this is the mutation for it: the shell
+       goes back to building the real store unconditionally. A screen would
+       still open, test mode would still say it was on, the clock would still
+       move — and every reading entered would land in the KEEPER'S OWN TANK.
+       That is the single failure the whole real/test separation exists to
+       prevent, and it is invisible from the interface. */
     id: "AM-P33",
-    why: "the shell acquires a route into test mode while the omissions report still says it has none",
+    why: "the shell builds the real store whatever the mode says, so a test reading lands in the keeper's own tank — silently, with test mode still reporting itself on",
     file: "app/src/App.jsx",
-    find: "import { nowIso } from './store/time.js'",
-    replace: "import { nowIso } from './store/time.js'\nimport { isTestMode } from './store/mode.js'",
+    find: "    storeRef.current = mode === MODE.TEST ? storeForMode(mode) : createStore();",
+    replace: "    storeRef.current = createStore();",
     breaks: ["TM-24"],
   },
   {

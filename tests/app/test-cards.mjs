@@ -18,6 +18,8 @@
    ========================================================================= */
 
 import { suite, eq, ok, deepEq } from "./harness.mjs";
+import { cardContent, cardNotice } from "../../app/src/present/card-content.js";
+import { keeperPosition } from "../../app/src/present/position.js";
 import { CARD_TABLE, instructsDoseChange, selectCard, matchingCards, isAbsent, isPresent } from "../../app/src/present/cards.js";
 
 const s = suite("card selection");
@@ -376,6 +378,118 @@ s.test("CARD-09", "a standing dose is not an instruction — only SET_MAINTENANC
   );
   ok(!instructsDoseChange({}), "an empty result instructs nothing");
   ok(!instructsDoseChange(null), "and neither does no result");
+});
+
+/* -------------------------------------------------------------------------
+   THE NOTICE STRIP, and where a position is allowed to come from.
+   ---------------------------------------------------------------------- */
+
+s.test("NOT-01", "a breach of the safe outer limits raises the strip, in the vocabulary the ENGINE emits", () => {
+  /* THE FIRST VERSION OF THIS BRANCH WAS DEAD CODE, AND IT READ AS WORKING.
+
+     It compared against `BREACH_LOW`/`BREACH_HIGH` and read
+     `engineResult.outerBoundState`. The engine emits `BREACHED_LOW` /
+     `BREACHED_HIGH` (`observation.py`, and the contract's `outerBoundState`)
+     and carries them on `safety`. Both halves were wrong, so the most severe
+     thing this app can say was unreachable — while `OPEN-ITEMS.md` `AI-020`
+     cited exactly this strip as the reason a breach is "not silent" even
+     though the Dosing tab says nothing about safety.
+
+     `cards.js` had the spelling and the path right in one line all along.
+     Two readers of one engine field that disagree is what `MASTER RULE 1`
+     calls a defect rather than a coincidence, and this is the half that was
+     wrong. */
+  for (const state of ["BREACHED_LOW", "BREACHED_HIGH"]) {
+    for (const shape of [{ outerBoundState: state }, { safety: { outerBoundState: state } }]) {
+      const n = cardNotice({ ...shape, latestValidValueDkh: 5.9, reasonCodes: [] });
+      ok(n, `${state} raises a strip (${Object.keys(shape)[0]})`);
+      eq(n.severity, "REFUSAL", "and it outranks a dose recommendation");
+      ok(n.title && n.title.length > 0, "and it has something to say");
+      ok(!/^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/.test(n.title),
+        `and it is words, not the engine's identifier: "${n.title}"`);
+      /* The failure `STR-06` exists for, reached by another route: a value the
+         engine STATED must never render as an absence. */
+      ok(!/not recorded|not known/i.test(n.title),
+        `a stated breach does not render as an absence: "${n.title}"`);
+    }
+  }
+  eq(cardNotice({ safety: { outerBoundState: "WITHIN_BOUNDS" },
+                  doseRecommendation: { action: "HOLD_CURRENT_DOSE", currentDoseMlPerDay: 8.8 },
+                  reasonCodes: [] }),
+     null, "and a hold inside bounds raises nothing — a card with nothing urgent says nothing");
+});
+
+s.test("NOT-02", "no reason code reaches the notification strip, whatever the engine emits", () => {
+  /* Round three item 14. The strip read `A RECORD CARRIES A TIME ...`,
+     truncated, because it was built by ranking every code the engine emitted
+     and rendering the top one. `17-DOSING-TAB-SPEC.md`'s rule for codes is
+     that they live last, inside Show working — "never on the face of the
+     screen, never in a notification strip". Enforced here rather than hoped
+     for, so a code the engine adds tomorrow cannot arrive on a card. */
+  const n = cardNotice({
+    safety: { outerBoundState: "WITHIN_BOUNDS" },
+    doseRecommendation: { action: "SET_MAINTENANCE_DOSE", recommendedDoseMlPerDay: 9.0 },
+    reasonCodes: [
+      { code: "VALIDATION_TIMESTAMP_INVALID", severity: "REFUSAL", payload: { readingId: "E-1" } },
+      { code: "AUDIT_TRACE_WRITTEN", severity: "INFO", payload: {} },
+    ],
+  });
+  ok(n, "the strip is raised for the dose recommendation");
+  const text = `${n.id} ${n.title} ${n.text} ${n.detail}`;
+  ok(!/VALIDATION_TIMESTAMP_INVALID|AUDIT_TRACE_WRITTEN/.test(text), `no reason code on the strip: "${text}"`);
+  ok(!/^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/.test(n.title), "and the title is a sentence");
+});
+
+s.test("KP-01", "the keeper's own range decides both its edges the same way", () => {
+  /* NOT CHEMISTRY, WHICH IS WHY IT IS TESTABLE HERE. `store/config.js` and
+     `present/position.js` both state it: for a parameter no engine assesses,
+     these are the keeper's two numbers, they are display, and none of them is
+     a canon band edge.
+
+     What the module did not state anywhere is which side each edge belongs
+     to. Pinned here as inclusive at both ends, so a tank held exactly at
+     target does not read as failing. */
+  const r = { min: 400, max: 450 };
+  eq(keeperPosition(399.999, r), "BELOW_RANGE", "one step below the minimum is below");
+  eq(keeperPosition(400, r), "IN_RANGE", "the minimum itself is IN the range");
+  eq(keeperPosition(450, r), "IN_RANGE", "and so is the maximum itself");
+  eq(keeperPosition(450.001, r), "ABOVE_RANGE", "one step above it is above");
+
+  /* No range, no reading, no opinion — rather than a guess. */
+  eq(keeperPosition(420, null), null, "no range set is not a position");
+  eq(keeperPosition(420, { min: 400 }), null, "half a range is not a range");
+  eq(keeperPosition(null, r), null, "no reading is not a position");
+  eq(keeperPosition("UNKNOWN", r), null, "and an engine absence marker is not a reading");
+  eq(keeperPosition(0 / 0, r), null, "nor is NaN");
+});
+
+s.test("KP-02", "an assessed parameter's position is the engine's, and never the keeper's arithmetic", () => {
+  /* `MASTER RULE 1`: one owner for each inference. Alkalinity's position is
+     the engine's, and `keeperPosition` computing the same thing from two
+     numbers the keeper typed would be a second owner. The guard is a ternary
+     in `cardContent`, and before this check it was a ternary and a comment —
+     delete the ternary and nothing turned red.
+
+     The engine and the keeper's range are given DELIBERATELY OPPOSITE answers
+     here. Two implementations that agree today is what the rule calls a
+     defect rather than a coincidence, so they are made to disagree. */
+  const alk = { key: "ALK", assessed: true, label: "Alkalinity", decimals: 2 };
+  const range = { min: 8.0, max: 9.0 };
+
+  eq(cardContent(alk, { position: "BELOW_RANGE" }, null, { value: 8.5 }, range).position,
+    "BELOW_RANGE", "the engine's answer, not the arithmetic's");
+  eq(cardContent(alk, { position: "NOT_RUN" }, null, { value: 8.5 }, range).position,
+    null, "no engine position means no position, not a computed one");
+  eq(cardContent(alk, null, null, { value: 8.5 }, range).position,
+    null, "and no engine result at all means the same");
+
+  /* The unassessed parameter is the one case the function exists for. */
+  const ca = { key: "CA", assessed: false, label: "Calcium", decimals: 0 };
+  const c = cardContent(ca, null, null, { value: 420 }, { min: 400, max: 450 });
+  eq(c.position, "IN_RANGE", "an unassessed reading is placed in the keeper's own range");
+  eq(c.card, null, "and still gets no card");
+  eq(c.direction, null, "no trajectory claim");
+  eq(c.notice, null, "and no notification strip — those are inferences with an owner");
 });
 
 export default s;

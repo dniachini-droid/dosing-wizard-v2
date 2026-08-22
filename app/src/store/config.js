@@ -42,6 +42,59 @@ export const KEEPER_FACTS = Object.freeze([
   { key: "recommendationPrecisionMlPerDay", label: "fact.pumpStep", unit: "mL/day", hint: "fact.pumpStepHint" },
 ]);
 
+/* HOW THE KEEPER CHOSE TO STATE HIS SOLUTION'S STRENGTH.
+
+   Grams per litre of soda ash and dKH per millilitre are the same fact in
+   different clothes, and Setup must not ask for both. It asks once, in
+   whichever of three forms the keeper finds natural, and what it then STORES
+   depends on which he picked — because the three are not equally derivable and
+   the app is not allowed to do the derivation that has an owner.
+
+     GRAMS_PER_LITRE   stores `chemical` + `stockConcentrationGPerL`, and NOT
+                       `selectedPotencyDkhPerMl`. The engine derives the potency
+                       itself (`potency.theoretical`, `P = factor · C / V`,
+                       `ALK-014`) and the screen renders the figure IT returned.
+                       The factor 0.05284 is a canon constant with one owner;
+                       an application that multiplied by it would be a second
+                       implementation of `ALK-014`, which `MASTER RULE 1` calls
+                       a defect rather than a coincidence.
+
+     DKH_PER_ML        stores `selectedPotencyDkhPerMl` as typed. The canon's
+                       own worked example configures a potency directly.
+
+     DKH_PER_ML_PER_100L
+                       stores `selectedPotencyDkhPerMl`, scaled to this tank.
+                       That conversion is pure unit algebra over two numbers the
+                       KEEPER supplied — his stated strength and his own net
+                       volume — and carries no canon constant of any kind. It is
+                       calculator arithmetic in `DEC-006`'s sense, not advisory
+                       logic, and it is recorded as derived so a later reader can
+                       see it was worked out rather than typed. */
+export const POTENCY_FORM = Object.freeze({
+  GRAMS_PER_LITRE: "GRAMS_PER_LITRE",
+  DKH_PER_ML: "DKH_PER_ML",
+  DKH_PER_ML_PER_100L: "DKH_PER_ML_PER_100L",
+});
+
+/* The chemicals the ENGINE names. The app offers exactly these and no others,
+   because a chemical the engine has no factor for is one it will refuse on —
+   and it holds no factor of its own to offer instead. */
+export const CHEMICALS = Object.freeze([
+  { key: "NA2CO3", label: "chem.na2co3" },
+  { key: "NAHCO3", label: "chem.nahco3" },
+  { key: "NAOH", label: "chem.naoh" },
+  { key: "COMMERCIAL", label: "chem.commercial" },
+]);
+
+/* The strength stated per 100 L, converted to this tank. Unit algebra only:
+   `dKH/mL = stated × 100 / V`. Returns null rather than guessing when the
+   volume is not known, because a strength with no tank to scale it to is not a
+   strength this app can state. */
+export function potencyForThisTank(statedPer100L, netVolumeL) {
+  if (!Number.isFinite(statedPer100L) || !Number.isFinite(netVolumeL) || netVolumeL <= 0) return null;
+  return (statedPer100L * 100) / netVolumeL;
+}
+
 /* Values the canon states, carried here so the engine receives them and the
    keeper is not asked to invent one. Every one of these is quoted from
    `docs/implementation/alk-v2/fixtures/config-defaults.json`, which is the
@@ -86,7 +139,17 @@ export const CANON_DEFAULT_KEYS = Object.freeze([
 
    `importedFrom` records where a configuration version came from, and what it
    superseded. It is provenance, not a setting. */
-const APP_ONLY_KEYS = new Set(["parameterRanges", "importedFrom"]);
+/* `potencyStatedAs` and `potencyStatedValue` record WHICH of the three forms
+   the keeper used and the number he actually typed, so the screen can show him
+   his own figure back rather than a round-trip through a conversion. They are
+   provenance about a setting, not a setting the engine reads, and the engine
+   declares no input by either name. */
+const APP_ONLY_KEYS = new Set([
+  "parameterRanges",
+  "importedFrom",
+  "potencyStatedAs",
+  "potencyStatedValue",
+]);
 
 export function createConfigStore(backend) {
   async function history() {

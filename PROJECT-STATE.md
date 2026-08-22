@@ -277,6 +277,48 @@ When application code eventually begins, the intended first runtime scope is:
 
 ---
 
+- **Round three (22 August 2026) made the application calculate.** The V1 interface port
+  had succeeded and the app was not computing: on the owner's real imported history almost
+  every field on the Dosing tab read "not worked out" or "not recorded", and several
+  contradicted data visible four rows below them on the same screen.
+
+  The cause was measured rather than guessed — a six-month V1-shaped history driven through
+  the real importer, the real `toEngineEvents` and the real engine — and it was **not** the
+  configuration, which the engine was receiving correctly all along. It was three defects
+  in the application's wire shape, all of one class: the app and the engine disagreeing
+  about which field a value travels in.
+
+    - `AI-014`. A reading with no usable instant carried its calendar day in `measuredAt`,
+      the INSTANT field, so the engine called every one of the owner's 325 date-only
+      readings malformed. Measured: 152 `VALIDATION_TIMESTAMP_INVALID` on a 180-reading
+      profile, and a trend that fell back to `UNCERTAIN` on a tank that is plainly falling.
+    - A `DOSE_STATE` with `effectiveAtConfidence: UNCERTAIN` was sent without the bounds
+      the contract makes `REQ*`, which the importer had already computed and stored.
+    - `MANUAL_CORRECTION` was not filtered by parameter, so a calcium hand-dose would have
+      been read as alkalinity entering the tank.
+
+  Beside them, Setup genuinely lacked an input the engine requires: the dose the pump is
+  running now. V1 recorded dose changes with a date and no time of day, so every one of the
+  owner's historical dose events is unplaceable on a clock and the engine keeps none of
+  them. **That gap is `AI-016` and is left open** — it is chemistry, and the contract makes
+  `effectiveAt` a required `Instant`. What round three added instead is a keeper stating a
+  present fact at a moment genuinely known.
+
+  With those four changes the same payload produces consumption 0.639 dKH/day,
+  `currentDose` 8.8, a recommended 9.0 and zero refusals, where before it produced
+  `NOT_RUN`, `UNKNOWN` and `WITHHELD`.
+
+  Also in round three: Setup's dosing section rebuilt to ask each fact once; correcting and
+  deleting a reading, which `PORT-OMISSIONS.md` called the most serious loss in the port;
+  the Dosing tab rebuilt to `17-DOSING-TAB-SPEC.md` with `jake`'s wording, taking sixty-three
+  reason codes down to fifteen; and eight of the round-three fixes, including test mode's
+  surface and offline — the latter **verified by running the built app with its origin shut
+  down**, not by reading the config. Five items are recorded open: `AI-016` … `AI-020`.
+
+  **The conformance gate is RED and this round changed nothing in its failing set** — the
+  failing set is byte-identical to the pre-existing baseline, which was established before
+  the work began. The application suite is GREEN at 180 checks.
+
 ## Next major step
 
 A second independent review of the application build, then the owner's decisions on the ten items

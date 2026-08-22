@@ -64,6 +64,57 @@ export default defineConfig({
         });
       },
     },
+    {
+      /* ROUND THREE, ITEM 10 — THE SERVICE WORKER.
+
+         `app/sw.js` is the source; this emits the built copy with two
+         placeholders filled in. It runs at `generateBundle` so it can see the
+         real hashed asset names, which is the half a hand-written precache
+         list cannot have.
+
+         THE ENGINE MODULE LIST IS READ, NOT RESTATED. `ENGINE_MODULES` in
+         `app/src/engine/worker.js` is the one owner of which engine files this
+         app carries, and its own comment says it is spelled out there "so the
+         service worker can precache exactly this set". Parsing it out of that
+         file keeps it one owner; writing the same fourteen names into this
+         config would make it two, and canon `MASTER RULE 1` is explicit that
+         two lists agreeing today is a defect rather than a coincidence. If the
+         parse fails the build FAILS, rather than quietly shipping a service
+         worker that caches no engine. */
+      name: 'dosing-wizard:service-worker',
+      generateBundle(_options, bundle) {
+        const workerSrc = fs.readFileSync(
+          path.join(process.cwd(), 'app/src/engine/worker.js'), 'utf8');
+        const listMatch = workerSrc.match(/const ENGINE_MODULES = \[([\s\S]*?)\]/);
+        if (!listMatch) {
+          this.error('could not read ENGINE_MODULES out of app/src/engine/worker.js — '
+            + 'the service worker would ship without the engine');
+        }
+        const modules = [...listMatch[1].matchAll(/"([^"]+\.py)"/g)].map((m) => m[1]);
+        if (!modules.length) this.error('ENGINE_MODULES parsed as empty');
+
+        const catalogue = workerSrc.match(/const CATALOGUE_PATH = "([^"]+)"/);
+        if (!catalogue) this.error('could not read CATALOGUE_PATH out of worker.js');
+
+        const assets = Object.keys(bundle).map((f) => '/' + f);
+        const precache = [
+          '/app/index.html',
+          '/app/manifest.webmanifest',
+          ...assets,
+          ...modules.map((m) => `/engine/alk_v2/${m}`),
+          '/' + catalogue[1],
+        ];
+
+        const sw = fs.readFileSync(path.join(process.cwd(), 'app/sw.js'), 'utf8')
+          .replaceAll('__PRECACHE__', JSON.stringify(precache, null, 2))
+          .replaceAll('__VERSION__', String(Date.now()));
+        if (sw.includes('__PRECACHE__') || sw.includes('__VERSION__')) {
+          this.error('the service worker still carries an unfilled placeholder');
+        }
+
+        this.emitFile({ type: 'asset', fileName: 'app/sw.js', source: sw });
+      },
+    },
   ],
   /* The Python runtime is an artefact this repository deliberately does not
      commit: `tools/app/vendor-runtime.py` fetches it and verifies its SHA-256,

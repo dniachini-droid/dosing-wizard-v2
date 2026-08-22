@@ -27,6 +27,10 @@
     "app/src/store/schedule.js",
     "app/src/store/seed.js",
     "app/src/store/suggestion.js",
-    "app/src/store/time.js"
+    "app/src/store/time.js",
+    "app/src/components/CorrectReadingSheet.jsx",
+    "app/src/components/TestMode.jsx",
+    "app/src/present/dosing-tab.js",
+    "app/sw.js"
   ]
 }

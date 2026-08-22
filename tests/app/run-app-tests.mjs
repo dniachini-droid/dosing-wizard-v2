@@ -53,6 +53,7 @@ const SUITES = [
   "test-ledger.mjs",
   "test-assessments.mjs",
   "test-cards.mjs",
+  "test-dosing-tab.mjs",
   "test-schedule.mjs",
   "test-suggestion.mjs",
   "test-testmode.mjs",
