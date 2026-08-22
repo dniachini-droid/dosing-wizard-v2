@@ -282,9 +282,9 @@ export const STRINGS = Object.freeze({
     "Both are shown whenever both exist, so a smaller acted-on figure is never mistaken for the measurement.",
 
   "assessment.reco.none": "No recommendation",
-  "assessment.reco.unclassified.head": "This build has no card for what the engine returned",
+  "assessment.reco.unclassified.head": "No wording for this one",
   "assessment.reco.unclassified.body":
-    "The engine answered and the app does not recognise the shape of the answer. Do not act on this card.",
+    "Something came back with no plain-English wording for it. Do not act on anything shown here.",
   "assessment.reco.safety.body":
     "This is a different situation from being outside your target range, and it is treated differently. " +
     "The safety figures below are stated separately from the ordinary maintenance conclusion.",
@@ -861,7 +861,18 @@ export const STRINGS = Object.freeze({
   "group.many": ({ count, value, unit }) =>
     `${count} tests taken within half an hour, so they are treated as one test run ${count} times over. `
     + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
-  "group.median": "The middle value is the one used, not the average, so one wild result does not move it.",
+  /* THIS SENTENCE WAS FALSE HALF THE TIME, and `jake` found it while reviewing
+     the wording around it. It said "not the average" — which holds for three
+     runs, where the middle of three IS one of the numbers typed. On TWO runs
+     there is no middle one, and `OI-MEDIAN-001` settles what happens instead:
+     the two central values are averaged. `kernel.py` says so in as many words.
+
+     So on a duplicate the figure used is the average, and the tooltip explaining
+     it said it was not. It says what the rule actually is, and says the thing
+     that rule is FOR — which is what the keeper is asking when he taps. */
+  "group.median":
+    "The middle value is the one used, so one wild result cannot drag it. On two, where there is no " +
+    "middle one, the two are averaged.",
   "group.spread": ({ spread, unit }) =>
     `They ranged ${spread}${unit ? ` ${unit}` : ""} apart.`,
   "group.wideSpread": ({ spread, unit }) =>
@@ -1059,7 +1070,7 @@ export const STRINGS = Object.freeze({
      readings taken on the new dose arrive, so the tab kept offering a dose he
      had already set. It says where he is instead. */
   "dosing.reco.alreadyThere": ({ dose }) =>
-    `You are already on ${dose} mL/day. Nothing to change until your next readings come in on it.`,
+    `You are already on ${dose} mL/day. Nothing to change until you have tested again on this dose.`,
 
   "dosing.reco.hold.isARecommendation":
     "A hold is a recommendation. The app looked and found nothing worth changing.",
@@ -1099,12 +1110,12 @@ export const STRINGS = Object.freeze({
      tests in duplicate was told he had more than the app could see. */
   "dosing.reco.fresh.body": ({ n }) =>
     `You have ${n} alkalinity test${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
-    `and tell the app what your pump is set to — those two things are all it needs. ` +
-    `The recommendation appears here on its own when your readings can carry one.`,
+    `and set down what your pump is dosing — that is all it takes. ` +
+    `A recommendation appears here on its own once your tests can carry one.`,
   "dosing.reco.fresh.bodyNone":
-    "No alkalinity readings are recorded yet. Log tests as you do them, and tell the app what your " +
-    "pump is set to — those two things are all it needs. The recommendation appears here on its own " +
-    "when your readings can carry one.",
+    "No alkalinity tests are recorded yet. Log them as you do them, and set down what your pump is " +
+    "dosing — that is all it takes. A recommendation appears here on its own once your tests can " +
+    "carry one.",
   "dosing.reco.fresh.nothingWrong":
     "Nothing is wrong and there is nothing to fix. A dose sized from one or two readings would be a " +
     "guess with a decimal point on it.",
@@ -1139,7 +1150,7 @@ export const STRINGS = Object.freeze({
      can read two different numbers and then be told they match. Where he can
      see the gap, the gap is named. */
   "dosing.boxes.diff.matchingSubGap": ({ gap }) =>
-    `${gap} apart, which is smaller than your readings can tell apart`,
+    `${gap} dKH/day apart, which is less than your readings can show`,
 
   "dosing.boxes.notWorkedOut": "Not worked out",
   "dosing.boxes.notWorkedOutSub": ({ missing }) => `needs ${missing}`,
@@ -1212,8 +1223,11 @@ export const STRINGS = Object.freeze({
      number. The counts ("n=10, 45 pairwise slopes") are method trivia and go. */
   /* The drift, with what it was drawn from. Finding 14: a bare "0.00" tells a
      keeper nothing about how much history stands behind it. */
+  /* TESTS, and "about". The identical quantity — `independentClusters` — is
+     rendered as "5 separate tests" two sections above this one, and this called
+     them readings. Two sections of one panel, one number, two nouns. */
   "dosing.working.movement.drawnFrom": ({ observed, n, span }) =>
-    `Your readings drift ${observed} dKH a day, across ${n} readings over approximately ${span}.`,
+    `Your readings drift ${observed} dKH a day, across ${n} tests over about ${span}.`,
 
   "dosing.working.movement.method":
     "The drift is the middle of every pair of your readings, so one odd result cannot drag it.",
@@ -1234,8 +1248,8 @@ export const STRINGS = Object.freeze({
     `${dose}.`,
 
   "dosing.working.readings.line": ({ n, span, first, last }) =>
-    `${n} separate tests over approximately ${span}, from ${first} to ${last}. Where you tested twice ` +
-    `within half an hour that counts once, so this can be fewer than the readings in your log.`,
+    `${n} separate tests over about ${span}, from ${first} to ${last}. Readings taken within half an ` +
+    `hour of each other count as one test, so this can be fewer than the readings in your log.`,
   "dosing.working.readings.lineOne": ({ first }) => `One test, on ${first}.`,
 
   "dosing.working.excluded.tooClose": ({ date }) =>
@@ -2749,8 +2763,8 @@ export const STRINGS = Object.freeze({
      It says what is actually true instead: the engine had something to say and
      this build has no wording for it. */
   "reason.fallback":
-    "The engine gave a reason this build has no plain-English wording for. Nothing about it is hidden — " +
-    "it simply has no sentence yet.",
+    "No plain-English wording for this one yet. Nothing is being kept from you; the sentence simply has " +
+    "not been written.",
 
   "reason.CONFIG_VERSION_RESOLVED": "The settings in force at the time of this assessment were used.",
   "reason.CONFIG_HISTORICAL_UNAVAILABLE":

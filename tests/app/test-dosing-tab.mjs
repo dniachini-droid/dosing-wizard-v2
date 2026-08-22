@@ -336,7 +336,12 @@ s.test("DOS-09", "the working shows the arithmetic, and every figure in it is th
   ok(/0\.609 \+ 0\.030 = 0\.639/.test(text), `the consumption sum is shown: "${text.slice(0, 160)}"`);
   ok(/0\.030 − 0\.014 = 0\.016/.test(text), "the supported-movement subtraction is shown");
   ok(/8\.8 \+ 0\.2 = 9\.0/.test(text), "and the dose arithmetic is shown");
-  ok(/approximately nine days/.test(text), "readings used, in plain English");
+  /* "about nine days", not "approximately nine days". `spanInWords` has already
+     rounded — "nine days" IS the hedge — so "approximately" hedged a hedge, in a
+     word no keeper says out loud. `jake` found it, and the sibling sentence two
+     sections up already said "about". */
+  ok(/about nine days/.test(text), "the tests used, in plain English");
+  ok(!/approximately/.test(text), "and nothing hedges a figure that is already rounded");
   ok(!/4\.99|\d\.\d{5,}/.test(text), "and no raw precision anywhere in it");
 });
 

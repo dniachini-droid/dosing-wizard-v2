@@ -4445,13 +4445,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `4c64f4ae132cb881a8eff08da29c677e7b74a7aeadf7d3565b9452df0887b72b` |
+| Ported SHA-256 | `911b03e9b3cd459e36525257c0ea16181fcd46d0708904ecfbb45791845fa178` |
 | Differences | 10 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
 ```diff
-@@ -1,160 +1,195 @@
+@@ -1,160 +1,206 @@
  import { useEffect, useMemo, useState } from 'react'
 -import { Btn, FindingList, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 +import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
@@ -4556,7 +4556,8 @@ Byte-identical to V1.
 +   answer and which words describe a position is `sayPosition()`'s, both of
 +   which the Dosing tab reads from too. This picks WHICH of the two to show and
 +   how much of it, and that is all it does. */
-+export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen }) {
++export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen,
++  episodes = null }) {
 +  const def = paramDefs.find((d) => d.assessed);
 +  if (!def || !engineResult) return null;
  
@@ -4565,10 +4566,11 @@ Byte-identical to V1.
 -    const e = (dismissedNotes || {})[`dose|${key}`];
 -    return e && typeof e === "object" && e.times ? e.times : 0;
 -  };
-+  const rows = rowsFor(readings, def.key);
-+  const rec = recommendation(engineResult, rows.length);
-+  const position = engineResult.position;
-+  const outOfRange = isOutOfRange(position);
++  /* TESTS, NOT MEASUREMENTS. `jake` found this while reviewing the sentence it
++     feeds: the Dosing tab was fixed to pass a count of TESTS and its own
++     comment claimed it was "the last surface that still counted the other
++     thing". It was not — this one still handed `recommendation()` a count of
++     raw rows.
  
 -  /* The sheet appears the first time, and again once putting this off has
 -     become a habit. Everywhere else the snooze is immediate — a dialog in
@@ -4581,6 +4583,15 @@ Byte-identical to V1.
 -    if (c.snoozeUntilTest && (!explained || count >= 2)) setSnoozing({ claim: c, count, el });
 -    else onDismissNote(c);
 -  };
++     Latent today, because only `rec.head` is rendered here and the count lives
++     in `rec.body`. Latent is not fixed: the day anything renders that body,
++     "You have 7 alkalinity tests recorded" prints beside a chart drawing five
++     points, which is finding 3 in its original form. */
++  const rows = rowsFor(readings, def.key);
++  const rec = recommendation(engineResult, chartGroupsFrom(rows, episodes, fmtShort).length);
++  const position = engineResult.position;
++  const outOfRange = isOutOfRange(position);
+ 
 +  /* A recommendation to change the dose is the strongest thing this app says,
 +     so it wins. An out-of-range level is next. Nothing else reaches here: a
 +     hold on a tank sitting in range is not news, and a strip that is always
@@ -4589,7 +4600,7 @@ Byte-identical to V1.
 +    : outOfRange ? sayPosition(position)
 +    : null;
 +  if (!headline) return null;
- 
++
 +  const tone = positionTone(position);
 +  return (
 +    <button onClick={onOpen} disabled={!onOpen}
@@ -4694,7 +4705,7 @@ Byte-identical to V1.
 +          should simply be rare, and it was not rare because nothing but a dose
 +          change could ever fill it. */}
 +      <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
-+        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} />
++        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} episodes={episodes} />
 +
 +      <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
 +        onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
@@ -4759,7 +4770,7 @@ Byte-identical to V1.
 2. **data source rewired — the reminders panel and calendar read V2's schedule view, tasks and completions**
 
 ```diff
-@@ -162,33 +197,24 @@
+@@ -162,33 +208,24 @@
        </div>
  
        <SectionTitle eyebrow="Schedule" title="Reminders" />
@@ -4809,7 +4820,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -195,13 +221,44 @@
+@@ -195,13 +232,44 @@
    );
  }
  
@@ -4863,7 +4874,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — a cleared range is described as cleared rather than reverted to a default, because this build ships no default range**
 
 ```diff
-@@ -215,7 +272,7 @@
+@@ -215,7 +283,7 @@
  
    const revert = async () => {
      await onResetRange(def.key);
@@ -4877,7 +4888,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +279,38 @@
+@@ -222,36 +290,38 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4939,7 +4950,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +319,98 @@
+@@ -260,91 +330,98 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -5050,7 +5061,7 @@ Byte-identical to V1.
 +              no conclusion to carry. */}
 +          {def.assessed && (
 +            <DosingNotice engineResult={engineResult} assessmentState={null}
-+              paramDefs={[def]} readings={readings} onOpen={onGoDosing} />
++              paramDefs={[def]} readings={readings} onOpen={onGoDosing} episodes={episodes} />
 +          )}
 +
 +          {notice && (
@@ -5113,7 +5124,7 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,14 +419,18 @@
+@@ -353,14 +430,18 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
@@ -5140,7 +5151,7 @@ Byte-identical to V1.
 8. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +448,16 @@
+@@ -378,10 +459,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -5164,7 +5175,7 @@ Byte-identical to V1.
 9. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -395,20 +471,19 @@
+@@ -395,20 +482,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -5193,7 +5204,7 @@ Byte-identical to V1.
 10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -417,280 +492,139 @@
+@@ -417,280 +503,139 @@
            </div>
  
            {rows.length === 0 ? (

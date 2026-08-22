@@ -186,6 +186,51 @@ commit, and it now has a specification.**
 
 ---
 
+## What `jake` found in this round's own wording
+
+Nine sentences went to him — everything new or rewritten this round. He kept
+three and rewrote six, and three of the rewrites were defects rather than taste:
+
+**`dosing.boxes.diff.matchingSubGap` shipped with the bug it was written to
+fix.** It rendered `0.070 apart` under a box headed "The difference", between
+two boxes reading `0.420 dKH/day` and `0.350 dKH/day` — a bare number, where its
+two siblings six lines above print the unit. That string exists because of a
+figures-and-units contradiction. `STR-12` now checks the family it happened in.
+
+**`reason.fallback` stopped naming a screen and went on naming the software.**
+"The engine gave a reason this build has no plain-English wording for" — two
+software references in eleven words, on the sentence whose whole defect was
+talking about itself.
+
+**`dosing.reco.fresh.body` had the register violation sitting beside the fix.**
+"tell the app what your pump is set to" — the exact sentence shape the
+reefkeeper quotes as a shipped failure. Changing "readings" to "tests" had read
+straight past it.
+
+He also found three things outside the nine he was given, each of which
+cancelled a fix inside them:
+
+- **The dashboard notice still counted raw measurements** while the Dosing tab
+  counted tests — and the Dosing tab's own comment claimed to be the last
+  surface that did. Latent, because only the headline renders there. Latent is
+  not fixed.
+- **`dosing.working.movement.drawnFrom` printed the test count and called them
+  readings**, one paragraph above the sentence that had just been corrected to
+  say tests. Same panel, same number, two nouns.
+- **`group.median` was false half the time.** "The middle value is the one used,
+  NOT THE AVERAGE" holds for three runs. On two there is no middle one, and
+  `OI-MEDIAN-001` settles it: the two central values are averaged.
+  `engine/alk_v2/kernel.py` says so in as many words. So on every duplicate the
+  figure used IS the average and the tooltip explaining it denied it. `EP-16`
+  reads the rule out of the engine rather than restating it.
+
+He also noted that `.claude/agents/jake.md` defines a findings-triage agent and
+**states no copy register at all**, while `app/src/lib/format.js` cites "jake's
+rule for this tab" in a comment. The register he was reviewed against is the
+reefkeeper's. **That file should say what jake is for** — recorded, not fixed.
+
+---
+
 ## The conformance gate
 
 **RED, unchanged.** Baseline taken before any work: 31 fixture failures, 5 check
@@ -193,7 +238,7 @@ failures, 8 invariant failures, reporting `NO ENGINE SUPPLIED` because it is run
 without the `--engine` argument. This round changed none of those counts, and
 none of this round's work touched the engine.
 
-The application suite is the gate this round moved: **273 checks green, 300
+The application suite is the gate this round moved: **275 checks green, 304
 mutations defined and every one caught.** Three browser checks stand behind the
 things a source scan cannot see:
 

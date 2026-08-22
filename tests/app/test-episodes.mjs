@@ -27,6 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
+import { t } from "../../app/src/strings.js";
 import { describeRows } from "../../app/src/present/spread.js";
 import {
   chartGroupsFrom,
@@ -322,6 +323,15 @@ s.test("EP-14", "every figure on the parameter sheet describes a TEST, not a mea
     "and never the raw rows");
   ok(/describeRows\(chartGroupsFrom\(rowsInWindow/.test(modal),
     "and the 7d/30d/90d/All strip is resolved the same way");
+
+  /* And the dashboard's one-line notice, which feeds the same sentence the
+     Dosing tab does. `jake` found it still counting raw rows while the Dosing
+     tab's own comment claimed to be the last surface that did — latent, because
+     only the headline is rendered here, and latent is not fixed. */
+  const notice = dash.slice(dash.indexOf("export function DosingNotice"),
+                            dash.indexOf("export function Dashboard"));
+  ok(/recommendation\(engineResult, chartGroupsFrom\(/.test(notice),
+    "the dashboard notice counts tests, not rows");
 });
 
 s.test("EP-15", "the Test tab's row for a parameter shows the test's figure, not the last number typed", () => {
@@ -354,6 +364,31 @@ s.test("EP-15", "the Test tab's row for a parameter shows the test's figure, not
   const wiz = code("app/src/components/DosingWizard.jsx");
   ok(/const latest = shownReading\(episodes,/.test(wiz),
     "and so does the line that stamps the Dosing tab's headline with a time");
+});
+
+s.test("EP-16", "what the tooltip says about the median is true of two runs as well as three", () => {
+  /* `jake` found this while reviewing the wording around it. The chart's
+     group tooltip said "The middle value is the one used, NOT THE AVERAGE" —
+     which holds for three runs, where the middle of three is one of the numbers
+     the keeper typed. On TWO there is no middle one, and `OI-MEDIAN-001`
+     settles what happens instead: the two central values are averaged.
+     `engine/alk_v2/kernel.py` says so in as many words, and this app's own
+     `middleValue` was corrected to match it earlier this round.
+
+     So on every duplicate the figure used IS the average, and the sentence
+     explaining it said it was not — a straight untruth on the one surface a
+     keeper taps to ask what happened to his numbers.
+
+     Read from the engine rather than restated here: a rule copied into a test
+     is a second owner of it. */
+  const kernel = fs.readFileSync(path.join(ROOT, "engine/alk_v2/kernel.py"), "utf8");
+  const fn = kernel.slice(kernel.indexOf("def median("), kernel.indexOf("def mad("));
+  ok(/xs\[mid - 1\] \+ xs\[mid\]\) \/ 2/.test(fn),
+    "the engine averages the two central values on an even count");
+
+  const said = t("group.median");
+  ok(!/not the average/i.test(said), `and the tooltip does not deny it: "${said}"`);
+  ok(/averaged|average/.test(said), "it says what happens on two");
 });
 
 export default s;

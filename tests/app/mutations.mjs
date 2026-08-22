@@ -2681,8 +2681,8 @@ export const MUTATIONS = [
     id: "AM-R57",
     why: "a message points the keeper at a \"developer view\" that no screen in the application renders, so he scrolls to the foot of the screen looking for it and finds the foot of the screen — reefkeeper finding 8",
     file: "app/src/strings.js",
-    find: '    "it simply has no sentence yet.",',
-    replace: '    "the full result is in the developer view at the foot of this screen.",',
+    find: '    "not been written.",',
+    replace: '    "shown in full in the developer view at the foot of this screen.",',
     breaks: ["STR-04", "STR-11"],
   },
 
@@ -2781,6 +2781,31 @@ export const MUTATIONS = [
     find: "  const latest = shownReading(episodes, def ? latestByParam[def.key] : null);",
     replace: "  const latest = def ? latestByParam[def.key] : null;",
     breaks: ["EP-15"],
+  },
+
+  {
+    id: "AM-R69",
+    why: "the difference box prints a bare number under a heading that means a quantity — \"0.070 apart\" between two boxes reading 0.420 dKH/day and 0.350 dKH/day — which is the units contradiction that string was written to fix, shipped inside the fix",
+    file: "app/src/strings.js",
+    find: "    `${gap} dKH/day apart, which is less than your readings can show`,",
+    replace: "    `${gap} apart, which is less than your readings can show`,",
+    breaks: ["STR-12"],
+  },
+  {
+    id: "AM-R70",
+    why: "the chart tooltip denies that two runs are averaged, which OI-MEDIAN-001 settles and kernel.py does — so on every duplicate the sentence explaining the figure contradicts the figure",
+    file: "app/src/strings.js",
+    find: '    "middle one, the two are averaged.",',
+    replace: '    "middle one, not the average.",',
+    breaks: ["EP-16"],
+  },
+  {
+    id: "AM-R71",
+    why: "the dashboard notice counts raw measurements again while the Dosing tab counts tests, so the same sentence states two different numbers depending on which screen it is read on",
+    file: "app/src/components/Dashboard.jsx",
+    find: "  const rec = recommendation(engineResult, chartGroupsFrom(rows, episodes, fmtShort).length);",
+    replace: "  const rec = recommendation(engineResult, rows.length);",
+    breaks: ["EP-14"],
   },
 
   {

@@ -350,4 +350,22 @@ s.test("STR-09", "the file is the only place, and it holds a substantial number 
   }
 });
 
+s.test("STR-12", "a figure in a sentence carries its unit", () => {
+  /* `jake` found `dosing.boxes.diff.matchingSubGap` rendering "0.070 apart"
+     under a box headed "The difference", between two boxes reading "0.420
+     dKH/day" and "0.350 dKH/day" — a bare number where its two siblings six
+     lines above print the unit. That string exists BECAUSE of a
+     figures-and-units contradiction; it shipped with the same one.
+
+     `fmtQty` returns a bare number by design, so every sentence that
+     interpolates one owns the unit. This checks the family where the mistake
+     happened rather than the whole register: a scan of every string in the file
+     would be a scan nobody could keep green. */
+  for (const key of ["dosing.boxes.diff.short", "dosing.boxes.diff.excess",
+                     "dosing.boxes.diff.matchingSubGap"]) {
+    const said = t(key, { gap: "0.070" });
+    ok(/dKH\/day/.test(said), `${key} says what the figure is measured in: "${said}"`);
+  }
+});
+
 export default s;

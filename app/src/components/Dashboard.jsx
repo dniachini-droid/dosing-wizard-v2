@@ -47,12 +47,23 @@ import { describeRows } from '../present/spread.js'
    answer and which words describe a position is `sayPosition()`'s, both of
    which the Dosing tab reads from too. This picks WHICH of the two to show and
    how much of it, and that is all it does. */
-export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen }) {
+export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen,
+  episodes = null }) {
   const def = paramDefs.find((d) => d.assessed);
   if (!def || !engineResult) return null;
 
+  /* TESTS, NOT MEASUREMENTS. `jake` found this while reviewing the sentence it
+     feeds: the Dosing tab was fixed to pass a count of TESTS and its own
+     comment claimed it was "the last surface that still counted the other
+     thing". It was not — this one still handed `recommendation()` a count of
+     raw rows.
+
+     Latent today, because only `rec.head` is rendered here and the count lives
+     in `rec.body`. Latent is not fixed: the day anything renders that body,
+     "You have 7 alkalinity tests recorded" prints beside a chart drawing five
+     points, which is finding 3 in its original form. */
   const rows = rowsFor(readings, def.key);
-  const rec = recommendation(engineResult, rows.length);
+  const rec = recommendation(engineResult, chartGroupsFrom(rows, episodes, fmtShort).length);
   const position = engineResult.position;
   const outOfRange = isOutOfRange(position);
 
@@ -156,7 +167,7 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           should simply be rare, and it was not rare because nothing but a dose
           change could ever fill it. */}
       <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
-        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} />
+        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} episodes={episodes} />
 
       <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
         onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
@@ -382,7 +393,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
               no conclusion to carry. */}
           {def.assessed && (
             <DosingNotice engineResult={engineResult} assessmentState={null}
-              paramDefs={[def]} readings={readings} onOpen={onGoDosing} />
+              paramDefs={[def]} readings={readings} onOpen={onGoDosing} episodes={episodes} />
           )}
 
           {notice && (
