@@ -277,8 +277,29 @@ export function ReefConsoleInner() {
          and the list says so rather than presenting it as his figure. */
       fromDerived: !!r.event.detail.fromMlPerDayDerived,
       isStart: r.event.kind === KIND.DOSE_STATE,
+      /* A recommendation, a recommendation the keeper adjusted, or his own
+         change. Absent on everything recorded before this existed and on every
+         imported row, where "his own change" is the only honest reading. */
+      origin: r.event.detail.origin || "KEEPER",
       parameter: r.event.parameter || "ALK",
     })), [projection]);
+
+  /* NEWEST FIRST, IN THE ORDER IT CLAIMS — owner finding 19.
+
+     Setup sorted this list on the DATE alone. Two changes made on one day
+     compare equal, so they kept the order they came out of storage in, which is
+     oldest first — and the keeper's 8.8 sat at the top of a list headed "newest
+     first" above the 9.0 that had replaced it that morning.
+
+     `projection` is the ledger's own total order (`INV-A1`) and the app already
+     trusts it for "the latest reading". Reversing it is reading that one order
+     rather than forming a second opinion about which change is most recent. */
+  const doseChangesNewestFirst = useMemo(() => [...doseChanges].reverse(), [doseChanges]);
+
+  /* THE DOSE THE PUMP IS RUNNING NOW. One answer, read by Setup, by the Dosing
+     tab and by the write path below, so no two of them can disagree about what
+     the previous figure was. */
+  const standingDose = doseChangesNewestFirst.length ? doseChangesNewestFirst[0].to : null;
 
   const lightingChanges = useMemo(() => projection
     .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
@@ -389,14 +410,37 @@ export function ReefConsoleInner() {
     assess();
   };
 
-  const addDoseChange = async ({ fromMlPerDay, toMlPerDay, date, time }) => {
+  /* THE DELIVERED DOSE — ONE WRITE PATH, THREE WAYS IN (owner finding 19).
+
+     Setup's field, accepting a recommendation on the Dosing tab, and "change
+     the dose anyway" are the same act and go through here. There is no second
+     code path for any of them; what differs is one field on the entry
+     afterwards, saying where the figure came from.
+
+     THE KEEPER SUPPLIES ONE NUMBER. The "to" is what he typed. The "from" is
+     `standingDose` — what the record already says was running — so the FROM/TO
+     form is gone rather than rearranged. Asking him to restate a figure the app
+     holds is asking him to get it wrong, and he did: he typed 9.0 in one box
+     and read "on record: 8.8" underneath it, because the two boxes wrote two
+     different kinds of record and neither knew about the other.
+
+     THE FIRST TIME IS NOT A DIFFERENT ACT. With nothing on record there is no
+     previous figure to move from, so the record BEGINS — a standing dose, which
+     is what `dosing.py` calls "a declaration of the standing rate". Every time
+     after it is a change. Same field, same path, same screen. */
+  const setDeliveredDose = async ({ toMlPerDay, date, time, origin = "KEEPER" }) => {
+    const from = standingDose;
     try {
-      await recordDoseChange(store, { fromMlPerDay, toMlPerDay, date, time });
+      if (from == null) {
+        await recordDoseState(store, { doseMlPerDay: toMlPerDay, date, atTime: time });
+      } else {
+        await recordDoseChange(store, { fromMlPerDay: from, toMlPerDay, date, time, origin });
+      }
     } catch (e) { setStorageMsg(e && e.message); return; }
     await reload();
-    notify("Dose change recorded");
+    notify(from == null ? t("dose.delivered.recorded") : t("dose.delivered.changed"));
     const def = paramDefs.find((d) => d.key === "ALK");
-    setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
+    if (from != null) setDoseResult({ at: Date.now(), def, from, to: toMlPerDay, date, time });
     assess();
   };
 
@@ -432,18 +476,6 @@ export function ReefConsoleInner() {
   };
 
   const dropReading = (eventId) => deleteRecordById(eventId, t("delete.done.reading"));
-
-  /* The dose the keeper says his pump is running now. Stage 1 established, by
-     measurement, that the engine had no readable record of this at all on a
-     V1-imported history — and without it `consumption` is `NOT_RUN` and every
-     figure that depends on it is withheld. */
-  const setStandingDose = async (doseMlPerDay) => {
-    try { await recordDoseState(store, { doseMlPerDay }); }
-    catch (e) { setStorageMsg(e && e.message); return; }
-    await reload();
-    notify("Current dose recorded");
-    assess();
-  };
 
   const addWaterChange = async ({ date, time, litres }) => {
     try {
@@ -936,15 +968,9 @@ export function ReefConsoleInner() {
               onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
+              standingDose={standingDose} onSetDeliveredDose={setDeliveredDose}
               config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
-              /* V1's, kept where a hold is recommended: a hold is advice, and
-                 the keeper is allowed to disagree with it. It opens the same
-                 dose-change form Setup uses; nothing here records a change by
-                 itself (`ALK-RECOMMEND-ONLY-001`). */
-              /* `"settings"` is not a tab id — `NAV` calls it `"setup"` — so this
-                 button set the tab to a value nothing renders and the screen
-                 went blank with only the bar left. Owner finding 20. */
-              onChangeDoseAnyway={() => setTab("setup")} />
+              />
           )}
 
           {tab === "tasks" && (
@@ -962,8 +988,8 @@ export function ReefConsoleInner() {
           {tab === "setup" && (
             <Setup config={config} onSaveConfig={saveConfig} paramDefs={paramDefs}
               engineResult={engineResult}
-              doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
-              onSetStandingDose={setStandingDose}
+              doseChanges={doseChangesNewestFirst} standingDose={standingDose}
+              onSetDeliveredDose={setDeliveredDose} onDeleteEvent={deleteEvent}
               onModeChange={() => setModeTick((n) => n + 1)}
               lightingChanges={lightingChanges}
               hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}

@@ -134,6 +134,10 @@ export function recommendation(result, readingCount = 0) {
     }
     return {
       head: t(`${p}.head`, { dose: fmtQty(recommended, "mlPerDay") }),
+      /* The figure the keeper is being offered, so the tab can hand it to the
+         delivered-dose field rather than making him retype it. Reading it out
+         is not deciding anything — the engine chose it. */
+      suggestedDose: recommended,
       body,
       canExplain: true,
       offerChangeAnyway: false,
@@ -145,6 +149,10 @@ export function recommendation(result, readingCount = 0) {
     body.push(t("dosing.reco.hold.isARecommendation"));
     return {
       head: t("dosing.reco.hold.head", { dose: fmtQty(current, "mlPerDay") }),
+      /* A hold recommends no change, so there is nothing to offer. "Change the
+         dose anyway" opens the field empty of a suggestion, and whatever the
+         keeper puts in it is his own change. */
+      suggestedDose: null,
       body: body.filter(Boolean),
       canExplain: true,
       /* V1's, kept: a hold is advice, and the keeper may disagree with it. */

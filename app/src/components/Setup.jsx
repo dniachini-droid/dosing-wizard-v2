@@ -11,6 +11,7 @@ import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../st
 import { ImportPanel } from './ImportPanel.jsx'
 import { TestMode } from './TestMode.jsx'
 import { MODE, currentMode } from '../store/mode.js'
+import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
 import { t } from '../strings.js'
 
 /* ---------------------------------- Setup ---------------------------------- */
@@ -114,7 +115,7 @@ function per100LFrom(config) {
 }
 
 export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
-  doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
+  doseChanges = [], onDeleteEvent, onSetDeliveredDose, standingDose = null,
   lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
   onExport, store = null, onImported = null, onModeChange = null,
   storageHealth = null }) {
@@ -163,24 +164,18 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   );
   const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
 
-  /* ---- dose changes ----------------------------------------------------- */
-  const [dcOpen, setDcOpen] = useState(false);
-  const [dcFrom, setDcFrom] = useState("");
-  const [dcTo, setDcTo] = useState("");
-  const [dcDate, setDcDate] = useState(todayStr());
-  const [dcTime, setDcTime] = useState(nowTime());
+  /* ---- the dose history --------------------------------------------------
 
-  const newestFirst = useMemo(
-    () => [...doseChanges].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-    [doseChanges]);
+     The FROM/TO form is gone entirely (owner finding 19). Its state went with
+     it: there is nothing left on this screen that asks the keeper for a figure
+     the record already holds.
 
-  const submitDoseChange = async () => {
-    const from = parseFloat(dcFrom), to = parseFloat(dcTo);
-    if (!Number.isFinite(from) || !Number.isFinite(to)) return;
-    await onAddDoseChange({ fromMlPerDay: from, toMlPerDay: to, date: dcDate, time: dcTime });
-    setDcFrom(""); setDcTo(""); setDcDate(todayStr()); setDcTime(nowTime());
-  };
-
+     Already newest-first, from the ledger's own total order. It was sorted here
+     on the DATE alone, which compares equal for two changes made on one day and
+     therefore left them in storage order — oldest at the top of a list headed
+     "newest first". A second opinion about which change is most recent is what
+     `MASTER RULE 1` forbids. */
+  const newestFirst = doseChanges;
   /* ---- ONE dosing section ------------------------------------------------
 
      "Never ask the same thing twice in different clothes." Solution strength,
@@ -201,9 +196,9 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
 
   /* THE RE-READ. One effect, one condition: the stored version changed.
 
-     `standing` and `current` are handled at their own declaration below, for
-     the same reason and by the same rule — the dose in force is a ledger fact,
-     not a configuration field, so it has its own key. */
+     The delivered dose is not here at all: it is a ledger fact rather than a
+     configuration field, it arrives from the shell, and `DeliveredDoseField`
+     owns its own re-read. */
   const syncedVersion = useRef(config ? config.configVersionId : null);
   useEffect(() => {
     const version = config ? config.configVersionId : null;
@@ -265,23 +260,6 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
     setTimeout(() => setStrengthMsg(""), 2500);
   };
 
-  /* The dose in force. This is the field whose absence stopped the engine
-     working out consumption at all — see `lib/record.js` `recordDoseState`. */
-  const standing = newestFirst.length ? newestFirst[0].to : null;
-  const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
-  const [currentMsg, setCurrentMsg] = useState("");
-
-  /* The same re-read as the configuration's, keyed on the ledger fact rather
-     than the configuration version, because that is where the standing dose
-     lives. Without it the box went on showing the dose that was in force when
-     the screen opened, however many changes had been recorded since. */
-  const syncedStanding = useRef(standing);
-  useEffect(() => {
-    if (standing === syncedStanding.current) return;
-    syncedStanding.current = standing;
-    setCurrent(standing != null ? String(standing) : "");
-  }, [standing]);
-
   /* What the card says about itself when it is shut: the two facts whose
      absence stops the engine answering, named rather than counted. */
   const dosingSubtitle = useMemo(() => {
@@ -290,17 +268,9 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
       && (config.selectedPotencyDkhPerMl != null
         || (config.chemical != null && config.stockConcentrationGPerL != null));
     if (!hasStrength) bits.push("solution strength needed");
-    if (standing == null) bits.push("current dose needed");
-    return bits.length ? bits.join(" · ") : `${fmtAmount(standing)} mL/day`;
-  }, [config, standing]);
-
-  const saveCurrent = async () => {
-    const v = parseFloat(current);
-    if (!Number.isFinite(v)) { setCurrentMsg("Enter a number."); return; }
-    await onSetStandingDose(v);
-    setCurrentMsg(t("dosing.currentSaved"));
-    setTimeout(() => setCurrentMsg(""), 2500);
-  };
+    if (standingDose == null) bits.push("current dose needed");
+    return bits.length ? bits.join(" · ") : `${fmtAmount(standingDose)} mL/day`;
+  }, [config, standingDose]);
 
   return (
     <div>
@@ -435,28 +405,23 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
             </Btn>
             {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
 
-            {/* ---- the dose in force -------------------------------------- */}
+            {/* ---- THE DELIVERED DOSE — ONE FIELD (owner finding 19) --------
+
+                 Three things used to sit here for a single act: "what your
+                 pump is running now", a history, and a "record a dose change"
+                 form with FROM and TO. They wrote two different kinds of
+                 record and neither knew about the other, which is why the
+                 keeper typed 9.0, was told it was saved, and read "on record:
+                 8.8 mL/day" underneath it.
+
+                 One field now, and it is `DeliveredDoseField` — the SAME
+                 component the Dosing tab uses, so the two surfaces cannot
+                 drift. Both notes are gone: they said "the app", which the
+                 register forbids, and the first did not make sense as
+                 written. */}
             <div className="border-t border-app mt-4 pt-3">
-              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.currentHead")}</h4>
-              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-                {t("dosing.currentLead")}
-              </p>
-              <Field label={t("dosing.current")} className="mb-2">
-                <input type="number" inputMode="decimal" step="0.01" className={inputCls}
-                  value={current} onChange={(e) => setCurrent(e.target.value)} />
-              </Field>
-              <p className="text-[11px] font-bold text-ink2 mb-2">
-                {standing != null ? t("dosing.currentOnRecord", { dose: fmtAmount(standing) }) : t("dosing.currentNone")}
-              </p>
-              {standing != null && (
-                <p className="text-[11px] font-medium text-ink2 leading-relaxed mb-2">
-                  {t("dosing.currentUseChange")}
-                </p>
-              )}
-              <Btn className="w-full" onClick={saveCurrent}>
-                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-              </Btn>
-              {currentMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{currentMsg}</p>}
+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.delivered.head")}</h4>
+              <DeliveredDoseField standing={standingDose} onSave={onSetDeliveredDose} />
             </div>
 
             {/* ---- the pump's step ---------------------------------------- */}
@@ -473,77 +438,23 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
               </Btn>
             </div>
 
-            {/* ---- every change to the dose ------------------------------- */}
+            {/* ---- the history, which writes itself ------------------------
+
+                 Newest first and in the order it claims, which it was not:
+                 it sorted on the date alone, so two changes made on one day
+                 kept storage order and the older sat on top. `doseChanges`
+                 arrives already ordered by the ledger, which is the app's one
+                 owner of "most recent".
+
+                 Nothing here can be edited. A dose change is a fact about a
+                 moment; correcting it means deleting it and entering it again,
+                 exactly as a reading does. */}
             <div className="border-t border-app mt-4 pt-3">
-              <h4 className="text-[13px] font-black text-ink mb-1">Dose changes</h4>
+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.history.head")}</h4>
               <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-                Every change to the daily dose, newest first. The date and time matter: the engine
-                measures the tank's response from the moment the change took effect, so a change made
-                at 9am and one made at 9pm are not the same change.
+                {t("dose.history.noEdit")}
               </p>
-        <button onClick={() => setDcOpen((v) => !v)}
-          className="w-full flex items-center justify-between gap-2 rounded-xl border border-app px-3 py-2.5 mb-3">
-          <span className="text-[12px] font-extrabold text-teal-brand">Record a dose change</span>
-          {dcOpen ? <ChevronUp size={14} className="text-ink2" /> : <ChevronDown size={14} className="text-ink2" />}
-        </button>
-
-        {dcOpen && (
-          <div className="mb-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="From (mL/day)">
-                <input type="number" inputMode="decimal" step="0.1" value={dcFrom}
-                  onChange={(e) => setDcFrom(e.target.value)} className={inputCls} />
-              </Field>
-              <Field label="To (mL/day)">
-                <input type="number" inputMode="decimal" step="0.1" value={dcTo}
-                  onChange={(e) => setDcTo(e.target.value)} className={inputCls} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <Field label="Date">
-                <input type="date" value={dcDate} max={todayStr()}
-                  onChange={(e) => setDcDate(e.target.value)} className={inputCls} />
-              </Field>
-              <Field label="Time">
-                <input type="time" value={dcTime} onChange={(e) => setDcTime(e.target.value)} className={inputCls} />
-              </Field>
-            </div>
-            <Btn className="w-full mt-3" onClick={submitDoseChange}>
-              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Record it</span>
-            </Btn>
-          </div>
-        )}
-
-        {newestFirst.length === 0 ? (
-          <p className="text-[13px] text-ink2 font-medium">No dose changes recorded yet.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {newestFirst.map((d) => (
-              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-black text-ink truncate">
-                    {d.isStart ? (
-                      <>{fmtAmount(d.to)} mL/day</>
-                    ) : (
-                      <>
-                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-                        <span className="text-ink2 font-bold ml-1">
-                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-bold text-ink2">
-                    {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
-                    {d.isStart ? " · where the record begins" : ""}
-                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
-                  </div>
-                </div>
-                <DeleteButton onDelete={() => onDeleteEvent(d.id)} confirmMessage="Dose change removed" />
-              </div>
-            ))}
-          </div>
-        )}
+              <DoseHistory entries={newestFirst} onDelete={onDeleteEvent} />
             </div>
           </>
         )}

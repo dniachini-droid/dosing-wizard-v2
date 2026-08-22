@@ -2298,10 +2298,14 @@ export const MUTATIONS = [
   },
   {
     id: "AM-R11",
-    why: "\"Change the dose anyway\" names a tab that does not exist again, so the screen goes blank with only the bar on it (finding 20)",
+    why: "the shell switches to a tab id that does not exist, so the screen goes blank with only the bar on it — finding 20, where \"Change the dose anyway\" set the tab to \"settings\"",
     file: "app/src/App.jsx",
-    find: '              onChangeDoseAnyway={() => setTab("setup")} />',
-    replace: '              onChangeDoseAnyway={() => setTab("settings")} />',
+    /* Re-anchored: "Change the dose anyway" no longer navigates anywhere — it
+       opens the delivered-dose field on the tab the keeper is already reading
+       (finding 19's clarification). The check it guards is unchanged and still
+       the right one: every tab this shell switches to must exist. */
+    find: '            onOpenDosing={() => setTab("dosing")} />',
+    replace: '            onOpenDosing={() => setTab("settings")} />',
     breaks: ["EP-11"],
   },
 
@@ -2371,6 +2375,96 @@ export const MUTATIONS = [
     find: '  if (typeof window === "undefined" || typeof document === "undefined") return () => {};',
     replace: "",
     breaks: ["VP-07"],
+  },
+
+  /* ---- ROUND FIVE: the delivered dose (owner finding 19) ------------- */
+  {
+    id: "AM-R20",
+    why: "the FROM/TO form comes back to Setup, so the keeper is asked to restate a figure the record already holds — and gets it wrong, which is how he came to read \"on record: 8.8\" under a field he had just filled with 9.0",
+    file: "app/src/components/Setup.jsx",
+    find: '              <DeliveredDoseField standing={standingDose} onSave={onSetDeliveredDose} />',
+    replace: '              <Field label="From (mL/day)"><input value={dcFrom} /></Field>\n              <Field label="To (mL/day)"><input value={dcTo} /></Field>',
+    breaks: ["DD-01", "DD-02"],
+  },
+  {
+    id: "AM-R21",
+    why: "the Dosing tab records a dose itself instead of going through the shell's one path, so two surfaces can disagree about what the previous dose was",
+    file: "app/src/components/DosingWizard.jsx",
+    find: "                    <DeliveredDoseField standing={standingDose}",
+    replace: "                    {recordDoseChange && null}\n                    <DeliveredDoseField standing={standingDose}",
+    breaks: ["DD-03"],
+  },
+  {
+    id: "AM-R22",
+    why: "a second writer of a dose appears in the shell, which is how the standing-dose field and the dose-change form came to write two kinds of record that did not know about each other",
+    file: "app/src/App.jsx",
+    find: "  const addWaterChange = async ({ date, time, litres }) => {",
+    replace: "  const alsoSetDose = async (ml) => recordDoseChange(store, { fromMlPerDay: 0, toMlPerDay: ml, date: todayStr(), time: \"09:00\" });\n  const addWaterChange = async ({ date, time, litres }) => {",
+    breaks: ["DD-04"],
+  },
+  {
+    id: "AM-R23",
+    why: "a dosing screen asks for the previous figure again",
+    file: "app/src/components/DeliveredDose.jsx",
+    find: "      await onSave({ toMlPerDay: to, date, time, origin: originOf(suggested, to) });",
+    replace: "      await onSave({ fromMlPerDay: standing, toMlPerDay: to, date, time, origin: originOf(suggested, to) });",
+    breaks: ["DD-05"],
+  },
+  {
+    id: "AM-R24",
+    why: "every save through a recommendation is recorded as taken-as-offered, so a keeper who changed the figure is told he accepted it",
+    file: "app/src/present/dose-origin.js",
+    find: "  return same ? DOSE_ORIGIN.RECOMMENDATION : DOSE_ORIGIN.RECOMMENDATION_ADJUSTED;",
+    replace: "  return DOSE_ORIGIN.RECOMMENDATION;",
+    breaks: ["DD-06"],
+  },
+  {
+    id: "AM-R25",
+    why: "the offered figure is compared exactly rather than at the precision it is shown in, so a keeper who accepted 9.00 as offered is told he adjusted it",
+    file: "app/src/present/dose-origin.js",
+    find: '  const same = fmtQty(suggested, "mlPerDay") === fmtQty(saved, "mlPerDay");',
+    replace: "  const same = suggested === saved;",
+    breaks: ["DD-07"],
+  },
+  {
+    id: "AM-R26",
+    why: "the dose history is re-sorted by date, so two changes made on one day keep storage order and the older sits at the top of a list headed newest first (finding 19)",
+    file: "app/src/App.jsx",
+    find: "  const doseChangesNewestFirst = useMemo(() => [...doseChanges].reverse(), [doseChanges]);",
+    replace: "  const doseChangesNewestFirst = useMemo(() => [...doseChanges].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)), [doseChanges]);",
+    breaks: ["DD-08"],
+  },
+  {
+    id: "AM-R27",
+    why: "the first dose is stamped from the clock while every change after it is stamped from the form, putting two precisions on one timeline — so a standing dose carrying seconds sorts after a change made a minute later and the history reads backwards",
+    file: "app/src/App.jsx",
+    find: "        await recordDoseState(store, { doseMlPerDay: toMlPerDay, date, atTime: time });",
+    replace: "        await recordDoseState(store, { doseMlPerDay: toMlPerDay });",
+    breaks: ["DD-09"],
+  },
+  {
+    id: "AM-R28",
+    why: "the screen stops saying a dose change cannot be edited, so the keeper has no way to know that correcting one means deleting it",
+    file: "app/src/components/Setup.jsx",
+    find: '                {t("dose.history.noEdit")}',
+    replace: '                {t("dose.history.head")}',
+    breaks: ["DD-10"],
+  },
+  {
+    id: "AM-R29",
+    why: "\"the app\" returns to the delivered-dose wording — the fifth surface it has appeared on, and the register forbids any observer",
+    file: "app/src/strings.js",
+    find: '  "dose.delivered.field": "mL per day",',
+    replace: '  "dose.delivered.field": "mL per day — the app records the change",',
+    breaks: ["DD-11"],
+  },
+  {
+    id: "AM-R30",
+    why: "where the figure came from is handed to the engine, so which button the keeper pressed becomes an input to his chemistry",
+    file: "app/src/store/ledger.js",
+    find: "        from: e.detail.fromMlPerDay,\n        to: e.detail.toMlPerDay,",
+    replace: "        from: e.detail.fromMlPerDay,\n        to: e.detail.toMlPerDay,\n        origin: e.detail.origin,",
+    breaks: ["DD-12"],
   },
 
 ];

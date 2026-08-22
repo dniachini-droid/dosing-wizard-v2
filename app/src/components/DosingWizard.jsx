@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
+import { DeliveredDoseField } from './DeliveredDose.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 import { fmtDate, fmtShort } from '../lib/dates.js'
 import { chartGroupsFrom } from '../present/episodes.js'
@@ -433,7 +434,11 @@ function PotencyBox({ box, onAccept, onKeep }) {
 export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
   config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
   asOf = null, correctionDismissed = null, onDismissCorrection = null,
-  onAcceptPotency = null, onKeepPotency = null, episodes = null }) {
+  onAcceptPotency = null, onKeepPotency = null, episodes = null,
+  standingDose = null, onSetDeliveredDose = null }) {
+  /* Whether the delivered-dose field is open on this tab. One flag: there is
+     one field, and it is the same field however it was reached. */
+  const [doseOpen, setDoseOpen] = useState(false);
 
   const KEYS = ["ALK", "CA", "MG"];
   const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -511,12 +516,41 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
               <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
                 {t("dosing.reco.note")}
               </p>
-              {/* V1's, kept where a hold is recommended: a hold is advice, and
-                  the keeper is allowed to disagree with it. */}
-              {rec.offerChangeAnyway && onChangeDoseAnyway && (
-                <Btn className="w-full mt-3" onClick={onChangeDoseAnyway}>
-                  {t("dosing.reco.changeAnyway")}
-                </Btn>
+              {/* THE DOSE IS SET FROM HERE, AND IT IS THE SAME FIELD SETUP USES
+                  (owner finding 19).
+
+                  Two ways in, one of them opening with the engine's figure and
+                  one with nothing suggested, both writing through the shell's
+                  single path. Whether the keeper took the recommendation or
+                  changed it is decided from the figure he saved, not from which
+                  button he pressed, so the history is right either way.
+
+                  It opens HERE rather than sending him to Setup: a
+                  recommendation he is acting on is on this screen, and a button
+                  that navigates away from it loses the thing he was reading. It
+                  also used to navigate to a tab that did not exist and leave
+                  him on a blank page (finding 20). */}
+              {onSetDeliveredDose && (rec.suggestedDose != null || rec.offerChangeAnyway) && (
+                doseOpen ? (
+                  <div className="mt-3 rounded-xl border border-app p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="text-[13px] font-black text-ink">{t("dose.delivered.head")}</h4>
+                      <button onClick={() => setDoseOpen(false)}
+                        className="text-[11px] font-extrabold text-ink2">
+                        {t("dose.change.close")}
+                      </button>
+                    </div>
+                    <DeliveredDoseField standing={standingDose}
+                      suggested={rec.suggestedDose} autoFocus compact
+                      onSave={async (args) => { await onSetDeliveredDose(args); setDoseOpen(false); }} />
+                  </div>
+                ) : (
+                  <Btn className="w-full mt-3" onClick={() => setDoseOpen(true)}>
+                    {rec.suggestedDose != null
+                      ? t("dosing.reco.setDose", { dose: fmtQty(rec.suggestedDose, "mlPerDay") })
+                      : t("dosing.reco.changeAnyway")}
+                  </Btn>
+                )
               )}
             </Card>
           )}

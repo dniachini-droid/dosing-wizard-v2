@@ -5811,13 +5811,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `a87b46d50a3dda675d0df47bed6038975bbfb1814f1168e84dbb3a2505ca3630` |
+| Ported SHA-256 | `44d947281ae494c5b9370e44dac371e416de62339eb60d28b26bb0d6c93366d0` |
 | Differences | 3 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,46 +1,59 @@
+@@ -1,46 +1,60 @@
  import { useState } from 'react'
 -import { Btn, FindingList, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 -import { AlkAssessmentBlock, Card } from './ErrorBoundary.jsx'
@@ -5828,6 +5828,7 @@ Byte-identical to V1.
 +import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 +import { Card } from './ErrorBoundary.jsx'
 +import { ZoomableLineChart } from './ZoomableChart.jsx'
++import { DeliveredDoseField } from './DeliveredDose.jsx'
 +import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 +import { fmtDate, fmtShort } from '../lib/dates.js'
 +import { chartGroupsFrom } from '../present/episodes.js'
@@ -5917,7 +5918,7 @@ Byte-identical to V1.
 2. **chemistry removed — the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes are V1's layout; everything inside is what V2's engine returned**
 
 ```diff
-@@ -47,41 +60,21 @@
+@@ -47,41 +61,21 @@
              <Icon size={11} style={{ color: def.color }} strokeWidth={2.6} />
            </span>
            <span className="text-[11px] font-black text-ink truncate flex-1 min-w-0">{def.label}</span>
@@ -5976,7 +5977,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +81,464 @@
+@@ -88,203 +82,497 @@
    );
  }
  
@@ -6450,7 +6451,11 @@ Byte-identical to V1.
 +export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
 +  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
 +  asOf = null, correctionDismissed = null, onDismissCorrection = null,
-+  onAcceptPotency = null, onKeepPotency = null, episodes = null }) {
++  onAcceptPotency = null, onKeepPotency = null, episodes = null,
++  standingDose = null, onSetDeliveredDose = null }) {
++  /* Whether the delivered-dose field is open on this tab. One flag: there is
++     one field, and it is the same field however it was reached. */
++  const [doseOpen, setDoseOpen] = useState(false);
 +
 +  const KEYS = ["ALK", "CA", "MG"];
 +  const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -6553,12 +6558,41 @@ Byte-identical to V1.
 +              <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
 +                {t("dosing.reco.note")}
 +              </p>
-+              {/* V1's, kept where a hold is recommended: a hold is advice, and
-+                  the keeper is allowed to disagree with it. */}
-+              {rec.offerChangeAnyway && onChangeDoseAnyway && (
-+                <Btn className="w-full mt-3" onClick={onChangeDoseAnyway}>
-+                  {t("dosing.reco.changeAnyway")}
-+                </Btn>
++              {/* THE DOSE IS SET FROM HERE, AND IT IS THE SAME FIELD SETUP USES
++                  (owner finding 19).
++
++                  Two ways in, one of them opening with the engine's figure and
++                  one with nothing suggested, both writing through the shell's
++                  single path. Whether the keeper took the recommendation or
++                  changed it is decided from the figure he saved, not from which
++                  button he pressed, so the history is right either way.
++
++                  It opens HERE rather than sending him to Setup: a
++                  recommendation he is acting on is on this screen, and a button
++                  that navigates away from it loses the thing he was reading. It
++                  also used to navigate to a tab that did not exist and leave
++                  him on a blank page (finding 20). */}
++              {onSetDeliveredDose && (rec.suggestedDose != null || rec.offerChangeAnyway) && (
++                doseOpen ? (
++                  <div className="mt-3 rounded-xl border border-app p-3">
++                    <div className="flex items-center justify-between gap-2 mb-2">
++                      <h4 className="text-[13px] font-black text-ink">{t("dose.delivered.head")}</h4>
++                      <button onClick={() => setDoseOpen(false)}
++                        className="text-[11px] font-extrabold text-ink2">
++                        {t("dose.change.close")}
++                      </button>
++                    </div>
++                    <DeliveredDoseField standing={standingDose}
++                      suggested={rec.suggestedDose} autoFocus compact
++                      onSave={async (args) => { await onSetDeliveredDose(args); setDoseOpen(false); }} />
++                  </div>
++                ) : (
++                  <Btn className="w-full mt-3" onClick={() => setDoseOpen(true)}>
++                    {rec.suggestedDose != null
++                      ? t("dosing.reco.setDose", { dose: fmtQty(rec.suggestedDose, "mlPerDay") })
++                      : t("dosing.reco.changeAnyway")}
++                  </Btn>
++                )
 +              )}
 +            </Card>
            )}
@@ -7060,13 +7094,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `613483ec4b12f1d1de81d852f540482ea6b63170579696dae7b5dcb5c2cdfd0f` |
-| Differences | 2 |
+| Ported SHA-256 | `60cf9c8d2de46382ba8d7569188ed25eb4e160c357d736b4c17fcb040c6de11f` |
+| Differences | 1 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,205 +1,305 @@
+@@ -1,931 +1,559 @@
  import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
 +import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
@@ -7095,6 +7129,7 @@ Byte-identical to V1.
 +import { ImportPanel } from './ImportPanel.jsx'
 +import { TestMode } from './TestMode.jsx'
 +import { MODE, currentMode } from '../store/mode.js'
++import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
 +import { t } from '../strings.js'
  
  /* ---------------------------------- Setup ---------------------------------- */
@@ -7304,42 +7339,10 @@ Byte-identical to V1.
 -    setSaveMsg(`${elem.label} dose set to ${doseNum} mL/day, recorded for ${fmtDate(doseDate)}.`);
 -    setDoseDate(todayStr());
 -    setTimeout(() => setSaveMsg(null), 3500);
+-  };
 +function gPerLFrom(config) {
 +  return config && config.stockConcentrationGPerL != null ? String(config.stockConcentrationGPerL) : "";
 +}
-+
-+function per100LFrom(config) {
-+  return config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
-+    ? String(config.potencyStatedValue ?? "") : "";
-+}
-+
-+export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
-+  doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
-+  lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
-+  onExport, store = null, onImported = null, onModeChange = null,
-+  storageHealth = null }) {
-+
-+  const [openId, setOpenId] = useState(null);
-+  const testModeOn = currentMode() === MODE.TEST;
-+  const toggle = (id) => setOpenId(openId === id ? null : id);
-+
-+  /* ---- the keeper's facts ---------------------------------------------- */
-+  const [facts, setFacts] = useState(() => factsFrom(config));
-+  const [factMsg, setFactMsg] = useState("");
-+
-+  const saveFacts = async (keys) => {
-+    const values = {};
-+    for (const k of keys) {
-+      const raw = facts[k];
-+      if (raw === "" || raw == null) continue;
-+      const n = parseFloat(raw);
-+      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
-+      values[k] = n;
-+    }
-+    await onSaveConfig(values);
-+    setFactMsg("Saved.");
-+    setTimeout(() => setFactMsg(""), 2500);
-   };
  
 -  const saveSigma = async () => {
 -    const v = parseFloat(sigmaVal);
@@ -7347,147 +7350,35 @@ Byte-identical to V1.
 -    await onSaveSettings({ ...settings, kitSigma: { ...(settings.kitSigma || {}), [elem.key]: v } });
 -    setSaveMsg("Kit precision saved.");
 -    setTimeout(() => setSaveMsg(null), 2500);
-+  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
-+
-+     Owner finding 4: "'One more left' persisted; the owner had to press save
-+     repeatedly before the step completed." It was not a save that failed. This
-+     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
-+     and this section renders three of them — the volume and the two range
-+     edges. The strength and the pump's step are asked for in the DOSING section
-+     below.
-+
-+     Worse, the strength can be legitimately absent. A keeper who states his
-+     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
-+     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
-+     itself and the app storing one as well would override `ALK-014`'s owner
-+     with a copy. That is `store/config.js`'s own rule, and it made this counter
-+     permanently stuck at one however many times he pressed save — a screen
-+     telling him something was missing that he had already supplied, on the same
-+     screen he had supplied it. */
-+  const ASKED_HERE = KEEPER_FACTS.filter(
-+    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
-+  );
-+  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
-+
-+  /* ---- dose changes ----------------------------------------------------- */
-+  const [dcOpen, setDcOpen] = useState(false);
-+  const [dcFrom, setDcFrom] = useState("");
-+  const [dcTo, setDcTo] = useState("");
-+  const [dcDate, setDcDate] = useState(todayStr());
-+  const [dcTime, setDcTime] = useState(nowTime());
-+
-+  const newestFirst = useMemo(
-+    () => [...doseChanges].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-+    [doseChanges]);
-+
-+  const submitDoseChange = async () => {
-+    const from = parseFloat(dcFrom), to = parseFloat(dcTo);
-+    if (!Number.isFinite(from) || !Number.isFinite(to)) return;
-+    await onAddDoseChange({ fromMlPerDay: from, toMlPerDay: to, date: dcDate, time: dcTime });
-+    setDcFrom(""); setDcTo(""); setDcDate(todayStr()); setDcTime(nowTime());
-   };
+-  };
++function per100LFrom(config) {
++  return config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
++    ? String(config.potencyStatedValue ?? "") : "";
++}
  
 -  /* Clearing the field stores nothing, rather than falling back to some other
 -     tank's product. Exactly what saveVolume does above, for the same reason:
 -     the app would rather refuse than dose from a figure nobody checked. */
-+  /* ---- ONE dosing section ------------------------------------------------
-+
-+     "Never ask the same thing twice in different clothes." Solution strength,
-+     the dose in force and the pump's step used to sit in one card while the
-+     dose-change history sat in another, and "solution strength" was asked for
-+     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
-+     have. Both are one section now, and the strength is asked for once in
-+     whichever of three forms he actually holds. */
-+  const DOSED = ["ALK", "CA", "MG"];
-+  const [dosedKey, setDosedKey] = useState("ALK");
-+  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
-+
-+  const [form, setForm] = useState(() => formFrom(config));
-+  const [chemical, setChemical] = useState(() => chemicalFrom(config));
-+  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
-+  const [per100L, setPer100L] = useState(() => per100LFrom(config));
-+  const [strengthMsg, setStrengthMsg] = useState("");
-+
-+  /* THE RE-READ. One effect, one condition: the stored version changed.
-+
-+     `standing` and `current` are handled at their own declaration below, for
-+     the same reason and by the same rule — the dose in force is a ledger fact,
-+     not a configuration field, so it has its own key. */
-+  const syncedVersion = useRef(config ? config.configVersionId : null);
-+  useEffect(() => {
-+    const version = config ? config.configVersionId : null;
-+    if (version === syncedVersion.current) return;
-+    syncedVersion.current = version;
-+    setFacts(factsFrom(config));
-+    setForm(formFrom(config));
-+    setChemical(chemicalFrom(config));
-+    setGPerL(gPerLFrom(config));
-+    setPer100L(per100LFrom(config));
-+  }, [config]);
-+
-+  const netVolumeL = parseFloat(facts.netVolumeL);
-+
-+  /* What the app can honestly show back as the derived figure, and where it
-+     came from. For the grams-per-litre form that is the ENGINE's own number —
-+     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
-+     what the engine returned rather than recomputing it. */
-+  const derived = useMemo(() => {
-+    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
-+    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
-+      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
-+      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
-+      return { kind: "fromVolume", value: v, volume: netVolumeL };
-+    }
-+    const p = engineResult && engineResult.potency;
-+    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
-+      ? p.theoreticalPotencyDkhPerMl : null;
-+    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
-+  }, [form, per100L, netVolumeL, engineResult]);
-+
-   const saveStrength = async () => {
+-  const saveStrength = async () => {
 -    await onSaveSettings({ ...settings, [elem.strengthField]: strengthNum > 0 ? strengthNum : null });
 -    setSaveMsg(strengthNum > 0
 -      ? "Product strength saved."
 -      : `${elem.label} strength cleared. Dosing advice and corrections will not be calculated until you enter it.`);
 -    setTimeout(() => setSaveMsg(null), 3500);
-+    const values = {};
-+    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
-+      const c = parseFloat(gPerL);
-+      if (!Number.isFinite(c)) { setStrengthMsg("Enter a number."); return; }
-+      /* The engine derives the potency from these two. Sending a
-+         `selectedPotencyDkhPerMl` as well would override its own derivation
-+         with the app's, so the app clears it rather than holding a stale one. */
-+      values.chemical = chemical;
-+      values.stockConcentrationGPerL = c;
-+      values.selectedPotencyDkhPerMl = null;
-+      values.potencyStatedValue = c;
-+    } else if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
-+      const stated = parseFloat(per100L);
-+      const v = potencyForThisTank(stated, netVolumeL);
-+      if (v == null) { setStrengthMsg("Enter your net volume above first."); return; }
-+      values.selectedPotencyDkhPerMl = v;
-+      values.potencyStatedValue = stated;
-+    } else {
-+      const v = parseFloat(facts.selectedPotencyDkhPerMl);
-+      if (!Number.isFinite(v)) { setStrengthMsg("Enter a number."); return; }
-+      values.selectedPotencyDkhPerMl = v;
-+      values.potencyStatedValue = v;
-+    }
-+    values.potencyStatedAs = form;
-+    await onSaveConfig(values);
-+    setStrengthMsg("Saved.");
-+    setTimeout(() => setStrengthMsg(""), 2500);
-   };
+-  };
++export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
++  doseChanges = [], onDeleteEvent, onSetDeliveredDose, standingDose = null,
++  lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
++  onExport, store = null, onImported = null, onModeChange = null,
++  storageHealth = null }) {
  
 -  const elemLog = useMemo(
 -    () => doseLog.filter((d) => (d.element || "alkalinity") === elemKey)
 -      .sort(byNewest),
 -    [doseLog, elemKey]);
-+  /* The dose in force. This is the field whose absence stopped the engine
-+     working out consumption at all — see `lib/record.js` `recordDoseState`. */
-+  const standing = newestFirst.length ? newestFirst[0].to : null;
-+  const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
-+  const [currentMsg, setCurrentMsg] = useState("");
++  const [openId, setOpenId] = useState(null);
++  const testModeOn = currentMode() === MODE.TEST;
++  const toggle = (id) => setOpenId(openId === id ? null : id);
  
 -  // Correction calculator state
 -  const correctable = paramDefs.filter((d) => CORRECTIONS[d.key]);
@@ -7507,16 +7398,9 @@ Byte-identical to V1.
 -    () => ((calcParam === "alkalinity" || calcParam === "calcium")
 -      ? magnesiumGate({ readings, settings, paramDefs }) : null),
 -    [calcParam, readings, settings, paramDefs]);
-+  /* The same re-read as the configuration's, keyed on the ledger fact rather
-+     than the configuration version, because that is where the standing dose
-+     lives. Without it the box went on showing the dose that was in force when
-+     the screen opened, however many changes had been recorded since. */
-+  const syncedStanding = useRef(standing);
-+  useEffect(() => {
-+    if (standing === syncedStanding.current) return;
-+    syncedStanding.current = standing;
-+    setCurrent(standing != null ? String(standing) : "");
-+  }, [standing]);
++  /* ---- the keeper's facts ---------------------------------------------- */
++  const [facts, setFacts] = useState(() => factsFrom(config));
++  const [factMsg, setFactMsg] = useState("");
  
 -  // Lighting log state
 -  const [lightDate, setLightDate] = useState(todayStr());
@@ -7526,35 +7410,24 @@ Byte-identical to V1.
 -    if (!lightNote.trim()) return;
 -    await onAddLighting({ date: lightDate, note: lightNote.trim() });
 -    setLightNote("");
-+  /* What the card says about itself when it is shut: the two facts whose
-+     absence stops the engine answering, named rather than counted. */
-+  const dosingSubtitle = useMemo(() => {
-+    const bits = [];
-+    const hasStrength = config
-+      && (config.selectedPotencyDkhPerMl != null
-+        || (config.chemical != null && config.stockConcentrationGPerL != null));
-+    if (!hasStrength) bits.push("solution strength needed");
-+    if (standing == null) bits.push("current dose needed");
-+    return bits.length ? bits.join(" · ") : `${fmtAmount(standing)} mL/day`;
-+  }, [config, standing]);
-+
-+  const saveCurrent = async () => {
-+    const v = parseFloat(current);
-+    if (!Number.isFinite(v)) { setCurrentMsg("Enter a number."); return; }
-+    await onSetStandingDose(v);
-+    setCurrentMsg(t("dosing.currentSaved"));
-+    setTimeout(() => setCurrentMsg(""), 2500);
++  const saveFacts = async (keys) => {
++    const values = {};
++    for (const k of keys) {
++      const raw = facts[k];
++      if (raw === "" || raw == null) continue;
++      const n = parseFloat(raw);
++      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
++      values[k] = n;
++    }
++    await onSaveConfig(values);
++    setFactMsg("Saved.");
++    setTimeout(() => setFactMsg(""), 2500);
    };
  
-   return (
-```
-
-2. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
-
-```diff
-@@ -206,726 +306,343 @@
-     <div>
-       <SectionTitle eyebrow="Configuration" title="Setup" />
+-  return (
+-    <div>
+-      <SectionTitle eyebrow="Configuration" title="Setup" />
++  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
  
 -      {/* --- Tank & dosing setup --- */}
 -      <Card className="p-4 mb-4">
@@ -7567,7 +7440,13 @@ Byte-identical to V1.
 -            </Btn>
 -          </div>
 -        </Field>
--
++     Owner finding 4: "'One more left' persisted; the owner had to press save
++     repeatedly before the step completed." It was not a save that failed. This
++     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
++     and this section renders three of them — the volume and the two range
++     edges. The strength and the pump's step are asked for in the DOSING section
++     below.
+ 
 -        {/* Which alkalinity kit you use decides how long the app waits before
 -            it will read a trend. A more precise kit clears its own error in
 -            fewer days, so it earns a verdict sooner — the app was assuming
@@ -7591,27 +7470,8 @@ Byte-identical to V1.
 -                <option key={k} value={k}>{v.label} (±{v[el.key]}{el.unit})</option>
 -              ))}
 -            </select>
-+      {/* ---- the tank's own facts --------------------------------------- */}
-+      <SetupSection icon={Waves} category="Tank" colour="#0B7C86"
-+        heading="Your tank"
-+        subtitle={missing ? `${missing} still needed` : "all set"}
-+        open={openId === "tank"} onToggle={() => toggle("tank")}>
-+        {/* V1 canon's rule, carried across as a principle: "Setup asks for
-+            facts, not judgements." Every field here is something only the
-+            keeper knows and the app cannot default. Nothing here is a
-+            threshold, a tolerance or a cadence — those are the canon's, and
-+            the app does not ask because it does not get to choose. */}
-+        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          These are the things only you know. The app will not guess at any of them, and it
-+          says what it cannot work out without each one.
-+        </p>
-+        {ASKED_HERE.map((f) => (
-+          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+            <input type="number" inputMode="decimal" className={inputCls}
-+              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+              placeholder={t(f.hint)} />
-           </Field>
-         ))}
+-          </Field>
+-        ))}
 -        <p className="text-[11px] text-ink2 mt-1 leading-snug">
 -          Precision decides how long the app waits before it will read a trend —
 -          a better kit earns a verdict sooner.{" "}
@@ -7628,27 +7488,31 @@ Byte-identical to V1.
 -          )}
 -        </p>
 -      </Card>
-+        <Btn className="w-full mt-2"
-+          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
-+          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+        </Btn>
-+        {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
-+      </SetupSection>
++     Worse, the strength can be legitimately absent. A keeper who states his
++     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
++     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
++     itself and the app storing one as well would override `ALK-014`'s owner
++     with a copy. That is `store/config.js`'s own rule, and it made this counter
++     permanently stuck at one however many times he pressed save — a screen
++     telling him something was missing that he had already supplied, on the same
++     screen he had supplied it. */
++  const ASKED_HERE = KEEPER_FACTS.filter(
++    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
++  );
++  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
  
 -      <Card className="p-4 mb-4">
 -        <div className="text-sm font-black text-ink mb-3">Dosing</div>
-+      {/* ---- ONE dosing section -----------------------------------------
++  /* ---- the dose history --------------------------------------------------
  
 -        <Field label="Element">
 -          <select value={elemKey} onChange={(e) => setElemKey(e.target.value)} className={inputCls}>
 -            {DOSE_ELEMENTS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
 -          </select>
 -        </Field>
-+           `17-DOSING-TAB-SPEC.md`'s companion rule for Setup: one dosing
-+           section, and never the same question twice in different clothes.
-+           Solution strength, the dose in force, the pump's step and the record
-+           of every change are one thing the keeper sets up, so they are one
-+           card.
++     The FROM/TO form is gone entirely (owner finding 19). Its state went with
++     it: there is nothing left on this screen that asks the keeper for a figure
++     the record already holds.
  
 -        {/* One field for the dose. Changing it IS the event — it records itself
 -            with today's date, so there's no second "new rate" box to fill in. */}
@@ -7682,29 +7546,14 @@ Byte-identical to V1.
 -            </p>
 -          )}
 -          {saveMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-1.5">{saveMsg}</p>}
-+           DELIVERY METHOD IS NOT ASKED. The application handles pump-delivered
-+           maintenance dosing only; corrections may be by hand, maintenance is
-+           not. There is no choice to make, so there is no question — and
-+           nothing that can afterwards be reported as "not recorded". */}
-+      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
-+        heading="Dosing"
-+        subtitle={dosingSubtitle}
-+        open={openId === "dosing"} onToggle={() => toggle("dosing")}>
-+
-+        <div className="flex gap-1.5 mb-3">
-+          {DOSED.map((k) => {
-+            const def = paramDefs.find((d) => d.key === k);
-+            if (!def) return null;
-+            return (
-+              <button key={k} onClick={() => setDosedKey(k)}
-+                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
-+                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
-+                         color: dosedKey === k ? def.color : "#45605F" }}>
-+                {def.label}
-+              </button>
-+            );
-+          })}
-         </div>
+-        </div>
++     Already newest-first, from the ledger's own total order. It was sorted here
++     on the DATE alone, which compares equal for two changes made on one day and
++     therefore left them in storage order — oldest at the top of a list headed
++     "newest first". A second opinion about which change is most recent is what
++     `MASTER RULE 1` forbids. */
++  const newestFirst = doseChanges;
++  /* ---- ONE dosing section ------------------------------------------------
  
 -        {/* Strength is set once per product, so it stays tucked away. */}
 -        <button onClick={() => setShowStrength((v) => !v)}
@@ -7730,29 +7579,15 @@ Byte-identical to V1.
 -            <p className="text-[11px] text-ink2 font-medium mt-2 leading-relaxed">{elem.hint}</p>
 -          </div>
 -        )}
-+        {!(dosedDef && dosedDef.assessed) ? (
-+          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
-+            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
-+            build, so there is nothing here to set up yet. Its readings are logged and charted like
-+            every other parameter's.
-+          </p>
-+        ) : (
-+          <>
-+            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
-+            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
-+            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-+              {t("dosing.strengthLead")}
-+            </p>
-+            <div className="flex gap-1.5 mb-2.5">
-+              {Object.keys(POTENCY_FORM).map((k) => (
-+                <button key={k} onClick={() => setForm(POTENCY_FORM[k])}
-+                  className="flex-1 rounded-lg py-1.5 px-1 text-[10px] font-extrabold border-2 leading-tight"
-+                  style={{ borderColor: form === POTENCY_FORM[k] ? "#0B7C86" : "#E3ECEA",
-+                           color: form === POTENCY_FORM[k] ? "#0B7C86" : "#45605F" }}>
-+                  {t(`dosing.form.${POTENCY_FORM[k]}`)}
-+                </button>
-+              ))}
-+            </div>
++     "Never ask the same thing twice in different clothes." Solution strength,
++     the dose in force and the pump's step used to sit in one card while the
++     dose-change history sat in another, and "solution strength" was asked for
++     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
++     have. Both are one section now, and the strength is asked for once in
++     whichever of three forms he actually holds. */
++  const DOSED = ["ALK", "CA", "MG"];
++  const [dosedKey, setDosedKey] = useState("ALK");
++  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
  
 -        {/* Kit precision drives the testing-cadence advice */}
 -        <button onClick={() => setShowSigma((v) => !v)}
@@ -7779,81 +7614,21 @@ Byte-identical to V1.
 -              How much your readings vary when you test the same water twice — not how much the tank
 -              varies. Titration kits are typically about one drop's worth; digital checkers quote a
 -              figure on the box. This drives the testing-frequency advice in Insights.
-+            {form === POTENCY_FORM.GRAMS_PER_LITRE && (
-+              <>
-+                <Field label={t("dosing.chemical")} className="mb-2">
-+                  <select className={inputCls} value={chemical}
-+                    onChange={(e) => setChemical(e.target.value)}>
-+                    {CHEMICALS.map((c) => (
-+                      <option key={c.key} value={c.key}>{t(c.label)}</option>
-+                    ))}
-+                  </select>
-+                </Field>
-+                <Field label={t("dosing.gPerL")} className="mb-2">
-+                  <input type="number" inputMode="decimal" className={inputCls}
-+                    value={gPerL} onChange={(e) => setGPerL(e.target.value)} />
-+                </Field>
-+              </>
-+            )}
-+
-+            {form === POTENCY_FORM.DKH_PER_ML && (
-+              <Field label={t("dosing.dkhPerMl")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
-+                  value={facts.selectedPotencyDkhPerMl}
-+                  onChange={(e) => setFacts({ ...facts, selectedPotencyDkhPerMl: e.target.value })} />
-+              </Field>
-+            )}
-+
-+            {form === POTENCY_FORM.DKH_PER_ML_PER_100L && (
-+              <Field label={t("dosing.dkhPerMlPer100L")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
-+                  value={per100L} onChange={(e) => setPer100L(e.target.value)} />
-+              </Field>
-+            )}
-+
-+            {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
-+            <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
-+              {derived.kind === "stated" && t("dosing.statedDirectly")}
-+              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtPotency(derived.value) })}
-+              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtPotency(derived.value), volume: fmtAmount(derived.volume) })}
-+              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
-+              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
-             </p>
+-            </p>
 -          </div>
 -        )}
-+            <Btn className="w-full" onClick={saveStrength}>
-+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+            </Btn>
-+            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
++  const [form, setForm] = useState(() => formFrom(config));
++  const [chemical, setChemical] = useState(() => chemicalFrom(config));
++  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
++  const [per100L, setPer100L] = useState(() => per100LFrom(config));
++  const [strengthMsg, setStrengthMsg] = useState("");
  
 -        {/* This element's change history */}
 -        {elemLog.length > 0 && (
 -          <div className="mt-3 pt-3 border-t border-app">
 -            <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-1.5">
 -              {elem.label} changes
-+            {/* ---- the dose in force -------------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.currentHead")}</h4>
-+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-+                {t("dosing.currentLead")}
-+              </p>
-+              <Field label={t("dosing.current")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.01" className={inputCls}
-+                  value={current} onChange={(e) => setCurrent(e.target.value)} />
-+              </Field>
-+              <p className="text-[11px] font-bold text-ink2 mb-2">
-+                {standing != null ? t("dosing.currentOnRecord", { dose: fmtAmount(standing) }) : t("dosing.currentNone")}
-+              </p>
-+              {standing != null && (
-+                <p className="text-[11px] font-medium text-ink2 leading-relaxed mb-2">
-+                  {t("dosing.currentUseChange")}
-+                </p>
-+              )}
-+              <Btn className="w-full" onClick={saveCurrent}>
-+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+              </Btn>
-+              {currentMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{currentMsg}</p>}
-             </div>
+-            </div>
 -            <div className="divide-y divide-app">
 -              {elemLog.slice(0, 5).map((d) => (
 -                <div key={d.id} className="flex items-center justify-between py-2">
@@ -7863,62 +7638,12 @@ Byte-identical to V1.
 -                    <DeleteButton onDelete={() => onDeleteDoseChange(d.id)} size={13} />
 -                  </div>
 -                </div>
-+
-+            {/* ---- the pump's step ---------------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
-+                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+                  <input type="number" inputMode="decimal" className={inputCls}
-+                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+                    placeholder={t(f.hint)} />
-+                </Field>
-               ))}
-+              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
-+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+              </Btn>
-             </div>
-+
-+            {/* ---- every change to the dose ------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              <h4 className="text-[13px] font-black text-ink mb-1">Dose changes</h4>
-+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+                Every change to the daily dose, newest first. The date and time matter: the engine
-+                measures the tank's response from the moment the change took effect, so a change made
-+                at 9am and one made at 9pm are not the same change.
-+              </p>
-+        <button onClick={() => setDcOpen((v) => !v)}
-+          className="w-full flex items-center justify-between gap-2 rounded-xl border border-app px-3 py-2.5 mb-3">
-+          <span className="text-[12px] font-extrabold text-teal-brand">Record a dose change</span>
-+          {dcOpen ? <ChevronUp size={14} className="text-ink2" /> : <ChevronDown size={14} className="text-ink2" />}
-+        </button>
-+
-+        {dcOpen && (
-+          <div className="mb-3">
-+            <div className="grid grid-cols-2 gap-2">
-+              <Field label="From (mL/day)">
-+                <input type="number" inputMode="decimal" step="0.1" value={dcFrom}
-+                  onChange={(e) => setDcFrom(e.target.value)} className={inputCls} />
-+              </Field>
-+              <Field label="To (mL/day)">
-+                <input type="number" inputMode="decimal" step="0.1" value={dcTo}
-+                  onChange={(e) => setDcTo(e.target.value)} className={inputCls} />
-+              </Field>
-+            </div>
-+            <div className="grid grid-cols-2 gap-2 mt-2">
-+              <Field label="Date">
-+                <input type="date" value={dcDate} max={todayStr()}
-+                  onChange={(e) => setDcDate(e.target.value)} className={inputCls} />
-+              </Field>
-+              <Field label="Time">
-+                <input type="time" value={dcTime} onChange={(e) => setDcTime(e.target.value)} className={inputCls} />
-+              </Field>
-+            </div>
-+            <Btn className="w-full mt-3" onClick={submitDoseChange}>
-+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Record it</span>
-+            </Btn>
-           </div>
-         )}
+-              ))}
+-            </div>
+-          </div>
+-        )}
 -      </Card>
++  /* THE RE-READ. One effect, one condition: the stored version changed.
  
 -      {/* --- Full dosing history across all elements --- */}
 -      {doseLog.length > 0 && (
@@ -7945,28 +7670,11 @@ Byte-identical to V1.
 -                      {delta != null && delta !== 0 && (
 -                        <span style={{ color: delta > 0 ? "#0B7C86" : "#A2621B" }}>
 -                          {" · "}{delta > 0 ? "up" : "down"} {Math.abs(delta).toFixed(1)} mL from {prior.ml}
-+        {newestFirst.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">No dose changes recorded yet.</p>
-+        ) : (
-+          <div className="space-y-1.5">
-+            {newestFirst.map((d) => (
-+              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                <div className="min-w-0 flex-1">
-+                  <div className="text-[13px] font-black text-ink truncate">
-+                    {d.isStart ? (
-+                      <>{fmtAmount(d.to)} mL/day</>
-+                    ) : (
-+                      <>
-+                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-+                        <span className="text-ink2 font-bold ml-1">
-+                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-                         </span>
+-                        </span>
 -                      )}
 -                      {prior == null && " · first recorded"}
 -                    </div>
-+                      </>
-+                    )}
-                   </div>
+-                  </div>
 -                  <DeleteButton onDelete={() => onDeleteDoseChange(d.id)} size={13} />
 -                </div>
 -              );
@@ -7977,9 +7685,24 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
--
++     The delivered dose is not here at all: it is a ledger fact rather than a
++     configuration field, it arrives from the shell, and `DeliveredDoseField`
++     owns its own re-read. */
++  const syncedVersion = useRef(config ? config.configVersionId : null);
++  useEffect(() => {
++    const version = config ? config.configVersionId : null;
++    if (version === syncedVersion.current) return;
++    syncedVersion.current = version;
++    setFacts(factsFrom(config));
++    setForm(formFrom(config));
++    setChemical(chemicalFrom(config));
++    setGPerL(gPerLFrom(config));
++    setPer100L(per100LFrom(config));
++  }, [config]);
+ 
 -      {/* --- One-off corrections, as their own kind of entry ---
--
++  const netVolumeL = parseFloat(facts.netVolumeL);
+ 
 -          A correction is not a dose change and is not a reading, and it was
 -          previously neither listed nor exported anywhere. The engines have
 -          always read it — it is what stops a rise being scored as the tank
@@ -8007,16 +7730,12 @@ Byte-identical to V1.
 -                      {fmtDate(c.date)}{c.time ? ` · ${c.time}` : ""}
 -                      {" · "}{down ? "to bring it down" : "one-off, on top of the daily dose"}
 -                    </div>
-+                  <div className="text-[11px] font-bold text-ink2">
-+                    {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
-+                    {d.isStart ? " · where the record begins" : ""}
-+                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
-                   </div>
+-                  </div>
 -                  {onDeleteCorrection && (
 -                    <DeleteButton onDelete={() => onDeleteCorrection(c.id)} size={13}
 -                      confirmMessage="Correction removed" />
 -                  )}
-                 </div>
+-                </div>
 -              );
 -            })}
 -          </div>
@@ -8027,7 +7746,23 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
--
++  /* What the app can honestly show back as the derived figure, and where it
++     came from. For the grams-per-litre form that is the ENGINE's own number —
++     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
++     what the engine returned rather than recomputing it. */
++  const derived = useMemo(() => {
++    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
++    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
++      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
++      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
++      return { kind: "fromVolume", value: v, volume: netVolumeL };
++    }
++    const p = engineResult && engineResult.potency;
++    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
++      ? p.theoreticalPotencyDkhPerMl : null;
++    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
++  }, [form, per100L, netVolumeL, engineResult]);
+ 
 -      {/* --- 9. Correction calculator --- */}
 -      <InfoBlock icon={Calculator} eyebrow="Actions" title="Correction calculator" tone="#B8541A"
 -        collapsible
@@ -8064,10 +7799,7 @@ Byte-identical to V1.
 -            <p className="text-[13px] text-ink font-medium leading-relaxed">
 -              You're aiming to <strong>lower</strong> {calcDef.label.toLowerCase()} from {calcCurrent} to {correction.delta + calcCurrent}{calcDef.unit}. There's no additive for this — the safe route is dilution through water changes, or simply reducing dosing and letting consumption pull it down. Use the water change model below to see how much each change would move it.
 -            </p>
-+                <DeleteButton onDelete={() => onDeleteEvent(d.id)} confirmMessage="Dose change removed" />
-+              </div>
-+            ))}
-           </div>
+-          </div>
 -        ) : (
 -          <div className="rounded-xl p-3" style={{ background: "#B8541A12", border: "1px solid #B8541A40" }}>
 -            <p className="text-[13px] text-ink font-medium leading-relaxed mb-2">
@@ -8092,26 +7824,54 @@ Byte-identical to V1.
 -                  These amounts are below what a kitchen scale weighs accurately. Rather than measuring the powder directly, dissolve a larger known weight into a litre of RODI and dose a measured fraction of that solution.
 -                </p>
 -              )}
-+        )}
-             </div>
+-            </div>
 -            <p className="text-[11px] text-ink2 font-medium mt-2">
 -              Dissolve in RODI before adding, and add to high flow. Re-test before dosing again rather than stacking doses on an assumption.
 -            </p>
 -          </div>
-+          </>
-         )}
+-        )}
 -      </InfoBlock>
-+      </SetupSection>
++  const saveStrength = async () => {
++    const values = {};
++    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
++      const c = parseFloat(gPerL);
++      if (!Number.isFinite(c)) { setStrengthMsg("Enter a number."); return; }
++      /* The engine derives the potency from these two. Sending a
++         `selectedPotencyDkhPerMl` as well would override its own derivation
++         with the app's, so the app clears it rather than holding a stale one. */
++      values.chemical = chemical;
++      values.stockConcentrationGPerL = c;
++      values.selectedPotencyDkhPerMl = null;
++      values.potencyStatedValue = c;
++    } else if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
++      const stated = parseFloat(per100L);
++      const v = potencyForThisTank(stated, netVolumeL);
++      if (v == null) { setStrengthMsg("Enter your net volume above first."); return; }
++      values.selectedPotencyDkhPerMl = v;
++      values.potencyStatedValue = stated;
++    } else {
++      const v = parseFloat(facts.selectedPotencyDkhPerMl);
++      if (!Number.isFinite(v)) { setStrengthMsg("Enter a number."); return; }
++      values.selectedPotencyDkhPerMl = v;
++      values.potencyStatedValue = v;
++    }
++    values.potencyStatedAs = form;
++    await onSaveConfig(values);
++    setStrengthMsg("Saved.");
++    setTimeout(() => setStrengthMsg(""), 2500);
++  };
  
-+      {/* ---- test mode ---------------------------------------------------
-+           ROUND THREE, ITEM 9. Here rather than on the tab bar because, in the
-+           port's own words, "it is not part of keeping a tank". */}
-+      <SetupSection icon={Settings2} category="Tools" colour="#A2621B"
-+        heading={t("testmode.title")}
-+        subtitle={testModeOn ? t("testmode.on") : t("testmode.off")}
-+        open={openId === "testmode"} onToggle={() => toggle("testmode")}>
-+        <TestMode onModeChange={onModeChange} />
-+      </SetupSection>
++  /* What the card says about itself when it is shut: the two facts whose
++     absence stops the engine answering, named rather than counted. */
++  const dosingSubtitle = useMemo(() => {
++    const bits = [];
++    const hasStrength = config
++      && (config.selectedPotencyDkhPerMl != null
++        || (config.chemical != null && config.stockConcentrationGPerL != null));
++    if (!hasStrength) bits.push("solution strength needed");
++    if (standingDose == null) bits.push("current dose needed");
++    return bits.length ? bits.join(" · ") : `${fmtAmount(standingDose)} mL/day`;
++  }, [config, standingDose]);
  
 -      {/* --- Lighting log --- */}
 -      <InfoBlock icon={SunMedium} eyebrow="AI Blade" title="Lighting changes" tone="#926A09"
@@ -8135,41 +7895,52 @@ Byte-identical to V1.
 -        </form>
 -        {lighting.length === 0 ? (
 -          <p className="text-[13px] text-ink2 font-medium">No lighting changes logged yet.</p>
-+      {/* ---- lighting ---------------------------------------------------- */}
-+      <SetupSection icon={SunMedium} category="The tank" colour="#A2621B"
-+        heading="Lighting changes"
-+        subtitle={lightingChanges.length ? `${lightingChanges.length} recorded` : "none recorded"}
-+        open={openId === "lighting"} onToggle={() => toggle("lighting")}>
-+        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          A lighting change marks every chart, because it touches everything. Record one from
-+          Tasks; this is the list.
-+        </p>
-+        {lightingChanges.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">Nothing recorded yet.</p>
-         ) : (
+-        ) : (
 -          <div className="divide-y divide-app">
 -            {lighting.slice(0, 8).map((l) => (
 -              <div key={l.id} className="flex items-start justify-between gap-2 py-2">
 -                <div className="min-w-0">
 -                  <div className="text-[11px] text-ink2 font-bold">{fmtDate(l.date)}</div>
 -                  <div className="text-[13px] font-semibold text-ink">{l.note}</div>
-+          <div className="space-y-1.5">
-+            {lightingChanges.map((l) => (
-+              <div key={l.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                <div className="min-w-0 flex-1">
-+                  <div className="text-[13px] font-black text-ink truncate">{l.note || "Lighting changed"}</div>
-+                  <div className="text-[11px] font-bold text-ink2">{fmtDate(l.date)}</div>
-                 </div>
+-                </div>
 -                <DeleteButton onDelete={() => onDeleteLighting(l.id)} />
-+                <DeleteButton onDelete={() => onDeleteEvent(l.id)} confirmMessage="Lighting change removed" />
-               </div>
-             ))}
-           </div>
-         )}
+-              </div>
+-            ))}
+-          </div>
+-        )}
 -        <p className="text-[12px] text-ink2 font-medium leading-relaxed mt-3">
 -          Each change drops a marker on every parameter chart, so you can see whether a lighting tweak moved your alkalinity demand.
--        </p>
++  return (
++    <div>
++      <SectionTitle eyebrow="Configuration" title="Setup" />
++
++      {/* ---- the tank's own facts --------------------------------------- */}
++      <SetupSection icon={Waves} category="Tank" colour="#0B7C86"
++        heading="Your tank"
++        subtitle={missing ? `${missing} still needed` : "all set"}
++        open={openId === "tank"} onToggle={() => toggle("tank")}>
++        {/* V1 canon's rule, carried across as a principle: "Setup asks for
++            facts, not judgements." Every field here is something only the
++            keeper knows and the app cannot default. Nothing here is a
++            threshold, a tolerance or a cadence — those are the canon's, and
++            the app does not ask because it does not get to choose. */}
++        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++          These are the things only you know. The app will not guess at any of them, and it
++          says what it cannot work out without each one.
+         </p>
 -      </InfoBlock>
++        {ASKED_HERE.map((f) => (
++          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
++            <input type="number" inputMode="decimal" className={inputCls}
++              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
++              placeholder={t(f.hint)} />
++          </Field>
++        ))}
++        <Btn className="w-full mt-2"
++          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
++          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
++        </Btn>
++        {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
 +      </SetupSection>
  
 -      {/* --- 11. Backup and export --- */}
@@ -8181,25 +7952,56 @@ Byte-identical to V1.
 -          ? `${dismissedList.length} notice${dismissedList.length === 1 ? "" : "s"} hidden`
 -          : "Nothing hidden"}>
 -        {dismissedList.length === 0 ? (
--          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
++      {/* ---- ONE dosing section -----------------------------------------
++
++           `17-DOSING-TAB-SPEC.md`'s companion rule for Setup: one dosing
++           section, and never the same question twice in different clothes.
++           Solution strength, the dose in force, the pump's step and the record
++           of every change are one thing the keeper sets up, so they are one
++           card.
++
++           DELIVERY METHOD IS NOT ASKED. The application handles pump-delivered
++           maintenance dosing only; corrections may be by hand, maintenance is
++           not. There is no choice to make, so there is no question — and
++           nothing that can afterwards be reported as "not recorded". */}
++      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
++        heading="Dosing"
++        subtitle={dosingSubtitle}
++        open={openId === "dosing"} onToggle={() => toggle("dosing")}>
++
++        <div className="flex gap-1.5 mb-3">
++          {DOSED.map((k) => {
++            const def = paramDefs.find((d) => d.key === k);
++            if (!def) return null;
++            return (
++              <button key={k} onClick={() => setDosedKey(k)}
++                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
++                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
++                         color: dosedKey === k ? def.color : "#45605F" }}>
++                {def.label}
++              </button>
++            );
++          })}
++        </div>
++
++        {!(dosedDef && dosedDef.assessed) ? (
+           <p className="text-[13px] text-ink2 font-medium leading-relaxed">
 -            Notices you hide will be listed here. They come back on their own if the situation changes —
 -            hiding one only silences the version you read.
-+      {/* ---- hidden notices ---------------------------------------------- */}
-+      <SetupSection icon={Bell} category="Notices" colour="#7B4FCB"
-+        heading="Hidden notices"
-+        subtitle={hiddenNotices.length ? `${hiddenNotices.length} put away` : "none put away"}
-+        open={openId === "hidden"} onToggle={() => toggle("hidden")}>
-+        {hiddenNotices.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">
-+            Nothing is hidden. A notice you put away comes back on its own if the engine raises it
-+            with different numbers.
++            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
++            build, so there is nothing here to set up yet. Its readings are logged and charted like
++            every other parameter's.
            </p>
          ) : (
            <>
 -            <p className="text-[13px] text-ink font-medium leading-relaxed mb-3">
 -              These are hidden from the rest of the app. Each will return by itself if the underlying
 -              numbers move enough to change what it says.
--            </p>
++            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
++            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
++            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
++              {t("dosing.strengthLead")}
+             </p>
 -            <div className="space-y-2">
 -              {dismissedList.map((f) => (
 -                <div key={f.id} className="flex items-start justify-between gap-2 rounded-lg p-2.5 bg-app">
@@ -8210,44 +8012,52 @@ Byte-identical to V1.
 -                    </div>
 -                  </div>
 -                  <button onClick={() => onRestoreFinding(findingKey(f))}
-+            <div className="space-y-1.5 mb-3">
-+              {hiddenNotices.map((n) => (
-+                <div key={n.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                  <span className="text-[12px] font-bold text-ink min-w-0 flex-1">{n.title}</span>
-+                  <button onClick={() => onRestoreNotice(n)}
-                     className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
-                 </div>
+-                    className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
+-                </div>
++            <div className="flex gap-1.5 mb-2.5">
++              {Object.keys(POTENCY_FORM).map((k) => (
++                <button key={k} onClick={() => setForm(POTENCY_FORM[k])}
++                  className="flex-1 rounded-lg py-1.5 px-1 text-[10px] font-extrabold border-2 leading-tight"
++                  style={{ borderColor: form === POTENCY_FORM[k] ? "#0B7C86" : "#E3ECEA",
++                           color: form === POTENCY_FORM[k] ? "#0B7C86" : "#45605F" }}>
++                  {t(`dosing.form.${POTENCY_FORM[k]}`)}
++                </button>
                ))}
              </div>
 -            <Btn variant="ghost" className="w-full mt-3" onClick={onRestoreAllFindings}>
 -              <span className="flex items-center justify-center gap-1.5"><RotateCcw size={13} /> Show all again</span>
 -            </Btn>
-+            <Btn variant="ghost" className="w-full" onClick={onRestoreAllNotices}>Show all again</Btn>
-           </>
-         )}
+-          </>
+-        )}
 -      </InfoBlock>
-+      </SetupSection>
  
 -      <InfoBlock icon={Waves} eyebrow="Fun" title="Opening animation" tone="#0B7C86"
 -        collapsible
 -        summary="Watch the reef intro again">
 -        <p className="text-[13px] text-ink font-medium leading-relaxed mb-3">
 -          This plays once each time the app is opened. Tap below to watch it now.
-+      {/* ---- backup and export ------------------------------------------- */}
-+      <SetupSection icon={Download} category="Your data" colour="#45605F"
-+        heading="Backup and export"
-+        subtitle={storageHealth ? storageHealth.summary : "a file you can keep"}
-+        open={openId === "backup"} onToggle={() => toggle("backup")}>
-+        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          Browser storage is not durable. This writes out everything this device holds — every
-+          event, every stored assessment with the version that produced it, and the whole
-+          configuration history — as one file you can keep somewhere else.
-         </p>
+-        </p>
 -        <Btn className="w-full" onClick={onPlayIntro}>
 -          <span className="flex items-center justify-center gap-1.5"><Waves size={14} /> Play intro</span>
 -        </Btn>
 -      </InfoBlock>
--
++            {form === POTENCY_FORM.GRAMS_PER_LITRE && (
++              <>
++                <Field label={t("dosing.chemical")} className="mb-2">
++                  <select className={inputCls} value={chemical}
++                    onChange={(e) => setChemical(e.target.value)}>
++                    {CHEMICALS.map((c) => (
++                      <option key={c.key} value={c.key}>{t(c.label)}</option>
++                    ))}
++                  </select>
++                </Field>
++                <Field label={t("dosing.gPerL")} className="mb-2">
++                  <input type="number" inputMode="decimal" className={inputCls}
++                    value={gPerL} onChange={(e) => setGPerL(e.target.value)} />
++                </Field>
++              </>
++            )}
+ 
 -      <InfoBlock icon={Download} eyebrow="Your data" title="Backup & export" tone="#45605F"
 -        collapsible
 -        defaultOpen={backupAge == null || backupAge > 14}
@@ -8281,7 +8091,14 @@ Byte-identical to V1.
 -            </p>
 -          )}
 -        </div>
--
++            {form === POTENCY_FORM.DKH_PER_ML && (
++              <Field label={t("dosing.dkhPerMl")} className="mb-2">
++                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
++                  value={facts.selectedPotencyDkhPerMl}
++                  onChange={(e) => setFacts({ ...facts, selectedPotencyDkhPerMl: e.target.value })} />
++              </Field>
++            )}
+ 
 -        <Btn className="w-full mb-2" onClick={async () => {
 -          const b = await buildBackup();
 -          downloadJson(b, `dans-tank-backup-${todayStr()}.json`);
@@ -8291,10 +8108,14 @@ Byte-identical to V1.
 -          setTimeout(() => setRestoreMsg(null), 8000);
 -        }}>
 -          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save backup file</span>
-+        <Btn className="w-full" onClick={onExport}>
-+          <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Export everything</span>
-         </Btn>
--
+-        </Btn>
++            {form === POTENCY_FORM.DKH_PER_ML_PER_100L && (
++              <Field label={t("dosing.dkhPerMlPer100L")} className="mb-2">
++                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
++                  value={per100L} onChange={(e) => setPer100L(e.target.value)} />
++              </Field>
++            )}
+ 
 -        {/* One tap to Files, iCloud Drive or Mail, on the platforms where the
 -            automatic file below does not exist. Not recorded as a backup: the
 -            share sheet reports dismissal and success identically in practice,
@@ -8311,7 +8132,19 @@ Byte-identical to V1.
 -            <span className="flex items-center justify-center gap-1.5"><Upload size={14} /> Share a backup file</span>
 -          </Btn>
 -        )}
--
++            {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
++            <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
++              {derived.kind === "stated" && t("dosing.statedDirectly")}
++              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtPotency(derived.value) })}
++              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtPotency(derived.value), volume: fmtAmount(derived.volume) })}
++              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
++              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
++            </p>
++            <Btn className="w-full" onClick={saveStrength}>
++              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
++            </Btn>
++            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
+ 
 -        <label className="block">
 -          <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-app px-4 py-2.5 text-[13px] font-extrabold text-ink2 cursor-pointer active:bg-app">
 -            <Upload size={14} /> Restore from a backup
@@ -8333,13 +8166,29 @@ Byte-identical to V1.
 -              }
 -            }} />
 -        </label>
--
++            {/* ---- THE DELIVERED DOSE — ONE FIELD (owner finding 19) --------
+ 
 -        {pending && (
 -          <div ref={previewRef} className="mt-3 rounded-xl border-2 p-3" style={{ borderColor: "#0B7C8640", background: "#0B7C8608" }}>
 -            <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-1.5">
 -              {pending.kind === "snapshot" ? "Snapshot" : "Backup"} from{" "}
 -              {pending.info.createdAt ? fmtDate(pending.info.createdAt.slice(0, 10)) : "an unknown date"}
--            </div>
++                 Three things used to sit here for a single act: "what your
++                 pump is running now", a history, and a "record a dose change"
++                 form with FROM and TO. They wrote two different kinds of
++                 record and neither knew about the other, which is why the
++                 keeper typed 9.0, was told it was saved, and read "on record:
++                 8.8 mL/day" underneath it.
++
++                 One field now, and it is `DeliveredDoseField` — the SAME
++                 component the Dosing tab uses, so the two surfaces cannot
++                 drift. Both notes are gone: they said "the app", which the
++                 register forbids, and the first did not make sense as
++                 written. */}
++            <div className="border-t border-app mt-4 pt-3">
++              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.delivered.head")}</h4>
++              <DeliveredDoseField standing={standingDose} onSave={onSetDeliveredDose} />
+             </div>
 -            {/* Entries the file holds but the app cannot read. Counting them as
 -                importable made the preview promise more than the restore would
 -                deliver, and the difference vanished without a word — the worst
@@ -8360,13 +8209,25 @@ Byte-identical to V1.
 -                    {row.total} in file · <span style={{ color: row.fresh ? "#0B7C86" : "#5F7575" }}>{row.fresh} new</span>
 -                  </span>
 -                </div>
--              ))}
--            </div>
++
++            {/* ---- the pump's step ---------------------------------------- */}
++            <div className="border-t border-app mt-4 pt-3">
++              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
++                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
++                  <input type="number" inputMode="decimal" className={inputCls}
++                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
++                    placeholder={t(f.hint)} />
++                </Field>
+               ))}
++              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
++                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
++              </Btn>
+             </div>
 -            <p className="text-[11px] text-ink2 font-medium leading-relaxed mb-2">
 -              Your readings, doses and other entries are only ever added to — nothing is overwritten
 -              or duplicated, and running the same file twice changes nothing the second time.
 -            </p>
--
+ 
 -            {/* Target ranges are the one thing a restore cannot merge, and the
 -                one thing it used to overwrite without saying so. Every reading
 -                in the log is coloured, shaded and described against these
@@ -8413,7 +8274,8 @@ Byte-identical to V1.
 -                </div>
 -              </div>
 -            )}
--
++            {/* ---- the history, which writes itself ------------------------
+ 
 -            <div className="grid grid-cols-2 gap-2">
 -              <Btn variant="ghost" onClick={() => { setPending(null); setRangeChoice(null); }}>Cancel</Btn>
 -              <Btn disabled={rangeConflicts.length > 0 && !rangeChoice} onClick={async () => {
@@ -8447,15 +8309,41 @@ Byte-identical to V1.
 -            {rangeConflicts.length > 0 && !rangeChoice && (
 -              <p className="text-[11px] font-bold mt-2" style={{ color: "#8A5A18" }}>
 -                Choose what happens to the target ranges first.
--              </p>
++                 Newest first and in the order it claims, which it was not:
++                 it sorted on the date alone, so two changes made on one day
++                 kept storage order and the older sat on top. `doseChanges`
++                 arrives already ordered by the ledger, which is the app's one
++                 owner of "most recent".
++
++                 Nothing here can be edited. A dose change is a fact about a
++                 moment; correcting it means deleting it and entering it again,
++                 exactly as a reading does. */}
++            <div className="border-t border-app mt-4 pt-3">
++              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.history.head")}</h4>
++              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++                {t("dose.history.noEdit")}
+               </p>
 -            )}
 -          </div>
--        )}
--
++              <DoseHistory entries={newestFirst} onDelete={onDeleteEvent} />
++            </div>
++          </>
+         )}
++      </SetupSection>
+ 
 -        {restoreMsg && (
 -          <p className="text-[12px] font-bold text-ink mt-2 leading-relaxed">{restoreMsg}</p>
 -        )}
--
++      {/* ---- test mode ---------------------------------------------------
++           ROUND THREE, ITEM 9. Here rather than on the tab bar because, in the
++           port's own words, "it is not part of keeping a tank". */}
++      <SetupSection icon={Settings2} category="Tools" colour="#A2621B"
++        heading={t("testmode.title")}
++        subtitle={testModeOn ? t("testmode.on") : t("testmode.off")}
++        open={openId === "testmode"} onToggle={() => toggle("testmode")}>
++        <TestMode onModeChange={onModeChange} />
++      </SetupSection>
+ 
 -        {/* The automatic backup file — Chromium only, which is why the share
 -            button above exists. Once a file is chosen the app rewrites it
 -            daily with no further prompts; a lapsed permission degrades to a
@@ -8491,8 +8379,30 @@ Byte-identical to V1.
 -                } catch { /* picker dismissed — nothing chosen, nothing changed */ }
 -              }}>{fileState ? "Choose a different file" : "Choose where to keep it"}</Btn>
 -            )}
--          </div>
--        )}
++      {/* ---- lighting ---------------------------------------------------- */}
++      <SetupSection icon={SunMedium} category="The tank" colour="#A2621B"
++        heading="Lighting changes"
++        subtitle={lightingChanges.length ? `${lightingChanges.length} recorded` : "none recorded"}
++        open={openId === "lighting"} onToggle={() => toggle("lighting")}>
++        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++          A lighting change marks every chart, because it touches everything. Record one from
++          Tasks; this is the list.
++        </p>
++        {lightingChanges.length === 0 ? (
++          <p className="text-[13px] text-ink2 font-medium">Nothing recorded yet.</p>
++        ) : (
++          <div className="space-y-1.5">
++            {lightingChanges.map((l) => (
++              <div key={l.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++                <div className="min-w-0 flex-1">
++                  <div className="text-[13px] font-black text-ink truncate">{l.note || "Lighting changed"}</div>
++                  <div className="text-[11px] font-bold text-ink2">{fmtDate(l.date)}</div>
++                </div>
++                <DeleteButton onDelete={() => onDeleteEvent(l.id)} confirmMessage="Lighting change removed" />
++              </div>
++            ))}
+           </div>
+         )}
 +      </SetupSection>
  
 -        {/* The snapshot ring. Deliberately described as what it is: it lives
@@ -8528,21 +8438,32 @@ Byte-identical to V1.
 -                    setRangeChoice(null);
 -                    setRestoreMsg(null);
 -                  }}>Restore</Btn>
--                </div>
--              ))}
--            </div>
++      {/* ---- hidden notices ---------------------------------------------- */}
++      <SetupSection icon={Bell} category="Notices" colour="#7B4FCB"
++        heading="Hidden notices"
++        subtitle={hiddenNotices.length ? `${hiddenNotices.length} put away` : "none put away"}
++        open={openId === "hidden"} onToggle={() => toggle("hidden")}>
++        {hiddenNotices.length === 0 ? (
++          <p className="text-[13px] text-ink2 font-medium">
++            Nothing is hidden. A notice you put away comes back on its own if the engine raises it
++            with different numbers.
++          </p>
++        ) : (
++          <>
++            <div className="space-y-1.5 mb-3">
++              {hiddenNotices.map((n) => (
++                <div key={n.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++                  <span className="text-[12px] font-bold text-ink min-w-0 flex-1">{n.title}</span>
++                  <button onClick={() => onRestoreNotice(n)}
++                    className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
+                 </div>
+               ))}
+             </div>
 -          </div>
--        )}
-+      {/* ---- the import -------------------------------------------------- */}
-+      <SetupSection icon={Upload} category="Your data" colour="#45605F"
-+        heading="Import your history"
-+        subtitle="from a V1 backup file"
-+        open={openId === "import"} onToggle={() => toggle("import")}>
-+        {store
-+          ? <ImportPanel store={store} onImported={onImported} />
-+          : <p className="text-[13px] text-ink2 font-medium">The import is not wired up on this screen.</p>}
-+      </SetupSection>
- 
++            <Btn variant="ghost" className="w-full" onClick={onRestoreAllNotices}>Show all again</Btn>
++          </>
+         )}
+-
 -        <div className="mt-4 pt-3 border-t border-app">
 -          <p className="text-[13px] text-ink font-medium leading-relaxed mb-2">
 -            The CSV below is for reading — open it in a spreadsheet or share it. It can't be
@@ -8555,14 +8476,40 @@ Byte-identical to V1.
 -            <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Download CSV</span>
 -          </Btn>
 -        </div>
-+      {/* V1's opening animation is out by the brief, and the salvage inventory
-+          had already put it under `LEAVE_BEHIND`: "327 lines of bundle for no
-+          product function."
++      </SetupSection>
  
 -        <p className="text-[11px] text-ink2 font-medium mt-3">
 -          {readings.length} readings · {icps.length} ICP panels · {waterChanges.length} water changes · {doseLog.length} dose changes
--        </p>
++      {/* ---- backup and export ------------------------------------------- */}
++      <SetupSection icon={Download} category="Your data" colour="#45605F"
++        heading="Backup and export"
++        subtitle={storageHealth ? storageHealth.summary : "a file you can keep"}
++        open={openId === "backup"} onToggle={() => toggle("backup")}>
++        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++          Browser storage is not durable. This writes out everything this device holds — every
++          event, every stored assessment with the version that produced it, and the whole
++          configuration history — as one file you can keep somewhere else.
+         </p>
 -      </InfoBlock>
++        <Btn className="w-full" onClick={onExport}>
++          <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Export everything</span>
++        </Btn>
++      </SetupSection>
++
++      {/* ---- the import -------------------------------------------------- */}
++      <SetupSection icon={Upload} category="Your data" colour="#45605F"
++        heading="Import your history"
++        subtitle="from a V1 backup file"
++        open={openId === "import"} onToggle={() => toggle("import")}>
++        {store
++          ? <ImportPanel store={store} onImported={onImported} />
++          : <p className="text-[13px] text-ink2 font-medium">The import is not wired up on this screen.</p>}
++      </SetupSection>
++
++      {/* V1's opening animation is out by the brief, and the salvage inventory
++          had already put it under `LEAVE_BEHIND`: "327 lines of bundle for no
++          product function."
++
 +          The correction calculator is recorded for later and is not built. V1
 +          had four implementations of it and one of them lived in this file. */}
 +      <div className="h-8" />
@@ -8579,7 +8526,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `ec344577e3fc985a94b2c4e90227e272e338abcfc2f11a1dda04bfff295de3ea` |
+| Ported SHA-256 | `0ee246b9a310972efb5e455e4e126082acb0304bc38852dd7ac76ff8a772e0cc` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -8722,7 +8669,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +89,693 @@
+@@ -66,1155 +89,725 @@
    return out;
  }
  
@@ -9033,10 +8980,6 @@ Byte-identical to V1.
 -  /* Lifted out of Dashboard: tapping a parameter should open its graph from
 -     anywhere, and two copies of the same modal would drift apart. */
    const [modalParam, setModalParam] = useState(null);
--  const [logResult, setLogResult] = useState(null);
--  const [icpResult, setIcpResult] = useState(null);
--  const [taskResult, setTaskResult] = useState(null);
--  const [toastMsg, setToastMsg] = useState(null);
 +  const [allGraphs, setAllGraphs] = useState(false);
 +  /* Which half of the Test tab is showing: the parameter checklist or the ICP
 +     panels. Named `testTab` rather than `testMode`, because "test mode" means
@@ -9044,6 +8987,34 @@ Byte-identical to V1.
 +     (`app/src/store/mode.js`) — and two things with one name is how a search
 +     for one of them finds the other. */
 +  const [testTab, setTestTab] = useState("tests");
++
++  /* ---- what is on this device ---------------------------------------- */
++  const [projection, setProjection] = useState([]);
++  const [config, setConfig] = useState(null);
++  const [tasks, setTasks] = useState([]);
++  const [completions, setCompletions] = useState([]);
++  const [hiddenNotices, setHiddenNotices] = useState({});
++  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
++
++     A single string: the correction panel's signature, which is the
++     intervention and the class the engine reached on it. Delete the reading the
++     conclusion rested on, the engine reclassifies from what remains, the
++     signature stops matching and the panel is back — which is owner finding
++     16's worked example, and it needs no record that a deletion happened. */
++  const [correctionDismissed, setCorrectionDismissed] = useState(null);
++
++  /* ---- what the engine said ------------------------------------------- */
++  const [assessment, setAssessment] = useState(null);
++  const [engineState, setEngineState] = useState(null);
++
++  /* ---- the moments ----------------------------------------------------- */
+   const [logResult, setLogResult] = useState(null);
+-  const [icpResult, setIcpResult] = useState(null);
++  const [doseResult, setDoseResult] = useState(null);
+   const [taskResult, setTaskResult] = useState(null);
+   const [toastMsg, setToastMsg] = useState(null);
++  const [storageMsg, setStorageMsg] = useState(null);
++  const [remWindow, setRemWindow] = useState(14);
  
 -  /* The splash belongs to a launch, not to a render: it plays once per session
 -     and never again until the app is opened afresh. Gating it to home-screen
@@ -9056,13 +9027,11 @@ Byte-identical to V1.
 -     for the entire life of that browser tab, which is why it stopped showing. */
 -  const [splash, setSplash] = useState(true);
 -  useEffect(() => { onToast(setToastMsg); }, []);
-+  /* ---- what is on this device ---------------------------------------- */
-+  const [projection, setProjection] = useState([]);
-+  const [config, setConfig] = useState(null);
-+  const [tasks, setTasks] = useState([]);
-+  const [completions, setCompletions] = useState([]);
-+  const [hiddenNotices, setHiddenNotices] = useState({});
-+  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
++  useEffect(() => {
++    onToast((m) => setToastMsg(m));
++    onStorageError((m) => setStorageMsg(m));
++    return onEngineState((s) => setEngineState(s));
++  }, []);
  
 -  /* Ask the browser to keep this app's data, once, at launch.
 -     This request used to live in Setup's mount effect, and Setup only mounts
@@ -9074,23 +9043,48 @@ Byte-identical to V1.
 -     second time. */
 -  useEffect(() => { requestPersistence(); }, []);
 -  const openTestFor = (paramKey) => { setTestPrefill({ paramKey, at: Date.now() }); setTab("log"); };
-+     A single string: the correction panel's signature, which is the
-+     intervention and the class the engine reached on it. Delete the reading the
-+     conclusion rested on, the engine reclassifies from what remains, the
-+     signature stops matching and the panel is back — which is owner finding
-+     16's worked example, and it needs no record that a deletion happened. */
-+  const [correctionDismissed, setCorrectionDismissed] = useState(null);
++  /* How tall the screen actually is, published for the stylesheet — see
++     `lib/viewport.js`. The shell and every sheet measure themselves against it
++     instead of against `vh`, which on a phone is the height the page would
++     have if the toolbar were hidden and is therefore taller than the screen. */
++  useEffect(() => watchViewport(), []);
  
 -  /* Browsers restore the previous scroll position on reload, which drops you
 -     partway down the Dashboard with the heading out of view. */
 -  useEffect(() => {
 -    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
 -      window.history.scrollRestoration = "manual";
--    }
++  /* Reload everything this device holds. Called after every write, so no
++     screen ever renders from a copy of the record that the record has since
++     moved past. */
++  const reload = useCallback(async () => {
++    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
++      store.ledger.projection(),
++      store.config.current(),
++      store.tasks.tasks(),
++      store.tasks.completions(),
++      store.kvGet("hidden-notices"),
++      store.kvGet("correction-dismissed"),
++    ]);
++    setProjection(proj);
++    setConfig(cfg);
++    setTasks(ts);
++    setCompletions(cs);
++    setHiddenNotices(hidden || {});
++    setCorrectionDismissed(correction || null);
++  }, [store]);
++
++  /* Ask the engine. Every write that could change the answer calls this, and
++     nothing else calls the engine at all. */
++  const assess = useCallback(async () => {
++    try {
++      const r = await runAssessment(store, nowAsOf());
++      setAssessment(r);
++    } catch (e) {
++      setAssessment({ state: "ENGINE_FAILED", engineResult: null, error: e && e.message });
+     }
 -  }, []);
-+  /* ---- what the engine said ------------------------------------------- */
-+  const [assessment, setAssessment] = useState(null);
-+  const [engineState, setEngineState] = useState(null);
++  }, [store]);
  
 -  /* Returning to a tab left the heading clipped under the browser chrome.
 -     Two things cause it: the previous scroll position is retained, and mobile
@@ -9098,7 +9092,7 @@ Byte-identical to V1.
 -     after the scroll has already happened. A single scrollTo therefore lands in
 -     the wrong place. Reset across several frames so the last one runs after the
 -     toolbar has settled. */
--  useEffect(() => {
+   useEffect(() => {
 -    if (typeof window === "undefined") return;
 -    let cancelled = false;
 -    const toTop = () => {
@@ -9144,17 +9138,23 @@ Byte-identical to V1.
 -  const [correctionPlans, setCorrectionPlans] = useState({});
 -  const [caPlan, setCaPlan] = useState(null);
 -  const [mgPlan, setMgPlan] = useState(null);
-+  /* ---- the moments ----------------------------------------------------- */
-+  const [logResult, setLogResult] = useState(null);
-   const [doseResult, setDoseResult] = useState(null);
-+  const [taskResult, setTaskResult] = useState(null);
-+  const [toastMsg, setToastMsg] = useState(null);
-   const [storageMsg, setStorageMsg] = useState(null);
+-  const [doseResult, setDoseResult] = useState(null);
+-  const [storageMsg, setStorageMsg] = useState(null);
 -  /* What the startup check made of this device: a new one, one that has been
 -     running, or one whose browser cleared everything. Null until it has run,
 -     so nothing is claimed before it is known. */
 -  const [install, setInstall] = useState(null);
-+  const [remWindow, setRemWindow] = useState(14);
++    (async () => {
++      await reload();
++      setLoaded(true);
++      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
++         it is started when the app is idle rather than blocking first paint:
++         logging a reading, browsing history and completing a task all work
++         before the engine has finished booting. */
++      warmUp();
++      assess();
++    })();
++  }, [reload, assess]);
  
 -  // Merge any user-edited target ranges over the built-in defaults.
 -  const paramDefs = useMemo(() =>
@@ -9162,11 +9162,11 @@ Byte-identical to V1.
 -      ? { ...d, min: customRanges[d.key].min, max: customRanges[d.key].max }
 -      : d),
 -  [customRanges]);
-+  useEffect(() => {
-+    onToast((m) => setToastMsg(m));
-+    onStorageError((m) => setStorageMsg(m));
-+    return onEngineState((s) => setEngineState(s));
-+  }, []);
++  /* ---- the record, in the shape the ported screens read ---------------- */
++  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
++  const readings = useMemo(() => readingsFrom(projection), [projection]);
++  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
++  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
  
 -  const saveSettings = async (next) => {
 -    const merged = { ...DEFAULT_SETTINGS, ...next };
@@ -9203,32 +9203,12 @@ Byte-identical to V1.
 -    setCustomRanges(next);
 -    await saveKey("custom-ranges", next);
 -  };
-+  /* How tall the screen actually is, published for the stylesheet — see
-+     `lib/viewport.js`. The shell and every sheet measure themselves against it
-+     instead of against `vh`, which on a phone is the height the page would
-+     have if the toolbar were hidden and is therefore taller than the screen. */
-+  useEffect(() => watchViewport(), []);
++  const waterChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
  
 -  useEffect(() => { onStorageError((m) => setStorageMsg(m)); }, []);
-+  /* Reload everything this device holds. Called after every write, so no
-+     screen ever renders from a copy of the record that the record has since
-+     moved past. */
-+  const reload = useCallback(async () => {
-+    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
-+      store.ledger.projection(),
-+      store.config.current(),
-+      store.tasks.tasks(),
-+      store.tasks.completions(),
-+      store.kvGet("hidden-notices"),
-+      store.kvGet("correction-dismissed"),
-+    ]);
-+    setProjection(proj);
-+    setConfig(cfg);
-+    setTasks(ts);
-+    setCompletions(cs);
-+    setHiddenNotices(hidden || {});
-+    setCorrectionDismissed(correction || null);
-+  }, [store]);
++  /* Dose CHANGES and the dose STATE the record starts from.
  
 -  /* The snapshot schedule: once the load has settled and the install check has
 -     run, and again whenever the app is backgrounded — the moment most likely
@@ -9245,18 +9225,33 @@ Byte-identical to V1.
 -    document.addEventListener("visibilitychange", onHide);
 -    return () => document.removeEventListener("visibilitychange", onHide);
 -  }, [loaded, install]);
-+  /* Ask the engine. Every write that could change the answer calls this, and
-+     nothing else calls the engine at all. */
-+  const assess = useCallback(async () => {
-+    try {
-+      const r = await runAssessment(store, nowAsOf());
-+      setAssessment(r);
-+    } catch (e) {
-+      setAssessment({ state: "ENGINE_FAILED", engineResult: null, error: e && e.message });
-+    }
-+  }, [store]);
++     The import writes the first dose row of each parameter as a `DOSE_STATE` —
++     what was running when the record begins — and every later one as a
++     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
++     read as "no dose changes recorded" while the app was assessing against a
++     dose it had. A starting point has no delta and is shown as what it is. */
++  const doseChanges = useMemo(() => projection
++    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
++      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      time: r.event.time.localTime || null,
++      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
++      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
++      /* `fromMlPerDay` on an imported change is this app reading the previous
++         recorded row, not something the keeper wrote down. The import marks it,
++         and the list says so rather than presenting it as his figure. */
++      fromDerived: !!r.event.detail.fromMlPerDayDerived,
++      isStart: r.event.kind === KIND.DOSE_STATE,
++      /* A recommendation, a recommendation the keeper adjusted, or his own
++         change. Absent on everything recorded before this existed and on every
++         imported row, where "his own change" is the only honest reading. */
++      origin: r.event.detail.origin || "KEEPER",
++      parameter: r.event.parameter || "ALK",
++    })), [projection]);
  
-   useEffect(() => {
+-  useEffect(() => {
 -    /* Carry an existing install's data out of the legacy `reefconsole:` prefix
 -       before anything is read from the live one. Removing the storage shim
 -       moved every read from the legacy copy to the mirror, and the old save
@@ -9265,7 +9260,8 @@ Byte-identical to V1.
 -       it silently reverts whatever the failed write was carrying. A custom
 -       target range is exactly that shape of value: lose it and the band falls
 -       back to the shipped default with nothing on screen to say so.
--
++  /* NEWEST FIRST, IN THE ORDER IT CLAIMS — owner finding 19.
+ 
 -       Synchronous and before the loads below, not inside them: `drainLegacyStore`
 -       records the keys it could not finish, and `loadKey` consults that record
 -       to keep preferring the legacy copy for them. Both halves have to have
@@ -9273,7 +9269,7 @@ Byte-identical to V1.
 -       wins anyway. Idempotent and a no-op on a device with nothing under the
 -       old prefix, which is every install made after the shim went. */
 -    drainLegacyStore();
-     (async () => {
+-    (async () => {
 -      const [r, i, ct, tl, lg, seeded, icpSeeded, wcSeeded, lightSeeded, strengthsFixed, rem, kc, dis, ap, corr, cap, mgp, cr, st, dl, wc] = await Promise.all([
 -        loadKey("readings", []),
 -        loadKey("icp-tests", []),
@@ -9297,16 +9293,10 @@ Byte-identical to V1.
 -        loadKey("dose-log", []),
 -        loadKey("water-changes", []),
 -      ]);
-+      await reload();
-+      setLoaded(true);
-+      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
-+         it is started when the app is idle rather than blocking first paint:
-+         logging a reading, browsing history and completing a task all work
-+         before the engine has finished booting. */
-+      warmUp();
-+      assess();
-+    })();
-+  }, [reload, assess]);
++     Setup sorted this list on the DATE alone. Two changes made on one day
++     compare equal, so they kept the order they came out of storage in, which is
++     oldest first — and the keeper's 8.8 sat at the top of a list headed "newest
++     first" above the 9.0 that had replaced it that morning.
  
 -      /* Is this a new device, or one that has been cleared? The two used to be
 -         indistinguishable — every marker below lives in the storage a clear
@@ -9322,11 +9312,10 @@ Byte-identical to V1.
 -        "light-seeded": lightSeeded, "strengths-fixed-v1": strengthsFixed,
 -      });
 -      setInstall(state);
-+  /* ---- the record, in the shape the ported screens read ---------------- */
-+  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
-+  const readings = useMemo(() => readingsFrom(projection), [projection]);
-+  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
-+  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
++     `projection` is the ledger's own total order (`INV-A1`) and the app already
++     trusts it for "the latest reading". Reversing it is reading that one order
++     rather than forming a second opinion about which change is most recent. */
++  const doseChangesNewestFirst = useMemo(() => [...doseChanges].reverse(), [doseChanges]);
  
 -      /* Readings are measurements somebody took, so nothing is seeded into
 -         them — a clean device starts empty. The marker is still written on the
@@ -9336,9 +9325,10 @@ Byte-identical to V1.
 -        await saveKey("readings", finalReadings);
 -        await saveKey("historical-seeded", true);
 -      }
-+  const waterChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
++  /* THE DOSE THE PUMP IS RUNNING NOW. One answer, read by Setup, by the Dosing
++     tab and by the write path below, so no two of them can disagree about what
++     the previous figure was. */
++  const standingDose = doseChangesNewestFirst.length ? doseChangesNewestFirst[0].to : null;
  
 -      /* ICP panels are measurements too, and are seeded no more than readings
 -         are. */
@@ -9346,30 +9336,21 @@ Byte-identical to V1.
 -      if (!icpSeeded) {
 -        await saveKey("icp-seeded", true);
 -      }
-+  /* Dose CHANGES and the dose STATE the record starts from.
++  const lightingChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
++      && r.event.detail.husbandryKind === "LIGHTING"
++      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
  
 -      /* Weekly water changes, seeded once and matched on date so anything
 -         already logged by hand is left alone.
-+     The import writes the first dose row of each parameter as a `DOSE_STATE` —
-+     what was running when the record begins — and every later one as a
-+     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
-+     read as "no dose changes recorded" while the app was assessing against a
-+     dose it had. A starting point has no delta and is shown as what it is. */
-+  const doseChanges = useMemo(() => projection
-+    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
++  const icps = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
 +    .map((r) => ({
 +      id: r.event.eventId,
 +      date: r.event.time.localDate,
-+      time: r.event.time.localTime || null,
-+      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
-+      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
-+      /* `fromMlPerDay` on an imported change is this app reading the previous
-+         recorded row, not something the keeper wrote down. The import marks it,
-+         and the list says so rather than presenting it as his figure. */
-+      fromDerived: !!r.event.detail.fromMlPerDayDerived,
-+      isStart: r.event.kind === KIND.DOSE_STATE,
-+      parameter: r.event.parameter || "ALK",
++      note: r.event.detail.note,
++      elements: r.event.detail.elements || {},
 +    })), [projection]);
  
 -         Not seeded at all on a device that has been cleared, or one the check
@@ -9393,11 +9374,9 @@ Byte-identical to V1.
 -        }
 -        await saveKey("wc-seeded", true);
 -      }
-+  const lightingChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-+      && r.event.detail.husbandryKind === "LIGHTING"
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
++  const scheduleView = useMemo(
++    () => computeSchedule(tasks, completions, todayStr(), remWindow),
++    [tasks, completions, remWindow]);
  
 -      let finalLighting = lg || [];
 -      if (!lightSeeded) {
@@ -9411,23 +9390,26 @@ Byte-identical to V1.
 -        }
 -        await saveKey("light-seeded", true);
 -      }
-+  const icps = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({
-+      id: r.event.eventId,
-+      date: r.event.time.localDate,
-+      note: r.event.detail.note,
-+      elements: r.event.detail.elements || {},
-+    })), [projection]);
++  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
++  /* Why there is no engine result, when there is none. The states are
++     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
++     one this shell adds when the call itself threw. Null while the first
++     assessment is still running, which the screens render as "working it
++     out". */
++  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
++     screens get the right label without this having to correct one.
  
 -      /* Doses are seeded; product strengths are NOT, and must never be again.
 -         A strength is a fact about the user's own bottle, so there is nothing
 -         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
 -         An unset strength is refused and named, the same as an unset net
 -         volume (reef-chemistry.md §16, §12, §17).
-+  const scheduleView = useMemo(
-+    () => computeSchedule(tasks, completions, todayStr(), remWindow),
-+    [tasks, completions, remWindow]);
++     The client's own state still wins where it says the engine failed, because
++     it knows before the first assessment is even attempted — that is what
++     turns a blank card into "the engine could not start" during boot rather
++     than after it. */
++  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
++  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
  
 -         Two blocks were removed here on 16 August, both of which wrote a
 -         default into storage and so would defeat the change entirely:
@@ -9450,14 +9432,7 @@ Byte-identical to V1.
 -        }
 -        await saveKey("tank-settings", finalSettings);
 -      }
-+  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
-+  /* Why there is no engine result, when there is none. The states are
-+     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
-+     one this shell adds when the call itself threw. Null while the first
-+     assessment is still running, which the screens render as "working it
-+     out". */
-+  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
-+     screens get the right label without this having to correct one.
++  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
  
 -      /* Test reminders exist from the start rather than needing to be created —
 -         the app already knows which parameters exist. Only the schedule is the
@@ -9486,28 +9461,6 @@ Byte-identical to V1.
 -      setCorrectionPlans(cplans || {});
 -      setCaPlan(cap || null);
 -      setMgPlan(mgp || null);
-+     The client's own state still wins where it says the engine failed, because
-+     it knows before the first assessment is even attempted — that is what
-+     turns a blank card into "the engine could not start" during boot rather
-+     than after it. */
-+  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
-+  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
- 
--      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
--      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
--      setDoseLog(dl || []); setWaterChanges(finalWaterChanges);
--      setLoaded(true);
--    })();
--  }, []);
-+  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
- 
--  /* A restore writes to storage directly, so mirror the merged result into
--     state — otherwise the screen would keep showing the pre-restore data until
--     the next reload. */
--  const saveReminders = async (next) => {
--    setReminders(next);
--    await saveKey("reminders", next);
--  };
 +     Canon treats measurements taken within half an hour as one test and
 +     resolves them to their middle value. Until this existed the words on a
 +     card came from that resolved observation while the number beside them came
@@ -9515,21 +9468,12 @@ Byte-identical to V1.
 +     "10.00 · IN RANGE". Read, never re-derived — see `present/episodes.js`. */
 +  const episodes = useMemo(() => episodesFrom(engineResult), [engineResult]);
  
--  /* Recording a replacement retires every comparison made with the old kit. */
--  const replaceKit = async (paramKey, date = todayStr()) => {
--    const next = { ...kitChanges, [paramKey]: date };
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    const def = paramDefs.find((d) => d.key === paramKey);
--    notify(`${def ? def.label : "Kit"} marked as replaced`);
--  };
--  const undoReplaceKit = async (paramKey) => {
--    const next = { ...kitChanges };
--    delete next[paramKey];
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    notify("Replacement removed");
--  };
+-      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
+-      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
+-      setDoseLog(dl || []); setWaterChanges(finalWaterChanges);
+-      setLoaded(true);
+-    })();
+-  }, []);
 +  /* One notice per parameter, from the engine, already worded — and filtered
 +     by what the keeper has put away. The identity and the signature are V1's
 +     mechanism over V2's reason codes: put one away and it comes back the
@@ -9540,6 +9484,44 @@ Byte-identical to V1.
 +    return findingHidden(c.notice, hiddenNotices) ? null : c.notice;
 +  }, [engineResult, assessmentState, hiddenNotices]);
  
+-  /* A restore writes to storage directly, so mirror the merged result into
+-     state — otherwise the screen would keep showing the pre-restore data until
+-     the next reload. */
+-  const saveReminders = async (next) => {
+-    setReminders(next);
+-    await saveKey("reminders", next);
++  const dismissNotice = async (f) => {
++    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice hidden");
+   };
+-
+-  /* Recording a replacement retires every comparison made with the old kit. */
+-  const replaceKit = async (paramKey, date = todayStr()) => {
+-    const next = { ...kitChanges, [paramKey]: date };
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    const def = paramDefs.find((d) => d.key === paramKey);
+-    notify(`${def ? def.label : "Kit"} marked as replaced`);
++  const restoreNotice = async (n) => {
++    const next = { ...hiddenNotices };
++    delete next[findingKey(n)];
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice shown again");
+   };
+-  const undoReplaceKit = async (paramKey) => {
+-    const next = { ...kitChanges };
+-    delete next[paramKey];
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    notify("Replacement removed");
++  const dismissCorrection = async (signature) => {
++    await store.kvSet("correction-dismissed", signature);
++    setCorrectionDismissed(signature);
+   };
+ 
 -  const dismissFinding = async (f) => {
 -    const prev = dismissed[findingKey(f)];
 -    const times = (prev && typeof prev === "object" && prev.times ? prev.times : 0) + 1;
@@ -9548,12 +9530,7 @@ Byte-identical to V1.
 -    setDismissed(next);
 -    await saveKey("findings-dismissed", next);
 -    notify("Hidden — it'll return if this changes");
-+  const dismissNotice = async (f) => {
-+    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice hidden");
-   };
+-  };
 -  /* A claim is put away by its own key rather than a finding id, because most
 -     claims are not findings — a drift or a parked pair is assembled from the
 -     readings themselves. */
@@ -9585,13 +9562,7 @@ Byte-identical to V1.
 -    notify(c.snoozeUntilTest
 -      ? "Put off \u2014 back after your next test"
 -      : "Hidden \u2014 it'll return if this changes");
-+  const restoreNotice = async (n) => {
-+    const next = { ...hiddenNotices };
-+    delete next[findingKey(n)];
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice shown again");
-   };
+-  };
 -  /* One note back, by its own key — restoring everything was the only option
 -     before, which made hiding a thing you had to be sure about. */
 -  /* Start a temporary correction: set the dose and record why, so every
@@ -9616,9 +9587,10 @@ Byte-identical to V1.
 -    await addDoseChange({ date: todayStr(), ml: offer.dose, element: key,
 -      note: `correction toward ${offer.aimPoint}` });
 -    notify(`${key} dose set to ${fmtAmount(offer.dose)} mL/day — correcting toward ${offer.aimPoint}`);
-+  const dismissCorrection = async (signature) => {
-+    await store.kvSet("correction-dismissed", signature);
-+    setCorrectionDismissed(signature);
++  const restoreAllNotices = async () => {
++    await store.kvSet("hidden-notices", {});
++    setHiddenNotices({});
++    notify("All notices shown again");
    };
  
 -  /* Cancel: the dose goes back, the plan is deleted, and everything derived
@@ -9633,45 +9605,12 @@ Byte-identical to V1.
 -    if (plan.returnDose != null) {
 -      await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
 -        note: "correction cancelled" });
--    }
--    notify(`Correction cancelled — ${key} dose back to ${fmtAmount(plan.returnDose)} mL/day`);
-+  const restoreAllNotices = async () => {
-+    await store.kvSet("hidden-notices", {});
-+    setHiddenNotices({});
-+    notify("All notices shown again");
-   };
- 
--  /* Arrived: return to the maintenance dose and clear the plan in one action,
--     because leaving the elevated dose running is how a correction overshoots. */
--  const finishCorrection = async (key) => {
--    const plan = correctionPlans[key];
--    if (!plan) return;
--    const next = { ...correctionPlans };
--    delete next[key];
--    setCorrectionPlans(next);
--    await saveKey("correction-plans", next);
--    await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
--      note: "correction complete" });
--    notify(`${key} back to ${fmtAmount(plan.returnDose)} mL/day`);
--  };
 +  const hiddenList = useMemo(
 +    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
 +    [hiddenNotices]);
- 
--  const restoreOneNote = async (c) => {
--    if (!c || !c.dismissKey) return;
--    const next = { ...dismissed };
--    delete next[c.dismissKey];
--    setDismissed(next);
--    await saveKey("findings-dismissed", next);
--    notify("Shown again");
--  };
++
 +  /* ---- writing ---------------------------------------------------------- */
- 
--  const restoreNotes = async () => {
--    setDismissed({});
--    await saveKey("findings-dismissed", {});
--    notify("Hidden notices restored");
++
 +  /* A reading. Four elements went in, and the three things that follow are the
 +     three the brief asks for: it saves, it completes its test task, and the
 +     moment appears. */
@@ -9687,7 +9626,8 @@ Byte-identical to V1.
 +    } catch (e) {
 +      setStorageMsg(e && e.message);
 +      return;
-+    }
+     }
+-    notify(`Correction cancelled — ${key} dose back to ${fmtAmount(plan.returnDose)} mL/day`);
 +    await reload();
 +    notify("Reading saved");
 +    setLogResult({
@@ -9696,6 +9636,46 @@ Byte-identical to V1.
 +    });
 +    assess();
    };
+ 
+-  /* Arrived: return to the maintenance dose and clear the plan in one action,
+-     because leaving the elevated dose running is how a correction overshoots. */
+-  const finishCorrection = async (key) => {
+-    const plan = correctionPlans[key];
+-    if (!plan) return;
+-    const next = { ...correctionPlans };
+-    delete next[key];
+-    setCorrectionPlans(next);
+-    await saveKey("correction-plans", next);
+-    await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
+-      note: "correction complete" });
+-    notify(`${key} back to ${fmtAmount(plan.returnDose)} mL/day`);
+-  };
++  /* THE DELIVERED DOSE — ONE WRITE PATH, THREE WAYS IN (owner finding 19).
+ 
+-  const restoreOneNote = async (c) => {
+-    if (!c || !c.dismissKey) return;
+-    const next = { ...dismissed };
+-    delete next[c.dismissKey];
+-    setDismissed(next);
+-    await saveKey("findings-dismissed", next);
+-    notify("Shown again");
+-  };
++     Setup's field, accepting a recommendation on the Dosing tab, and "change
++     the dose anyway" are the same act and go through here. There is no second
++     code path for any of them; what differs is one field on the entry
++     afterwards, saying where the figure came from.
+ 
+-  const restoreNotes = async () => {
+-    setDismissed({});
+-    await saveKey("findings-dismissed", {});
+-    notify("Hidden notices restored");
+-  };
++     THE KEEPER SUPPLIES ONE NUMBER. The "to" is what he typed. The "from" is
++     `standingDose` — what the record already says was running — so the FROM/TO
++     form is gone rather than rearranged. Asking him to restate a figure the app
++     holds is asking him to get it wrong, and he did: he typed 9.0 in one box
++     and read "on record: 8.8" underneath it, because the two boxes wrote two
++     different kinds of record and neither knew about the other.
  
 -  const restoreFinding = async (key) => {
 -    const next = { ...dismissed };
@@ -9708,14 +9688,23 @@ Byte-identical to V1.
 -    setDismissed({});
 -    await saveKey("findings-dismissed", {});
 -    notify("All notes restored");
-+  const addDoseChange = async ({ fromMlPerDay, toMlPerDay, date, time }) => {
++     THE FIRST TIME IS NOT A DIFFERENT ACT. With nothing on record there is no
++     previous figure to move from, so the record BEGINS — a standing dose, which
++     is what `dosing.py` calls "a declaration of the standing rate". Every time
++     after it is a change. Same field, same path, same screen. */
++  const setDeliveredDose = async ({ toMlPerDay, date, time, origin = "KEEPER" }) => {
++    const from = standingDose;
 +    try {
-+      await recordDoseChange(store, { fromMlPerDay, toMlPerDay, date, time });
++      if (from == null) {
++        await recordDoseState(store, { doseMlPerDay: toMlPerDay, date, atTime: time });
++      } else {
++        await recordDoseChange(store, { fromMlPerDay: from, toMlPerDay, date, time, origin });
++      }
 +    } catch (e) { setStorageMsg(e && e.message); return; }
 +    await reload();
-+    notify("Dose change recorded");
++    notify(from == null ? t("dose.delivered.recorded") : t("dose.delivered.changed"));
 +    const def = paramDefs.find((d) => d.key === "ALK");
-+    setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
++    if (from != null) setDoseResult({ at: Date.now(), def, from, to: toMlPerDay, date, time });
 +    assess();
    };
  
@@ -9826,21 +9815,10 @@ Byte-identical to V1.
 -    await saveReminders(reminders.map((r) => (r.id === "rem-calcium"
 -      ? { ...r, dueOverride: null, dueTime: null, dueReason: null } : r)));
 -    notify("Plan cleared");
-+  /* The dose the keeper says his pump is running now. Stage 1 established, by
-+     measurement, that the engine had no readable record of this at all on a
-+     V1-imported history — and without it `consumption` is `NOT_RUN` and every
-+     figure that depends on it is withheld. */
-+  const setStandingDose = async (doseMlPerDay) => {
-+    try { await recordDoseState(store, { doseMlPerDay }); }
-+    catch (e) { setStorageMsg(e && e.message); return; }
-+    await reload();
-+    notify("Current dose recorded");
-+    assess();
-   };
+-  };
 -  const applyCaEffect = async (per100L) => {
 -    await saveSettings({ ...settings, caPpmPerMlPer100L: per100L });
 -    notify(`Calcium strength set to ${per100L} ppm/mL/100L`);
-+
 +  const addWaterChange = async ({ date, time, litres }) => {
 +    try {
 +      await recordWaterChange(store, { date, time, litres, netVolumeL: config && config.netVolumeL });
@@ -10460,7 +10438,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +803,26 @@
+@@ -1242,21 +835,26 @@
          }
        `}</style>
  
@@ -10497,7 +10475,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +832,35 @@
+@@ -1266,59 +864,35 @@
                );
              })}
            </nav>
@@ -10582,7 +10560,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +877,133 @@
+@@ -1335,105 +909,127 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10690,15 +10668,9 @@ Byte-identical to V1.
 +              onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
 +              summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
 +              latestByParam={latestByParam}
++              standingDose={standingDose} onSetDeliveredDose={setDeliveredDose}
 +              config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
-+              /* V1's, kept where a hold is recommended: a hold is advice, and
-+                 the keeper is allowed to disagree with it. It opens the same
-+                 dose-change form Setup uses; nothing here records a change by
-+                 itself (`ALK-RECOMMEND-ONLY-001`). */
-+              /* `"settings"` is not a tab id — `NAV` calls it `"setup"` — so this
-+                 button set the tab to a value nothing renders and the screen
-+                 went blank with only the bar left. Owner finding 20. */
-+              onChangeDoseAnyway={() => setTab("setup")} />
++              />
            )}
 +
            {tab === "tasks" && (
@@ -10737,8 +10709,8 @@ Byte-identical to V1.
 -              onRestoreAllFindings={restoreAllFindings} />
 +            <Setup config={config} onSaveConfig={saveConfig} paramDefs={paramDefs}
 +              engineResult={engineResult}
-+              doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
-+              onSetStandingDose={setStandingDose}
++              doseChanges={doseChangesNewestFirst} standingDose={standingDose}
++              onSetDeliveredDose={setDeliveredDose} onDeleteEvent={deleteEvent}
 +              onModeChange={() => setModeTick((n) => n + 1)}
 +              lightingChanges={lightingChanges}
 +              hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}
@@ -10798,7 +10770,7 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +1010,10 @@
+@@ -1440,10 +1036,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -10816,7 +10788,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +1027,96 @@
+@@ -1457,6 +1053,96 @@
    );
  }
  

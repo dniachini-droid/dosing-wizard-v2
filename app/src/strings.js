@@ -1113,6 +1113,7 @@ export const STRINGS = Object.freeze({
   "dosing.reco.showWorking": "Show working",
   "dosing.reco.why": "Why?",
   "dosing.reco.changeAnyway": "Change the dose anyway",
+  "dosing.reco.setDose": ({ dose }) => `Set the dose to ${dose}`,
 
   /* ---- the three boxes -------------------------------------------------
      "Current calculated consumption" became "What your tank uses": "calculated"
@@ -1519,6 +1520,51 @@ export const STRINGS = Object.freeze({
      The confirmation asks plainly and names the act. It does not ask "are you
      sure", which invites a reflex rather than a decision, and it does not
      promise the record can be got back, because it cannot. */
+  /* ==================================================================
+     THE DELIVERED DOSE — ONE FIELD, FOREVER
+     ------------------------------------------------------------------
+     Not a setup field. It is the dose the pump is running: filled the
+     first time it establishes the dose, filled again it records a
+     change. The keeper never types the previous figure — the record
+     holds it.
+
+     No sentence here says "the app". The register forbids any observer,
+     and the two notes that used to sit above and below this field were
+     the fourth and fifth places it had appeared.
+     ================================================================== */
+  "dose.delivered.head": "The dose your pump is running now",
+  "dose.delivered.lead":
+    "Type the new figure when you change the dial. The date and time matter, because the tank's "
+    + "response is measured from the moment the change took effect.",
+  "dose.delivered.leadFirst":
+    "What your doser is delivering each day. The date and time matter, because everything about "
+    + "the tank's response is measured from them.",
+  "dose.delivered.field": "mL per day",
+  "dose.delivered.date": "Date",
+  "dose.delivered.time": "Time",
+  "dose.delivered.save": "Save the change",
+  "dose.delivered.saveFirst": "Save",
+  "dose.delivered.recorded": "Recorded.",
+  "dose.delivered.changed": "Change recorded.",
+  "dose.delivered.needNumber": "Enter a number.",
+  "dose.delivered.needPositive": "A dose cannot be less than nothing.",
+
+  "dose.history.head": "Dose changes",
+  "dose.history.none": "No dose recorded yet.",
+  "dose.history.moved": ({ from, to }) => `Moved from ${from} mL/day to ${to} mL/day`,
+  "dose.history.start": ({ dose }) => `${dose} mL/day \u2014 where the record begins`,
+  "dose.history.fromDerived": "the earlier figure is read from the record, not typed",
+  "dose.history.noEdit":
+    "A dose change cannot be edited. Delete it and enter it again with the right date and time.",
+  "dose.history.deleteAria": ({ date }) => `Delete the dose change from ${date}`,
+
+  "dose.origin.recommendation": "a recommendation",
+  "dose.origin.adjusted": "a recommendation you adjusted",
+  "dose.origin.keeper": "your own change",
+
+  "dose.change.head": "Change the dose",
+  "dose.change.close": "Never mind",
+
   "delete.confirm.reading": "Delete this reading? It will be gone, and everything is worked out again without it.",
   "delete.confirm.dose": "Delete this dose change? It will be gone, and everything is worked out again without it.",
   "delete.confirm.entry": "Delete this entry? It will be gone, and everything is worked out again without it.",

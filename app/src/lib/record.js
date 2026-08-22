@@ -109,7 +109,7 @@ export async function recordReading(store, { param, value, date, time }) {
 /* A dose change. `effectiveAtConfidence` is `EXACT` because the form asked for
    a date and a time and the keeper answered; `makeEvent` refuses an event that
    does not state it, and there is deliberately no default. */
-export async function recordDoseChange(store, { parameter = null, fromMlPerDay, toMlPerDay, date, time }) {
+export async function recordDoseChange(store, { parameter = null, fromMlPerDay, toMlPerDay, date, time, origin = "KEEPER" }) {
   const at = stamp(date, time);
   return store.ledger.append({
     kind: KIND.DOSE_CHANGE,
@@ -122,6 +122,12 @@ export async function recordDoseChange(store, { parameter = null, fromMlPerDay, 
       fromMlPerDay,
       toMlPerDay,
       effectiveAtConfidence: "EXACT",
+      /* WHERE THE FIGURE CAME FROM — a recommendation, a recommendation the
+         keeper adjusted, or his own change (owner finding 19). It is history
+         about the keeper's decision, not an input: `toEngineEvents` builds the
+         engine's event from named fields and this is not one of them, so the
+         engine never sees it and cannot be influenced by it. */
+      origin,
     },
   });
 }
@@ -167,9 +173,26 @@ export async function recordWaterChange(store, { date, time, litres, netVolumeL 
    them inside the window says the interval is uniform", written for "the
    commonest first-run ledger there is (a few back-entered readings, then
    'here is what my doser is set to')." */
-export async function recordDoseState(store, { parameter = "ALK", doseMlPerDay, at = null }) {
+export async function recordDoseState(store, { parameter = "ALK", doseMlPerDay, at = null, date = null, atTime = null }) {
   if (!(typeof doseMlPerDay === "number" && Number.isFinite(doseMlPerDay))) {
     throw new Error("a standing dose needs a number");
+  }
+  /* THE MOMENT THE KEEPER GAVE, WHERE HE GAVE ONE — AND THE SAME STAMP AS A
+     DOSE CHANGE.
+
+     The delivered-dose field asks for a date and a time, and it asks whether
+     this is the first figure or a later change, because they are the same act
+     (owner finding 19). Stamping the first one from the clock and every one
+     after it from the form put two precisions on one timeline: the standing
+     dose carried seconds and a change made a minute later did not, so the
+     ledger ordered the change BEFORE the dose it changed and the history read
+     in the wrong order — the fault the owner reported from the other side.
+
+     Both are stamped from the keeper's own answer now. Where no answer is
+     given the clock still applies, which is what an import wants. */
+  if (!at && date && atTime) {
+    const from = stamp(date, atTime);
+    if (from && from.absoluteInstant) at = from.absoluteInstant;
   }
   /* THE APP'S CLOCK, NOT THE WALL CLOCK — AND THE DIFFERENCE IS NOT COSMETIC.
 
