@@ -14,11 +14,13 @@ equations, controller rules, evidence minima, retest timing, refusal conditions
 or anything a recommendation is computed from. If unsure whether a change
 qualifies, it qualifies.
 
-**The reviewer sequence is fixed. Do not shorten it and do not extend it.** The
-reviewers are `canon-conformance-auditor` and `breaker`, and adding a third is
-how a fixed sequence stops being fixed. `jake` at step 6 is **not** a reviewer
-and is not part of it: he sorts findings the sequence has already produced, and
-runs strictly after it (`DEC-017`).
+**The reviewer sequence is fixed. Do not shorten it and do not extend it.** As
+of `DEC-027` the sequence is three, not two: `unimpressed-reefkeeper` where the
+round changes something the owner sees, then `canon-conformance-auditor`, then
+`breaker`. It is **restated, not extended** — a run may not add a fourth, and the
+route to changing it again is an owner decision, exactly as this change was.
+`jake` at step 7 is **not** a reviewer and is not part of it: he sorts findings
+the sequence has already produced, and runs strictly after it (`DEC-017`).
 
 Read `docs/process/AUTONOMY-AND-CONTROLS.md` first. **Never merge.**
 
@@ -117,13 +119,48 @@ process, so a `COMPLETE` path is two clauses of three and you still owe the
 is not settled either, however green its row: what its fixtures verify rests on
 a reading somebody flagged rather than answered.
 
-## 4 — `canon-conformance-auditor`, in fresh context
+## 4 — `unimpressed-reefkeeper`, first, if the round changes anything the owner sees
+
+**`DEC-027`.** Engine-only rounds do not need this step — a change confined to
+the engine, the canon or the fixtures skips it and says so. **A chemistry round
+that changes anything the owner sees does need it**, and "anything he sees" is
+literal: a dose, a number, a sentence, a band, a verdict, a chart, a control. A
+chemistry change usually ends as a figure on a screen, so expect to run it.
+
+It goes **before** `canon-conformance-auditor` and `breaker`. Both of those check
+the change against an authority; this one checks it against a keeper's eyes, and
+that is worth most before the round has convinced itself the answer is right.
+
+It reads no code and no canon. Give it the running app and nothing else — no
+diff, no changed paths, no canon rule ID, no stated intent.
+
+**Two prerequisites. It stops without them, and stopping is correct.**
+
+1. **The app running in a browser it can drive**, at a phone viewport, on this
+   round's build. `npm run dev`.
+2. **A written summary of what is in the tank's data** — how many readings of
+   each parameter, how many dose changes, how many water changes, how many
+   tasks — produced by **counting the records you loaded**, never from a
+   fixture's declared totals or from memory. A wrong summary is worse than none.
+
+If you cannot drive a browser, do not dispatch it, and say so in the run record.
+Never let it fall back to reading source.
+
+Its findings go to the step 8 fix pass with the rest. **Its three escalations are
+not fixed here and are not judged here** — anything touching chemistry or the
+canon, anything it flags as *"was this decided?"*, and anything where it names
+two options rather than one answer go to `docs/process/OPEN-OWNER-DECISIONS.md`.
+In this workflow the first of those will be common, and that is the point: it is
+the one reviewer that can say a canon-conformant number is still wrong on screen,
+and it has no authority to decide that it is.
+
+## 5 — `canon-conformance-auditor`, in fresh context
 
 Does this match the canon as written? Does every rule it touches trace to one
 owner and one covering fixture? Give it the base-relative diff, the changed
 paths and the canon rule IDs claimed.
 
-## 5 — `breaker`, in fresh context
+## 6 — `breaker`, in fresh context
 
 What input, timing, evidence, intervention, migration or extreme state makes
 this produce a wrong or unsafe result? A finding it cannot reproduce is not a
@@ -131,7 +168,7 @@ finding.
 
 Run 4 and 5 concurrently. Neither sees the other's findings.
 
-## 6 — `jake`, over the output of steps 4 and 5
+## 7 — `jake`, over the output of steps 4, 5 and 6
 
 **Not a reviewer, and not part of the fixed sequence above** (`DEC-017`). He
 consumes the two finished reports and sorts every finding into `BUG`,
@@ -143,13 +180,13 @@ He runs **before** the fix pass, so his sorting can inform what gets fixed with
 the one pass available. That is the same slot `adjudicator` occupies; where
 both run, `adjudicator` goes first and `jake` sorts its adjudicated list.
 
-Skip him only when steps 4 and 5 produced no findings, and say so. If the fix
-pass at step 7 produces new findings, he sorts those too.
+Skip him only when steps 4, 5 and 6 produced no findings, and say so. If the fix
+pass at step 8 produces new findings, he sorts those too.
 
 A `BUG` / `EDGE CASE` label never lowers a severity: a `BLOCKER` marked
-`EDGE CASE` is still a `BLOCKER` and is still fixed at step 7.
+`EDGE CASE` is still a `BLOCKER` and is still fixed at step 8.
 
-## 7 — One fix pass
+## 8 — One fix pass
 
 Fix every `BLOCKER` and `CORRECTNESS_GAP`, re-run the harness and the fixtures,
 and re-run the two reviewers **only on what changed**.
@@ -160,7 +197,7 @@ a reason to iterate.
 
 `adjudicator` is invoked only if the two reviewers contradict each other.
 
-## 8 — Read the whole change, then PR, then stop
+## 9 — Read the whole change, then PR, then stop
 
 As `/implement` step 7: base-relative diff, nothing outside scope, no change
 under `docs/canon/`, no chemistry value the canon does not state, no V1 value

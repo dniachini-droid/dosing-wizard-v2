@@ -81,8 +81,10 @@ checker that cannot fire gets published as demonstrated.
 
 **If the changed paths include anything the owner will look at — a screen, a
 number, a word, a control — `unimpressed-reefkeeper` runs before any other
-reviewer.** A change confined to the engine or the canon skips it; say that you
-skipped it and why.
+reviewer.** The exemption is engine-only (`DEC-027`): a change confined to the
+engine, the canon or the fixtures skips it, and you say that you skipped it and
+why. Chemistry work is **not** exempt as a category — judge it by whether the
+diff changes something he would see, not by which directory it is in.
 
 It drives the running app in a browser and reports what does not make sense. It
 reads no code and no canon, so it is the one reviewer that gets **no diff, no

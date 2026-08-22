@@ -1099,6 +1099,59 @@ exactly the list the owner asked never to be produced. That is why all four
 
 ---
 
+## DEC-027 — `unimpressed-reefkeeper`'s exemption is engine-only, and chemistry rounds that change what the owner sees are not exempt
+
+- **ID:** DEC-027
+- **Date:** 2026-08-22
+- **Status:** ACTIVE
+
+**Decision**
+
+`unimpressed-reefkeeper` runs on any round that changes something the owner sees.
+The exemption is **engine-only**: a change confined to the engine, the canon or
+the fixtures skips it. A chemistry round that changes anything he sees — a dose,
+a number, a sentence, a band, a verdict, a chart, a control — does not skip it.
+
+`/implement-chemistry`'s reviewer sequence is therefore **three**, and is
+restated rather than extended: `unimpressed-reefkeeper` where the round changes
+something visible, then `canon-conformance-auditor`, then `breaker`. It remains
+closed to extension by a run. Changing it again is an owner decision, as this was.
+
+**Rationale**
+
+The exemption as first written was "engine or canon only", which read in practice
+as "chemistry work is exempt". That is backwards. Chemistry work is the highest-
+consequence work in this repository and it almost always ends as a figure on a
+screen, so exempting it exempted the rounds that most need a keeper to look.
+
+The narrower rule keeps what the exemption was for. A change to a formula that
+alters no displayed output has nothing for this agent to see, and dispatching it
+there costs a browser session to confirm nothing changed. The test is not what
+kind of work it was; it is whether the owner would see a difference.
+
+This is also the honest form of the extension. `/implement-chemistry` said its
+sequence was fixed and closed, and `AGENT-ROSTER.md` recorded that a run adding
+a reviewer there is exactly what "fixed" forbids. The route was never that the
+rule is wrong — it was that only the owner may restate it. He has.
+
+**What this does not decide**
+
+`OD-004` — whether `normal-operation-reviewer` should also run on chemistry work
+— stays open. The two agents are not interchangeable: `normal-operation-reviewer`
+reasons from the specification against `PRODUCT-REVIEW-CRITERIA.md`, and
+`unimpressed-reefkeeper` reads no document and drives the app. Answering one does
+not answer the other, though `DEC-027` is evidence for the direction.
+
+**Consequences**
+
+- `/implement-chemistry` gains step 4 and renumbers 5–9.
+- `/implement` and `/pr-gate` state the exemption in the same words.
+- `AGENT-ROSTER.md`'s composition table records the three-reviewer sequence.
+- A chemistry round that cannot drive a browser cannot run this step, and says
+  so in its run record rather than passing silently.
+
+---
+
 ## DEC-026 — The application's record is the keeper's to amend, and the ledger's guarantees are restated around that
 
 - **ID:** DEC-026

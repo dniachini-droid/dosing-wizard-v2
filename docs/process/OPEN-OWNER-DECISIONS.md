@@ -1035,6 +1035,20 @@ before this is revisited, in which case option 1 should be settled first.
 - **Raised:** 2026-08-20 · **By:** conformance-harness run, Part 4 wiring · **Status:** OPEN
 - **Blocks:** nothing — `/implement-chemistry` runs today exactly as written
 
+> **Related, and decided: `DEC-027` (2026-08-22).** The owner has ruled on the
+> *same shape of question* for a different agent. `unimpressed-reefkeeper` now
+> runs in `/implement-chemistry` whenever the round changes anything he sees; its
+> exemption is engine-only. The sequence was restated by owner decision rather
+> than extended by a run — which is option 2's "honest form" below, taken.
+>
+> **This does not answer OD-004.** The two agents are not interchangeable:
+> `normal-operation-reviewer` reasons from the specification against
+> `PRODUCT-REVIEW-CRITERIA.md`; `unimpressed-reefkeeper` reads no document and
+> drives the running app. A round can pass one and fail the other. What `DEC-027`
+> does change is the cost of option 2: the "fixed sequence stops being fixed"
+> objection is now weaker, because the precedent set is an owner restating it,
+> not a run extending it.
+
 **The question, in plain language**
 
 `normal-operation-reviewer` asks whether the product gives a sensible answer on
