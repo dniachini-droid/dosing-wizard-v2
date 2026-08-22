@@ -1250,6 +1250,37 @@ export const STRINGS = Object.freeze({
     "There is not enough yet to size a dose — keep logging your alkalinity tests, and the recommendation " +
     "will appear here on its own when your readings can carry one.",
 
+  /* ---- correcting and deleting a reading -------------------------------
+     `PORT-OMISSIONS.md`: "There is no way to fix a mistyped reading in this
+     build." The audit consequence is stated plainly rather than implied,
+     because supersession is not what a keeper expects the word "edit" to
+     mean. */
+  "correct.title": "Fix this reading",
+  "correct.original": ({ value, unit, date, time }) =>
+    `Recorded as ${value} ${unit} on ${date}${time ? ` at ${time}` : ""}.`,
+  "correct.newValue": "What it should say",
+  "correct.dateOnlyNote":
+    "This reading has a date and no time of day, so the corrected one will not have a time either. "
+    + "Fixing a number is not new information about when it was taken.",
+  "correct.audit":
+    "Your original stays in the record, marked as replaced. Nothing is erased — the app can always "
+    + "show what was first entered, and what you changed it to.",
+  "correct.save": "Save the correction",
+  "correct.saved": "Reading corrected",
+  "correct.deleteHead": "Or take it out of your results",
+  "correct.deleteBody":
+    "Use this where the reading should never have been recorded at all — a test you botched, or one "
+    + "you entered twice. It stops counting towards anything: charts, statistics and the engine.",
+  "correct.delete": "Take it out",
+  "correct.deleted": "Reading taken out",
+  "correct.deleteAudit":
+    "It stays in your record, marked as one that should not have been counted. It is not erased.",
+  "correct.cancel": "Leave it as it is",
+  "correct.readingsHead": "Your readings",
+  "correct.tapToFix": "Tap any reading to fix it or take it out.",
+  "correct.superseded": "replaced",
+  "correct.invalid": "not counted",
+
   /* ---- the dosing section: one fact, three ways of saying it ------------
      Grams per litre of soda ash and dKH per millilitre are the same fact in
      different clothes. Setup asks once and derives the rest, and says which

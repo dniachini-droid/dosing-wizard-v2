@@ -401,4 +401,145 @@ s.test("LED-08", "a dose event must say how sure it is of when it took effect", 
   eq(reading.kind, KIND.READING, "a reading is unaffected");
 });
 
+/* -------------------------------------------------------------------------
+   Correcting and deleting a reading — `PORT-OMISSIONS.md`'s most serious loss
+   in the interface port. The mechanism existed; the surface did not.
+   ---------------------------------------------------------------------- */
+
+s.test(
+  "COR-01",
+  "a correction supersedes the original, and the original survives byte for byte",
+  async () => {
+    const { correctReading } = await import("../../app/src/lib/record.js");
+    const store = createMemoryStore();
+    /* The defect this exists for: 89 typed where 8.9 was meant. */
+    const wrong = await store.ledger.append(reading(89, AT("2026-08-18", "07:40")));
+    const before = JSON.stringify(await store.backend.get(EVENTS, wrong.eventId));
+
+    await correctReading(store, {
+      eventId: wrong.eventId, param: "ALK", value: 8.9,
+      date: "2026-08-18", time: "07:40",
+    });
+
+    eq(JSON.stringify(await store.backend.get(EVENTS, wrong.eventId)), before,
+      "the original reading, untouched");
+    eq((await store.ledger.allEvents()).length, 2, "the correction is an append, not an edit");
+
+    const rows = await store.ledger.projection();
+    eq(rows.find((r) => r.event.eventId === wrong.eventId).state, "SUPERSEDED",
+      "the original folds to superseded");
+
+    /* And the engine is handed the corrected number, not the typo. */
+    const sent = toEngineEvents(rows, "2026-08-20T00:00:00Z");
+    eq(sent.length, 1, "one reading reaches the engine, not two");
+    eq(sent[0].rawValueDkh, 8.9, "and it is the corrected value");
+  }
+);
+
+s.test(
+  "COR-02",
+  "correcting a date-only reading produces a date-only reading, and cannot produce a timed one",
+  async () => {
+    /* Correcting a NUMBER is not new information about WHEN. The store already
+       refuses an improvement (`TIME-02`); this pins that the correction path
+       does not try to make one, which is the thing a form with a time box on
+       it would do. */
+    const { correctReading } = await import("../../app/src/lib/record.js");
+    const store = createMemoryStore();
+    const original = await store.ledger.append(reading(89, dateOnly("2026-08-19")));
+
+    const fixed = await correctReading(store, {
+      eventId: original.eventId, param: "ALK", value: 8.9, date: "2026-08-19", time: null,
+    });
+    eq(fixed.time.timeProvenance, PROVENANCE.DATE_ONLY, "the correction keeps the provenance");
+    eq(fixed.time.absoluteInstant, undefined, "and gains no instant");
+
+    await throws(
+      () => correctReading(store, {
+        eventId: original.eventId, param: "ALK", value: 8.9,
+        date: "2026-08-19", time: "07:40",
+      }),
+      "provenance may not improve",
+      "a correction that tries to add a time"
+    );
+  }
+);
+
+s.test(
+  "COR-03",
+  "taking a reading out stops it counting, and does not erase it",
+  async () => {
+    const { markInvalid } = await import("../../app/src/lib/record.js");
+    const store = createMemoryStore();
+    const ev = await store.ledger.append(reading(8.9, AT("2026-08-18", "07:40")));
+    const before = JSON.stringify(await store.backend.get(EVENTS, ev.eventId));
+
+    await markInvalid(store, ev.eventId);
+
+    eq(JSON.stringify(await store.backend.get(EVENTS, ev.eventId)), before,
+      "the reading itself is untouched");
+    const rows = await store.ledger.projection();
+    eq(rows[0].state, "INVALID", "it folds to invalid");
+    eq(toEngineEvents(rows, "2026-08-20T00:00:00Z").length, 0,
+      "and it is not sent to the engine");
+  }
+);
+
+s.test(
+  "LED-09",
+  "a DOSE_STATE that is uncertain when it took effect carries the bounds the contract requires",
+  async () => {
+    /* `ALK-V2-DATA-CONTRACT.md` §3 makes `effectiveAtEarliest`/`Latest` `REQ*`
+       — required exactly when `effectiveAtConfidence` is `UNCERTAIN` — because
+       `M-5` reads them to decide when a clean segment resumes. The importer
+       computed them, stored them, and `toEngineEvents` dropped them on the
+       way out for `DOSE_STATE` while sending them for `DOSE_CHANGE`. */
+    const store = createMemoryStore();
+    await store.ledger.append({
+      kind: KIND.DOSE_STATE,
+      parameter: "ALK",
+      time: dateOnly("2026-08-10"),
+      recordedAt: "2026-08-20T09:00:00Z",
+      detail: {
+        doseMlPerDay: 8.8,
+        effectiveAtConfidence: "UNCERTAIN",
+        effectiveAtEarliest: "2026-08-09T10:00:00Z",
+        effectiveAtLatest: "2026-08-11T11:59:00Z",
+      },
+    });
+
+    const [sent] = toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z");
+    eq(sent.kind, "DOSE_STATE", "the dose state is sent");
+    eq(sent.effectiveAtConfidence, "UNCERTAIN", "with its confidence");
+    eq(sent.effectiveAtEarliest, "2026-08-09T10:00:00Z", "and its earliest bound");
+    eq(sent.effectiveAtLatest, "2026-08-11T11:59:00Z", "and its latest bound");
+  }
+);
+
+s.test(
+  "LED-10",
+  "a hand-dosed correction for another parameter is never handed to the alkalinity engine",
+  async () => {
+    /* `DATA-PROVENANCE.md` §3 forbids manufactured delivery history. A calcium
+       correction sent unmarked is read as alkalinity entering the tank, and the
+       engine then attributes movement to a delivery that never touched it. The
+       dose branches already asked whose event it was; this one did not. */
+    const store = createMemoryStore();
+    const base = {
+      time: AT("2026-08-18", "07:40"),
+      recordedAt: "2026-08-20T09:00:00Z",
+      detail: { amountMl: 40 },
+    };
+    await store.ledger.append({ kind: KIND.MANUAL_CORRECTION, parameter: "ALK", ...base });
+    await store.ledger.append({ kind: KIND.MANUAL_CORRECTION, parameter: "CA", ...base });
+    /* An event with no parameter is alkalinity's — that is what every
+       correction this app has ever written means, and nothing about existing
+       records may change. */
+    await store.ledger.append({ kind: KIND.MANUAL_CORRECTION, ...base });
+
+    const sent = toEngineEvents(await store.ledger.projection(), "2026-08-20T00:00:00Z");
+    eq(sent.length, 2, "alkalinity's and the unmarked one are sent; calcium's is not");
+  }
+);
+
 export default s;

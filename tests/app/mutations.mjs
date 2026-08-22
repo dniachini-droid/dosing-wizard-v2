@@ -107,6 +107,55 @@ export const MUTATIONS = [
     breaks: ["LED-07"],
   },
 
+  {
+    id: "AM-C0",
+    why: "the pre-amendment wire shape returns: a record with no usable instant puts its calendar day in `measuredAt`, the instant field, and the engine calls all 325 of the owner's date-only readings malformed (AI-014)",
+    file: "app/src/store/ledger.js",
+    find: "        ...(at ? { measuredAt: at } : dayFields(e.time)),",
+    replace: "        measuredAt: at || e.time.localDate,",
+    breaks: ["LED-07"],
+  },
+  {
+    id: "AM-C1",
+    why: "a correction overwrites the original in place instead of superseding it — the ledger stops being append-only and every stored assessment's input set becomes a lie",
+    file: "app/src/lib/record.js",
+    find: "    supersedes: eventId,",
+    replace: "    eventId,",
+    breaks: ["COR-01"],
+  },
+  {
+    id: "AM-C2",
+    why: "the correction form offers a time for a date-only reading, fabricating a precision the record never had",
+    file: "app/src/lib/record.js",
+    find: "    time: time ? stamp(date, time) : undated(date),",
+    replace: "    time: stamp(date, time || \"12:00\"),",
+    breaks: ["COR-02"],
+  },
+  {
+    id: "AM-C3",
+    why: "an invalid reading is still sent to the engine, so a reading the keeper disowned still moves his trend",
+    file: "app/src/store/ledger.js",
+    find: '    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;',
+    replace: '    if (row.state === "SUPERSEDED") continue;',
+    breaks: ["COR-03", "LED-06"],
+  },
+  {
+    id: "AM-C4",
+    why: "a DOSE_STATE with an UNCERTAIN effective time is sent without the bounds the contract makes REQ*, so M-5 cannot tell where a clean segment resumes",
+    file: "app/src/store/ledger.js",
+    find: "      if (ev.effectiveAtConfidence === \"UNCERTAIN\") {\n        ev.effectiveAtEarliest = e.detail.effectiveAtEarliest;\n        ev.effectiveAtLatest = e.detail.effectiveAtLatest;\n      }\n      out.push(ev);\n    } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {",
+    replace: "      out.push(ev);\n    } else if (e.kind === KIND.DOSE_CHANGE && isAlkalinityDose(e)) {",
+    breaks: ["LED-09"],
+  },
+  {
+    id: "AM-C5",
+    why: "a calcium hand-dose is handed to the alkalinity engine as alkalinity entering the tank — manufactured delivery history, which DATA-PROVENANCE.md forbids by name",
+    file: "app/src/store/ledger.js",
+    find: "    } else if (e.kind === KIND.MANUAL_CORRECTION && isAlkalinityDose(e)) {",
+    replace: "    } else if (e.kind === KIND.MANUAL_CORRECTION) {",
+    breaks: ["LED-10"],
+  },
+
   /* --- time provenance ---------------------------------------------------- */
   {
     id: "AM-07",

@@ -17,6 +17,7 @@ import {
   chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
+  correctReading, markInvalid,
   recordDoseChange, recordDoseState, recordIcpPanel, recordLightingChange, recordNote, recordOneOff,
   recordReading, recordWaterChange, markInvalid,
 } from './lib/record.js'
@@ -31,6 +32,7 @@ import { selectCard, instructsDoseChange } from './present/cards.js'
 import { positionTone } from './present/position.js'
 import { sayVerb, sayAction, sayPosition } from './present/wording.js'
 import { fmtAmount } from './lib/format.js'
+import { t } from './strings.js'
 
 /* The tab set is data in `lib/constants.js`, which imports nothing so it stays
    loadable by a test runner that is Node and nothing else. The glyph each tab
@@ -342,6 +344,27 @@ export function ReefConsoleInner() {
     notify("Dose change recorded");
     const def = paramDefs.find((d) => d.key === "ALK");
     setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
+    assess();
+  };
+
+  /* FIXING A READING THAT WAS TYPED WRONG.
+
+     `PORT-OMISSIONS.md`'s most serious loss in the port. Both of these append
+     — neither edits and neither deletes — and the sheet says so before either
+     runs. */
+  const fixReading = async (args) => {
+    try { await correctReading(store, args); }
+    catch (e) { setStorageMsg(e && e.message); return; }
+    await reload();
+    notify(t("correct.saved"));
+    assess();
+  };
+
+  const dropReading = async (eventId) => {
+    try { await markInvalid(store, eventId); }
+    catch (e) { setStorageMsg(e && e.message); return; }
+    await reload();
+    notify(t("correct.deleted"));
     assess();
   };
 
@@ -664,7 +687,8 @@ export function ReefConsoleInner() {
               remWindow={remWindow} setRemWindow={setRemWindow}
               onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval}
               onSkipTask={skipTask} onUpdateTask={updateTask}
-              onAddReading={addReading} />
+              onAddReading={addReading}
+              onCorrectReading={fixReading} onDeleteReading={dropReading} />
           )}
 
           {tab === "log" && (

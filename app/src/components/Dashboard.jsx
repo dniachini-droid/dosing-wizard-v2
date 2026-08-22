@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
 import { Btn, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { QuickLog } from './LogReadingSheet.jsx'
@@ -158,7 +159,11 @@ export function Dashboard({ latestByParam, readings, paramDefs,
 
    `docs/migration/PORT-OMISSIONS.md` records all of it. */
 export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
-  chartEvents = [], onAddReading = null, notice = null, onGoDosing = null }) {
+  chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
+  onCorrectReading = null, onDeleteReading = null }) {
+  /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
+     no way to correct a mistyped reading anywhere in the build. */
+  const [fixing, setFixing] = useState(null);
   const [editing, setEditing] = useState(false);
   const [minVal, setMinVal] = useState(def.min == null ? "" : String(def.min));
   const [maxVal, setMaxVal] = useState(def.max == null ? "" : String(def.max));
@@ -453,10 +458,24 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                   {untimed} of these {rows.length} readings were recorded with a date and no time.
                 </p>
               )}
+
+              {/* The readings themselves, under the chart they are drawn on —
+                  which is where a keeper who has just SEEN a wrong point is
+                  already looking. `PORT-OMISSIONS.md` records the absence of
+                  this route as the most serious loss in the port. */}
+              {onCorrectReading && (
+                <ReadingList rows={[...rows].reverse()} def={def} onPick={setFixing} />
+              )}
             </>
           )}
         </Card>
       </div>
+
+      {fixing && (
+        <CorrectReadingSheet reading={fixing} def={def}
+          onCorrect={onCorrectReading} onDelete={onDeleteReading}
+          onClose={() => setFixing(null)} />
+      )}
     </div>
   );
 }

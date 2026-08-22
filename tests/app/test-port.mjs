@@ -442,6 +442,12 @@ const RECORDERS = Object.freeze([
      neither "the form asked for a time" nor "the form asked for neither" — and
      the loop below still holds it to producing a real, exact instant. */
   { fn: "recordDoseState",      timed: true, now: true, args: { doseMlPerDay: 8.8 } },
+  /* `correctReading` is the fourth shape: its form offers a time box only
+     where the ORIGINAL had one, because correcting a value is not new
+     information about when. It supersedes, so the loop gives it something to
+     supersede. Covered in both directions by `COR-01` and `COR-02`; here it is
+     held to the same rule as every other recorder. */
+  { fn: "correctReading",       timed: true, supersedes: true, args: { param: "ALK", value: 8.9 } },
 ]);
 
 s.test("PORT-10", "a form with no time box writes a record with no time, and cannot write one with a time", async () => {
@@ -476,7 +482,11 @@ s.test("PORT-10", "a form with no time box writes a record with no time, and can
   }
 
   for (const r of RECORDERS) {
-    const args = r.now ? { ...r.args } : r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
+    let args = r.now ? { ...r.args } : r.timed ? { ...r.args, date, time: "09:15" } : { ...r.args, date };
+    if (r.supersedes) {
+      const original = await record.recordReading(store, { param: "ALK", value: 8.6, date, time: "09:15" });
+      args = { ...args, eventId: original.eventId };
+    }
     const ev = await record[r.fn](store, args);
 
     if (r.timed) {

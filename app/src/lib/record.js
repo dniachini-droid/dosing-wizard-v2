@@ -232,6 +232,45 @@ export async function recordIcpPanel(store, { date, note, elements }) {
   });
 }
 
+/* CORRECT A READING THAT WAS TYPED WRONG.
+
+   `PORT-OMISSIONS.md` calls this "the most useful thing on this list" and the
+   most serious loss in the port: type 89 instead of 8.9 and it was in the
+   ledger permanently, skewing every chart and every assessment, with no
+   surface anywhere in the build to fix it.
+
+   The mechanism the canon already provides is supersession, and it is the
+   whole of what happens here. The original is NOT overwritten and is NOT
+   deleted: it stays in the ledger exactly as it was written, and a new reading
+   is appended naming it. The projection then folds the old one to `SUPERSEDED`
+   and the new one is what the app reads. Every assessment already stored still
+   names the event it actually used, so what the app said last week remains
+   true of the record it said it about.
+
+   TIME PROVENANCE STILL MAY NOT IMPROVE. A correction to a date-only reading
+   is itself date-only; the store refuses anything else (`assertProvenanceNotImproved`,
+   `PORT-12`, `TIME-02`) and this function does not try. Correcting the VALUE
+   is not new information about WHEN, and a form that offered a time box here
+   would be offering to fabricate one. */
+export async function correctReading(store, { eventId, param, value, date, time = null, note = null }) {
+  if (!(typeof value === "number" && Number.isFinite(value))) {
+    throw new Error("a reading needs a number");
+  }
+  return store.ledger.append({
+    kind: KIND.READING,
+    parameter: param,
+    rawValue: String(value),
+    normalizedValue: value,
+    /* The form offers a time box only where the original had one, so this
+       branches on what is being corrected rather than on what was typed. */
+    time: time ? stamp(date, time) : undated(date),
+    recordedAt: nowIsoExact(),
+    source: SOURCE.KEEPER_ENTRY,
+    supersedes: eventId,
+    ...(note ? { detail: { note } } : {}),
+  });
+}
+
 /* Mark an event as one that should not have been recorded. The record is not
    deleted — the ledger is append-only and the fold is what decides state. */
 export async function markInvalid(store, eventId, note = null) {
