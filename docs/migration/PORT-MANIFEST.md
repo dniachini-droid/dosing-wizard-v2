@@ -2225,13 +2225,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `2581210462cf92e2374001adadc549bff723c8f3803d3be90e44179b92c97132` |
+| Ported SHA-256 | `1a6a86043e462c07afc87954516c8018abd804be5f8366cc43c463fa8c2c1557` |
 | Differences | 13 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
 
 ```diff
-@@ -1,19 +1,34 @@
+@@ -1,19 +1,35 @@
  import { useEffect, useState } from 'react'
  import { Card } from './ErrorBoundary.jsx'
  import { Activity, AlertTriangle, ArrowDown, ArrowUp, Beaker, Droplets, FlaskConical, Gauge, Plus, Scale, Target, Waves } from '../icons.jsx'
@@ -2244,6 +2244,7 @@ Byte-identical to V1.
 -import { STABILITY_COLOR } from '../lib/stability-engine.js'
 +import { fmtShort } from '../lib/dates.js'
 +import { positionTone } from '../present/position.js'
++import { shownObservation } from '../present/episodes.js'
 +import { t } from '../strings.js'
  
 -/* --- What to expect after a dose change ---
@@ -2281,7 +2282,7 @@ Byte-identical to V1.
 2. **wording replaced with engine output — the dose moment no longer destructures V1's own predicted value, per-day movement, retest date and staged target; in V2 the prediction is the engine's immutable snapshot and is not available at this instant**
 
 ```diff
-@@ -36,7 +51,7 @@
+@@ -36,7 +52,7 @@
    }, [result, left, held]);
  
    if (!result) return null;
@@ -2295,7 +2296,7 @@ Byte-identical to V1.
 3. **wording replaced with engine output — the chart emoji replaced by the icon set's arrow; the brief rules out emojis**
 
 ```diff
-@@ -48,13 +63,19 @@
+@@ -48,13 +64,19 @@
          style={{ boxShadow: "0 24px 60px rgba(8,25,29,0.35)" }}>
  
          <div className="px-5 pt-6 pb-5 text-center" style={{ background: tone + "12" }}>
@@ -2323,7 +2324,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — V1's predicted-value sentence and retest date replaced by a statement of what was recorded, which is what the app knows at that moment**
 
 ```diff
-@@ -68,40 +89,31 @@
+@@ -68,40 +90,31 @@
              <div className="text-center" style={{ animationDelay: "0ms" }}>
                <div className="text-[15px] font-black" style={{ color: tone }}>Recorded</div>
                <p className="text-[13px] text-ink font-medium leading-relaxed mt-1">
@@ -2383,7 +2384,7 @@ Byte-identical to V1.
 5. **defect fixed — an apostrophe escaped so the string parses after the surrounding template was rewritten**
 
 ```diff
-@@ -111,11 +123,12 @@
+@@ -111,11 +124,12 @@
              </button>
              <div className="mt-2 text-center" style={{ animationDelay: "560ms" }}>
                <span className="text-[10px] font-bold text-ink2">
@@ -2402,7 +2403,7 @@ Byte-identical to V1.
 6. **wording replaced with engine output — a notice's identity and signature are keyed on the engine's reason code and its payload instead of V1's own finding id and title**
 
 ```diff
-@@ -125,22 +138,29 @@
+@@ -125,22 +139,29 @@
     the wizard renders AlkAssessmentBlock directly, so nothing referenced it any
     more — an old screen kept alive only by being defined. */
  
@@ -2448,7 +2449,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the tone table keys on the frozen catalogue's severity (`REFUSAL` / `GATING` / `INFO`) instead of V1's own `act` / `watch` / `info`**
 
 ```diff
-@@ -155,7 +175,12 @@
+@@ -155,7 +176,12 @@
  
  export function FindingList({ items, compact = false, onDismiss = null }) {
    if (!items || !items.length) return null;
@@ -2467,7 +2468,7 @@ Byte-identical to V1.
 8. **data source rewired — the icon table is keyed by the ledger's parameter keys instead of V1's own spellings, and has no ammonia row because this build has no ammonia parameter**
 
 ```diff
-@@ -186,10 +211,14 @@
+@@ -186,10 +212,14 @@
  /* An icon per parameter, so a card is recognisable before it is read. Reusing
     the icon set already imported keeps the weight and stroke consistent with
     the rest of the app. */
@@ -2490,7 +2491,7 @@ Byte-identical to V1.
 9. **chemistry removed — the sparkline's band is drawn only where the keeper has a range, because this build ships no range it cannot source**
 
 ```diff
-@@ -198,17 +227,25 @@
+@@ -198,17 +228,25 @@
    if (!rows || rows.length < 3) return <div style={{ height: 20 }} />;
    const W = 100, H = 20, P = 2;
    const vals = rows.map((r) => r.value);
@@ -2525,7 +2526,7 @@ Byte-identical to V1.
 10. **chemistry removed — `ParamCard` no longer computes position, direction or a stability grade; all four are props decided by the engine, and the noise-floor comparison behind V1's trend arrow is deleted**
 
 ```diff
-@@ -216,18 +253,49 @@
+@@ -216,18 +254,47 @@
    );
  }
  
@@ -2568,9 +2569,7 @@ Byte-identical to V1.
 +  /* The number and the words describe the same test. `observation` is the one
 +     owner of "the current value" (`present/episodes.js`); `reading` is kept
 +     only for the callers that have not been given one yet. */
-+  const shown = observation || (reading
-+    ? { value: reading.value, date: reading.date, count: 1, resolved: false }
-+    : null);
++  const shown = shownObservation(observation, reading);
 +  const tone = positionTone(position);
    const Icon = PARAM_ICON[def.key] || Beaker;
 -  const notes = findings || [];
@@ -2590,7 +2589,7 @@ Byte-identical to V1.
 11. **chemistry removed — the trend arrow follows the engine's trajectory instead of a delta compared against `def.step`**
 
 ```diff
-@@ -248,7 +316,7 @@
+@@ -248,7 +315,7 @@
            </span>
            {moved && (
              <span className="shrink-0" style={{ color: tone, opacity: 0.8 }}>
@@ -2604,7 +2603,7 @@ Byte-identical to V1.
 12. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
 
 ```diff
-@@ -268,44 +336,49 @@
+@@ -268,44 +335,49 @@
          <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
            <div className="flex items-baseline gap-1">
              <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
@@ -2681,7 +2680,7 @@ Byte-identical to V1.
 13. **defect fixed — owner finding 17: a short number should look like one. A net volume is three digits and a pump step is two, and both had a box the width of the phone.**
 
 ```diff
-@@ -352,3 +425,18 @@
+@@ -352,3 +424,18 @@
  }
  
  export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
@@ -4353,7 +4352,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `24ef932b0fde733d67cc4d8c1d939e251f0f2cdb987cef8841e7b75e2bb75e26` |
+| Ported SHA-256 | `8f4f2e99bcbe9924397d09aae79281eff3ff35a97d3023904d1ccd7452aed24a` |
 | Differences | 11 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
@@ -4386,7 +4385,7 @@ Byte-identical to V1.
 -import { STABILITY_RULES } from '../lib/stability-engine.js'
 +import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 +import { rowsFor, untimedCount } from '../lib/adapt.js'
-+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
++import { chartGroupsFrom, currentObservationFor, latestShownValue } from '../present/episodes.js'
 +import { taskState } from '../store/schedule.js'
 +import { cardContent } from '../present/card-content.js'
 +import { recommendation } from '../present/dosing-tab.js'
@@ -4909,7 +4908,7 @@ Byte-identical to V1.
 +  /* "Latest" means the same thing here as it does on the card and on Dosing:
 +     the value the engine used. It read the raw last reading, so a repeat test
 +     put 10.00 in this row while every word on the screen described 9.00. */
-+  const latestShown = chartData.length ? chartData[chartData.length - 1].value : stats.latest;
++  const latestShown = latestShownValue(chartData, stats.latest);
 +
    useEscape(onClose);
  

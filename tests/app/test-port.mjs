@@ -1092,11 +1092,35 @@ s.test("PORT-22", "Setup's tank section counts only the facts it asks for", () =
      18 replaced one `map` over three identical boxes with a short volume field
      and a two-handled range bar, which is three facts rendered as two controls.
      Asserting the loop would have been asserting the markup. */
+  /* SCOPED TO THE SECTION, and that scoping is the whole check.
+
+     `test-engineer` proved the first version of this edit was a real
+     weakening: it searched the WHOLE FILE for each field's name, and
+     `Setup.jsx` mentions `facts.netVolumeL` again further down for the
+     solution-strength derivation. Delete the net-volume INPUT from the tank
+     section entirely and the check still passed — which is finding 4's exact
+     shape, a counted list drifting from what is shown, walking straight
+     through the test written to catch it. */
+  const from = code.indexOf('heading="Your tank"');
+  ok(from >= 0, "the tank section is findable");
+  const section = code.slice(from, code.indexOf("</SetupSection>", from));
+  ok(section.length > 0, "and has a body");
   for (const key of ["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]) {
-    ok(new RegExp(`facts\\.${key}|facts\\[["']${key}`).test(code)
-       || new RegExp(`${key}:`).test(code),
-      `the section renders ${key}`);
+    /* Bound to the EDITING state, `facts`, not merely mentioned. A section that
+       shows a saved value back and has lost the control that edits it counts a
+       fact the keeper can no longer supply — which is finding 4 again, reached
+       from the other side. The locked read-back reads `config` and is checked
+       separately below. */
+    ok(new RegExp(`facts\\.${key}\\b|facts\\[["']${key}`).test(section),
+      `the tank section binds a control to ${key}`);
+    ok(new RegExp(`config\\.${key}\\b`).test(section),
+      `and shows ${key} back once it is saved`);
   }
+  /* And it renders them as controls the keeper can actually use, or as the
+     locked read-back of one. A section that named all three in comments and
+     rendered none would satisfy the loop above. */
+  ok(/<input|<RangeSlider|<LockedValue/.test(section),
+    "and renders them as fields or as their saved values");
 });
 
 s.test("PORT-23", "the service worker does not take over a page that is still loading a previous version", () => {

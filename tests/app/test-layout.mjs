@@ -47,7 +47,14 @@ s.test("VP-01", "no sheet sizes itself in vh", () => {
      one mistake, each of them taller than the screen on a phone. */
   for (const rel of SHEETS) {
     const code = read(rel).replace(/\/\*[\s\S]*?\*\//g, "");
-    const found = [...code.matchAll(/max-h-\[\d+vh\]/g)].map((m) => m[0]);
+    /* Every spelling of the same mistake, not only Tailwind's `max-h-[85vh]`:
+       an inline `style={{ maxHeight: "85vh" }}` and a fixed `h-[85vh]` put the
+       sheet off the bottom of the screen just as surely. */
+    const found = [
+      ...code.matchAll(/\bh-\[\d+(?:\.\d+)?vh\]/g),
+      ...code.matchAll(/max-h-\[\d+(?:\.\d+)?vh\]/g),
+      ...code.matchAll(/(?:max-?[Hh]eight|height)\s*:\s*["'`]?\s*\d+(?:\.\d+)?vh/g),
+    ].map((m) => m[0]);
     eq(found.join(", "), "", `${rel} measures a sheet in vh`);
   }
 });

@@ -5,6 +5,7 @@ import { fmtQty, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
 import { ParamGauge, useEscape } from '../lib/backup.jsx'
 import { fmtShort } from '../lib/dates.js'
 import { positionTone } from '../present/position.js'
+import { shownObservation } from '../present/episodes.js'
 import { t } from '../strings.js'
 
 /* --- The dose-change moment ---
@@ -289,9 +290,7 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
   /* The number and the words describe the same test. `observation` is the one
      owner of "the current value" (`present/episodes.js`); `reading` is kept
      only for the callers that have not been given one yet. */
-  const shown = observation || (reading
-    ? { value: reading.value, date: reading.date, count: 1, resolved: false }
-    : null);
+  const shown = shownObservation(observation, reading);
   const tone = positionTone(position);
   const Icon = PARAM_ICON[def.key] || Beaker;
 

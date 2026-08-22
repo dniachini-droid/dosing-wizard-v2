@@ -276,3 +276,32 @@ export function currentObservationFor(def, engineResult, index, latestReading) {
     resolved: false,
   };
 }
+
+/* WHICH FIGURE A SURFACE PUTS ON SCREEN.
+
+   The card, its range marker and the "Latest" cell in the parameter sheet all
+   answer this, and each of them used to answer it by reaching for the raw last
+   reading — which is how "10.00" came to be printed beside the word "IN RANGE".
+
+   It is a function rather than an expression inside a component because it is
+   the exact line the whole of findings 26 and 28 turn on, and a line that
+   important has to be testable by a runner that never renders anything.
+   `test-engineer` found it uncovered: reverting it would have reintroduced the
+   owner's flagship defect and turned nothing red. */
+export function shownObservation(observation, reading) {
+  if (observation) return observation;
+  if (!reading) return null;
+  /* No engine answer for this parameter yet. The raw reading is the only thing
+     anyone knows, and it says so rather than claiming to have been resolved. */
+  return { value: reading.value, date: reading.date, count: 1, resolved: false };
+}
+
+/* The most recent point of a grouped series, for a surface that shows one
+   figure and calls it the latest.
+
+   `groups` is `chartGroupsFrom`'s output, so its last entry's value is the
+   figure the engine used for the most recent test — not the last measurement
+   typed. `fallback` covers a caller with no groups at all. */
+export function latestShownValue(groups, fallback) {
+  return groups && groups.length ? groups[groups.length - 1].value : fallback;
+}

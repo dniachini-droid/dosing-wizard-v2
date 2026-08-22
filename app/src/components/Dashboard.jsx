@@ -11,7 +11,7 @@ import { fmtVal } from '../lib/format.js'
 import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 import { rowsFor, untimedCount } from '../lib/adapt.js'
-import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
+import { chartGroupsFrom, currentObservationFor, latestShownValue } from '../present/episodes.js'
 import { taskState } from '../store/schedule.js'
 import { cardContent } from '../present/card-content.js'
 import { recommendation } from '../present/dosing-tab.js'
@@ -336,7 +336,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   /* "Latest" means the same thing here as it does on the card and on Dosing:
      the value the engine used. It read the raw last reading, so a repeat test
      put 10.00 in this row while every word on the screen described 9.00. */
-  const latestShown = chartData.length ? chartData[chartData.length - 1].value : stats.latest;
+  const latestShown = latestShownValue(chartData, stats.latest);
 
   useEscape(onClose);
 

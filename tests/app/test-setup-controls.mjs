@@ -36,8 +36,13 @@ s.test("SC-01", "a saved group locks, and its Save becomes Edit", () => {
   ]) {
     const decl = new RegExp(`const ${locked} = ([^;]+);`).exec(setup);
     ok(decl, `${locked} is declared`);
-    ok(decl[1].includes(saved) && decl[1].includes(editing),
-      `${locked} is read off what is saved and whether he is editing: ${decl[1]}`);
+    /* THE OPERATOR, not just the two names. `test-engineer` showed that
+       `tankSaved || !tankEditing` — which locks a field before anything has
+       ever been saved — passed a check that only looked for both identifiers.
+       Locked means BOTH: it is on record, and he is not editing it. */
+    const rule = decl[1].replace(/\s+/g, " ").trim();
+    eq(rule, `${saved} && !${editing}`,
+      `${locked} is "on record AND not being edited": got "${rule}"`);
   }
   ok(/<LockedValue/.test(setup), "a saved value renders as text");
   ok(/<SaveOrEdit/.test(setup), "and one control is Save or Edit, never both");

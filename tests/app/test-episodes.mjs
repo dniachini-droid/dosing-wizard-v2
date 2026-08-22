@@ -34,6 +34,8 @@ import {
   episodesFrom,
   groupWordKey,
   latestEpisode,
+  latestShownValue,
+  shownObservation,
 } from "../../app/src/present/episodes.js";
 
 const s = suite("episodes");
@@ -256,8 +258,45 @@ s.test("RL-05", "a reading that was one of several says so, and names the figure
      here reads as "no reading was ever grouped", which is a sentence about the
      tank and would be false. */
   const rows = lab.slice(lab.indexOf("function ReadingRows"), lab.indexOf("export function TestLab"));
-  const decided = /const grouped = [^;]*\bep\b[^;]*;/.exec(rows);
-  ok(decided, `whether a row is grouped is read off its episode: ${(/const grouped = [^;]*/.exec(rows) || [])[0]}`);
+  const decided = /const grouped = ([^;]*);/.exec(rows);
+  ok(decided && /\bep\b/.test(decided[1]),
+    `whether a row is grouped is read off its episode: ${decided ? decided[1] : "(not found)"}`);
+  /* And at the right boundary. `>= 1` would badge every single reading as a
+     duplicate — pinned for the chart by EP-10 and, until `test-engineer` said
+     so, not pinned here. */
+  ok(decided && /count > 1/.test(decided[1]),
+    `a group is more than one measurement: ${decided ? decided[1] : "(not found)"}`);
+});
+
+s.test("EP-12", "the figure a card puts on screen is the resolved one, never the raw last reading", () => {
+  /* THE LINE THE WHOLE OF FINDINGS 26 AND 28 TURN ON, and `test-engineer`
+     found it had no coverage at all: reverting it would have put "10.00"
+     back beside the words "in range" and turned nothing red. */
+  const observation = { value: 9.1, date: "2026-08-22", count: 3, resolved: true };
+  const raw = { value: 10.0, date: "2026-08-22" };
+  eq(shownObservation(observation, raw).value, 9.1, "the engine's answer wins");
+  eq(shownObservation(observation, raw).count, 3, "and it carries how many tests stand behind it");
+});
+
+s.test("EP-13", "with no engine answer, the card shows the reading and does not claim it was resolved", () => {
+  const raw = { value: 430, date: "2026-08-22" };
+  const shown = shownObservation(null, raw);
+  eq(shown.value, 430, "the reading itself");
+  eq(shown.count, 1, "one measurement");
+  eq(shown.resolved, false, "and it says the engine did not resolve it");
+  eq(shownObservation(null, null), null, "nothing at all where there is nothing");
+});
+
+s.test("EP-14", "\"Latest\" is the last TEST's figure, not the last measurement typed", () => {
+  /* The parameter sheet's Latest/Min/Max/Median row. It read the raw last
+     reading, so a repeat test put 10.00 in this cell while every word on the
+     screen described 9.10. Also uncovered until `test-engineer` said so. */
+  const groups = [
+    { value: 8.9, grouped: false },
+    { value: 9.1, grouped: true, members: [{ value: 9.0 }, { value: 9.1 }, { value: 10.0 }] },
+  ];
+  eq(latestShownValue(groups, 10.0), 9.1, "the figure the engine used");
+  eq(latestShownValue([], 8.7), 8.7, "and the fallback where there are no groups");
 });
 
 export default s;

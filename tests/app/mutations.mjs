@@ -2625,4 +2625,54 @@ export const MUTATIONS = [
     breaks: ["DOS-07b"],
   },
 
+  /* ---- What `test-engineer` found had no control at all ------------- */
+  {
+    id: "AM-R49",
+    why: "the card takes the raw last reading as the figure it prints, which is owner findings 26 and 28 in one line: \"10.00\" beside the words \"in range\". It had NO test until test-engineer said so",
+    file: "app/src/present/episodes.js",
+    find: "export function shownObservation(observation, reading) {\n  if (observation) return observation;",
+    replace: "export function shownObservation(observation, reading) {\n  if (observation && !reading) return observation;",
+    breaks: ["EP-12"],
+  },
+  {
+    id: "AM-R50",
+    why: "a parameter with no engine claims its raw reading was resolved by one, on the card this time rather than in the observation",
+    file: "app/src/present/episodes.js",
+    find: "  return { value: reading.value, date: reading.date, count: 1, resolved: false };",
+    replace: "  return { value: reading.value, date: reading.date, count: 1, resolved: true };",
+    breaks: ["EP-13"],
+  },
+  {
+    id: "AM-R51",
+    why: "the \"Latest\" cell in the parameter sheet goes back to the last measurement typed, so a repeat test puts 10.00 there while every word on the screen describes 9.10. Also uncovered until test-engineer said so",
+    file: "app/src/present/episodes.js",
+    find: "  return groups && groups.length ? groups[groups.length - 1].value : fallback;",
+    replace: "  return fallback;",
+    breaks: ["EP-14"],
+  },
+  {
+    id: "AM-R52",
+    why: "the tank section counts a fact it no longer renders — owner finding 4's exact shape, which test-engineer proved walked straight through the check written to catch it",
+    file: "app/src/components/Setup.jsx",
+    find: '                  className={`${shortInputCls} shrink-0`}\n                  value={facts.netVolumeL}',
+    replace: '                  className={`${shortInputCls} shrink-0`}\n                  value={""}',
+    breaks: ["PORT-22"],
+  },
+  {
+    id: "AM-R53",
+    why: "a Setup group locks before anything has ever been saved, so the keeper is shown an Edit button over a value he never entered",
+    file: "app/src/components/Setup.jsx",
+    find: "  const tankLocked = tankSaved && !tankEditing;",
+    replace: "  const tankLocked = tankSaved || !tankEditing;",
+    breaks: ["SC-01"],
+  },
+  {
+    id: "AM-R54",
+    why: "a sheet is sized in vh through a spelling the scan did not cover — an inline style rather than a Tailwind class — and is off the bottom of the phone again",
+    file: "app/src/components/Dashboard.jsx",
+    find: '        <Card className="p-5 sheet-panel overflow-y-auto">',
+    replace: '        <Card className="p-5 overflow-y-auto" style={{ maxHeight: "85vh" }}>',
+    breaks: ["VP-01"],
+  },
+
 ];
