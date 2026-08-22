@@ -35,7 +35,7 @@ export function QuickLog({ def, onAdd }) {
   return (
     <div className="rounded-xl border border-app overflow-hidden mb-4">
       <button onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left active:bg-app">
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] text-left active:bg-app">
         <span className="flex items-center gap-1.5">
           <Plus size={13} style={{ color: def.color }} />
           <span className="text-[12px] font-extrabold" style={{ color: def.color }}>

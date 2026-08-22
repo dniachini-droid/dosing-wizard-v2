@@ -80,12 +80,21 @@ A difference may carry one of these and nothing else.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
 | V1 blob | `632afe7013fae66e08622a2adfef71c728d895f6` |
-| Ported SHA-256 | `15a25d3e7b4ca5ecfbf5a5e7fa2ba29b576c695dc9a274e5beef2414722f54d1` |
-| Differences | 0 |
+| Ported SHA-256 | `db6d8404e7f50b5d0fb64099fdeaab78a928382464e5db4629fefa837539f355` |
+| Differences | 1 |
 
-Byte-identical to V1.
+1. **defect fixed — owner finding 16: a saved value locks and its Save button becomes Edit, which needs a pencil. V1 had no icon for it.**
 
----
+```diff
+@@ -24,6 +24,7 @@
+ export const ChevronDown = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m6 9 6 6 6-6\"/>"}});
+ export const ChevronUp = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m18 15-6-6-6 6\"/>"}});
+ export const Settings2 = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M20 7h-9\"/><path d=\"M14 17H5\"/><circle cx=\"17\" cy=\"17\" r=\"3\"/><circle cx=\"7\" cy=\"7\" r=\"3\"/>"}});
++export const Pencil = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/><path d=\"m15 5 4 4\"/>"}});
+ export const Save = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\"/><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\"/><path d=\"M7 3v4a1 1 0 0 0 1 1h7\"/>"}});
+ export const Activity = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\"/>"}});
+ export const Scale = ({size=24, color="currentColor", strokeWidth=2, className="", style={}}) => React.createElement("svg", {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:strokeWidth, strokeLinecap:"round", strokeLinejoin:"round", className:className, style:style, dangerouslySetInnerHTML:{__html: "<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1\"/><path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1\"/><path d=\"M7 21h10\"/><path d=\"M12 3v18\"/><path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\"/>"}});
+```
 
 ### `app/src/main.jsx`
 
@@ -157,13 +166,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `32ffdfd42ff8a745a1f58298665fd4e606ca4da490d1686c5fbb9d6e81181a43` |
 | V1 blob | `919636df1a9c02ead8aa21e8bfc8079ef5bbfcee` |
-| Ported SHA-256 | `0d02fdaf76c372ad213b7e808c4a7d9f0ea62779da511f624e746c1e90cbb911` |
+| Ported SHA-256 | `f0cf3ac5fed94fd89c7b880fd34640f1a8f86ee2607cc40851dac62524de6ec4` |
 | Differences | 1 |
 
 1. **defect fixed — the page's own pinch-zoom fought the chart's, which handles pinch itself to zoom a time axis, so the two competed and whichever won the race decided what the keeper got. Round three item 8. `touch-action: pan-x pan-y` withholds the browser's pinch gesture; the viewport meta tag alone does not do it, because iOS Safari has ignored `user-scalable=no` since version 10**
 
 ```diff
-@@ -257,3 +257,18 @@
+@@ -257,3 +257,76 @@
            font-weight:700; font-size:14px; }
    #boot .err { color:#C4285B; font-weight:600; font-size:12px; max-width:520px;
                 white-space:pre-wrap; text-align:left; font-family:ui-monospace,monospace; }
@@ -182,9 +191,65 @@ Byte-identical to V1.
 +  touch-action: pan-x pan-y;
 +  overscroll-behavior-y: none;
 +}
++
++/* ============================================================================
++   THE TWO-HANDLED RANGE BAR — owner finding 18
++   ----------------------------------------------------------------------------
++   Two native range inputs stacked over one drawn track. Native, because a
++   hand-built slider loses the keyboard, the screen reader and the platform's
++   own touch handling, and this is a control used at the tank with wet hands.
++
++   The input itself is invisible: the track and the filled span are drawn
++   beneath it and only the thumb is painted. `pointer-events` is off on the
++   input and back on for the thumb, so the two inputs can overlap completely
++   and each still only responds where its own handle is.
++
++   The thumb is 26px. A 16px handle is a developer's handle; a wet thumb needs
++   the target this size.
++   ========================================================================= */
++.tw-range {
++  position: absolute;
++  left: 0;
++  right: 0;
++  top: 0;
++  width: 100%;
++  height: 32px;
++  margin: 0;
++  background: transparent;
++  -webkit-appearance: none;
++  appearance: none;
++  pointer-events: none;
++}
++.tw-range:focus { outline: none; }
++.tw-range::-webkit-slider-runnable-track { background: transparent; height: 32px; }
++.tw-range::-moz-range-track { background: transparent; height: 32px; }
++.tw-range::-webkit-slider-thumb {
++  -webkit-appearance: none;
++  appearance: none;
++  pointer-events: auto;
++  width: 26px;
++  height: 26px;
++  border-radius: 999px;
++  background: #FFFFFF;
++  border: 3px solid #0B7C86;
++  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
++  cursor: pointer;
++  margin-top: 3px;
++}
++.tw-range::-moz-range-thumb {
++  pointer-events: auto;
++  width: 26px;
++  height: 26px;
++  border-radius: 999px;
++  background: #FFFFFF;
++  border: 3px solid #0B7C86;
++  box-shadow: 0 1px 4px rgba(8, 25, 29, 0.28);
++  cursor: pointer;
++}
++.tw-range:focus-visible::-webkit-slider-thumb { border-color: #08191D; }
++.tw-range:focus-visible::-moz-range-thumb { border-color: #08191D; }
++.tw-range:disabled::-webkit-slider-thumb { cursor: default; }
 ```
-
----
 
 ### `app/src/styles/aurelia-skin.css`
 
@@ -833,8 +898,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
 | V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
-| Ported SHA-256 | `76b04f5e863ee3a8ec6de31963541488ff58a867d21d3d0a8a8da97e7f133ae2` |
-| Differences | 11 |
+| Ported SHA-256 | `6229498af7784f143c86b8e19702a087ade1e3f294310f7aca0de13acf66ff36` |
+| Differences | 12 |
 
 1. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
@@ -1360,10 +1425,32 @@ Byte-identical to V1.
          {!off && state && due <= 0 && (
 ```
 
-6. **chemistry removed — the second use of the same pin label, in the reschedule sheet's header**
+6. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -526,8 +238,6 @@
+@@ -516,10 +228,14 @@
+   const intervalOk = isFinite(intervalNum) && intervalNum >= 1 && intervalNum <= 365;
+ 
+   return (
+-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
++    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sheet-layer"
+       style={{ background: "rgba(8,25,29,0.5)" }} onClick={onClose}>
++      {/* Bounded to the screen and scrollable, like every other sheet — owner
++          finding 22. It was `overflow-hidden` with no height limit, so on a
++          short viewport its lower half was simply not reachable: the controls
++          were rendered, they were off the bottom, and nothing scrolled. */}
+       <div onClick={(e) => e.stopPropagation()}
+-        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden"
++        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-y-auto sheet-panel"
+         style={{ boxShadow: "0 -8px 40px rgba(8,25,29,0.3)" }}>
+ 
+         <div className="px-4 pt-4 pb-3" style={{ background: tone + "10" }}>
+```
+
+7. **chemistry removed — the second use of the same pin label, in the reschedule sheet's header**
+
+```diff
+@@ -526,8 +242,6 @@
            <div className="text-[15px] font-black text-ink">{rem.label}</div>
            <div className="text-[12px] font-bold mt-0.5" style={{ color: tone }}>
              {!rem.enabled ? "Turned off — no reminders until you turn it back on"
@@ -1374,10 +1461,10 @@ Byte-identical to V1.
                : `Due ${fmtFriendly(state.due)}`}
 ```
 
-7. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -626,11 +336,15 @@
+@@ -626,18 +340,27 @@
    );
  }
  
@@ -1395,12 +1482,25 @@ Byte-identical to V1.
    const cursor = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
    const year = cursor.getFullYear(), month = cursor.getMonth();
    const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+ 
++  /* A completion whose task is no longer on record — every imported one, since
++     the import brings the history without recreating the tasks — used to render
++     its internal id: the keeper's calendar read "t-skimmer". A database key is
++     never a thing to show him. */
+   const labelFor = (id) => {
+     const r = (reminders || []).find((x) => x.id === id);
+-    return r ? r.label : id;
++    if (r) return r.label;
++    return t("calendar.unknownTask");
+   };
+ 
+   /* Completions grouped by day, with water-change volumes folded in so the
 ```
 
-8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -647,7 +361,7 @@
+@@ -647,14 +370,39 @@
      for (const l of taskLog || []) {
        if (!l.date) continue;
        (map[l.date] = map[l.date] || []).push({
@@ -1408,13 +1508,48 @@ Byte-identical to V1.
 +        id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
        });
      }
++    /* OWNER FINDING 3 — WHY 25 WATER CHANGES WERE ON THE CHARTS AND NOWHERE
++       ELSE.
++
++       This folded a water change into a day that already had a task completion
++       on it, and did nothing at all where there was none. The owner's imported
++       history holds 25 water changes and no completion matching any of them, so
++       every one of them was skipped here — while the charts, which read the
++       ledger directly, drew all 25. He was looking at markers for events he
++       could not find, could not check and could not delete.
++
++       They are real: the import wrote 25 `WATER_CHANGE` events, and they came
++       from his own V1 backup. So they belong on the calendar, as themselves. */
      for (const w of waterChanges || []) {
+-      const day = map[w.date];
+-      if (!day) continue;
++      if (!w.date) continue;
++      const day = (map[w.date] = map[w.date] || []);
++      const size = w.litres == null ? null : `${w.litres} L`;
+       const row = day.find((x) => x.taskId === "waterchange");
+-      if (row) row.detail = `${w.litres}L`;
++      if (row) { if (size) row.detail = size; continue; }
++      day.push({
++        id: w.id,
++        label: t("water.label"),
++        taskId: "waterchange",
++        date: w.date,
++        detail: size,
++        done: true,
++        /* A ledger event rather than a task completion, so the caller deletes
++           the right thing. The calendar's trash used to remove the TICK on
++           every row it drew, whatever the row actually was. */
++        eventId: w.id,
++      });
+     }
+     return map;
+   }, [taskLog, waterChanges, reminders]);
 ```
 
-9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -756,11 +470,15 @@
+@@ -756,11 +504,15 @@
            ) : (
              <div className="space-y-1">
                {(byDay[picked] || []).map((it) => (
@@ -1433,10 +1568,10 @@ Byte-identical to V1.
                {/* Scheduled items are tappable: seeing a task on a day you
 ```
 
-10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+11. **defect fixed — owner finding 22: the Tasks sheet was overflow-hidden with no height limit, so on a short viewport its lower half was rendered off the bottom with nothing to scroll. It takes the one sheet rule now, like every other sheet.**
 
 ```diff
-@@ -803,7 +521,8 @@
+@@ -803,12 +555,13 @@
  
  /* The calendar as an overlay, so it can be reached from the dashboard without
     losing your place. */
@@ -1445,13 +1580,20 @@ Byte-identical to V1.
 +  onDeleteDone = null }) {
    useEscape(onClose);
    return (
-     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 sheet-layer"
+       onClick={onClose}>
+-      <div className="bg-app w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
++      <div className="bg-app w-full sm:max-w-lg sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+         onClick={(e) => e.stopPropagation()}
+         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+         <div className="sticky top-0 bg-app px-4 pt-4 pb-2 flex items-center justify-between gap-2 z-10">
 ```
 
-11. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
+12. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -821,7 +540,7 @@
+@@ -821,7 +574,7 @@
          </div>
          <div className="px-4 pb-4">
            <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
@@ -1470,13 +1612,27 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `263b8560aedea7eb30023c660339d57054ecee1212800425c1f7212a888e9a20` |
 | V1 blob | `bdf2efcbadc8d004d41b4a28d7d683bb885ec9c4` |
-| Ported SHA-256 | `da328e0a8f1e6b16f85b02b8b4552c073cf2d3fdd18ec399922d63d62ef4c792` |
-| Differences | 4 |
+| Ported SHA-256 | `ddd1eb7e1c9005499e4929024aa9e66e3bf3fa5b22d26984a34e2c20c11f79cd` |
+| Differences | 7 |
 
 1. **defect fixed — the chart never received or displayed a unit or a parameter name at any of V1's four call sites; both are now required parameters**
 
 ```diff
-@@ -66,7 +66,19 @@
+@@ -2,6 +2,8 @@
+ import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+ import { RotateCcw } from '../icons.jsx'
+ import { daysBetween } from '../lib/dates.js'
++import { groupWordKey } from '../present/episodes.js'
++import { t } from '../strings.js'
+ 
+ /* ---------------------------------- zoomable / pannable chart ---------------------------------- */
+ 
+```
+
+2. **defect fixed — the same defect: the tooltip states the unit and the parameter name alongside the value**
+
+```diff
+@@ -66,7 +68,117 @@
    return { domain: [clean(lo), clean(hi)], ticks, format, formatValue, step, decimals };
  }
  
@@ -1493,16 +1649,114 @@ Byte-identical to V1.
 +   have reproduced the defect at any call site that forgot — which is how it
 +   survived four of them in V1. `unit` may be an empty string, because pH
 +   genuinely has no unit; it may not be absent. */
++/* ============================================================================
++   A TEST RUN MORE THAN ONCE, DRAWN AS ONE TEST
++   ----------------------------------------------------------------------------
++   Six readings typed inside a minute used to draw six points spread along the
++   axis, which told the keeper he had tested six times over an hour. He tested
++   once, six times over, and the chart said something that did not happen.
++
++   So a group occupies ONE x-position — the instant the engine resolved it to —
++   and its measurements are stacked vertically there. They are drawn small and
++   quiet because they are not the answer; the resolved value is drawn as a ring
++   against them because it is, and the trend line passes through it alone.
++
++   HOW THE STACK IS PLACED. Each measurement slot is its own `Line` with no
++   stroke, so recharts positions every dot through the same two axes the trace
++   uses. Reading the chart's internal scales and doing the pixel arithmetic here
++   would be a second implementation of "where does this value sit", and it would
++   be the one that drifted the day a margin changed.
++
++   A test run once is a stack of one and takes exactly this shape, so there is
++   one kind of point on the chart rather than two.
++   ========================================================================= */
++
++/* How many measurements the busiest visible group holds. */
++function maxMembers(rows) {
++  let n = 1;
++  for (const r of rows) {
++    const c = r && Array.isArray(r.members) ? r.members.length : 1;
++    if (c > n) n = c;
++  }
++  return n;
++}
++
++/* One measurement in a stack. Small, low-contrast, and never connected to
++   anything — a line through the members would be a trend nobody claimed. */
++function MemberDot({ cx, cy, payload, fill }) {
++  if (cx == null || cy == null) return null;
++  if (!payload || !payload.grouped) return null;
++  return <circle cx={cx} cy={cy} r={2.6} fill={fill} fillOpacity={0.45} stroke="none" />;
++}
++
++/* The value the engine used. A ring where the test was run more than once, so
++   it is unmistakable against the members stacked behind it; an ordinary dot
++   where there is only one measurement and nothing to distinguish it from. */
++function ResolvedDot({ cx, cy, payload, stroke, showPlainDots }) {
++  if (cx == null || cy == null) return null;
++  if (payload && payload.grouped) {
++    return (
++      <g>
++        <circle cx={cx} cy={cy} r={5.5} fill="#fff" stroke={stroke} strokeWidth={2.5} />
++        <circle cx={cx} cy={cy} r={1.8} fill={stroke} />
++      </g>
++    );
++  }
++  if (!showPlainDots) return null;
++  return <circle cx={cx} cy={cy} r={3} fill={stroke} stroke="none" />;
++}
++
++/* What a group says when it is tapped. Names how many measurements it holds
++   and which figure was used, because those are the two things a keeper looking
++   at a stack of dots wants to know. */
++function GroupTooltip({ active, payload, paramName, unit, formatValue }) {
++  if (!active || !payload || !payload.length) return null;
++  const row = payload[0].payload;
++  if (!row) return null;
++  const box = {
++    background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10,
++    padding: "8px 10px", maxWidth: 236,
++  };
++  if (!row.grouped) {
++    return (
++      <div style={box}>
++        <div className="text-[12px] font-extrabold text-ink">
++          {formatValue(row.value)}{unit ? ` ${unit}` : ""}
++        </div>
++        <div className="text-[11px] font-bold text-ink2">{paramName} · {row.label}</div>
++      </div>
++    );
++  }
++  const key = groupWordKey(row.count);
++  return (
++    <div style={box}>
++      <div className="text-[12px] font-extrabold text-ink leading-snug">
++        {t(`group.${key}`, { count: row.count, value: formatValue(row.value), unit })}
++      </div>
++      <div className="text-[11px] font-bold text-ink2 mt-1 leading-snug">
++        {t("group.median")}
++      </div>
++      {row.spread != null && row.spread > 0 && (
++        <div className="text-[11px] font-bold mt-1 leading-snug"
++          style={{ color: row.anomalous ? "#A2621B" : "#45605F" }}>
++          {t(row.anomalous ? "group.wideSpread" : "group.spread",
++            { spread: formatValue(row.spread), unit })}
++        </div>
++      )}
++    </div>
++  );
++}
++
 +export function ZoomableLineChart({ data, color, paramName, unit, targetRangeMin, targetRangeMax, height = 280, events = [] }) {
    const containerRef = useRef(null);
    const [range, setRange] = useState({ start: 0, end: 1 });
    const gestureRef = useRef(null);
 ```
 
-2. **defect fixed — the same defect: the refusal is computed after the hooks so the hook order cannot change between renders**
+3. **defect fixed — the same defect: the refusal is computed after the hooks so the hook order cannot change between renders**
 
 ```diff
-@@ -158,6 +170,11 @@
+@@ -158,6 +270,11 @@
      };
    }, [range]);
  
@@ -1516,10 +1770,29 @@ Byte-identical to V1.
    const visible = total > 0 ? data.slice(startIdx, endIdx + 1) : [];
 ```
 
-3. **defect fixed — the same defect: it refuses to render rather than drawing an unlabelled trace, and draws the parameter's name and unit above the plot**
+4. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
 
 ```diff
-@@ -189,11 +206,47 @@
+@@ -174,6 +291,13 @@
+ 
+   /* Snap each event to the nearest visible reading so the marker lands on a
+      real x-axis category, then drop any that fall outside the zoom window. */
++  /* One slot per measurement position, so the busiest visible group has a
++     line to draw every one of its members through. */
++  const memberSlots = useMemo(() => {
++    const n = maxMembers(visible);
++    return Array.from({ length: n }, (_, i) => i);
++  }, [visible]);
++
+   const visibleEvents = useMemo(() => {
+     if (!events.length || !visible.length) return [];
+     const out = [];
+```
+
+5. **defect fixed — the same defect: it refuses to render rather than drawing an unlabelled trace, and draws the parameter's name and unit above the plot**
+
+```diff
+@@ -189,11 +313,47 @@
          if (!seen.has(k)) { seen.add(k); out.push({ ...ev, label: best.label }); }
        }
      }
@@ -1570,21 +1843,69 @@ Byte-identical to V1.
            <LineChart data={visible} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
 ```
 
-4. **defect fixed — the same defect: the tooltip states the unit and the parameter name alongside the value**
+6. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
 
 ```diff
-@@ -206,7 +259,7 @@
+@@ -205,9 +365,22 @@
+               <ReferenceLine key={i} x={ev.label} stroke={ev.color} strokeDasharray="4 3" strokeWidth={1.5}
                  label={{ value: ev.icon, position: "top", fontSize: 11, fill: ev.color }} />
              ))}
-             <Tooltip contentStyle={{ background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "#08191D" }}
+-            <Tooltip contentStyle={{ background: "#fff", border: "1px solid #DCE7E5", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "#08191D" }}
 -              formatter={(v) => axis.formatValue(v)} />
-+              formatter={(v) => [`${axis.formatValue(v)}${unit ? ` ${unit}` : ""}`, paramName]} />
-             <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75} dot={visible.length < 50} activeDot={{ r: 5 }} />
+-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75} dot={visible.length < 50} activeDot={{ r: 5 }} />
++            <Tooltip cursor={{ stroke: "#C7D6D3", strokeWidth: 1 }}
++              content={<GroupTooltip paramName={paramName} unit={unit} formatValue={axis.formatValue} />} />
++            {/* The measurements, stacked at their group's position and drawn
++                first so the trace and its resolved value sit over them. */}
++            {memberSlots.map((i) => (
++              <Line key={`m${i}`} type="linear" isAnimationActive={false} legendType="none"
++                dataKey={(row) => (row && row.grouped && row.members && row.members[i]
++                  ? row.members[i].value : null)}
++                stroke="none" connectNulls={false} activeDot={false}
++                dot={<MemberDot fill={color} />} />
++            ))}
++            {/* The trend runs through the resolved value and nothing else. */}
++            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.75}
++              isAnimationActive={false}
++              dot={<ResolvedDot stroke={color} showPlainDots={visible.length < 50} />}
++              activeDot={{ r: 5 }} />
            </LineChart>
          </ResponsiveContainer>
+       </div>
 ```
 
----
+7. **defect fixed — owner findings 28 and 29: V1's chart plotted every raw measurement as its own point spread along the axis, so a repeat test read as several tests over an hour. A test is now one x-position with its measurements stacked on it and the engine's resolved value ringed against them.**
+
+```diff
+@@ -223,9 +396,26 @@
+           kinds.push({ kind: ev.kind, color: ev.color, icon: ev.icon });
+         }
+         const hasBand = targetRangeMin != null && targetRangeMax != null;
+-        if (!kinds.length && !hasBand) return null;
++        /* Only where a repeat test is actually on screen. A legend explaining
++           stacked measurements on a chart that has none is noise. */
++        const hasGroup = visible.some((d) => d && d.grouped);
++        if (!kinds.length && !hasBand && !hasGroup) return null;
+         return (
+           <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2">
++            {hasGroup && (
++              <>
++                <span className="flex items-center gap-1.5">
++                  <span className="inline-block rounded-full" aria-hidden="true"
++                    style={{ width: 6, height: 6, background: color, opacity: 0.45 }} />
++                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.measurement")}</span>
++                </span>
++                <span className="flex items-center gap-1.5">
++                  <span className="inline-block rounded-full" aria-hidden="true"
++                    style={{ width: 10, height: 10, background: "#fff", border: `2.5px solid ${color}` }} />
++                  <span className="text-[10px] font-bold text-ink2">{t("group.legend.used")}</span>
++                </span>
++              </>
++            )}
+             {hasBand && (
+               <span className="flex items-center gap-1.5">
+                 <span className="inline-block w-4 h-2.5 rounded-sm" style={{ background: color, opacity: 0.18 }} />
+```
 
 ### `app/src/components/ErrorBoundary.jsx`
 
@@ -1918,25 +2239,27 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `39533a35e49b923ad189b1705872acd899dd9ced1933a7ad9c14d52847b9d54a` |
 | V1 blob | `fea31b39ea39c2ba4b61eb30afdaf9bccf82513d` |
-| Ported SHA-256 | `d5fbb3a0eab2a4063a08c95ffecf850fbbd4360a62ea428f6fa9321acd9b3c35` |
-| Differences | 13 |
+| Ported SHA-256 | `64de189754b5c3f1a2f6fe6f9daddc946f77de6366edb75ff21dbe6dcf17f16a` |
+| Differences | 15 |
 
 1. **data source rewired — imports repointed from V1's analytics modules onto V2's formatting and the position presenter**
 
 ```diff
-@@ -1,19 +1,33 @@
+@@ -1,19 +1,35 @@
  import { useEffect, useState } from 'react'
  import { Card } from './ErrorBoundary.jsx'
  import { Activity, AlertTriangle, ArrowDown, ArrowUp, Beaker, Droplets, FlaskConical, Gauge, Plus, Scale, Target, Waves } from '../icons.jsx'
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { fmtTime } from '../lib/analytics/time-of-day.js'
 -import { fmtFriendly } from '../lib/analytics/water-changes.js'
-+import { fmtAmount, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
++import { fmtQty, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
  import { ParamGauge, useEscape } from '../lib/backup.jsx'
 -import { STATUS_COLOR, fmtShort, paramStatus } from '../lib/dates.js'
 -import { STABILITY_COLOR } from '../lib/stability-engine.js'
 +import { fmtShort } from '../lib/dates.js'
 +import { positionTone } from '../present/position.js'
++import { shownObservation } from '../present/episodes.js'
++import { t } from '../strings.js'
  
 -/* --- What to expect after a dose change ---
 +/* --- The dose-change moment ---
@@ -1973,7 +2296,7 @@ Byte-identical to V1.
 2. **wording replaced with engine output — the dose moment no longer destructures V1's own predicted value, per-day movement, retest date and staged target; in V2 the prediction is the engine's immutable snapshot and is not available at this instant**
 
 ```diff
-@@ -36,7 +50,7 @@
+@@ -36,7 +52,7 @@
    }, [result, left, held]);
  
    if (!result) return null;
@@ -1987,7 +2310,7 @@ Byte-identical to V1.
 3. **wording replaced with engine output — the chart emoji replaced by the icon set's arrow; the brief rules out emojis**
 
 ```diff
-@@ -48,7 +62,13 @@
+@@ -48,13 +64,19 @@
          style={{ boxShadow: "0 24px 60px rgba(8,25,29,0.35)" }}>
  
          <div className="px-5 pt-6 pb-5 text-center" style={{ background: tone + "12" }}>
@@ -2000,14 +2323,22 @@ Byte-identical to V1.
 +            {up ? <ArrowUp size={30} strokeWidth={2.6} /> : <ArrowDown size={30} strokeWidth={2.6} />}
 +          </div>
            <div className="mt-3 flex items-baseline justify-center gap-1.5">
-             <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
+-            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
++            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtQty(from, "mlPerDay")}</span>
              <span className="text-[15px] font-bold text-ink2">{"\u2192"}</span>
+             <span className={`rc-value text-[32px] font-black leading-none tabular-nums${phase >= 1 ? " landed" : ""}`}
+               style={{ color: tone }}>
+-              <span className="rc-sheen">{fmtAmount(to)}</span>
++              <span className="rc-sheen">{fmtQty(to, "mlPerDay")}</span>
+             </span>
+             <span className="text-[12px] font-bold text-ink2">mL/day</span>
+           </div>
 ```
 
 4. **wording replaced with engine output — V1's predicted-value sentence and retest date replaced by a statement of what was recorded, which is what the app knows at that moment**
 
 ```diff
-@@ -68,40 +88,31 @@
+@@ -68,40 +90,31 @@
              <div className="text-center" style={{ animationDelay: "0ms" }}>
                <div className="text-[15px] font-black" style={{ color: tone }}>Recorded</div>
                <p className="text-[13px] text-ink font-medium leading-relaxed mt-1">
@@ -2024,13 +2355,13 @@ Byte-identical to V1.
 -                <span className="text-[11px] font-bold text-ink2">Test again</span>
 -                <span className="text-[12px] font-black text-ink">{fmtFriendly(testOn)}</span>
 +                <span className="text-[11px] font-bold text-ink2">Was</span>
-+                <span className="text-[12px] font-black text-ink">{fmtAmount(from)} mL/day</span>
++                <span className="text-[12px] font-black text-ink">{fmtQty(from, "mlPerDay")} mL/day</span>
                </div>
                <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
 -                <span className="text-[11px] font-bold text-ink2">That's in</span>
 -                <span className="text-[12px] font-black text-ink">{days} day{days === 1 ? "" : "s"}</span>
 +                <span className="text-[11px] font-bold text-ink2">Now</span>
-+                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtAmount(to)} mL/day</span>
++                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtQty(to, "mlPerDay")} mL/day</span>
                </div>
 -              {expected != null && (
 -                <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
@@ -2067,7 +2398,7 @@ Byte-identical to V1.
 5. **defect fixed — an apostrophe escaped so the string parses after the surrounding template was rewritten**
 
 ```diff
-@@ -111,11 +122,12 @@
+@@ -111,11 +124,12 @@
              </button>
              <div className="mt-2 text-center" style={{ animationDelay: "560ms" }}>
                <span className="text-[10px] font-bold text-ink2">
@@ -2086,7 +2417,7 @@ Byte-identical to V1.
 6. **wording replaced with engine output — a notice's identity and signature are keyed on the engine's reason code and its payload instead of V1's own finding id and title**
 
 ```diff
-@@ -125,22 +137,29 @@
+@@ -125,22 +139,29 @@
     the wizard renders AlkAssessmentBlock directly, so nothing referenced it any
     more — an old screen kept alive only by being defined. */
  
@@ -2132,7 +2463,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the tone table keys on the frozen catalogue's severity (`REFUSAL` / `GATING` / `INFO`) instead of V1's own `act` / `watch` / `info`**
 
 ```diff
-@@ -155,7 +174,12 @@
+@@ -155,7 +176,12 @@
  
  export function FindingList({ items, compact = false, onDismiss = null }) {
    if (!items || !items.length) return null;
@@ -2151,7 +2482,7 @@ Byte-identical to V1.
 8. **data source rewired — the icon table is keyed by the ledger's parameter keys instead of V1's own spellings, and has no ammonia row because this build has no ammonia parameter**
 
 ```diff
-@@ -186,10 +210,14 @@
+@@ -186,10 +212,14 @@
  /* An icon per parameter, so a card is recognisable before it is read. Reusing
     the icon set already imported keeps the weight and stroke consistent with
     the rest of the app. */
@@ -2174,7 +2505,7 @@ Byte-identical to V1.
 9. **chemistry removed — the sparkline's band is drawn only where the keeper has a range, because this build ships no range it cannot source**
 
 ```diff
-@@ -198,17 +226,25 @@
+@@ -198,17 +228,25 @@
    if (!rows || rows.length < 3) return <div style={{ height: 20 }} />;
    const W = 100, H = 20, P = 2;
    const vals = rows.map((r) => r.value);
@@ -2209,7 +2540,7 @@ Byte-identical to V1.
 10. **chemistry removed — `ParamCard` no longer computes position, direction or a stability grade; all four are props decided by the engine, and the noise-floor comparison behind V1's trend arrow is deleted**
 
 ```diff
-@@ -216,18 +252,43 @@
+@@ -216,18 +254,47 @@
    );
  }
  
@@ -2248,7 +2579,11 @@ Byte-identical to V1.
 +   trajectory where there is one, and there is no arrow anywhere else.
 +   Recorded in `docs/migration/PORT-OMISSIONS.md`. */
 +export function ParamCard({ def, reading, recent, position = null, statusLine = null,
-+  direction = null, notice = null, rows, onOpen, onLog = null }) {
++  direction = null, notice = null, rows, onOpen, onLog = null, observation = null }) {
++  /* The number and the words describe the same test. `observation` is the one
++     owner of "the current value" (`present/episodes.js`); `reading` is kept
++     only for the callers that have not been given one yet. */
++  const shown = shownObservation(observation, reading);
 +  const tone = positionTone(position);
    const Icon = PARAM_ICON[def.key] || Beaker;
 -  const notes = findings || [];
@@ -2268,7 +2603,7 @@ Byte-identical to V1.
 11. **chemistry removed — the trend arrow follows the engine's trajectory instead of a delta compared against `def.step`**
 
 ```diff
-@@ -248,7 +309,7 @@
+@@ -248,7 +315,7 @@
            </span>
            {moved && (
              <span className="shrink-0" style={{ color: tone, opacity: 0.8 }}>
@@ -2279,15 +2614,61 @@ Byte-identical to V1.
            {/* Sits in the header row rather than floating over the card, so it
 ```
 
-12. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
+12. **defect fixed — owner finding 17: a short number should look like one. A net volume is three digits and a pump step is two, and both had a box the width of the phone.**
 
 ```diff
-@@ -273,14 +334,20 @@
+@@ -255,12 +322,22 @@
+               cannot land on top of the trend arrow. Nested inside the card's
+               own button, so it stops the event to log rather than open. */}
+           {onLog && (
++            /* REEFKEEPER FINDING 21. Drawn at 18px and hit at 18px: the
++               smallest control in the application, on the card he taps most,
++               used one-handed at the tank with wet fingers. The BADGE is still
++               18px — it is a marker on a dense card and making it big would
++               take the card's room. The TARGET is 44, and the negative margin
++               gives the header row its spacing back, so the finger has
++               somewhere to land and the picture is unchanged. */
+             <span role="button" tabIndex={0}
+               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onLog(def.key); }}
+               aria-label={`Log a ${def.label.toLowerCase()} reading`}
+-              className="shrink-0 rounded-md flex items-center justify-center cursor-pointer"
+-              style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
+-              <Plus size={11} strokeWidth={3} />
++              className="shrink-0 flex items-center justify-center cursor-pointer -my-[13px] -mr-[13px]"
++              style={{ width: 44, height: 44 }}>
++              <span className="rounded-md flex items-center justify-center"
++                style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
++                <Plus size={11} strokeWidth={3} />
++              </span>
+             </span>
+           )}
+         </div>
+```
+
+13. **chemistry removed — the range bar receives the engine's position, and the status line is the engine's sentence instead of V1's stability label**
+
+```diff
+@@ -268,44 +345,49 @@
+         <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
+           <div className="flex items-baseline gap-1">
+             <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
+-              {reading ? fmtVal(def, reading.value) : "\u2014"}
++              {shown ? fmtVal(def, shown.value) : "\u2014"}
+             </span>
              <span className="text-[10px] font-bold text-ink2">{def.unit}</span>
++            {/* A test run more than once says so, because otherwise the figure
++                shown is not one the keeper ever typed and nothing on the card
++                explains where it came from. */}
++            {shown && shown.count > 1 && (
++              <span className="text-[9px] font-extrabold rounded px-1 py-[1px] shrink-0"
++                style={{ background: def.color + "1F", color: def.color }}>
++                {t("group.badgeShort", { count: shown.count })}
++              </span>
++            )}
            </div>
  
 -          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent} compact />
-+          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent}
++          <ParamGauge def={def} value={shown ? shown.value : null} recent={recent}
 +            position={position} compact />
  
            <MicroSpark rows={rows} def={def} colour={def.color} />
@@ -2305,13 +2686,8 @@ Byte-identical to V1.
 +              {statusLine || ""}
              </span>
              <span className="text-[9px] font-bold text-ink2 shrink-0">
-               {reading ? fmtShort(reading.date) : ""}
-```
-
-13. **wording replaced with engine output — V1's dose chip and worst-finding chip replaced by one notification strip carrying the engine's own notice**
-
-```diff
-@@ -287,25 +354,15 @@
+-              {reading ? fmtShort(reading.date) : ""}
++              {shown && shown.date ? fmtShort(shown.date) : ""}
              </span>
            </div>
  
@@ -2346,7 +2722,47 @@ Byte-identical to V1.
            )}
 ```
 
----
+14. **defect fixed — controls under the 44px touch floor, measured in a browser at 390x844 (reefkeeper finding 21)**
+
+```diff
+@@ -336,7 +418,9 @@
+   };
+   return (
+     <button type={type} onClick={onClick} disabled={disabled}
+-      className={`px-3.5 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
++      /* REEFKEEPER FINDING 21. Every button in the application comes through
++         here, so the floor is set here once rather than on each of them. */
++      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
+       {children}
+     </button>
+   );
+```
+
+15. **defect fixed — controls under the 44px touch floor, measured in a browser at 390x844 (reefkeeper finding 21)**
+
+```diff
+@@ -351,4 +435,19 @@
+   );
+ }
+ 
+-export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
++export const inputCls = "w-full min-w-0 max-w-full min-h-[44px] bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
++
++/* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
++
++   A net water volume is three digits and a pump step is two, and both had a box
++   the width of the phone. A box that big says "write me a sentence" when the
++   keeper has four characters to type, and it makes a form of short numbers read
++   as a form of essays.
++
++   Same class as `inputCls` in every other respect, because they must focus,
++   round and space identically — this only settles the width, right-aligned so
++   the digits line up with the unit beside them. It replaces the width rather
++   than being added to it: Tailwind emits both classes and the later one in the
++   stylesheet wins, not the later one in the attribute, so "w-full w-24" is a
++   coin toss. */
++export const shortInputCls = inputCls.replace("w-full", "w-24") + " text-right";
+```
 
 ### `app/src/components/ReadingContext.jsx`
 
@@ -2504,7 +2920,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6e3afc520f3ea9c578d157ee1f654a5cc8e5d820d0dd3ad74520c480e963c51a` |
 | V1 blob | `93ec64d731adde6d4ec2173be8841468a7a03cd2` |
-| Ported SHA-256 | `998d4250b8eb45d0bc4150500dcf4ac66ca5a3f9773a87beb81beeb4a40b5beb` |
+| Ported SHA-256 | `89c321567d24ce883c8fbd1d1a155ea8155575b32a4a4959f486b1c3ff59224e` |
 | Differences | 7 |
 
 1. **data source rewired — imports repointed onto V2's formatting and task store; V1's findings, narrative engine and stability rules deleted**
@@ -2518,7 +2934,7 @@ Byte-identical to V1.
  import { Check } from '../icons.jsx'
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { fmtFriendly } from '../lib/analytics/water-changes.js'
-+import { fmtVal, fmtFriendly } from '../lib/format.js'
++import { fmtVal, fmtFriendly, fmtWithUnit } from '../lib/format.js'
  import { useEscape } from '../lib/backup.jsx'
 -import { SAFE_BOUNDS } from '../lib/findings.js'
 -import { isCorrectionState } from '../lib/narrative-engine.js'
@@ -2939,7 +3355,7 @@ Byte-identical to V1.
 +   forbids", and its instruction is "Keep the moment; rebuild the reasoning."
  
 +   That is what has happened. The moment is here in full — the timing, the
-+   easing, the one progress value driving chart, dot and counter, the closing
++   easing, the one progress value driving the chart and the dot, the closing
 +   countdown with its shrinking bar, the tap-to-keep-open. Every word it says
 +   arrives as a prop, from `app/src/present/`, out of what V2's engine
 +   returned. This file no longer contains a single sentence about what a
@@ -2983,10 +3399,33 @@ Byte-identical to V1.
       eight more to actually look at the result. */
 ```
 
-3. **wording replaced with engine output — the moment's headline and line arrive as a prop built from the engine's answer; where the engine has not answered yet it acknowledges the save and claims nothing**
+3. **wording replaced with engine output — the emoji and the celebration burst removed; the brief rules out emojis, ticks, confetti and stars**
 
 ```diff
-@@ -510,9 +122,16 @@
+@@ -464,9 +76,14 @@
+       ? readingGeometry(result.def, series, 260, 108, 12) : null),
+     [result, series]);
+ 
+-  /* One clock for everything. The dot's position, the length of drawn line and
+-     the number on screen are all read from this single progress value, so they
+-     move as one rather than as three animations that happen to start together. */
++  /* One clock for the DRAWING. The dot's position and the length of drawn line
++     are read from this single progress value, so they move as one rather than
++     as two animations that happen to start together.
++
++     The figure on screen is deliberately not on this clock — see finding 11
++     below. V1 counted it up along the line and it was one of the things this
++     rebuild was told to keep; it turned out to be one of the things worth
++     losing. */
+   const [progress, setProgress] = useState(0);
+   const [sheenDone, setSheenDone] = useState(false);
+   const landed = progress >= 1;
+```
+
+4. **wording replaced with engine output — the moment's headline and line arrive as a prop built from the engine's answer; where the engine has not answered yet it acknowledges the save and claims nothing**
+
+```diff
+@@ -510,9 +127,16 @@
  
    if (!result || !result.def) return null;
  
@@ -3008,10 +3447,10 @@ Byte-identical to V1.
      <div className="fixed inset-0 flex items-center justify-center p-5" onClick={onClose}
 ```
 
-4. **wording replaced with engine output — the emoji and the celebration burst removed; the brief rules out emojis, ticks, confetti and stars**
+5. **chemistry removed — the previous reading is stated as a fact instead of being compared against `def.step`, which is a noise floor**
 
 ```diff
-@@ -523,9 +142,7 @@
+@@ -523,21 +147,30 @@
  
          {/* A tinted cap so the result reads before any words do. */}
          <div className="px-5 pt-6 pb-5 text-center relative" style={{ background: v.tone + "12" }}>
@@ -3021,13 +3460,22 @@ Byte-identical to V1.
 +          <div className="flex items-baseline justify-center gap-1">
              <span className={`rc-value text-[34px] font-black leading-none tabular-nums${landed && !sheenDone ? " landed" : ""}`}
                style={{ color: v.tone }}>
++              {/* REEFKEEPER FINDING 11. This number used to travel along the
++                  sparkline with the dot, so for four and a half seconds the
++                  headline figure on a confirmation popup counted through
++                  readings from weeks ago — in the tank's colour, at 34px, under
++                  the words "Reading saved". He watched it settle and could not
++                  say what it had settled on.
++
++                  A LINE MOVING IS A DRAWING. A NUMBER MOVING IS A CLAIM. The
++                  dot still travels; the figure is the reading he just typed and
++                  it does not move, because that is the one thing this moment
++                  exists to confirm. */}
                <span className="rc-sheen">
-```
-
-5. **chemistry removed — the previous reading is stated as a fact instead of being compared against `def.step`, which is a noise floor**
-
-```diff
-@@ -535,9 +152,9 @@
+-                {fmtVal(def, geo ? geo.at(progress).value : value)}
++                {fmtVal(def, value)}
+               </span>
+             </span>
              <span className="text-[14px] font-bold text-ink2">{def.unit}</span>
            </div>
            <div className="text-[13px] font-black text-ink mt-1">{def.label}</div>
@@ -3035,7 +3483,7 @@ Byte-identical to V1.
 +          {showPrev && (
              <div className="text-[11px] font-bold text-ink2 mt-1">
 -              {delta > 0 ? "\u2191" : "\u2193"} {fmtVal(def, +Math.abs(delta).toFixed(4))}{def.unit} from {fmtVal(def, prev)}
-+              previous {fmtVal(def, prev)}{def.unit}
++              previous {fmtWithUnit(def, prev)}
              </div>
            )}
  
@@ -3044,7 +3492,7 @@ Byte-identical to V1.
 6. **wording replaced with engine output — the hand-off button's label and variant no longer depend on V1's celebrate verdict**
 
 ```diff
-@@ -563,9 +180,8 @@
+@@ -563,9 +196,8 @@
                never drift out of step with it. */}
            {v.goto === "dosing" && onOpenDosing && (
              <div className="mt-3">
@@ -3061,7 +3509,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the parameter's mid-sentence name comes from the strings file instead of lowercasing its heading form**
 
 ```diff
-@@ -573,7 +189,7 @@
+@@ -573,7 +205,7 @@
            {nextDue && (
              <div className="mt-3 pt-3 border-t border-app" style={{ animationDelay: "500ms" }}>
                <div className="text-[11px] font-bold text-ink2">
@@ -3071,8 +3519,6 @@ Byte-identical to V1.
                <div className="text-[13px] font-black text-ink">
                  {fmtFriendly(nextDue)}
 ```
-
----
 
 ### `app/src/components/TaskCompletion.jsx`
 
@@ -3250,8 +3696,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `c48cecb59afe6219f8b4ccb3bd37f8033df1d1aec52eb6e4ed3a6cdaf417f028` |
 | V1 blob | `0358527fbc2eab1a0b244e928861d8c9bde826e5` |
-| Ported SHA-256 | `7e377dc7d6ebd6a70d94aba3ff563323a7a90d3b5d70dec07e343e552d402540` |
-| Differences | 15 |
+| Ported SHA-256 | `5c29866b9290f2b14e5c64cab6c1ecfa9c5ffd270c5b05808014e7e8bfb8a909` |
+| Differences | 16 |
 
 1. **data source rewired — imports repointed onto V2's task store and application clock; V1's stability engine, narrative engine and analytics deleted**
 
@@ -3421,10 +3867,31 @@ Byte-identical to V1.
      </div>
 ```
 
-10. **data source rewired — the needs-doing rows read V2's task vocabulary**
+10. **data source rewired — the beyond-the-window sentence reads V2's task label**
 
 ```diff
-@@ -196,18 +196,18 @@
+@@ -181,7 +181,14 @@
+           </button>
+         ) : <span />}
+         <div className="flex gap-1">
+-          {[7, 14, 30].map((d) => (
++          {/* OWNER FINDING 4 — "the calendar shows only the last two weeks".
++
++              The calendar itself does not: it walks back month by month and
++              holds the whole record. This panel does, and it is what he was
++              reading — 14 days by default, and nothing here reached past 30, so
++              six months of imported task history had no window wide enough to
++              show it. The calendar is one tap away and is named below. */}
++          {[7, 14, 30, 90].map((d) => (
+             <button key={d} onClick={() => setWindowDays(d)}
+               className="rounded-lg px-2 py-1 text-[11px] font-extrabold border-2"
+               style={{ borderColor: windowDays === d ? "#0B7C86" : "#E3ECEA",
+```
+
+11. **data source rewired — the needs-doing rows read V2's task vocabulary**
+
+```diff
+@@ -196,18 +203,18 @@
          <div className="mb-3">
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Needs doing</div>
            {view.actionable.map((s) => (
@@ -3450,10 +3917,10 @@ Byte-identical to V1.
                {/* Snooze stays as a one-tap shortcut; anything more than that
 ```
 
-11. **data source rewired — the needs-doing snooze and reschedule actions read V2's task id**
+12. **data source rewired — the needs-doing snooze and reschedule actions read V2's task id**
 
 ```diff
-@@ -214,8 +214,8 @@
+@@ -214,8 +221,8 @@
                    opens the same sheet the calendar uses, so there is one way to
                    change a schedule however you got here. */}
                <div className="mt-1.5 flex items-center gap-1.5">
@@ -3466,10 +3933,10 @@ Byte-identical to V1.
            ))}
 ```
 
-12. **data source rewired — the coming-up rows read V2's task vocabulary**
+13. **data source rewired — the coming-up rows read V2's task vocabulary**
 
 ```diff
-@@ -226,20 +226,20 @@
+@@ -226,20 +233,20 @@
          <div className="mb-3">
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Coming up</div>
            {view.upcoming.map((s) => (
@@ -3498,10 +3965,10 @@ Byte-identical to V1.
                </div>
 ```
 
-13. **data source rewired — the recently-done rows key on V2's task id**
+14. **data source rewired — the recently-done rows key on V2's task id**
 
 ```diff
-@@ -252,7 +252,7 @@
+@@ -252,7 +259,7 @@
          <div>
            <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink2 mb-1">Recently done</div>
            {view.recent.map((s) => (
@@ -3512,24 +3979,28 @@ Byte-identical to V1.
                    <Check size={12} /> {s.doneToday ? "today" : fmtShort(s.lastDone)}
 ```
 
-14. **data source rewired — the beyond-the-window sentence reads V2's task label**
+15. **defect fixed — owner finding 4: nothing here reached past 30 days, so six months of imported task history had no window wide enough to show it, and the panel did not say the calendar holds the rest.**
 
 ```diff
-@@ -274,7 +274,7 @@
+@@ -274,8 +281,11 @@
        <p className="text-[11px] text-ink2 font-medium mt-2.5 pt-2.5 border-t border-app leading-relaxed">
          Showing what's due and what was done within {windowDays} days.
          {view.later.length > 0
 -          ? ` ${view.later.length} further ${view.later.length === 1 ? "reminder falls" : "reminders fall"} beyond that — next is ${view.later[0].rem.label.toLowerCase()} on ${fmtShort(view.later[0].due)}.`
 +          ? ` ${view.later.length} further ${view.later.length === 1 ? "reminder falls" : "reminders fall"} beyond that — next is ${view.later[0].task.label.toLowerCase()} on ${fmtShort(view.later[0].due)}.`
            : " Nothing falls outside it."}
++        {/* Where the rest of it is. This window is a window; the calendar is
++            the record, and it walks back as far as the record goes. */}
++        {" "}The calendar holds the whole history.
        </p>
      </Card>
+   );
 ```
 
-15. **chemistry removed — `StabilityStrip`, `ScoreBreakdown`, `SnoozeSheet`, `Briefing` and `OverviewCard` deleted: the tank assessment score, the headline sentence and the stability grading, all computed inside presentation components**
+16. **chemistry removed — `StabilityStrip`, `ScoreBreakdown`, `SnoozeSheet`, `Briefing` and `OverviewCard` deleted: the tank assessment score, the headline sentence and the stability grading, all computed inside presentation components**
 
 ```diff
-@@ -283,413 +283,31 @@
+@@ -283,413 +293,31 @@
  
  
  /* ===========================================================================
@@ -3966,8 +4437,6 @@ Byte-identical to V1.
 -}
 ```
 
----
-
 ### `app/src/components/Dashboard.jsx`
 
 | | |
@@ -3976,13 +4445,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `ee672b9635d9fec664179d5c065d1645c345df09abafe3c28eefc4131a0b0882` |
-| Differences | 11 |
+| Ported SHA-256 | `911b03e9b3cd459e36525257c0ea16181fcd46d0708904ecfbb45791845fa178` |
+| Differences | 10 |
 
-1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
+1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
 
 ```diff
-@@ -1,160 +1,118 @@
+@@ -1,160 +1,206 @@
  import { useEffect, useMemo, useState } from 'react'
 -import { Btn, FindingList, ParamCard, SectionTitle, inputCls } from './DoseExpectation.jsx'
 +import { CorrectReadingSheet, ReadingList } from './CorrectReadingSheet.jsx'
@@ -4001,16 +4470,21 @@ Byte-identical to V1.
 -import { byOldest, fmtTime, windowRows } from '../lib/analytics/time-of-day.js'
 -import { DEFAULT_SETTINGS, fmtFriendly } from '../lib/analytics/water-changes.js'
 +import { ChevronDown, ChevronUp, RotateCcw, Save, Settings2, X } from '../icons.jsx'
-+import { fmtVal } from '../lib/format.js'
++import { fmtVal, fmtWithUnit } from '../lib/format.js'
  import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 -import { addDaysFromToday, fmtShort, paramStatus, todayStr } from '../lib/dates.js'
 -import { findingsFor } from '../lib/dosing/corrected-strength.js'
 -import { reminderState } from '../lib/reminders.js'
 -import { STABILITY_RULES } from '../lib/stability-engine.js'
 +import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-+import { chartDataFrom, rowsFor, untimedCount } from '../lib/adapt.js'
++import { rowsFor, untimedCount } from '../lib/adapt.js'
++import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 +import { taskState } from '../store/schedule.js'
 +import { cardContent } from '../present/card-content.js'
++import { recommendation } from '../present/dosing-tab.js'
++import { isOutOfRange, positionTone } from '../present/position.js'
++import { sayPosition } from '../present/wording.js'
++import { t } from '../strings.js'
 +import { describeRows } from '../present/spread.js'
  
  /* ---------------------------------- Dashboard ---------------------------------- */
@@ -4072,25 +4546,32 @@ Byte-identical to V1.
 -    else if (onGoTab) onGoTab(dest.tab, dest.key);
 -  };
 +   All of it is in `docs/migration/PORT-OMISSIONS.md`. */
-+export function Dashboard({ latestByParam, readings, paramDefs,
-+  saveRange, resetRange, customRanges, chartEvents, config,
-+  engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
-+  onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
-+  remWindow = 14, setRemWindow = () => {},
-+  onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-+  onAddReading = null, waterChanges = [] }) {
++/* The one conclusion, at dashboard length.
  
 -  /* The last 30 days of each parameter, so the gauge can show where it has been
 -     rather than only where it is. */
-   const [calOpen, setCalOpen] = useState(false);
+-  const [calOpen, setCalOpen] = useState(false);
 -  const [snoozing, setSnoozing] = useState(null);
++   It holds no rule of its own: which sentence applies is `recommendation()`'s
++   answer and which words describe a position is `sayPosition()`'s, both of
++   which the Dosing tab reads from too. This picks WHICH of the two to show and
++   how much of it, and that is all it does. */
++export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen,
++  episodes = null }) {
++  const def = paramDefs.find((d) => d.assessed);
++  if (!def || !engineResult) return null;
  
 -  /* How many times this parameter's suggestion has already been put off. */
 -  const snoozeCountFor = (key) => {
 -    const e = (dismissedNotes || {})[`dose|${key}`];
 -    return e && typeof e === "object" && e.times ? e.times : 0;
 -  };
--
++  /* TESTS, NOT MEASUREMENTS. `jake` found this while reviewing the sentence it
++     feeds: the Dosing tab was fixed to pass a count of TESTS and its own
++     comment claimed it was "the last surface that still counted the other
++     thing". It was not — this one still handed `recommendation()` a count of
++     raw rows.
+ 
 -  /* The sheet appears the first time, and again once putting this off has
 -     become a habit. Everywhere else the snooze is immediate — a dialog in
 -     front of a cheap, reversible action only teaches people to dismiss
@@ -4102,17 +4583,68 @@ Byte-identical to V1.
 -    if (c.snoozeUntilTest && (!explained || count >= 2)) setSnoozing({ claim: c, count, el });
 -    else onDismissNote(c);
 -  };
--
++     Latent today, because only `rec.head` is rendered here and the count lives
++     in `rec.body`. Latent is not fixed: the day anything renders that body,
++     "You have 7 alkalinity tests recorded" prints beside a chart drawing five
++     points, which is finding 3 in its original form. */
++  const rows = rowsFor(readings, def.key);
++  const rec = recommendation(engineResult, chartGroupsFrom(rows, episodes, fmtShort).length);
++  const position = engineResult.position;
++  const outOfRange = isOutOfRange(position);
+ 
++  /* A recommendation to change the dose is the strongest thing this app says,
++     so it wins. An out-of-range level is next. Nothing else reaches here: a
++     hold on a tank sitting in range is not news, and a strip that is always
++     full is a strip nobody reads. */
++  const headline = rec && rec.suggestedDose != null ? rec.head
++    : outOfRange ? sayPosition(position)
++    : null;
++  if (!headline) return null;
++
++  const tone = positionTone(position);
++  return (
++    <button onClick={onOpen} disabled={!onOpen}
++      className="w-full text-left rounded-xl p-3 mb-4 border-2 active:opacity-80"
++      style={{ background: tone + "10", borderColor: tone + "44" }}>
++      <div className="text-[10px] font-extrabold uppercase tracking-wide mb-0.5" style={{ color: tone }}>
++        {def.label}
++      </div>
++      <div className="text-[14px] font-black text-ink leading-snug">{headline}</div>
++      {rec && rec.suggestedDose != null && outOfRange && (
++        <div className="text-[12px] font-bold text-ink2 mt-0.5">{sayPosition(position)}</div>
++      )}
++      {onOpen && (
++        <div className="text-[11px] font-extrabold mt-1" style={{ color: tone }}>
++          {t("dashboard.notice.open")}
++        </div>
++      )}
++    </button>
++  );
++}
++
++export function Dashboard({ latestByParam, readings, paramDefs,
++  saveRange, resetRange, customRanges, chartEvents, config,
++  engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
++  onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
++  remWindow = 14, setRemWindow = () => {},
++  onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
++  onAddReading = null, waterChanges = [], episodes = null, onGoDosing = null }) {
++
++  const [calOpen, setCalOpen] = useState(false);
++
    /* A short tail per parameter for the card sparklines — computed once here
       rather than filtering the whole log inside each of eight cards. */
    const sparkRowsByParam = useMemo(() => {
      const m = {};
--    for (const d of paramDefs) {
++    /* Grouped, so a repeat test is one point on the sparkline rather than
++       several — and so the last point is the figure the engine used. */
+     for (const d of paramDefs) {
 -      m[d.key] = readings.filter((r) => r.param === d.key).sort(byOldest).slice(-14);
--    }
-+    for (const d of paramDefs) m[d.key] = rowsFor(readings, d.key).slice(-14);
++      m[d.key] = chartGroupsFrom(rowsFor(readings, d.key), episodes, (x) => x).slice(-14);
+     }
      return m;
-   }, [readings, paramDefs]);
+-  }, [readings, paramDefs]);
++  }, [readings, paramDefs, episodes]);
  
 +  /* Where each parameter has been lately, so the range bar can show its recent
 +     travel rather than only where it is now. The window is a fixed number of
@@ -4148,14 +4680,33 @@ Byte-identical to V1.
 -        claims={briefing} readings={readings} paramDefs={paramDefs} onGoTo={goTo}
 -        onDismissNote={requestDismiss} hiddenCount={hiddenNotes} onRestoreNotes={onRestoreNotes}
 -        onRestoreOneNote={onRestoreOneNote} snoozeHint={snoozeHint} />
--
--      {/* Directly after the assessment: only what needs doing now. */}
--      <TodayPanel view={reminderView} onOpenTest={onOpenTest}
--        onComplete={onCompleteReminder} onNudge={onNudgeReminder} onPickTask={setSheetId}
 +      {/* The due bar. Collapsed to one line, expanding into a row per due or
 +          upcoming item, each of which takes its reading in place. V1's own
 +          note on why: "going to another tab to type one number was the most
 +          repeated friction in the app." */}
++      {/* OWNER FINDINGS 13 AND 23 — THE STRONGEST THING THE APP HAS TO SAY,
++          WHERE THE KEEPER IS ACTUALLY LOOKING.
+ 
+-      {/* Directly after the assessment: only what needs doing now. */}
+-      <TodayPanel view={reminderView} onOpenTest={onOpenTest}
+-        onComplete={onCompleteReminder} onNudge={onNudgeReminder} onPickTask={setSheetId}
++          "A keeper opens this on the home screen at 7am with a coffee in the
++          other hand. He expects to be told. He should not have to go looking."
++
++          The dose recommendation lived on the Dosing tab and nowhere else, so
++          the app's most important conclusion was reachable only by opening a
++          tab he had no reason to open. It is here now, above the grid, in the
++          same words at a shorter length — one owner, `recommendation()`, which
++          the Dosing tab also renders.
++
++          And where there is no dose conclusion, an out-of-range parameter says
++          so here rather than only on its own card (finding 23). The rule that
++          the strip is ABSENT when the engine has no conclusion still holds; it
++          should simply be rare, and it was not rare because nothing but a dose
++          change could ever fill it. */}
++      <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
++        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} episodes={episodes} />
++
 +      <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
 +        onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
          paramDefs={paramDefs} onAddReading={onAddReading} />
@@ -4196,9 +4747,12 @@ Byte-identical to V1.
 +          const content = cardContent(def, engineResult, assessmentState,
 +            latestByParam[def.key],
 +            def.min != null && def.max != null ? { min: def.min, max: def.max } : null);
++          /* The figure and the words now come from the same place. */
++          const observation = currentObservationFor(def, engineResult, episodes, latestByParam[def.key]);
            return (
 -            <ParamCard key={def.key} def={def} reading={reading}
 +            <ParamCard key={def.key} def={def} reading={latestByParam[def.key]}
++              observation={observation}
                recent={recentRangeByParam[def.key]}
 -              stab={tank.stabilityByParam[def.key]}
 -              findings={findingsFor(findings, def.key)}
@@ -4216,7 +4770,7 @@ Byte-identical to V1.
 2. **data source rewired — the reminders panel and calendar read V2's schedule view, tasks and completions**
 
 ```diff
-@@ -162,33 +120,24 @@
+@@ -162,33 +208,24 @@
        </div>
  
        <SectionTitle eyebrow="Schedule" title="Reminders" />
@@ -4263,10 +4817,10 @@ Byte-identical to V1.
      </div>
 ```
 
-3. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
+3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -195,13 +144,44 @@
+@@ -195,13 +232,44 @@
    );
  }
  
@@ -4295,7 +4849,7 @@ Byte-identical to V1.
 +   `docs/migration/PORT-OMISSIONS.md` records all of it. */
 +export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
 +  chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-+  onCorrectReading = null, onDeleteReading = null }) {
++  onCorrectReading = null, onDeleteReading = null, episodes = null, engineResult = null }) {
 +  /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
 +     no way to correct a mistyped reading anywhere in the build. */
 +  const [fixing, setFixing] = useState(null);
@@ -4320,7 +4874,7 @@ Byte-identical to V1.
 4. **wording replaced with engine output — a cleared range is described as cleared rather than reverted to a default, because this build ships no default range**
 
 ```diff
-@@ -215,7 +195,7 @@
+@@ -215,7 +283,7 @@
  
    const revert = async () => {
      await onResetRange(def.key);
@@ -4334,7 +4888,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +202,35 @@
+@@ -222,36 +290,38 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4369,13 +4923,13 @@ Byte-identical to V1.
 +  /* Every window at once, so "tight recently, wide historically" reads as one
 +     story rather than two boxes appearing to disagree. */
    const windowStats = useMemo(
--    () => WINDOWS.map(([d, label]) => ({
--      days: d, label,
+     () => WINDOWS.map(([d, label]) => ({
+       days: d, label,
 -      c: computeControl(def, readings, d >= 99999 ? 100000 : d),
--    })),
++      c: describeRows(chartGroupsFrom(rowsInWindow(d), episodes, fmtShort), range),
+     })),
 -    [def, readings]);
-+    () => WINDOWS.map(([d, label]) => ({ days: d, label, c: describeRows(rowsInWindow(d), range) })),
-+    [allRows, def.key, def.min, def.max]);
++    [allRows, episodes, def.key, def.min, def.max]);
  
 -  /* Open on the shortest window that has enough readings to judge. Testing
 -     cadence changes over time, so a fixed default can land on an empty view. */
@@ -4396,7 +4950,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +239,61 @@
+@@ -260,91 +330,98 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4407,35 +4961,54 @@ Byte-identical to V1.
 -    const cutoff = addDaysFromToday(-activeWin);
 -    return allRows.filter((r) => r.date >= cutoff);
 -  }, [allRows, activeWin]);
--
--
++  /* Everything below is scoped to the selected window, so the figures and the
++     chart describe the same slice of time. */
++  const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
+ 
++  /* Dose markers are tagged with their parameter, so a calcium doser change
++     does not clutter the alkalinity chart. Untagged events — water changes,
++     lighting, ICP — remain relevant to every parameter. */
++  const relevantEvents = useMemo(
++    () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
++    [chartEvents, def.key]);
+ 
 -  const control = useMemo(
 -    () => computeControl(def, readings, activeWin >= 99999 ? 100000 : activeWin),
 -    [def, readings, activeWin]);
--
++  /* One point per TEST, not per measurement — see `present/episodes.js`. A
++     repeat test is one x-position with its measurements stacked on it. */
++  const chartData = useMemo(
++    () => chartGroupsFrom(rows, episodes, fmtShort), [rows, episodes]);
++  const untimed = untimedCount(rows);
+ 
 -  const rates = useMemo(
 -    () => computeRates(def, readings, activeWin >= 99999 ? 100000 : activeWin),
 -    [def, readings, activeWin]);
--
++  /* THE FIGURES DESCRIBE TESTS, NOT MEASUREMENTS — REEFKEEPER FINDINGS 3 AND 10.
+ 
 -  const elementUse = useMemo(
 -    () => (CONSUMPTION_RULES[def.key]
 -      ? computeElementConsumption(def.key, readings, waterChanges, settings)
 -      : null),
 -    [def.key, readings, waterChanges, settings]);
-+  /* Everything below is scoped to the selected window, so the figures and the
-+     chart describe the same slice of time. */
-+  const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
-+  const stats = useMemo(() => describeRows(rows, range), [rows, def.min, def.max]);
++     Latest, Min, Max, Median, the spread, the percentage in range and the count
++     beneath it were computed over the raw ledger rows, so a test run three times
++     counted three times, and its widest measurement became the sheet's Max. The
++     chart directly above them had already been fixed to draw one point per test;
++     the numbers under it still described something else, and the two disagreed
++     on the same screen.
  
 -  /* Dose markers are tagged with their element, so a calcium doser change
 -     doesn't clutter the alkalinity chart. Untagged events (water changes,
 -     lighting, ICP) remain relevant to every parameter. */
-+  /* Dose markers are tagged with their parameter, so a calcium doser change
-+     does not clutter the alkalinity chart. Untagged events — water changes,
-+     lighting, ICP — remain relevant to every parameter. */
-   const relevantEvents = useMemo(
-     () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
-     [chartEvents, def.key]);
+-  const relevantEvents = useMemo(
+-    () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
+-    [chartEvents, def.key]);
++     `chartData` is the resolved set — one entry per test, carrying the value the
++     engine used — and it is the ONLY thing described here now, so the row, the
++     chart and the words come from one source by construction rather than by
++     agreement. The reconciling helper that stood between them is gone with the
++     disagreement it reconciled.
  
 -  /* When a day holds more than one reading, label by time so the two points
 -     are distinguishable rather than both reading "10 Aug". */
@@ -4450,28 +5023,47 @@ Byte-identical to V1.
 -  const min = values.length ? Math.min(...values) : null;
 -  const max = values.length ? Math.max(...values) : null;
 -  const avg = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : null;
-+  const chartData = chartDataFrom(rows, fmtShort);
-+  const untimed = untimedCount(rows);
++     `describeRows` returns null where there is nothing, and everything reading
++     it is inside a guard for that: a regression the reefkeeper found on the
++     first tap of a new install took the whole application down. */
++  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
++  /* The whole log, resolved the same way, so "12 of 40" counts the same kind of
++     thing on both sides of the "of". */
++  const allTests = useMemo(
++    () => chartGroupsFrom(allRows, episodes, fmtShort).length, [allRows, episodes]);
  
    useEscape(onClose);
  
    return (
-     <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
 -      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl">
-+      {/* `relative`, so the pinned close control below has this box to sit
-+          against rather than the scrolling content inside it (finding 6). */}
-+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
-+        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
-         <Card className="p-5 max-h-[85vh] overflow-y-auto">
+-        <Card className="p-5 max-h-[85vh] overflow-y-auto">
 -          {/* Whatever the dosing wizard currently believes about this element,
 -              said here too — the dashboard was previously silent about a change
 -              the user had made minutes earlier. */}
 -          {dose && dose.state !== "idle" && (
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4 sheet-layer" onClick={onClose}>
++      {/* `relative`, so the pinned close control below has this box to sit
++          against rather than the scrolling content inside it (finding 6). */}
++      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
++        <SheetClose onClose={onClose} label={`Close ${def.label}`} />
++        <Card className="p-5 sheet-panel overflow-y-auto">
 +
 +          {/* The notice sits at the top, as V1's dose banner did, and carries
 +              V2's wording: the engine's own reason code, worded by the strings
 +              file. Expandable, because the strip has room for a line and the
 +              engine often has more than a line to say. */}
++          {/* FINDING 13's third surface. The same conclusion the dashboard strip
++              and the Dosing tab carry, above everything else on this sheet —
++              because a keeper who taps a parameter's card is asking about that
++              parameter, and the app's answer about it should not be one tab
++              away. Only for the parameter the engine assesses; the others have
++              no conclusion to carry. */}
++          {def.assessed && (
++            <DosingNotice engineResult={engineResult} assessmentState={null}
++              paramDefs={[def]} readings={readings} onOpen={onGoDosing} episodes={episodes} />
++          )}
++
 +          {notice && (
              <div className="rounded-xl p-3 mb-4"
 -              style={{ background: dose.tone + "10", border: `1px solid ${dose.tone}33` }}>
@@ -4532,23 +5124,18 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +302,9 @@
+@@ -353,14 +430,18 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
 -                target range {def.min}–{def.max}{def.unit} · {rows.length} of {allRows.length} readings
 +                {range
-+                  ? `target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}${def.unit}`
-+                  : "no target range set"} · {rows.length} of {allRows.length} readings
++                  ? `target range ${fmtVal(def, def.min)}–${fmtWithUnit(def, def.max)}`
++                  : "no target range set"} · {chartData.length} of {allTests} tests
                  {isCustom && <span className="ml-1 text-teal-brand">· custom</span>}
                </div>
-               <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
-```
-
-8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
-
-```diff
-@@ -360,7 +311,9 @@
+-              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
++              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 min-h-[44px] text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
                  <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
                </button>
              </div>
@@ -4561,10 +5148,10 @@ Byte-identical to V1.
            {editing && (
 ```
 
-9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
+8. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +331,16 @@
+@@ -378,10 +459,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -4585,10 +5172,10 @@ Byte-identical to V1.
            )}
 ```
 
-10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
+9. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -395,20 +354,19 @@
+@@ -395,20 +482,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -4604,7 +5191,7 @@ Byte-identical to V1.
                      </div>
                      <div className="text-[11px] font-bold text-ink mt-0.5 truncate">
 -                      {c ? c.metricLabel : "no data"}
-+                      {c ? `${fmtVal(def, c.spread)}${def.unit} spread` : "no data"}
++                      {c ? `${fmtWithUnit(def, c.spread)} spread` : "no data"}
                      </div>
                      <div className="text-[10px] font-semibold text-ink2">
 -                      {c ? `${c.pct}% in range` : "\u2014"}
@@ -4614,10 +5201,10 @@ Byte-identical to V1.
                  );
 ```
 
-11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
+10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -417,280 +375,121 @@
+@@ -417,280 +503,139 @@
            </div>
  
            {rows.length === 0 ? (
@@ -4625,7 +5212,7 @@ Byte-identical to V1.
 +            <div className="py-10 text-center text-ink2 font-semibold text-sm">No readings for {def.labelMid || def.label.toLowerCase()} in this window</div>
            ) : (
              <>
-               <div className="grid grid-cols-4 gap-3 mb-5">
+-              <div className="grid grid-cols-4 gap-3 mb-5">
 -                <div className="text-center min-w-0">
 -                  <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">Latest</div>
 -                  <div className="text-lg font-black text-ink mt-0.5 truncate">{latest.value}{def.unit}</div>
@@ -4642,10 +5229,29 @@ Byte-identical to V1.
 -                  <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">Median</div>
 -                  <div className="text-lg font-black text-ink mt-0.5 truncate">
 -                    {fmtVal(def, control ? control.p50 : avg)}{def.unit}
++              {/* OWNER FINDING 25 — THESE WERE UNREADABLE.
++
++                  Four figures across a phone, each "10.00dKH" on one line at
++                  `text-lg`, in a cell that then clipped it: the row read
++                  "10.00… 9.00d… 10.00… 9.00d…", which is worse than showing
++                  nothing because it looks like data.
++
++                  The unit moves to its own line. It is the same for all four
++                  and repeating it four times across the narrowest row in the
++                  app was what cost the digits their space. Nothing is clipped
++                  now — `truncate` is gone rather than being given more room,
++                  because a number that silently loses its last digit is a
++                  number the keeper cannot trust anywhere. */}
++              <div className="grid grid-cols-4 gap-2 mb-5">
 +                {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
 +                  <div key={label} className="text-center min-w-0">
 +                    <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
-+                    <div className="text-lg font-black text-ink mt-0.5 truncate">{fmtVal(def, v)}{def.unit}</div>
++                    <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">
++                      {fmtVal(def, v)}
++                    </div>
++                    {def.unit && (
++                      <div className="text-[9px] font-bold text-ink2 leading-none">{def.unit}</div>
++                    )}
                    </div>
 -                </div>
 +                ))}
@@ -4669,7 +5275,7 @@ Byte-identical to V1.
 +                    {winLabel}
 +                  </span>
 +                  <span className="text-[12px] font-black text-ink">
-+                    usually {fmtVal(def, stats.p05)}–{fmtVal(def, stats.p95)}{def.unit}
++                    usually {fmtVal(def, stats.p05)}–{fmtWithUnit(def, stats.p95)}
 +                  </span>
 +                </div>
 +
@@ -4679,7 +5285,7 @@ Byte-identical to V1.
 +                    <div className="h-full rounded-full" style={{ width: "100%", background: def.color + "55" }} />
                    </div>
 +                  <span className="text-[10px] font-bold w-24 text-right shrink-0" style={{ color: def.color }}>
-+                    {fmtVal(def, stats.spread)}{def.unit} spread
++                    {fmtWithUnit(def, stats.spread)} spread
 +                  </span>
 +                </div>
  
@@ -4767,7 +5373,7 @@ Byte-identical to V1.
 -                      : <ChevronDown size={12} style={{ color: control.tone }} />}
 -                  </button>
 +                <button onClick={() => setDetailOpen((v) => !v)}
-+                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 border-t"
++                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 min-h-[44px] border-t"
 +                  style={{ borderColor: def.color + "26" }}>
 +                  <span className="text-[11px] font-extrabold" style={{ color: def.color }}>
 +                    {detailOpen ? "Hide detail" : "Where these figures come from"}
@@ -4995,23 +5601,28 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `afe621320207a376739e3c1c6a425c6c7eb6522e3ba849eef682021e50f7639c` |
-| Differences | 9 |
+| Ported SHA-256 | `158338c734032661ae318bfbba15c3ab9d2a038b77126ad55bdeabfe93482e31` |
+| Differences | 16 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
 
 ```diff
-@@ -2,10 +2,11 @@
+@@ -1,11 +1,15 @@
+ import { useMemo, useState } from 'react'
++import { DeleteControl } from './DeleteControl.jsx'
  import { Card } from './ErrorBoundary.jsx'
  import { ZoomableLineChart } from './ZoomableChart.jsx'
- import { Check, X } from '../icons.jsx'
+-import { Check, X } from '../icons.jsx'
 -import { fmtVal } from '../lib/analytics/time-in-range.js'
 -import { byNewest, byOldest, fmtTime, nowTime } from '../lib/analytics/time-of-day.js'
-+import { fmtVal, fmtTime } from '../lib/format.js'
++import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
++import { fmtVal, fmtTime, fmtWithUnit } from '../lib/format.js'
 +import { nowTime } from '../lib/clock.js'
  import { useEscape } from '../lib/backup.jsx'
  import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-+import { rowsFor, chartDataFrom } from '../lib/adapt.js'
++import { rowsFor } from '../lib/adapt.js'
++import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey, shownReading } from '../present/episodes.js'
++import { t } from '../strings.js'
  
  /* --- Enter every parameter on one screen ---
   *
@@ -5020,21 +5631,85 @@ Byte-identical to V1.
 2. **data source rewired — the Test Lab takes V2's schedule view instead of V1's reminders and reminder view**
 
 ```diff
-@@ -14,7 +15,7 @@
+@@ -14,10 +18,71 @@
   * Log, move on. The date applies to all of them, since a testing session
   * happens at one sitting.
   */
 -export function TestLab({ paramDefs, readings, onAdd, onOpenParam, reminders = [], reminderView = null }) {
-+export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null }) {
++/* This parameter's readings, newest first.
++
++   `rowsFor` is the app's one answer to "this parameter's readings, in order",
++   and the ledger's order is the app's one answer to which is most recent — so
++   this reverses that rather than sorting on a date, which is the mistake that
++   put the dose history in the wrong order. */
++function readingsNewestFirst(readings, key) {
++  return [...rowsFor(readings, key)].reverse();
++}
++
++/* Value, date, time and a trash icon each — the owner's own list.
++
++   A reading that was one of several taken close together says so, because
++   otherwise the keeper sees three rows at 09:07 and cannot tell why the card
++   above shows a figure that is none of them. Deleting one recomputes the group
++   from the ledger: the engine forms the episode again from what is left, and
++   every surface follows. Nothing here is cached and nothing is patched. */
++function ReadingRows({ rows, def, episodes, onDelete }) {
++  if (!rows.length) {
++    return (
++      <p className="text-[12px] font-medium text-ink2 px-1 pb-2 pt-1">
++        {t("testlab.noReadings", { parameter: def.labelMid || def.label.toLowerCase() })}
++      </p>
++    );
++  }
++  return (
++    <div className="space-y-1 pt-2 pb-1">
++      {rows.map((r) => {
++        const ep = episodeForReading(episodes, r.id);
++        const grouped = !!(ep && ep.count > 1);
++        return (
++          <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++            <span className="text-[13px] font-black text-ink tabular-nums shrink-0">
++              {fmtVal(def, r.value)}
++              <span className="text-ink2 font-bold text-[11px] ml-0.5">{def.unit}</span>
++            </span>
++            <span className="text-[11px] font-bold text-ink2 flex-1 min-w-0">
++              {fmtShort(r.date)}{fmtTime(r.time) ? ` · ${fmtTime(r.time)}` : ""}
++              {grouped && (
++                <span className="block text-[10px] font-bold" style={{ color: def.color }}>
++                  {t(`testlab.partOf.${groupWordKey(ep.count)}`, {
++                    count: ep.count, value: fmtVal(def, ep.valueDkh), unit: def.unit })}
++                </span>
++              )}
++            </span>
++            {onDelete && (
++              <DeleteControl onDelete={() => onDelete(r.id)}
++                label={t("delete.aria.reading", { date: fmtShort(r.date) })}
++                ask={t("delete.confirm.reading")} />
++            )}
++          </div>
++        );
++      })}
++    </div>
++  );
++}
++
++export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
++  episodes = null, onDeleteReading = null }) {
    const [date, setDate] = useState(todayStr());
    const [time, setTime] = useState(nowTime());
    const [values, setValues] = useState({});
++  /* Which parameter's readings are showing. One at a time: eight open lists on
++     a phone is a page nobody can find anything in. */
++  const [openKey, setOpenKey] = useState(null);
+ 
+   const setVal = (k, v) => setValues((p) => ({ ...p, [k]: v }));
+ 
 ```
 
 3. **data source rewired — the latest reading per parameter comes from the read adapter's ordering**
 
 ```diff
-@@ -24,8 +25,8 @@
+@@ -24,8 +89,8 @@
    const latest = useMemo(() => {
      const m = {};
      for (const d of paramDefs) {
@@ -5050,7 +5725,7 @@ Byte-identical to V1.
 4. **data source rewired — a logged reading carries value, date and time and nothing else**
 
 ```diff
-@@ -35,7 +36,7 @@
+@@ -35,7 +100,7 @@
      if (raw === undefined || raw === "") return;
      const v = parseFloat(raw);
      if (!isFinite(v)) return;
@@ -5064,7 +5739,7 @@ Byte-identical to V1.
 5. **data source rewired — the due state reads V2's task vocabulary**
 
 ```diff
-@@ -45,9 +46,9 @@
+@@ -45,9 +110,9 @@
    const { sessionDue, sessionDone } = useMemo(() => {
      let due = 0, done = 0;
      for (const def of paramDefs) {
@@ -5082,7 +5757,7 @@ Byte-identical to V1.
 6. **data source rewired — the session progress and the due lookup read V2's schedule view**
 
 ```diff
-@@ -54,11 +55,11 @@
+@@ -54,11 +119,11 @@
        if (testedOnDate) done += 1;
      }
      return { sessionDue: due, sessionDone: done };
@@ -5102,7 +5777,7 @@ Byte-identical to V1.
 7. **wording replaced with engine output — the party emoji in the completion state replaced by the icon set's tick; the brief rules out emojis**
 
 ```diff
-@@ -104,7 +105,10 @@
+@@ -104,7 +169,10 @@
  
          {sessionDue > 0 && sessionDone >= sessionDue && (
            <div className="rounded-lg px-3 py-2 mb-2.5 flex items-center gap-2" style={{ background: "#0B7C8614" }}>
@@ -5116,32 +5791,185 @@ Byte-identical to V1.
              </span>
 ```
 
-8. **data source rewired — All graphs builds its series through the read adapter**
+8. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
 
 ```diff
-@@ -229,9 +233,8 @@
+@@ -119,13 +187,13 @@
+             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Date</span>
+             <input type="date" value={date} max={todayStr()}
+               onChange={(e) => setDate(e.target.value)}
+-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
++              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+           </label>
+           <label className="block">
+             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Time</span>
+             <input type="time" value={time}
+               onChange={(e) => setTime(e.target.value)}
+-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
++              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+           </label>
+         </div>
+       </div>
+```
+
+9. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
+
+```diff
+@@ -132,7 +200,12 @@
+ 
+       <div className="divide-y divide-app">
+         {paramDefs.map((def) => {
+-          const last = latest[def.key];
++          /* REEFKEEPER FINDING 10. The row read the ledger's last measurement,
++             so a test run three times printed 10.00 here while the card above
++             it and every other surface printed 9.10. `shownReading` asks the
++             episode index what that reading was resolved to; it computes
++             nothing. */
++          const last = shownReading(episodes, latest[def.key]);
+           const st = dueFor(def.key);
+           const filled = values[def.key] !== undefined && values[def.key] !== "";
+           /* Tested today: the row reads as ticked off rather than merely
+```
+
+10. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
+
+```diff
+@@ -151,7 +224,7 @@
+               style={{ background: rowBg, borderLeft: `3px solid ${stripe}`,
+                        opacity: idle ? 0.62 : 1 }}>
+               <div className="flex items-center gap-2">
+-                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left">
++                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left min-h-[44px]">
+                   <div className="flex items-center gap-1.5">
+                     {doneToday ? (
+                       <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 tp-tick"
+```
+
+11. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+
+```diff
+@@ -175,13 +248,14 @@
+                     style={{ color: doneToday ? "#0B7C86" : "#45605F" }}>
+                     {doneToday ? (
+                       <span className="font-extrabold">
+-                        Done · {fmtVal(def, last.value)}{def.unit}
++                        Done · {fmtWithUnit(def, last.value)}
+                         {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
++                        {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
+                       </span>
+                     ) : (
+                       <>
+                         {last
+-                          ? `last ${fmtVal(def, last.value)}${def.unit} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
++                          ? `last ${fmtWithUnit(def, last.value)} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
+                           : "no readings yet"}
+                         {st && st.daysOut > 0 && (
+                           <span className="ml-1">· next {fmtShort(st.due)}</span>
+```
+
+12. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
+
+```diff
+@@ -195,7 +269,7 @@
+                   value={values[def.key] ?? ""} onChange={(e) => setVal(def.key, e.target.value)}
+                   onKeyDown={(e) => { if (e.key === "Enter") log(def); }}
+                   placeholder={def.unit}
+-                  className="w-20 shrink-0 rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
++                  className="w-20 shrink-0 min-h-[44px] rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
+ 
+                 <button onClick={() => log(def)} disabled={!filled}
+                   className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-extrabold transition-colors"
+```
+
+13. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
+
+```diff
+@@ -206,9 +280,33 @@
+                     : { background: "#EDF3F2", color: "#9FB0AE" }}>
+                   {doneToday && !filled ? "Again" : "Log"}
+                 </button>
+-              </div>
+ 
++                {/* OWNER FINDINGS 8, 11 AND 27 — THE RAW READINGS, REACHABLE.
+ 
++                    There was no list of readings anywhere he could get to. The
++                    calendar answers "what did I do on this day"; it does not
++                    answer "where is that reading I typed wrong", and its trash
++                    icon deletes the TICK rather than the reading — which is why
++                    deleting from it changed one surface and nothing else.
++
++                    So the readings live here, under the parameter they belong
++                    to, which is how he asked for them: expand a parameter, see
++                    its own readings newest first. */}
++                <button onClick={() => setOpenKey(openKey === def.key ? null : def.key)}
++                  aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
++                    { parameter: def.labelMid || def.label.toLowerCase() })}
++                  aria-expanded={openKey === def.key}
++                  /* REEFKEEPER FINDING 21: 27px, beside seven others like it,
++                     on a list read one-handed at the tank. */
++                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-ink2 active:bg-app">
++                  {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
++                </button>
++              </div>
++
++              {openKey === def.key && (
++                <ReadingRows rows={readingsNewestFirst(readings, def.key)} def={def}
++                  episodes={episodes} onDelete={onDeleteReading} />
++              )}
+             </div>
+           );
+         })}
+```
+
+14. **data source rewired — All graphs builds its series through the read adapter**
+
+```diff
+@@ -219,7 +317,7 @@
+ 
+ /* Every chart in one place, stripped of commentary — for when you want to scan
+    the tank's whole history rather than study one parameter. */
+-export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam }) {
++export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam, episodes = null }) {
+   useEscape(onClose);
+   /* One window setting for every chart, so they're comparable at a glance —
+      charts on different timescales invite the wrong conclusion. */
+```
+
+15. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
+
+```diff
+@@ -229,16 +327,15 @@
    const series = paramDefs
      .map((def) => ({
        def,
 -      data: readings.filter((r) => r.param === def.key && (!cutoff || r.date >= cutoff))
 -        .sort(byOldest)
 -        .map((r) => ({ date: r.date, value: r.value, label: fmtShort(r.date), time: r.time })),
-+      data: chartDataFrom(
-+        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), fmtShort),
++      data: chartGroupsFrom(
++        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), episodes, fmtShort),
      }))
      .filter((x) => x.data.length >= 2);
  
+   return (
+-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4"
++    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4 sheet-layer"
+       onClick={onClose}>
+-      <div className="bg-app w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
++      <div className="bg-app w-full sm:max-w-2xl sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+         onClick={(e) => e.stopPropagation()}
+         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+         {/* The header sticks, so the window control stays reachable however far
 ```
 
-9. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+16. **defect fixed — a figure ran into its unit, on screens the same application spells 9.10 dKH correctly elsewhere (reefkeeper finding 22)**
 
 ```diff
-@@ -279,10 +282,15 @@
+@@ -279,10 +376,15 @@
                    <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                  </span>
                  <span className="text-[11px] font-bold text-ink2 shrink-0">
 -                  {fmtVal(def, data[data.length - 1].value)}{def.unit} · target range {fmtVal(def, def.min)}–{fmtVal(def, def.max)}
-+                  {fmtVal(def, data[data.length - 1].value)}{def.unit}
++                  {fmtWithUnit(def, data[data.length - 1].value)}
 +                  {def.min != null && def.max != null
 +                    ? ` · target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}`
 +                    : ""}
@@ -5156,8 +5984,6 @@ Byte-identical to V1.
            ))}
 ```
 
----
-
 ### `app/src/components/LogReadingSheet.jsx`
 
 | | |
@@ -5166,7 +5992,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `1638a9ec9cc18458cb084f1679d7b4f921fb21a8f0414d492ed5c70def543038` |
 | V1 blob | `205c56b8fe0d98d88631ee5cbd789644dc45318c` |
-| Ported SHA-256 | `85885009bdc3113068fba2cc597bbf4de4ea4a4dd39f9e2f7fc944b61cddb091` |
+| Ported SHA-256 | `da25d2cf556db32bad69cc4c9803ec36845e30cb8b5d41e720728e5b5655998c` |
 | Differences | 4 |
 
 1. **data source rewired — the clock comes from the application's, not V1's time-of-day analytics module**
@@ -5223,7 +6049,12 @@ Byte-identical to V1.
 3. **defect fixed — V1 wrote "Log a alkalinity reading"; the article now follows the word**
 
 ```diff
-@@ -33,7 +39,11 @@
+@@ -29,11 +35,15 @@
+   return (
+     <div className="rounded-xl border border-app overflow-hidden mb-4">
+       <button onClick={() => setOpen((v) => !v)}
+-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left active:bg-app">
++        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] text-left active:bg-app">
          <span className="flex items-center gap-1.5">
            <Plus size={13} style={{ color: def.color }} />
            <span className="text-[12px] font-extrabold" style={{ color: def.color }}>
@@ -5251,8 +6082,6 @@ Byte-identical to V1.
            <div className="grid grid-cols-2 gap-2 mt-2">
              <Field label="Date">
 ```
-
----
 
 ### `app/src/components/IcpPanel.jsx`
 
@@ -5530,26 +6359,28 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2635e7ddaf17e9e95b4c2ed28af87c1e121447640ebdd6f1f54d5cd7e2fdceae` |
 | V1 blob | `95b57a94957b9192c8e05a0af2d204b6e9d2ddcc` |
-| Ported SHA-256 | `aafc8e0a479b22117c5322cc69f2b32a7687f51bd192d68016c995b418002b6c` |
+| Ported SHA-256 | `28841e446a9c3dd5b313e2e9177646289c352c42255f6c829d0665f528320307` |
 | Differences | 3 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,46 +1,59 @@
- import { useState } from 'react'
+@@ -1,46 +1,61 @@
+-import { useState } from 'react'
 -import { Btn, FindingList, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 -import { AlkAssessmentBlock, Card } from './ErrorBoundary.jsx'
 -import { Beaker, ChevronDown, ChevronUp, X } from '../icons.jsx'
 -import { fmtAmount, fmtVal } from '../lib/analytics/time-in-range.js'
 -import { STATUS_COLOR, paramStatus } from '../lib/dates.js'
 -import { findingsFor } from '../lib/dosing/corrected-strength.js'
++import { useMemo, useState } from 'react'
 +import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 +import { Card } from './ErrorBoundary.jsx'
 +import { ZoomableLineChart } from './ZoomableChart.jsx'
++import { DeliveredDoseField } from './DeliveredDose.jsx'
 +import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 +import { fmtDate, fmtShort } from '../lib/dates.js'
-+import { chartDataFrom } from '../lib/adapt.js'
++import { chartGroupsFrom, shownReading } from '../present/episodes.js'
 +import { fmtPotency, fmtQty } from '../lib/format.js'
 +import { positionTone } from '../present/position.js'
 +import {
@@ -5557,6 +6388,7 @@ Byte-identical to V1.
 +  statusParts, whyPanel, working,
 +} from '../present/dosing-tab.js'
 +import { sayPayloadKey, sayPayloadValue, sayReason } from '../present/wording.js'
++import { alreadyAtDose } from '../present/dose-origin.js'
 +import { t } from '../strings.js'
  
 -/* ---------------------------------- Dosing Wizard ---------------------------------- */
@@ -5636,7 +6468,7 @@ Byte-identical to V1.
 2. **chemistry removed — the whole body: V1 computed the dose, the staged step and the correction offers here. The three summary boxes are V1's layout; everything inside is what V2's engine returned**
 
 ```diff
-@@ -47,41 +60,21 @@
+@@ -47,41 +62,21 @@
              <Icon size={11} style={{ color: def.color }} strokeWidth={2.6} />
            </span>
            <span className="text-[11px] font-black text-ink truncate flex-1 min-w-0">{def.label}</span>
@@ -5695,7 +6527,7 @@ Byte-identical to V1.
 3. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -88,203 +81,463 @@
+@@ -88,203 +83,536 @@
    );
  }
  
@@ -5912,7 +6744,7 @@ Byte-identical to V1.
 -      <SectionTitle eyebrow="Two-part" title="Dosing Wizard" />
 +    <div className="mt-2">
 +      <button onClick={() => setOpen((v) => !v)}
-+        className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
++        className="flex items-center gap-1 min-h-[44px] text-[12px] font-extrabold text-teal-brand">
 +        {canExplain ? t("dosing.reco.showWorking") : t("dosing.reco.why")}
 +        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
 +      </button>
@@ -6043,7 +6875,7 @@ Byte-identical to V1.
 +   belongs in the working, where it is named in words — a second, weaker
 +   version of it drawn on the chart is exactly the duplicate ownership
 +   `MASTER RULE 1` forbids. */
-+function DosingChart({ def, rows, chartEvents }) {
++function DosingChart({ def, rows, chartEvents, episodes = null }) {
 +  const [days, setDays] = useState(7);
 +  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 +  const shown = rows.filter((r) => r.date >= cutoff);
@@ -6056,18 +6888,19 @@ Byte-identical to V1.
 +     the axis drew no dates and the owner's four imported dose changes drew
 +     nothing — on a chart that was already being handed them.
 +
-+     `chartDataFrom` is the shape every other chart in the app uses, and it is
-+     where the label rule lives: where a day carries more than one reading the
-+     label carries the time too, so two points on one day stay distinguishable.
-+     Building a second point shape here was the defect; there is one now. */
-+  const data = chartDataFrom(shown, fmtShort);
++     `chartGroupsFrom` is the shape every other chart in the app uses, and it
++     is where the point rule lives: one x-position per TEST, with the
++     measurements of a repeat test stacked on it rather than spread along the
++     axis as if they were separate tests. Building a second point shape here
++     was the defect; there is one now. */
++  const data = chartGroupsFrom(shown, episodes, fmtShort);
 +
 +  return (
 +    <div className="mb-4">
 +      <div className="flex gap-1.5 mb-2" role="group" aria-label={t("dosing.graph.aria")}>
 +        {[[7, t("dosing.graph.7")], [14, t("dosing.graph.14")]].map(([d, label]) => (
 +          <button key={d} onClick={() => setDays(d)}
-+            className="rounded-lg px-3 py-1.5 text-[11px] font-extrabold border-2"
++            className="rounded-lg px-3 min-h-[44px] text-[11px] font-extrabold border-2"
 +            style={{ borderColor: days === d ? def.color : "#E3ECEA",
 +                     color: days === d ? def.color : "#45605F" }}>
 +            {label}
@@ -6096,6 +6929,10 @@ Byte-identical to V1.
 +    learned: box.learned == null ? "—" : fmtPotency(box.learned),
 +    entered: fmtPotency(box.entered),
 +    accepted: fmtPotency(box.entered),
++    /* The engine's own observed figure, for the state where it has read a
++       strength but not gathered enough to be confident in one (finding 12). */
++    observed: box.observed == null ? "—" : fmtPotency(box.observed),
++    count: box.observations,
 +  };
 +
 +  return (
@@ -6168,7 +7005,11 @@ Byte-identical to V1.
 +export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
 +  config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
 +  asOf = null, correctionDismissed = null, onDismissCorrection = null,
-+  onAcceptPotency = null, onKeepPotency = null }) {
++  onAcceptPotency = null, onKeepPotency = null, episodes = null,
++  standingDose = null, onSetDeliveredDose = null }) {
++  /* Whether the delivered-dose field is open on this tab. One flag: there is
++     one field, and it is the same field however it was reached. */
++  const [doseOpen, setDoseOpen] = useState(false);
 +
 +  const KEYS = ["ALK", "CA", "MG"];
 +  const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -6177,11 +7018,22 @@ Byte-identical to V1.
 +  const def = active ? active.def : null;
 +
 +  const rows = readings.filter((r) => def && r.param === def.key);
-+  const latest = def ? latestByParam[def.key] : null;
++  /* THE INSTANT THE FIGURE ABOVE IT WAS TAKEN AT — findings 26 and 28's fifth
++     surface. The headline said 9.10 dKH, the line beneath it said "Measured 19
++     August at 09:08", and 09:08 is when the 10.00 was typed. The figure came
++     from the resolved test at 09:07 and the timestamp came from the ledger's
++     last row: two sources, one sentence. */
++  const latest = shownReading(episodes, def ? latestByParam[def.key] : null);
 +  const assessed = def && def.assessed && engineResult;
 +
 +  const status = assessed ? statusParts(engineResult) : null;
-+  const rec = assessed ? recommendation(engineResult, rows.length) : null;
++  /* TESTS, NOT MEASUREMENTS — reefkeeper findings 3, 7 and 10, on the last
++     surface that still counted the other thing. "You have 7 alkalinity readings
++     recorded" beside a chart drawing five points is the app disagreeing with
++     itself about how much it has been told. */
++  const testCount = useMemo(
++    () => chartGroupsFrom(rows, episodes, fmtShort).length, [rows, episodes]);
++  const rec = assessed ? recommendation(engineResult, testCount) : null;
 +  const three = assessed ? boxes(engineResult) : null;
 +  const potency = assessed ? potencyBox(engineResult, config) : null;
 +
@@ -6266,17 +7118,70 @@ Byte-identical to V1.
 +          {rec && (
 +            <Card className="p-4 mb-4">
 +              <h3 className="text-[17px] font-black text-ink leading-tight mb-1.5">{rec.head}</h3>
-+              <p className="text-[13px] text-ink font-medium leading-relaxed">{rec.body.join("")}</p>
++              {/* JOINED WITH A SPACE, not with nothing. Some of these sentences
++                  carry a trailing space and some do not, so the screen read
++                  "...your readings can carry one.Nothing is wrong..." — found in
++                  a screenshot, not by any check. Trimmed first so the ones that
++                  do carry a space do not end up with two. */}
++              <p className="text-[13px] text-ink font-medium leading-relaxed">
++                {rec.body.map((s) => String(s).trim()).filter(Boolean).join(" ")}
++              </p>
 +              <ShowWorking result={engineResult} config={config} canExplain={rec.canExplain} />
 +              <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
 +                {t("dosing.reco.note")}
 +              </p>
-+              {/* V1's, kept where a hold is recommended: a hold is advice, and
-+                  the keeper is allowed to disagree with it. */}
-+              {rec.offerChangeAnyway && onChangeDoseAnyway && (
-+                <Btn className="w-full mt-3" onClick={onChangeDoseAnyway}>
-+                  {t("dosing.reco.changeAnyway")}
-+                </Btn>
++              {/* THE DOSE IS SET FROM HERE, AND IT IS THE SAME FIELD SETUP USES
++                  (owner finding 19).
++
++                  Two ways in, one of them opening with the engine's figure and
++                  one with nothing suggested, both writing through the shell's
++                  single path. Whether the keeper took the recommendation or
++                  changed it is decided from the figure he saved, not from which
++                  button he pressed, so the history is right either way.
++
++                  It opens HERE rather than sending him to Setup: a
++                  recommendation he is acting on is on this screen, and a button
++                  that navigates away from it loses the thing he was reading. It
++                  also used to navigate to a tab that did not exist and leave
++                  him on a blank page (finding 20). */}
++              {onSetDeliveredDose && (rec.suggestedDose != null || rec.offerChangeAnyway) && (
++                doseOpen ? (
++                  <div className="mt-3 rounded-xl border border-app p-3">
++                    <div className="flex items-center justify-between gap-2 mb-2">
++                      <h4 className="text-[13px] font-black text-ink">{t("dose.delivered.head")}</h4>
++                      <button onClick={() => setDoseOpen(false)}
++                        className="text-[11px] font-extrabold text-ink2">
++                        {t("dose.change.close")}
++                      </button>
++                    </div>
++                    <DeliveredDoseField standing={standingDose}
++                      suggested={rec.suggestedDose} autoFocus compact
++                      onSave={async (args) => { await onSetDeliveredDose(args); setDoseOpen(false); }} />
++                  </div>
++                ) : alreadyAtDose(rec.suggestedDose, standingDose) ? (
++                  /* REEFKEEPER FINDING 16. He took the recommendation, set 9.0,
++                     and the button went on saying "Set the dose to 9.0 mL/day".
++                     The engine's answer does not move until readings taken on
++                     the new dose arrive — correct of the engine, unreadable on
++                     the screen — so he set it again and the history carried a
++                     change from 9.0 to 9.0. The screen says where he is, and
++                     leaves the door open rather than removing it. */
++                  <div className="mt-3">
++                    <p className="text-[12px] font-bold text-ink leading-relaxed">
++                      {t("dosing.reco.alreadyThere", { dose: fmtQty(standingDose, "mlPerDay") })}
++                    </p>
++                    <button onClick={() => setDoseOpen(true)}
++                      className="text-[11px] font-extrabold text-ink2 underline mt-1 min-h-[44px]">
++                      {t("dosing.reco.changeAnyway")}
++                    </button>
++                  </div>
++                ) : (
++                  <Btn className="w-full mt-3" onClick={() => setDoseOpen(true)}>
++                    {rec.suggestedDose != null
++                      ? t("dosing.reco.setDose", { dose: fmtQty(rec.suggestedDose, "mlPerDay") })
++                      : t("dosing.reco.changeAnyway")}
++                  </Btn>
++                )
 +              )}
 +            </Card>
            )}
@@ -6296,7 +7201,7 @@ Byte-identical to V1.
 -          {findingsFor(findings, active.key).length > 0 && (
 -            <div className="mt-3">
 -              <FindingList items={findingsFor(findings, active.key)} compact onDismiss={onDismissFinding} />
-+          <DosingChart def={def} rows={rows} chartEvents={chartEvents} />
++          <DosingChart def={def} rows={rows} chartEvents={chartEvents} episodes={episodes} />
 +
 +          {three && (
 +            <div className="grid grid-cols-2 gap-2 mb-4">
@@ -6333,7 +7238,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `2482249ce03e14404f2f75c9f72a24d140e695c9de908d878fafec0df747d593` |
 | V1 blob | `83583c09cea5fa4080582555219756f49e0cb2e7` |
-| Ported SHA-256 | `231f55c46c75daf96904e5d907a91494fc1a4830ce603f26a245bee28a7c9158` |
+| Ported SHA-256 | `644677b6ab2d2444eb11a70fad6f0ae174106cf945a4811e38a05e1de612c676` |
 | Differences | 5 |
 
 1. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
@@ -6610,13 +7515,23 @@ Byte-identical to V1.
 5. **data source rewired — the calendar's completed entries reach V2's task store to take one back off the record; owner decision 32 makes anything the keeper recorded deletable**
 
 ```diff
-@@ -180,25 +187,144 @@
+@@ -180,25 +187,154 @@
              <input type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)} className={inputCls} />
            </Field>
          </div>
-+        <label className="flex items-center gap-2 mt-2">
-+          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)} />
-+          <span className="text-[12px] font-bold text-ink2">Just the once — turn it off after it is done</span>
++        {/* REEFKEEPER FINDING 21. A 13px checkbox is the browser's default and
++            it is the smallest target in the application. The whole label is the
++            control — a `<label>` wrapping its input already is one — so it is
++            given the height. But the BOX is what the finger lands on, and a
++            check that an ancestor can satisfy proves nothing — nor does a
++            transform, because hit-testing follows the transform and a box
++            scaled to look right is a box that is small again. So it is 44, and
++            it looks like 44. A control that can be hit is worth more than a
++            control that is the size the desktop drew it. */}
++        <label className="flex items-center gap-2 mt-2 min-h-[44px]">
++          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)}
++            className="w-11 h-11 shrink-0 accent-teal-brand" />
++          <span className="text-[13px] font-bold text-ink2">Just the once — turn it off after it is done</span>
 +        </label>
          <Btn onClick={submit} className="w-full mt-3">
 -          <span className="flex items-center justify-center gap-1.5"><Plus size={14} /> Add reminder</span>
@@ -6646,7 +7561,7 @@ Byte-identical to V1.
 +            it would create a wrong record rather than an incomplete one.
 +            Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */}
 +        <button onClick={() => setOoOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app first:border-0">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app first:border-0">
 +          <Plus size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">A one-off addition by hand</span>
 +        </button>
@@ -6681,7 +7596,7 @@ Byte-identical to V1.
 +        )}
 +
 +        <button onClick={() => setLightOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
 +          <SunMedium size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">A lighting change</span>
 +        </button>
@@ -6710,7 +7625,7 @@ Byte-identical to V1.
 +        )}
 +
 +        <button onClick={() => setNoteOpen((v) => !v)}
-+          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
++          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
 +          <StickyNote size={14} className="text-ink2 shrink-0" />
 +          <span className="text-[13px] font-black text-ink flex-1">Something that changed what the tank uses</span>
 +        </button>
@@ -6778,16 +7693,16 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `613483ec4b12f1d1de81d852f540482ea6b63170579696dae7b5dcb5c2cdfd0f` |
-| Differences | 2 |
+| Ported SHA-256 | `eac4338faae0bae0446abd9fcf15768ce9ef08ce87507491c6d14b42e4e782f6` |
+| Differences | 1 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,205 +1,305 @@
+@@ -1,931 +1,653 @@
  import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
-+import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
++import { Btn, Field, SectionTitle, inputCls, shortInputCls } from './DoseExpectation.jsx'
  import { Card, DeleteButton } from './ErrorBoundary.jsx'
 -import { InfoBlock } from './Insights.jsx'
 -import { Activity, Calculator, CheckCircle2, ChevronDown, ChevronUp, Download, Plus, RotateCcw, Save, SunMedium, Upload, Waves } from '../icons.jsx'
@@ -6806,13 +7721,16 @@ Byte-identical to V1.
 +import {
 +  Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 +} from '../icons.jsx'
-+import { fmtAmount, fmtPotency, fmtTime } from '../lib/format.js'
++import { fmtAmount, fmtPotency, fmtQty, fmtTime } from '../lib/format.js'
 +import { todayStr, fmtDate } from '../lib/dates.js'
 +import { nowTime } from '../lib/clock.js'
 +import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
 +import { ImportPanel } from './ImportPanel.jsx'
 +import { TestMode } from './TestMode.jsx'
 +import { MODE, currentMode } from '../store/mode.js'
++import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
++import { LockedValue, SaveOrEdit } from './SetupLock.jsx'
++import { RangeSlider } from './RangeSlider.jsx'
 +import { t } from '../strings.js'
  
  /* ---------------------------------- Setup ---------------------------------- */
@@ -7022,42 +7940,10 @@ Byte-identical to V1.
 -    setSaveMsg(`${elem.label} dose set to ${doseNum} mL/day, recorded for ${fmtDate(doseDate)}.`);
 -    setDoseDate(todayStr());
 -    setTimeout(() => setSaveMsg(null), 3500);
+-  };
 +function gPerLFrom(config) {
 +  return config && config.stockConcentrationGPerL != null ? String(config.stockConcentrationGPerL) : "";
 +}
-+
-+function per100LFrom(config) {
-+  return config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
-+    ? String(config.potencyStatedValue ?? "") : "";
-+}
-+
-+export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
-+  doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
-+  lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
-+  onExport, store = null, onImported = null, onModeChange = null,
-+  storageHealth = null }) {
-+
-+  const [openId, setOpenId] = useState(null);
-+  const testModeOn = currentMode() === MODE.TEST;
-+  const toggle = (id) => setOpenId(openId === id ? null : id);
-+
-+  /* ---- the keeper's facts ---------------------------------------------- */
-+  const [facts, setFacts] = useState(() => factsFrom(config));
-+  const [factMsg, setFactMsg] = useState("");
-+
-+  const saveFacts = async (keys) => {
-+    const values = {};
-+    for (const k of keys) {
-+      const raw = facts[k];
-+      if (raw === "" || raw == null) continue;
-+      const n = parseFloat(raw);
-+      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
-+      values[k] = n;
-+    }
-+    await onSaveConfig(values);
-+    setFactMsg("Saved.");
-+    setTimeout(() => setFactMsg(""), 2500);
-   };
  
 -  const saveSigma = async () => {
 -    const v = parseFloat(sigmaVal);
@@ -7065,147 +7951,35 @@ Byte-identical to V1.
 -    await onSaveSettings({ ...settings, kitSigma: { ...(settings.kitSigma || {}), [elem.key]: v } });
 -    setSaveMsg("Kit precision saved.");
 -    setTimeout(() => setSaveMsg(null), 2500);
-+  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
-+
-+     Owner finding 4: "'One more left' persisted; the owner had to press save
-+     repeatedly before the step completed." It was not a save that failed. This
-+     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
-+     and this section renders three of them — the volume and the two range
-+     edges. The strength and the pump's step are asked for in the DOSING section
-+     below.
-+
-+     Worse, the strength can be legitimately absent. A keeper who states his
-+     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
-+     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
-+     itself and the app storing one as well would override `ALK-014`'s owner
-+     with a copy. That is `store/config.js`'s own rule, and it made this counter
-+     permanently stuck at one however many times he pressed save — a screen
-+     telling him something was missing that he had already supplied, on the same
-+     screen he had supplied it. */
-+  const ASKED_HERE = KEEPER_FACTS.filter(
-+    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
-+  );
-+  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
-+
-+  /* ---- dose changes ----------------------------------------------------- */
-+  const [dcOpen, setDcOpen] = useState(false);
-+  const [dcFrom, setDcFrom] = useState("");
-+  const [dcTo, setDcTo] = useState("");
-+  const [dcDate, setDcDate] = useState(todayStr());
-+  const [dcTime, setDcTime] = useState(nowTime());
-+
-+  const newestFirst = useMemo(
-+    () => [...doseChanges].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-+    [doseChanges]);
-+
-+  const submitDoseChange = async () => {
-+    const from = parseFloat(dcFrom), to = parseFloat(dcTo);
-+    if (!Number.isFinite(from) || !Number.isFinite(to)) return;
-+    await onAddDoseChange({ fromMlPerDay: from, toMlPerDay: to, date: dcDate, time: dcTime });
-+    setDcFrom(""); setDcTo(""); setDcDate(todayStr()); setDcTime(nowTime());
-   };
+-  };
++function per100LFrom(config) {
++  return config && config.potencyStatedAs === POTENCY_FORM.DKH_PER_ML_PER_100L
++    ? String(config.potencyStatedValue ?? "") : "";
++}
  
 -  /* Clearing the field stores nothing, rather than falling back to some other
 -     tank's product. Exactly what saveVolume does above, for the same reason:
 -     the app would rather refuse than dose from a figure nobody checked. */
-+  /* ---- ONE dosing section ------------------------------------------------
-+
-+     "Never ask the same thing twice in different clothes." Solution strength,
-+     the dose in force and the pump's step used to sit in one card while the
-+     dose-change history sat in another, and "solution strength" was asked for
-+     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
-+     have. Both are one section now, and the strength is asked for once in
-+     whichever of three forms he actually holds. */
-+  const DOSED = ["ALK", "CA", "MG"];
-+  const [dosedKey, setDosedKey] = useState("ALK");
-+  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
-+
-+  const [form, setForm] = useState(() => formFrom(config));
-+  const [chemical, setChemical] = useState(() => chemicalFrom(config));
-+  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
-+  const [per100L, setPer100L] = useState(() => per100LFrom(config));
-+  const [strengthMsg, setStrengthMsg] = useState("");
-+
-+  /* THE RE-READ. One effect, one condition: the stored version changed.
-+
-+     `standing` and `current` are handled at their own declaration below, for
-+     the same reason and by the same rule — the dose in force is a ledger fact,
-+     not a configuration field, so it has its own key. */
-+  const syncedVersion = useRef(config ? config.configVersionId : null);
-+  useEffect(() => {
-+    const version = config ? config.configVersionId : null;
-+    if (version === syncedVersion.current) return;
-+    syncedVersion.current = version;
-+    setFacts(factsFrom(config));
-+    setForm(formFrom(config));
-+    setChemical(chemicalFrom(config));
-+    setGPerL(gPerLFrom(config));
-+    setPer100L(per100LFrom(config));
-+  }, [config]);
-+
-+  const netVolumeL = parseFloat(facts.netVolumeL);
-+
-+  /* What the app can honestly show back as the derived figure, and where it
-+     came from. For the grams-per-litre form that is the ENGINE's own number —
-+     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
-+     what the engine returned rather than recomputing it. */
-+  const derived = useMemo(() => {
-+    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
-+    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
-+      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
-+      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
-+      return { kind: "fromVolume", value: v, volume: netVolumeL };
-+    }
-+    const p = engineResult && engineResult.potency;
-+    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
-+      ? p.theoreticalPotencyDkhPerMl : null;
-+    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
-+  }, [form, per100L, netVolumeL, engineResult]);
-+
-   const saveStrength = async () => {
+-  const saveStrength = async () => {
 -    await onSaveSettings({ ...settings, [elem.strengthField]: strengthNum > 0 ? strengthNum : null });
 -    setSaveMsg(strengthNum > 0
 -      ? "Product strength saved."
 -      : `${elem.label} strength cleared. Dosing advice and corrections will not be calculated until you enter it.`);
 -    setTimeout(() => setSaveMsg(null), 3500);
-+    const values = {};
-+    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
-+      const c = parseFloat(gPerL);
-+      if (!Number.isFinite(c)) { setStrengthMsg("Enter a number."); return; }
-+      /* The engine derives the potency from these two. Sending a
-+         `selectedPotencyDkhPerMl` as well would override its own derivation
-+         with the app's, so the app clears it rather than holding a stale one. */
-+      values.chemical = chemical;
-+      values.stockConcentrationGPerL = c;
-+      values.selectedPotencyDkhPerMl = null;
-+      values.potencyStatedValue = c;
-+    } else if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
-+      const stated = parseFloat(per100L);
-+      const v = potencyForThisTank(stated, netVolumeL);
-+      if (v == null) { setStrengthMsg("Enter your net volume above first."); return; }
-+      values.selectedPotencyDkhPerMl = v;
-+      values.potencyStatedValue = stated;
-+    } else {
-+      const v = parseFloat(facts.selectedPotencyDkhPerMl);
-+      if (!Number.isFinite(v)) { setStrengthMsg("Enter a number."); return; }
-+      values.selectedPotencyDkhPerMl = v;
-+      values.potencyStatedValue = v;
-+    }
-+    values.potencyStatedAs = form;
-+    await onSaveConfig(values);
-+    setStrengthMsg("Saved.");
-+    setTimeout(() => setStrengthMsg(""), 2500);
-   };
+-  };
++export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
++  doseChanges = [], onDeleteEvent, onSetDeliveredDose, standingDose = null,
++  lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
++  onExport, store = null, onImported = null, onModeChange = null,
++  storageHealth = null }) {
  
 -  const elemLog = useMemo(
 -    () => doseLog.filter((d) => (d.element || "alkalinity") === elemKey)
 -      .sort(byNewest),
 -    [doseLog, elemKey]);
-+  /* The dose in force. This is the field whose absence stopped the engine
-+     working out consumption at all — see `lib/record.js` `recordDoseState`. */
-+  const standing = newestFirst.length ? newestFirst[0].to : null;
-+  const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
-+  const [currentMsg, setCurrentMsg] = useState("");
++  const [openId, setOpenId] = useState(null);
++  const testModeOn = currentMode() === MODE.TEST;
++  const toggle = (id) => setOpenId(openId === id ? null : id);
  
 -  // Correction calculator state
 -  const correctable = paramDefs.filter((d) => CORRECTIONS[d.key]);
@@ -7225,16 +7999,23 @@ Byte-identical to V1.
 -    () => ((calcParam === "alkalinity" || calcParam === "calcium")
 -      ? magnesiumGate({ readings, settings, paramDefs }) : null),
 -    [calcParam, readings, settings, paramDefs]);
-+  /* The same re-read as the configuration's, keyed on the ledger fact rather
-+     than the configuration version, because that is where the standing dose
-+     lives. Without it the box went on showing the dose that was in force when
-+     the screen opened, however many changes had been recorded since. */
-+  const syncedStanding = useRef(standing);
-+  useEffect(() => {
-+    if (standing === syncedStanding.current) return;
-+    syncedStanding.current = standing;
-+    setCurrent(standing != null ? String(standing) : "");
-+  }, [standing]);
++  /* ---- the keeper's facts ---------------------------------------------- */
++  const [facts, setFacts] = useState(() => factsFrom(config));
++  const [factMsg, setFactMsg] = useState("");
++  /* OWNER FINDING 16. A group is locked once every value in it is on record and
++     the keeper is not editing it. Editing is a state of this screen and writes
++     nothing: the record changes when he saves and at no other moment. */
++  const [tankEditing, setTankEditing] = useState(false);
++  const tankSaved = !!(config && config.netVolumeL != null
++    && config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null);
++  const tankLocked = tankSaved && !tankEditing;
++  const [strengthEditing, setStrengthEditing] = useState(false);
++  const strengthSaved = !!(config && (config.selectedPotencyDkhPerMl != null
++    || (config.chemical != null && config.stockConcentrationGPerL != null)));
++  const strengthLocked = strengthSaved && !strengthEditing;
++  const [stepEditing, setStepEditing] = useState(false);
++  const stepSaved = !!(config && config.recommendationPrecisionMlPerDay != null);
++  const stepLocked = stepSaved && !stepEditing;
  
 -  // Lighting log state
 -  const [lightDate, setLightDate] = useState(todayStr());
@@ -7244,35 +8025,33 @@ Byte-identical to V1.
 -    if (!lightNote.trim()) return;
 -    await onAddLighting({ date: lightDate, note: lightNote.trim() });
 -    setLightNote("");
-+  /* What the card says about itself when it is shut: the two facts whose
-+     absence stops the engine answering, named rather than counted. */
-+  const dosingSubtitle = useMemo(() => {
-+    const bits = [];
-+    const hasStrength = config
-+      && (config.selectedPotencyDkhPerMl != null
-+        || (config.chemical != null && config.stockConcentrationGPerL != null));
-+    if (!hasStrength) bits.push("solution strength needed");
-+    if (standing == null) bits.push("current dose needed");
-+    return bits.length ? bits.join(" · ") : `${fmtAmount(standing)} mL/day`;
-+  }, [config, standing]);
-+
-+  const saveCurrent = async () => {
-+    const v = parseFloat(current);
-+    if (!Number.isFinite(v)) { setCurrentMsg("Enter a number."); return; }
-+    await onSetStandingDose(v);
-+    setCurrentMsg(t("dosing.currentSaved"));
-+    setTimeout(() => setCurrentMsg(""), 2500);
++  const saveFacts = async (keys) => {
++    const values = {};
++    const empty = [];
++    for (const k of keys) {
++      const raw = facts[k];
++      /* REEFKEEPER FINDING 13. An empty box was skipped and the screen still
++         said "Saved." — on the one screen that was missing the value every dose
++         is sized from, and which the import had just deleted. A save that wrote
++         nothing must not report that it wrote something. */
++      if (raw === "" || raw == null) { empty.push(k); continue; }
++      const n = parseFloat(raw);
++      if (!Number.isFinite(n)) { setFactMsg(t("setup.needNumber")); return; }
++      values[k] = n;
++    }
++    if (empty.length) {
++      setFactMsg(t("setup.stillNeeded", { fields: empty.map((k) => t(labelOf(k))).join(", ") }));
++      return;
++    }
++    await onSaveConfig(values);
++    setFactMsg(t("setup.saved"));
++    setTimeout(() => setFactMsg(""), 2500);
    };
  
-   return (
-```
-
-2. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
-
-```diff
-@@ -206,726 +306,343 @@
-     <div>
-       <SectionTitle eyebrow="Configuration" title="Setup" />
+-  return (
+-    <div>
+-      <SectionTitle eyebrow="Configuration" title="Setup" />
++  /* WHAT THIS SECTION IS STILL WAITING FOR — AND IT COUNTS ONLY WHAT IT ASKS.
  
 -      {/* --- Tank & dosing setup --- */}
 -      <Card className="p-4 mb-4">
@@ -7285,7 +8064,13 @@ Byte-identical to V1.
 -            </Btn>
 -          </div>
 -        </Field>
--
++     Owner finding 4: "'One more left' persisted; the owner had to press save
++     repeatedly before the step completed." It was not a save that failed. This
++     counted every one of `KEEPER_FACTS`, including `selectedPotencyDkhPerMl`,
++     and this section renders three of them — the volume and the two range
++     edges. The strength and the pump's step are asked for in the DOSING section
++     below.
+ 
 -        {/* Which alkalinity kit you use decides how long the app waits before
 -            it will read a trend. A more precise kit clears its own error in
 -            fewer days, so it earns a verdict sooner — the app was assuming
@@ -7309,27 +8094,8 @@ Byte-identical to V1.
 -                <option key={k} value={k}>{v.label} (±{v[el.key]}{el.unit})</option>
 -              ))}
 -            </select>
-+      {/* ---- the tank's own facts --------------------------------------- */}
-+      <SetupSection icon={Waves} category="Tank" colour="#0B7C86"
-+        heading="Your tank"
-+        subtitle={missing ? `${missing} still needed` : "all set"}
-+        open={openId === "tank"} onToggle={() => toggle("tank")}>
-+        {/* V1 canon's rule, carried across as a principle: "Setup asks for
-+            facts, not judgements." Every field here is something only the
-+            keeper knows and the app cannot default. Nothing here is a
-+            threshold, a tolerance or a cadence — those are the canon's, and
-+            the app does not ask because it does not get to choose. */}
-+        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          These are the things only you know. The app will not guess at any of them, and it
-+          says what it cannot work out without each one.
-+        </p>
-+        {ASKED_HERE.map((f) => (
-+          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+            <input type="number" inputMode="decimal" className={inputCls}
-+              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+              placeholder={t(f.hint)} />
-           </Field>
-         ))}
+-          </Field>
+-        ))}
 -        <p className="text-[11px] text-ink2 mt-1 leading-snug">
 -          Precision decides how long the app waits before it will read a trend —
 -          a better kit earns a verdict sooner.{" "}
@@ -7346,27 +8112,30 @@ Byte-identical to V1.
 -          )}
 -        </p>
 -      </Card>
-+        <Btn className="w-full mt-2"
-+          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
-+          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+        </Btn>
-+        {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
-+      </SetupSection>
++     Worse, the strength can be legitimately absent. A keeper who states his
++     solution in grams per litre stores `chemical` and `stockConcentrationGPerL`
++     and NO `selectedPotencyDkhPerMl`, because the engine derives the potency
++     itself and the app storing one as well would override `ALK-014`'s owner
++     with a copy. That is `store/config.js`'s own rule, and it made this counter
++     permanently stuck at one however many times he pressed save — a screen
++     telling him something was missing that he had already supplied, on the same
++     screen he had supplied it. */
++  /* A field's own label, for a message that has to name it. */
++  const labelOf = (key) => (KEEPER_FACTS.find((f) => f.key === key) || {}).label || key;
  
 -      <Card className="p-4 mb-4">
 -        <div className="text-sm font-black text-ink mb-3">Dosing</div>
-+      {/* ---- ONE dosing section -----------------------------------------
++  const ASKED_HERE = KEEPER_FACTS.filter(
++    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
++  );
++  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
  
 -        <Field label="Element">
 -          <select value={elemKey} onChange={(e) => setElemKey(e.target.value)} className={inputCls}>
 -            {DOSE_ELEMENTS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
 -          </select>
 -        </Field>
-+           `17-DOSING-TAB-SPEC.md`'s companion rule for Setup: one dosing
-+           section, and never the same question twice in different clothes.
-+           Solution strength, the dose in force, the pump's step and the record
-+           of every change are one thing the keeper sets up, so they are one
-+           card.
++  /* ---- the dose history --------------------------------------------------
  
 -        {/* One field for the dose. Changing it IS the event — it records itself
 -            with today's date, so there's no second "new rate" box to fill in. */}
@@ -7400,29 +8169,10 @@ Byte-identical to V1.
 -            </p>
 -          )}
 -          {saveMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-1.5">{saveMsg}</p>}
-+           DELIVERY METHOD IS NOT ASKED. The application handles pump-delivered
-+           maintenance dosing only; corrections may be by hand, maintenance is
-+           not. There is no choice to make, so there is no question — and
-+           nothing that can afterwards be reported as "not recorded". */}
-+      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
-+        heading="Dosing"
-+        subtitle={dosingSubtitle}
-+        open={openId === "dosing"} onToggle={() => toggle("dosing")}>
-+
-+        <div className="flex gap-1.5 mb-3">
-+          {DOSED.map((k) => {
-+            const def = paramDefs.find((d) => d.key === k);
-+            if (!def) return null;
-+            return (
-+              <button key={k} onClick={() => setDosedKey(k)}
-+                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
-+                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
-+                         color: dosedKey === k ? def.color : "#45605F" }}>
-+                {def.label}
-+              </button>
-+            );
-+          })}
-         </div>
+-        </div>
++     The FROM/TO form is gone entirely (owner finding 19). Its state went with
++     it: there is nothing left on this screen that asks the keeper for a figure
++     the record already holds.
  
 -        {/* Strength is set once per product, so it stays tucked away. */}
 -        <button onClick={() => setShowStrength((v) => !v)}
@@ -7448,29 +8198,13 @@ Byte-identical to V1.
 -            <p className="text-[11px] text-ink2 font-medium mt-2 leading-relaxed">{elem.hint}</p>
 -          </div>
 -        )}
-+        {!(dosedDef && dosedDef.assessed) ? (
-+          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
-+            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
-+            build, so there is nothing here to set up yet. Its readings are logged and charted like
-+            every other parameter's.
-+          </p>
-+        ) : (
-+          <>
-+            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
-+            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
-+            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-+              {t("dosing.strengthLead")}
-+            </p>
-+            <div className="flex gap-1.5 mb-2.5">
-+              {Object.keys(POTENCY_FORM).map((k) => (
-+                <button key={k} onClick={() => setForm(POTENCY_FORM[k])}
-+                  className="flex-1 rounded-lg py-1.5 px-1 text-[10px] font-extrabold border-2 leading-tight"
-+                  style={{ borderColor: form === POTENCY_FORM[k] ? "#0B7C86" : "#E3ECEA",
-+                           color: form === POTENCY_FORM[k] ? "#0B7C86" : "#45605F" }}>
-+                  {t(`dosing.form.${POTENCY_FORM[k]}`)}
-+                </button>
-+              ))}
-+            </div>
++     Already newest-first, from the ledger's own total order. It was sorted here
++     on the DATE alone, which compares equal for two changes made on one day and
++     therefore left them in storage order — oldest at the top of a list headed
++     "newest first". A second opinion about which change is most recent is what
++     `MASTER RULE 1` forbids. */
++  const newestFirst = doseChanges;
++  /* ---- ONE dosing section ------------------------------------------------
  
 -        {/* Kit precision drives the testing-cadence advice */}
 -        <button onClick={() => setShowSigma((v) => !v)}
@@ -7497,81 +8231,25 @@ Byte-identical to V1.
 -              How much your readings vary when you test the same water twice — not how much the tank
 -              varies. Titration kits are typically about one drop's worth; digital checkers quote a
 -              figure on the box. This drives the testing-frequency advice in Insights.
-+            {form === POTENCY_FORM.GRAMS_PER_LITRE && (
-+              <>
-+                <Field label={t("dosing.chemical")} className="mb-2">
-+                  <select className={inputCls} value={chemical}
-+                    onChange={(e) => setChemical(e.target.value)}>
-+                    {CHEMICALS.map((c) => (
-+                      <option key={c.key} value={c.key}>{t(c.label)}</option>
-+                    ))}
-+                  </select>
-+                </Field>
-+                <Field label={t("dosing.gPerL")} className="mb-2">
-+                  <input type="number" inputMode="decimal" className={inputCls}
-+                    value={gPerL} onChange={(e) => setGPerL(e.target.value)} />
-+                </Field>
-+              </>
-+            )}
-+
-+            {form === POTENCY_FORM.DKH_PER_ML && (
-+              <Field label={t("dosing.dkhPerMl")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
-+                  value={facts.selectedPotencyDkhPerMl}
-+                  onChange={(e) => setFacts({ ...facts, selectedPotencyDkhPerMl: e.target.value })} />
-+              </Field>
-+            )}
-+
-+            {form === POTENCY_FORM.DKH_PER_ML_PER_100L && (
-+              <Field label={t("dosing.dkhPerMlPer100L")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
-+                  value={per100L} onChange={(e) => setPer100L(e.target.value)} />
-+              </Field>
-+            )}
-+
-+            {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
-+            <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
-+              {derived.kind === "stated" && t("dosing.statedDirectly")}
-+              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtPotency(derived.value) })}
-+              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtPotency(derived.value), volume: fmtAmount(derived.volume) })}
-+              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
-+              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
-             </p>
+-            </p>
 -          </div>
 -        )}
-+            <Btn className="w-full" onClick={saveStrength}>
-+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+            </Btn>
-+            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
++     "Never ask the same thing twice in different clothes." Solution strength,
++     the dose in force and the pump's step used to sit in one card while the
++     dose-change history sat in another, and "solution strength" was asked for
++     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
++     have. Both are one section now, and the strength is asked for once in
++     whichever of three forms he actually holds. */
++  const DOSED = ["ALK", "CA", "MG"];
++  const [dosedKey, setDosedKey] = useState("ALK");
++  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
  
 -        {/* This element's change history */}
 -        {elemLog.length > 0 && (
 -          <div className="mt-3 pt-3 border-t border-app">
 -            <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-1.5">
 -              {elem.label} changes
-+            {/* ---- the dose in force -------------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.currentHead")}</h4>
-+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-+                {t("dosing.currentLead")}
-+              </p>
-+              <Field label={t("dosing.current")} className="mb-2">
-+                <input type="number" inputMode="decimal" step="0.01" className={inputCls}
-+                  value={current} onChange={(e) => setCurrent(e.target.value)} />
-+              </Field>
-+              <p className="text-[11px] font-bold text-ink2 mb-2">
-+                {standing != null ? t("dosing.currentOnRecord", { dose: fmtAmount(standing) }) : t("dosing.currentNone")}
-+              </p>
-+              {standing != null && (
-+                <p className="text-[11px] font-medium text-ink2 leading-relaxed mb-2">
-+                  {t("dosing.currentUseChange")}
-+                </p>
-+              )}
-+              <Btn className="w-full" onClick={saveCurrent}>
-+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+              </Btn>
-+              {currentMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{currentMsg}</p>}
-             </div>
+-            </div>
 -            <div className="divide-y divide-app">
 -              {elemLog.slice(0, 5).map((d) => (
 -                <div key={d.id} className="flex items-center justify-between py-2">
@@ -7581,62 +8259,16 @@ Byte-identical to V1.
 -                    <DeleteButton onDelete={() => onDeleteDoseChange(d.id)} size={13} />
 -                  </div>
 -                </div>
-+
-+            {/* ---- the pump's step ---------------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
-+                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-+                  <input type="number" inputMode="decimal" className={inputCls}
-+                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-+                    placeholder={t(f.hint)} />
-+                </Field>
-               ))}
-+              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
-+                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-+              </Btn>
-             </div>
-+
-+            {/* ---- every change to the dose ------------------------------- */}
-+            <div className="border-t border-app mt-4 pt-3">
-+              <h4 className="text-[13px] font-black text-ink mb-1">Dose changes</h4>
-+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+                Every change to the daily dose, newest first. The date and time matter: the engine
-+                measures the tank's response from the moment the change took effect, so a change made
-+                at 9am and one made at 9pm are not the same change.
-+              </p>
-+        <button onClick={() => setDcOpen((v) => !v)}
-+          className="w-full flex items-center justify-between gap-2 rounded-xl border border-app px-3 py-2.5 mb-3">
-+          <span className="text-[12px] font-extrabold text-teal-brand">Record a dose change</span>
-+          {dcOpen ? <ChevronUp size={14} className="text-ink2" /> : <ChevronDown size={14} className="text-ink2" />}
-+        </button>
-+
-+        {dcOpen && (
-+          <div className="mb-3">
-+            <div className="grid grid-cols-2 gap-2">
-+              <Field label="From (mL/day)">
-+                <input type="number" inputMode="decimal" step="0.1" value={dcFrom}
-+                  onChange={(e) => setDcFrom(e.target.value)} className={inputCls} />
-+              </Field>
-+              <Field label="To (mL/day)">
-+                <input type="number" inputMode="decimal" step="0.1" value={dcTo}
-+                  onChange={(e) => setDcTo(e.target.value)} className={inputCls} />
-+              </Field>
-+            </div>
-+            <div className="grid grid-cols-2 gap-2 mt-2">
-+              <Field label="Date">
-+                <input type="date" value={dcDate} max={todayStr()}
-+                  onChange={(e) => setDcDate(e.target.value)} className={inputCls} />
-+              </Field>
-+              <Field label="Time">
-+                <input type="time" value={dcTime} onChange={(e) => setDcTime(e.target.value)} className={inputCls} />
-+              </Field>
-+            </div>
-+            <Btn className="w-full mt-3" onClick={submitDoseChange}>
-+              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Record it</span>
-+            </Btn>
-           </div>
-         )}
+-              ))}
+-            </div>
+-          </div>
+-        )}
 -      </Card>
++  const [form, setForm] = useState(() => formFrom(config));
++  const [chemical, setChemical] = useState(() => chemicalFrom(config));
++  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
++  const [per100L, setPer100L] = useState(() => per100LFrom(config));
++  const [strengthMsg, setStrengthMsg] = useState("");
  
 -      {/* --- Full dosing history across all elements --- */}
 -      {doseLog.length > 0 && (
@@ -7663,28 +8295,11 @@ Byte-identical to V1.
 -                      {delta != null && delta !== 0 && (
 -                        <span style={{ color: delta > 0 ? "#0B7C86" : "#A2621B" }}>
 -                          {" · "}{delta > 0 ? "up" : "down"} {Math.abs(delta).toFixed(1)} mL from {prior.ml}
-+        {newestFirst.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">No dose changes recorded yet.</p>
-+        ) : (
-+          <div className="space-y-1.5">
-+            {newestFirst.map((d) => (
-+              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                <div className="min-w-0 flex-1">
-+                  <div className="text-[13px] font-black text-ink truncate">
-+                    {d.isStart ? (
-+                      <>{fmtAmount(d.to)} mL/day</>
-+                    ) : (
-+                      <>
-+                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-+                        <span className="text-ink2 font-bold ml-1">
-+                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-                         </span>
+-                        </span>
 -                      )}
 -                      {prior == null && " · first recorded"}
 -                    </div>
-+                      </>
-+                    )}
-                   </div>
+-                  </div>
 -                  <DeleteButton onDelete={() => onDeleteDoseChange(d.id)} size={13} />
 -                </div>
 -              );
@@ -7695,9 +8310,24 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
--
++  /* THE RE-READ. One effect, one condition: the stored version changed.
+ 
 -      {/* --- One-off corrections, as their own kind of entry ---
--
++     The delivered dose is not here at all: it is a ledger fact rather than a
++     configuration field, it arrives from the shell, and `DeliveredDoseField`
++     owns its own re-read. */
++  const syncedVersion = useRef(config ? config.configVersionId : null);
++  useEffect(() => {
++    const version = config ? config.configVersionId : null;
++    if (version === syncedVersion.current) return;
++    syncedVersion.current = version;
++    setFacts(factsFrom(config));
++    setForm(formFrom(config));
++    setChemical(chemicalFrom(config));
++    setGPerL(gPerLFrom(config));
++    setPer100L(per100LFrom(config));
++  }, [config]);
+ 
 -          A correction is not a dose change and is not a reading, and it was
 -          previously neither listed nor exported anywhere. The engines have
 -          always read it — it is what stops a rise being scored as the tank
@@ -7725,16 +8355,12 @@ Byte-identical to V1.
 -                      {fmtDate(c.date)}{c.time ? ` · ${c.time}` : ""}
 -                      {" · "}{down ? "to bring it down" : "one-off, on top of the daily dose"}
 -                    </div>
-+                  <div className="text-[11px] font-bold text-ink2">
-+                    {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
-+                    {d.isStart ? " · where the record begins" : ""}
-+                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
-                   </div>
+-                  </div>
 -                  {onDeleteCorrection && (
 -                    <DeleteButton onDelete={() => onDeleteCorrection(c.id)} size={13}
 -                      confirmMessage="Correction removed" />
 -                  )}
-                 </div>
+-                </div>
 -              );
 -            })}
 -          </div>
@@ -7745,7 +8371,8 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
--
++  const netVolumeL = parseFloat(facts.netVolumeL);
+ 
 -      {/* --- 9. Correction calculator --- */}
 -      <InfoBlock icon={Calculator} eyebrow="Actions" title="Correction calculator" tone="#B8541A"
 -        collapsible
@@ -7782,10 +8409,7 @@ Byte-identical to V1.
 -            <p className="text-[13px] text-ink font-medium leading-relaxed">
 -              You're aiming to <strong>lower</strong> {calcDef.label.toLowerCase()} from {calcCurrent} to {correction.delta + calcCurrent}{calcDef.unit}. There's no additive for this — the safe route is dilution through water changes, or simply reducing dosing and letting consumption pull it down. Use the water change model below to see how much each change would move it.
 -            </p>
-+                <DeleteButton onDelete={() => onDeleteEvent(d.id)} confirmMessage="Dose change removed" />
-+              </div>
-+            ))}
-           </div>
+-          </div>
 -        ) : (
 -          <div className="rounded-xl p-3" style={{ background: "#B8541A12", border: "1px solid #B8541A40" }}>
 -            <p className="text-[13px] text-ink font-medium leading-relaxed mb-2">
@@ -7810,26 +8434,59 @@ Byte-identical to V1.
 -                  These amounts are below what a kitchen scale weighs accurately. Rather than measuring the powder directly, dissolve a larger known weight into a litre of RODI and dose a measured fraction of that solution.
 -                </p>
 -              )}
-+        )}
-             </div>
+-            </div>
 -            <p className="text-[11px] text-ink2 font-medium mt-2">
 -              Dissolve in RODI before adding, and add to high flow. Re-test before dosing again rather than stacking doses on an assumption.
 -            </p>
 -          </div>
-+          </>
-         )}
+-        )}
 -      </InfoBlock>
-+      </SetupSection>
++  /* What the app can honestly show back as the derived figure, and where it
++     came from. For the grams-per-litre form that is the ENGINE's own number —
++     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
++     what the engine returned rather than recomputing it. */
++  const derived = useMemo(() => {
++    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
++    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
++      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
++      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
++      return { kind: "fromVolume", value: v, volume: netVolumeL };
++    }
++    const p = engineResult && engineResult.potency;
++    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
++      ? p.theoreticalPotencyDkhPerMl : null;
++    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
++  }, [form, per100L, netVolumeL, engineResult]);
  
-+      {/* ---- test mode ---------------------------------------------------
-+           ROUND THREE, ITEM 9. Here rather than on the tab bar because, in the
-+           port's own words, "it is not part of keeping a tank". */}
-+      <SetupSection icon={Settings2} category="Tools" colour="#A2621B"
-+        heading={t("testmode.title")}
-+        subtitle={testModeOn ? t("testmode.on") : t("testmode.off")}
-+        open={openId === "testmode"} onToggle={() => toggle("testmode")}>
-+        <TestMode onModeChange={onModeChange} />
-+      </SetupSection>
++  const saveStrength = async () => {
++    const values = {};
++    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
++      const c = parseFloat(gPerL);
++      if (!Number.isFinite(c)) { setStrengthMsg("Enter a number."); return; }
++      /* The engine derives the potency from these two. Sending a
++         `selectedPotencyDkhPerMl` as well would override its own derivation
++         with the app's, so the app clears it rather than holding a stale one. */
++      values.chemical = chemical;
++      values.stockConcentrationGPerL = c;
++      values.selectedPotencyDkhPerMl = null;
++      values.potencyStatedValue = c;
++    } else if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
++      const stated = parseFloat(per100L);
++      const v = potencyForThisTank(stated, netVolumeL);
++      if (v == null) { setStrengthMsg("Enter your net volume above first."); return; }
++      values.selectedPotencyDkhPerMl = v;
++      values.potencyStatedValue = stated;
++    } else {
++      const v = parseFloat(facts.selectedPotencyDkhPerMl);
++      if (!Number.isFinite(v)) { setStrengthMsg("Enter a number."); return; }
++      values.selectedPotencyDkhPerMl = v;
++      values.potencyStatedValue = v;
++    }
++    values.potencyStatedAs = form;
++    await onSaveConfig(values);
++    setStrengthMsg("Saved.");
++    setTimeout(() => setStrengthMsg(""), 2500);
++  };
  
 -      {/* --- Lighting log --- */}
 -      <InfoBlock icon={SunMedium} eyebrow="AI Blade" title="Lighting changes" tone="#926A09"
@@ -7853,17 +8510,46 @@ Byte-identical to V1.
 -        </form>
 -        {lighting.length === 0 ? (
 -          <p className="text-[13px] text-ink2 font-medium">No lighting changes logged yet.</p>
-+      {/* ---- lighting ---------------------------------------------------- */}
-+      <SetupSection icon={SunMedium} category="The tank" colour="#A2621B"
-+        heading="Lighting changes"
-+        subtitle={lightingChanges.length ? `${lightingChanges.length} recorded` : "none recorded"}
-+        open={openId === "lighting"} onToggle={() => toggle("lighting")}>
++  /* What the card says about itself when it is shut: the two facts whose
++     absence stops the engine answering, named rather than counted. */
++  const dosingSubtitle = useMemo(() => {
++    const bits = [];
++    const hasStrength = config
++      && (config.selectedPotencyDkhPerMl != null
++        || (config.chemical != null && config.stockConcentrationGPerL != null));
++    if (!hasStrength) bits.push("solution strength needed");
++    if (standingDose == null) bits.push("current dose needed");
++    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
++  }, [config, standingDose]);
++
++  return (
++    <div>
++      <SectionTitle eyebrow="Configuration" title="Setup" />
++
++      {/* ---- the tank's own facts --------------------------------------- */}
++      <SetupSection icon={Waves} category="Tank" colour="#0B7C86"
++        heading="Your tank"
++        subtitle={missing ? `${missing} still needed` : "all set"}
++        open={openId === "tank"} onToggle={() => toggle("tank")}>
++        {/* V1 canon's rule, carried across as a principle: "Setup asks for
++            facts, not judgements." Every field here is something only the
++            keeper knows and the app cannot default. Nothing here is a
++            threshold, a tolerance or a cadence — those are the canon's, and
++            the app does not ask because it does not get to choose. */}
 +        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          A lighting change marks every chart, because it touches everything. Record one from
-+          Tasks; this is the list.
++          These are the things only you know. None of them is guessed at, and anything that
++          cannot be worked out without one is named rather than estimated.
 +        </p>
-+        {lightingChanges.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">Nothing recorded yet.</p>
++        {tankLocked ? (
++          <>
++            {/* OWNER FINDING 16 — A SAVED VALUE LOOKS SAVED. It rendered as an
++                input that still accepted typing, so nothing on the screen said
++                the save had taken. */}
++            <LockedValue label={t("setup.volume")}
++              text={`${fmtAmount(config.netVolumeL)} ${t("setup.volumeUnit")}`} />
++            <LockedValue label={t("range.head")}
++              text={`${fmtQty(config.targetRangeMinDkh, "dkh")} \u2013 ${fmtQty(config.targetRangeMaxDkh, "dkh")} dKH`} />
++          </>
          ) : (
 -          <div className="divide-y divide-app">
 -            {lighting.slice(0, 8).map((l) => (
@@ -7871,23 +8557,57 @@ Byte-identical to V1.
 -                <div className="min-w-0">
 -                  <div className="text-[11px] text-ink2 font-bold">{fmtDate(l.date)}</div>
 -                  <div className="text-[13px] font-semibold text-ink">{l.note}</div>
-+          <div className="space-y-1.5">
-+            {lightingChanges.map((l) => (
-+              <div key={l.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                <div className="min-w-0 flex-1">
-+                  <div className="text-[13px] font-black text-ink truncate">{l.note || "Lighting changed"}</div>
-+                  <div className="text-[11px] font-bold text-ink2">{fmtDate(l.date)}</div>
-                 </div>
+-                </div>
 -                <DeleteButton onDelete={() => onDeleteLighting(l.id)} />
-+                <DeleteButton onDelete={() => onDeleteEvent(l.id)} confirmMessage="Lighting change removed" />
++          <>
++            {/* OWNER FINDING 17 — A SHORT NUMBER LOOKS LIKE ONE. A net volume
++                is three digits and had a box the width of the screen, which
++                says "write me a sentence". */}
++            <Field label={t("setup.volume")} className="mb-3">
++              <div className="flex items-center gap-2">
++                <input type="number" inputMode="decimal"
++                  className={`${shortInputCls} shrink-0`}
++                  value={facts.netVolumeL}
++                  onChange={(e) => setFacts({ ...facts, netVolumeL: e.target.value })}
++                  placeholder={t("fact.netVolumeHint")} />
++                <span className="text-[13px] font-bold text-ink2">{t("setup.volumeUnit")}</span>
                </div>
-             ))}
-           </div>
+-            ))}
+-          </div>
++            </Field>
++
++            {/* OWNER FINDING 18 — the range is a bar with two handles, and how
++                wide it is is itself the thing being judged. Graded, because
++                these are alkalinity's and the owner stated them for it. */}
++            <div className="mb-3">
++              <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-0.5">
++                {t("range.head")}
++              </div>
++              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
++                {t("range.lead")}
++              </p>
++              <RangeSlider graded unit="dKH"
++                min={parseFloat(facts.targetRangeMinDkh)}
++                max={parseFloat(facts.targetRangeMaxDkh)}
++                onChange={(lo, hi) => setFacts({
++                  ...facts,
++                  targetRangeMinDkh: String(Number(lo.toFixed(2))),
++                  targetRangeMaxDkh: String(Number(hi.toFixed(2))),
++                })} />
++            </div>
++          </>
          )}
 -        <p className="text-[12px] text-ink2 font-medium leading-relaxed mt-3">
 -          Each change drops a marker on every parameter chart, so you can see whether a lighting tweak moved your alkalinity demand.
 -        </p>
 -      </InfoBlock>
++        <SaveOrEdit locked={tankLocked}
++          onEdit={() => setTankEditing(true)}
++          onSave={async () => {
++            await saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]);
++            setTankEditing(false);
++          }} />
++        {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
 +      </SetupSection>
  
 -      {/* --- 11. Backup and export --- */}
@@ -7899,25 +8619,64 @@ Byte-identical to V1.
 -          ? `${dismissedList.length} notice${dismissedList.length === 1 ? "" : "s"} hidden`
 -          : "Nothing hidden"}>
 -        {dismissedList.length === 0 ? (
--          <p className="text-[13px] text-ink2 font-medium leading-relaxed">
++      {/* ---- ONE dosing section -----------------------------------------
++
++           `17-DOSING-TAB-SPEC.md`'s companion rule for Setup: one dosing
++           section, and never the same question twice in different clothes.
++           Solution strength, the dose in force, the pump's step and the record
++           of every change are one thing the keeper sets up, so they are one
++           card.
++
++           DELIVERY METHOD IS NOT ASKED. The application handles pump-delivered
++           maintenance dosing only; corrections may be by hand, maintenance is
++           not. There is no choice to make, so there is no question — and
++           nothing that can afterwards be reported as "not recorded". */}
++      <SetupSection icon={Beaker} category="Dosing" colour="#1D6FA5"
++        heading="Dosing"
++        subtitle={dosingSubtitle}
++        open={openId === "dosing"} onToggle={() => toggle("dosing")}>
++
++        <div className="flex gap-1.5 mb-3">
++          {DOSED.map((k) => {
++            const def = paramDefs.find((d) => d.key === k);
++            if (!def) return null;
++            return (
++              <button key={k} onClick={() => setDosedKey(k)}
++                className="flex-1 rounded-lg py-2 text-[12px] font-extrabold border-2"
++                style={{ borderColor: dosedKey === k ? def.color : "#E3ECEA",
++                         color: dosedKey === k ? def.color : "#45605F" }}>
++                {def.label}
++              </button>
++            );
++          })}
++        </div>
++
++        {!(dosedDef && dosedDef.assessed) ? (
+           <p className="text-[13px] text-ink2 font-medium leading-relaxed">
 -            Notices you hide will be listed here. They come back on their own if the situation changes —
 -            hiding one only silences the version you read.
-+      {/* ---- hidden notices ---------------------------------------------- */}
-+      <SetupSection icon={Bell} category="Notices" colour="#7B4FCB"
-+        heading="Hidden notices"
-+        subtitle={hiddenNotices.length ? `${hiddenNotices.length} put away` : "none put away"}
-+        open={openId === "hidden"} onToggle={() => toggle("hidden")}>
-+        {hiddenNotices.length === 0 ? (
-+          <p className="text-[13px] text-ink2 font-medium">
-+            Nothing is hidden. A notice you put away comes back on its own if the engine raises it
-+            with different numbers.
++            There is no {dosedDef ? (dosedDef.labelMid || dosedDef.label.toLowerCase()) : ""} engine in this
++            build, so there is nothing here to set up yet. Its readings are logged and charted like
++            every other parameter's.
            </p>
          ) : (
            <>
 -            <p className="text-[13px] text-ink font-medium leading-relaxed mb-3">
 -              These are hidden from the rest of the app. Each will return by itself if the underlying
 -              numbers move enough to change what it says.
--            </p>
++            {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
++            <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
++            {strengthLocked ? (
++              <LockedValue label={t("dosing.strengthHead")}
++                text={derived.value != null ? `${fmtPotency(derived.value)} dKH/mL`
++                  : config && config.selectedPotencyDkhPerMl != null
++                    ? `${fmtPotency(config.selectedPotencyDkhPerMl)} dKH/mL`
++                    : `${fmtAmount(config.stockConcentrationGPerL)} g/L`} />
++            ) : (
++              <>
++            <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
++              {t("dosing.strengthLead")}
+             </p>
 -            <div className="space-y-2">
 -              {dismissedList.map((f) => (
 -                <div key={f.id} className="flex items-start justify-between gap-2 rounded-lg p-2.5 bg-app">
@@ -7928,44 +8687,52 @@ Byte-identical to V1.
 -                    </div>
 -                  </div>
 -                  <button onClick={() => onRestoreFinding(findingKey(f))}
-+            <div className="space-y-1.5 mb-3">
-+              {hiddenNotices.map((n) => (
-+                <div key={n.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-+                  <span className="text-[12px] font-bold text-ink min-w-0 flex-1">{n.title}</span>
-+                  <button onClick={() => onRestoreNotice(n)}
-                     className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
-                 </div>
+-                    className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
+-                </div>
++            <div className="flex gap-1.5 mb-2.5">
++              {Object.keys(POTENCY_FORM).map((k) => (
++                <button key={k} onClick={() => setForm(POTENCY_FORM[k])}
++                  className="flex-1 rounded-lg py-1.5 px-1 text-[10px] font-extrabold border-2 leading-tight"
++                  style={{ borderColor: form === POTENCY_FORM[k] ? "#0B7C86" : "#E3ECEA",
++                           color: form === POTENCY_FORM[k] ? "#0B7C86" : "#45605F" }}>
++                  {t(`dosing.form.${POTENCY_FORM[k]}`)}
++                </button>
                ))}
              </div>
 -            <Btn variant="ghost" className="w-full mt-3" onClick={onRestoreAllFindings}>
 -              <span className="flex items-center justify-center gap-1.5"><RotateCcw size={13} /> Show all again</span>
 -            </Btn>
-+            <Btn variant="ghost" className="w-full" onClick={onRestoreAllNotices}>Show all again</Btn>
-           </>
-         )}
+-          </>
+-        )}
 -      </InfoBlock>
-+      </SetupSection>
  
 -      <InfoBlock icon={Waves} eyebrow="Fun" title="Opening animation" tone="#0B7C86"
 -        collapsible
 -        summary="Watch the reef intro again">
 -        <p className="text-[13px] text-ink font-medium leading-relaxed mb-3">
 -          This plays once each time the app is opened. Tap below to watch it now.
-+      {/* ---- backup and export ------------------------------------------- */}
-+      <SetupSection icon={Download} category="Your data" colour="#45605F"
-+        heading="Backup and export"
-+        subtitle={storageHealth ? storageHealth.summary : "a file you can keep"}
-+        open={openId === "backup"} onToggle={() => toggle("backup")}>
-+        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-+          Browser storage is not durable. This writes out everything this device holds — every
-+          event, every stored assessment with the version that produced it, and the whole
-+          configuration history — as one file you can keep somewhere else.
-         </p>
+-        </p>
 -        <Btn className="w-full" onClick={onPlayIntro}>
 -          <span className="flex items-center justify-center gap-1.5"><Waves size={14} /> Play intro</span>
 -        </Btn>
 -      </InfoBlock>
--
++            {form === POTENCY_FORM.GRAMS_PER_LITRE && (
++              <>
++                <Field label={t("dosing.chemical")} className="mb-2">
++                  <select className={inputCls} value={chemical}
++                    onChange={(e) => setChemical(e.target.value)}>
++                    {CHEMICALS.map((c) => (
++                      <option key={c.key} value={c.key}>{t(c.label)}</option>
++                    ))}
++                  </select>
++                </Field>
++                <Field label={t("dosing.gPerL")} className="mb-2">
++                  <input type="number" inputMode="decimal" className={inputCls}
++                    value={gPerL} onChange={(e) => setGPerL(e.target.value)} />
++                </Field>
++              </>
++            )}
+ 
 -      <InfoBlock icon={Download} eyebrow="Your data" title="Backup & export" tone="#45605F"
 -        collapsible
 -        defaultOpen={backupAge == null || backupAge > 14}
@@ -7999,7 +8766,14 @@ Byte-identical to V1.
 -            </p>
 -          )}
 -        </div>
--
++            {form === POTENCY_FORM.DKH_PER_ML && (
++              <Field label={t("dosing.dkhPerMl")} className="mb-2">
++                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
++                  value={facts.selectedPotencyDkhPerMl}
++                  onChange={(e) => setFacts({ ...facts, selectedPotencyDkhPerMl: e.target.value })} />
++              </Field>
++            )}
+ 
 -        <Btn className="w-full mb-2" onClick={async () => {
 -          const b = await buildBackup();
 -          downloadJson(b, `dans-tank-backup-${todayStr()}.json`);
@@ -8009,10 +8783,14 @@ Byte-identical to V1.
 -          setTimeout(() => setRestoreMsg(null), 8000);
 -        }}>
 -          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save backup file</span>
-+        <Btn className="w-full" onClick={onExport}>
-+          <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Export everything</span>
-         </Btn>
--
+-        </Btn>
++            {form === POTENCY_FORM.DKH_PER_ML_PER_100L && (
++              <Field label={t("dosing.dkhPerMlPer100L")} className="mb-2">
++                <input type="number" inputMode="decimal" step="0.0001" className={inputCls}
++                  value={per100L} onChange={(e) => setPer100L(e.target.value)} />
++              </Field>
++            )}
+ 
 -        {/* One tap to Files, iCloud Drive or Mail, on the platforms where the
 -            automatic file below does not exist. Not recorded as a backup: the
 -            share sheet reports dismissal and success identically in practice,
@@ -8029,7 +8807,21 @@ Byte-identical to V1.
 -            <span className="flex items-center justify-center gap-1.5"><Upload size={14} /> Share a backup file</span>
 -          </Btn>
 -        )}
--
++            {/* WHAT WAS DERIVED, AND FROM WHAT. Never silently. */}
++            <p className="text-[11px] font-bold text-teal-brand leading-relaxed mb-2">
++              {derived.kind === "stated" && t("dosing.statedDirectly")}
++              {derived.kind === "fromEngine" && t("dosing.derivedFromEngine", { value: fmtPotency(derived.value) })}
++              {derived.kind === "fromVolume" && t("dosing.derivedFromVolume", { value: fmtPotency(derived.value), volume: fmtAmount(derived.volume) })}
++              {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
++              {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
++            </p>
++              </>
++            )}
++            <SaveOrEdit locked={strengthLocked}
++              onEdit={() => setStrengthEditing(true)}
++              onSave={async () => { await saveStrength(); setStrengthEditing(false); }} />
++            {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
+ 
 -        <label className="block">
 -          <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-app px-4 py-2.5 text-[13px] font-extrabold text-ink2 cursor-pointer active:bg-app">
 -            <Upload size={14} /> Restore from a backup
@@ -8051,13 +8843,29 @@ Byte-identical to V1.
 -              }
 -            }} />
 -        </label>
--
++            {/* ---- THE DELIVERED DOSE — ONE FIELD (owner finding 19) --------
+ 
 -        {pending && (
 -          <div ref={previewRef} className="mt-3 rounded-xl border-2 p-3" style={{ borderColor: "#0B7C8640", background: "#0B7C8608" }}>
 -            <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-1.5">
 -              {pending.kind === "snapshot" ? "Snapshot" : "Backup"} from{" "}
 -              {pending.info.createdAt ? fmtDate(pending.info.createdAt.slice(0, 10)) : "an unknown date"}
--            </div>
++                 Three things used to sit here for a single act: "what your
++                 pump is running now", a history, and a "record a dose change"
++                 form with FROM and TO. They wrote two different kinds of
++                 record and neither knew about the other, which is why the
++                 keeper typed 9.0, was told it was saved, and read "on record:
++                 8.8 mL/day" underneath it.
++
++                 One field now, and it is `DeliveredDoseField` — the SAME
++                 component the Dosing tab uses, so the two surfaces cannot
++                 drift. Both notes are gone: they said "the app", which the
++                 register forbids, and the first did not make sense as
++                 written. */}
++            <div className="border-t border-app mt-4 pt-3">
++              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.delivered.head")}</h4>
++              <DeliveredDoseField standing={standingDose} onSave={onSetDeliveredDose} />
+             </div>
 -            {/* Entries the file holds but the app cannot read. Counting them as
 -                importable made the preview promise more than the restore would
 -                deliver, and the difference vanished without a word — the worst
@@ -8079,12 +8887,39 @@ Byte-identical to V1.
 -                  </span>
 -                </div>
 -              ))}
--            </div>
++
++            {/* ---- the pump's step ---------------------------------------- */}
++            <div className="border-t border-app mt-4 pt-3">
++              {stepLocked ? (
++                <LockedValue label={t("fact.pumpStep")}
++                  text={`${fmtQty(config.recommendationPrecisionMlPerDay, "mlPerDay")} mL/day`} />
++              ) : (
++                KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
++                  <Field key={f.key} label={t(f.label)} className="mb-2">
++                    {/* A pump step is one or two characters. Finding 17's rule
++                        applies to it as much as to the volume. */}
++                    <div className="flex items-center gap-2">
++                      <input type="number" inputMode="decimal"
++                        className={`${shortInputCls} shrink-0`}
++                        value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
++                        placeholder={t(f.hint)} />
++                      <span className="text-[13px] font-bold text-ink2">{f.unit}</span>
++                    </div>
++                  </Field>
++                ))
++              )}
++              <SaveOrEdit locked={stepLocked}
++                onEdit={() => setStepEditing(true)}
++                onSave={async () => {
++                  await saveFacts(["recommendationPrecisionMlPerDay"]);
++                  setStepEditing(false);
++                }} />
+             </div>
 -            <p className="text-[11px] text-ink2 font-medium leading-relaxed mb-2">
 -              Your readings, doses and other entries are only ever added to — nothing is overwritten
 -              or duplicated, and running the same file twice changes nothing the second time.
 -            </p>
--
+ 
 -            {/* Target ranges are the one thing a restore cannot merge, and the
 -                one thing it used to overwrite without saying so. Every reading
 -                in the log is coloured, shaded and described against these
@@ -8131,7 +8966,8 @@ Byte-identical to V1.
 -                </div>
 -              </div>
 -            )}
--
++            {/* ---- the history, which writes itself ------------------------
+ 
 -            <div className="grid grid-cols-2 gap-2">
 -              <Btn variant="ghost" onClick={() => { setPending(null); setRangeChoice(null); }}>Cancel</Btn>
 -              <Btn disabled={rangeConflicts.length > 0 && !rangeChoice} onClick={async () => {
@@ -8165,15 +9001,41 @@ Byte-identical to V1.
 -            {rangeConflicts.length > 0 && !rangeChoice && (
 -              <p className="text-[11px] font-bold mt-2" style={{ color: "#8A5A18" }}>
 -                Choose what happens to the target ranges first.
--              </p>
++                 Newest first and in the order it claims, which it was not:
++                 it sorted on the date alone, so two changes made on one day
++                 kept storage order and the older sat on top. `doseChanges`
++                 arrives already ordered by the ledger, which is the app's one
++                 owner of "most recent".
++
++                 Nothing here can be edited. A dose change is a fact about a
++                 moment; correcting it means deleting it and entering it again,
++                 exactly as a reading does. */}
++            <div className="border-t border-app mt-4 pt-3">
++              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.history.head")}</h4>
++              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++                {t("dose.history.noEdit")}
+               </p>
 -            )}
 -          </div>
--        )}
--
++              <DoseHistory entries={newestFirst} onDelete={onDeleteEvent} />
++            </div>
++          </>
+         )}
++      </SetupSection>
+ 
 -        {restoreMsg && (
 -          <p className="text-[12px] font-bold text-ink mt-2 leading-relaxed">{restoreMsg}</p>
 -        )}
--
++      {/* ---- test mode ---------------------------------------------------
++           ROUND THREE, ITEM 9. Here rather than on the tab bar because, in the
++           port's own words, "it is not part of keeping a tank". */}
++      <SetupSection icon={Settings2} category="Tools" colour="#A2621B"
++        heading={t("testmode.title")}
++        subtitle={testModeOn ? t("testmode.on") : t("testmode.off")}
++        open={openId === "testmode"} onToggle={() => toggle("testmode")}>
++        <TestMode onModeChange={onModeChange} />
++      </SetupSection>
+ 
 -        {/* The automatic backup file — Chromium only, which is why the share
 -            button above exists. Once a file is chosen the app rewrites it
 -            daily with no further prompts; a lapsed permission degrades to a
@@ -8209,8 +9071,30 @@ Byte-identical to V1.
 -                } catch { /* picker dismissed — nothing chosen, nothing changed */ }
 -              }}>{fileState ? "Choose a different file" : "Choose where to keep it"}</Btn>
 -            )}
--          </div>
--        )}
++      {/* ---- lighting ---------------------------------------------------- */}
++      <SetupSection icon={SunMedium} category="The tank" colour="#A2621B"
++        heading="Lighting changes"
++        subtitle={lightingChanges.length ? `${lightingChanges.length} recorded` : "none recorded"}
++        open={openId === "lighting"} onToggle={() => toggle("lighting")}>
++        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++          A lighting change marks every chart, because it touches everything. Record one from
++          Tasks; this is the list.
++        </p>
++        {lightingChanges.length === 0 ? (
++          <p className="text-[13px] text-ink2 font-medium">Nothing recorded yet.</p>
++        ) : (
++          <div className="space-y-1.5">
++            {lightingChanges.map((l) => (
++              <div key={l.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++                <div className="min-w-0 flex-1">
++                  <div className="text-[13px] font-black text-ink truncate">{l.note || "Lighting changed"}</div>
++                  <div className="text-[11px] font-bold text-ink2">{fmtDate(l.date)}</div>
++                </div>
++                <DeleteButton onDelete={() => onDeleteEvent(l.id)} confirmMessage="Lighting change removed" />
++              </div>
++            ))}
+           </div>
+         )}
 +      </SetupSection>
  
 -        {/* The snapshot ring. Deliberately described as what it is: it lives
@@ -8246,21 +9130,32 @@ Byte-identical to V1.
 -                    setRangeChoice(null);
 -                    setRestoreMsg(null);
 -                  }}>Restore</Btn>
--                </div>
--              ))}
--            </div>
++      {/* ---- hidden notices ---------------------------------------------- */}
++      <SetupSection icon={Bell} category="Notices" colour="#7B4FCB"
++        heading="Hidden notices"
++        subtitle={hiddenNotices.length ? `${hiddenNotices.length} put away` : "none put away"}
++        open={openId === "hidden"} onToggle={() => toggle("hidden")}>
++        {hiddenNotices.length === 0 ? (
++          <p className="text-[13px] text-ink2 font-medium">
++            Nothing is hidden. A notice you put away comes back on its own if the engine raises it
++            with different numbers.
++          </p>
++        ) : (
++          <>
++            <div className="space-y-1.5 mb-3">
++              {hiddenNotices.map((n) => (
++                <div key={n.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
++                  <span className="text-[12px] font-bold text-ink min-w-0 flex-1">{n.title}</span>
++                  <button onClick={() => onRestoreNotice(n)}
++                    className="shrink-0 text-[11px] font-extrabold text-teal-brand">Show again</button>
+                 </div>
+               ))}
+             </div>
 -          </div>
--        )}
-+      {/* ---- the import -------------------------------------------------- */}
-+      <SetupSection icon={Upload} category="Your data" colour="#45605F"
-+        heading="Import your history"
-+        subtitle="from a V1 backup file"
-+        open={openId === "import"} onToggle={() => toggle("import")}>
-+        {store
-+          ? <ImportPanel store={store} onImported={onImported} />
-+          : <p className="text-[13px] text-ink2 font-medium">The import is not wired up on this screen.</p>}
-+      </SetupSection>
- 
++            <Btn variant="ghost" className="w-full" onClick={onRestoreAllNotices}>Show all again</Btn>
++          </>
+         )}
+-
 -        <div className="mt-4 pt-3 border-t border-app">
 -          <p className="text-[13px] text-ink font-medium leading-relaxed mb-2">
 -            The CSV below is for reading — open it in a spreadsheet or share it. It can't be
@@ -8273,14 +9168,40 @@ Byte-identical to V1.
 -            <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Download CSV</span>
 -          </Btn>
 -        </div>
-+      {/* V1's opening animation is out by the brief, and the salvage inventory
-+          had already put it under `LEAVE_BEHIND`: "327 lines of bundle for no
-+          product function."
++      </SetupSection>
  
 -        <p className="text-[11px] text-ink2 font-medium mt-3">
 -          {readings.length} readings · {icps.length} ICP panels · {waterChanges.length} water changes · {doseLog.length} dose changes
--        </p>
++      {/* ---- backup and export ------------------------------------------- */}
++      <SetupSection icon={Download} category="Your data" colour="#45605F"
++        heading="Backup and export"
++        subtitle={storageHealth ? storageHealth.summary : "a file you can keep"}
++        open={openId === "backup"} onToggle={() => toggle("backup")}>
++        <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
++          Browser storage is not durable. This writes out everything this device holds — every
++          event, every stored assessment with the version that produced it, and the whole
++          configuration history — as one file you can keep somewhere else.
+         </p>
 -      </InfoBlock>
++        <Btn className="w-full" onClick={onExport}>
++          <span className="flex items-center justify-center gap-1.5"><Download size={14} /> Export everything</span>
++        </Btn>
++      </SetupSection>
++
++      {/* ---- the import -------------------------------------------------- */}
++      <SetupSection icon={Upload} category="Your data" colour="#45605F"
++        heading="Import your history"
++        subtitle="from a V1 backup file"
++        open={openId === "import"} onToggle={() => toggle("import")}>
++        {store
++          ? <ImportPanel store={store} onImported={onImported} />
++          : <p className="text-[13px] text-ink2 font-medium">The import is not wired up on this screen.</p>}
++      </SetupSection>
++
++      {/* V1's opening animation is out by the brief, and the salvage inventory
++          had already put it under `LEAVE_BEHIND`: "327 lines of bundle for no
++          product function."
++
 +          The correction calculator is recorded for later and is not built. V1
 +          had four implementations of it and one of them lived in this file. */}
 +      <div className="h-8" />
@@ -8297,13 +9218,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `a7c0ea483a9dc8bee89d2c31f8c70b0e1f4c2e31a9876e3a3ad0a3b908842d4e` |
+| Ported SHA-256 | `946413e161276ce449ca02822240fb524262e3a2c536a1bb3167442269f52e53` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
 
 ```diff
-@@ -1,62 +1,83 @@
+@@ -1,62 +1,85 @@
 -import React, { useEffect, useMemo, useState } from 'react'
 +import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  import { Dashboard, ParamHistoryModal } from './components/Dashboard.jsx'
@@ -8343,8 +9264,9 @@ Byte-identical to V1.
 +import { NAV } from './lib/constants.js'
 +import { todayStr, fmtShort } from './lib/dates.js'
 +import { onStorageError, onToast, notify } from './lib/storage.js'
++import { watchViewport } from './lib/viewport.js'
 +import {
-+  chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
++  chartEventsFrom, isLive, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 +} from './lib/adapt.js'
 +import {
 +  correctReading, deleteRecord,
@@ -8362,9 +9284,10 @@ Byte-identical to V1.
 +import { ENGINE_STATE, onEngineState, warmUp } from './engine/client.js'
 +import { cardContent, cardStatusLine } from './present/card-content.js'
 +import { selectCard, instructsDoseChange } from './present/cards.js'
++import { episodesFrom, latestEpisode } from './present/episodes.js'
 +import { positionTone } from './present/position.js'
 +import { sayVerb, sayAction, sayPosition } from './present/wording.js'
-+import { fmtAmount } from './lib/format.js'
++import { fmtQty } from './lib/format.js'
 +import { t } from './strings.js'
  
 +/* The tab set is data in `lib/constants.js`, which imports nothing so it stays
@@ -8438,7 +9361,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +87,646 @@
+@@ -66,1155 +89,748 @@
    return out;
  }
  
@@ -8596,7 +9519,7 @@ Byte-identical to V1.
 +         PRESENT on results that recommend nothing at all, so reading its
 +         presence as a command turned a hold into "up 0.0 mL/day from 12.0". */
 +      headline: typeof rec === "number" && typeof cur === "number" && instructsDoseChange(engineResult)
-+        ? `${fmtAmount(cur)} → ${fmtAmount(rec)}`
++        ? `${fmtQty(cur, "mlPerDay")} → ${fmtQty(rec, "mlPerDay")}`
 +        : sayVerb(card, dose.action),
 +      sub: sayPosition(engineResult.position),
 +      value: typeof engineResult.latestValidValueDkh === "number" ? engineResult.latestValidValueDkh : null,
@@ -8749,10 +9672,6 @@ Byte-identical to V1.
 -  /* Lifted out of Dashboard: tapping a parameter should open its graph from
 -     anywhere, and two copies of the same modal would drift apart. */
    const [modalParam, setModalParam] = useState(null);
--  const [logResult, setLogResult] = useState(null);
--  const [icpResult, setIcpResult] = useState(null);
--  const [taskResult, setTaskResult] = useState(null);
--  const [toastMsg, setToastMsg] = useState(null);
 +  const [allGraphs, setAllGraphs] = useState(false);
 +  /* Which half of the Test tab is showing: the parameter checklist or the ICP
 +     panels. Named `testTab` rather than `testMode`, because "test mode" means
@@ -8760,6 +9679,34 @@ Byte-identical to V1.
 +     (`app/src/store/mode.js`) — and two things with one name is how a search
 +     for one of them finds the other. */
 +  const [testTab, setTestTab] = useState("tests");
++
++  /* ---- what is on this device ---------------------------------------- */
++  const [projection, setProjection] = useState([]);
++  const [config, setConfig] = useState(null);
++  const [tasks, setTasks] = useState([]);
++  const [completions, setCompletions] = useState([]);
++  const [hiddenNotices, setHiddenNotices] = useState({});
++  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
++
++     A single string: the correction panel's signature, which is the
++     intervention and the class the engine reached on it. Delete the reading the
++     conclusion rested on, the engine reclassifies from what remains, the
++     signature stops matching and the panel is back — which is owner finding
++     16's worked example, and it needs no record that a deletion happened. */
++  const [correctionDismissed, setCorrectionDismissed] = useState(null);
++
++  /* ---- what the engine said ------------------------------------------- */
++  const [assessment, setAssessment] = useState(null);
++  const [engineState, setEngineState] = useState(null);
++
++  /* ---- the moments ----------------------------------------------------- */
+   const [logResult, setLogResult] = useState(null);
+-  const [icpResult, setIcpResult] = useState(null);
++  const [doseResult, setDoseResult] = useState(null);
+   const [taskResult, setTaskResult] = useState(null);
+   const [toastMsg, setToastMsg] = useState(null);
++  const [storageMsg, setStorageMsg] = useState(null);
++  const [remWindow, setRemWindow] = useState(14);
  
 -  /* The splash belongs to a launch, not to a render: it plays once per session
 -     and never again until the app is opened afresh. Gating it to home-screen
@@ -8772,13 +9719,11 @@ Byte-identical to V1.
 -     for the entire life of that browser tab, which is why it stopped showing. */
 -  const [splash, setSplash] = useState(true);
 -  useEffect(() => { onToast(setToastMsg); }, []);
-+  /* ---- what is on this device ---------------------------------------- */
-+  const [projection, setProjection] = useState([]);
-+  const [config, setConfig] = useState(null);
-+  const [tasks, setTasks] = useState([]);
-+  const [completions, setCompletions] = useState([]);
-+  const [hiddenNotices, setHiddenNotices] = useState({});
-+  /* WHICH CONCLUSION THE KEEPER HAS PUT AWAY, NOT WHICH PANEL.
++  useEffect(() => {
++    onToast((m) => setToastMsg(m));
++    onStorageError((m) => setStorageMsg(m));
++    return onEngineState((s) => setEngineState(s));
++  }, []);
  
 -  /* Ask the browser to keep this app's data, once, at launch.
 -     This request used to live in Setup's mount effect, and Setup only mounts
@@ -8790,23 +9735,48 @@ Byte-identical to V1.
 -     second time. */
 -  useEffect(() => { requestPersistence(); }, []);
 -  const openTestFor = (paramKey) => { setTestPrefill({ paramKey, at: Date.now() }); setTab("log"); };
-+     A single string: the correction panel's signature, which is the
-+     intervention and the class the engine reached on it. Delete the reading the
-+     conclusion rested on, the engine reclassifies from what remains, the
-+     signature stops matching and the panel is back — which is owner finding
-+     16's worked example, and it needs no record that a deletion happened. */
-+  const [correctionDismissed, setCorrectionDismissed] = useState(null);
++  /* How tall the screen actually is, published for the stylesheet — see
++     `lib/viewport.js`. The shell and every sheet measure themselves against it
++     instead of against `vh`, which on a phone is the height the page would
++     have if the toolbar were hidden and is therefore taller than the screen. */
++  useEffect(() => watchViewport(), []);
  
 -  /* Browsers restore the previous scroll position on reload, which drops you
 -     partway down the Dashboard with the heading out of view. */
 -  useEffect(() => {
 -    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
 -      window.history.scrollRestoration = "manual";
--    }
++  /* Reload everything this device holds. Called after every write, so no
++     screen ever renders from a copy of the record that the record has since
++     moved past. */
++  const reload = useCallback(async () => {
++    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
++      store.ledger.projection(),
++      store.config.current(),
++      store.tasks.tasks(),
++      store.tasks.completions(),
++      store.kvGet("hidden-notices"),
++      store.kvGet("correction-dismissed"),
++    ]);
++    setProjection(proj);
++    setConfig(cfg);
++    setTasks(ts);
++    setCompletions(cs);
++    setHiddenNotices(hidden || {});
++    setCorrectionDismissed(correction || null);
++  }, [store]);
++
++  /* Ask the engine. Every write that could change the answer calls this, and
++     nothing else calls the engine at all. */
++  const assess = useCallback(async () => {
++    try {
++      const r = await runAssessment(store, nowAsOf());
++      setAssessment(r);
++    } catch (e) {
++      setAssessment({ state: "ENGINE_FAILED", engineResult: null, error: e && e.message });
+     }
 -  }, []);
-+  /* ---- what the engine said ------------------------------------------- */
-+  const [assessment, setAssessment] = useState(null);
-+  const [engineState, setEngineState] = useState(null);
++  }, [store]);
  
 -  /* Returning to a tab left the heading clipped under the browser chrome.
 -     Two things cause it: the previous scroll position is retained, and mobile
@@ -8814,7 +9784,7 @@ Byte-identical to V1.
 -     after the scroll has already happened. A single scrollTo therefore lands in
 -     the wrong place. Reset across several frames so the last one runs after the
 -     toolbar has settled. */
--  useEffect(() => {
+   useEffect(() => {
 -    if (typeof window === "undefined") return;
 -    let cancelled = false;
 -    const toTop = () => {
@@ -8860,24 +9830,35 @@ Byte-identical to V1.
 -  const [correctionPlans, setCorrectionPlans] = useState({});
 -  const [caPlan, setCaPlan] = useState(null);
 -  const [mgPlan, setMgPlan] = useState(null);
-+  /* ---- the moments ----------------------------------------------------- */
-+  const [logResult, setLogResult] = useState(null);
-   const [doseResult, setDoseResult] = useState(null);
-+  const [taskResult, setTaskResult] = useState(null);
-+  const [toastMsg, setToastMsg] = useState(null);
-   const [storageMsg, setStorageMsg] = useState(null);
+-  const [doseResult, setDoseResult] = useState(null);
+-  const [storageMsg, setStorageMsg] = useState(null);
 -  /* What the startup check made of this device: a new one, one that has been
 -     running, or one whose browser cleared everything. Null until it has run,
 -     so nothing is claimed before it is known. */
 -  const [install, setInstall] = useState(null);
--
++    (async () => {
++      await reload();
++      setLoaded(true);
++      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
++         it is started when the app is idle rather than blocking first paint:
++         logging a reading, browsing history and completing a task all work
++         before the engine has finished booting. */
++      warmUp();
++      assess();
++    })();
++  }, [reload, assess]);
+ 
 -  // Merge any user-edited target ranges over the built-in defaults.
 -  const paramDefs = useMemo(() =>
 -    PARAM_DEFS.map((d) => customRanges[d.key]
 -      ? { ...d, min: customRanges[d.key].min, max: customRanges[d.key].max }
 -      : d),
 -  [customRanges]);
-+  const [remWindow, setRemWindow] = useState(14);
++  /* ---- the record, in the shape the ported screens read ---------------- */
++  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
++  const readings = useMemo(() => readingsFrom(projection), [projection]);
++  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
++  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
  
 -  const saveSettings = async (next) => {
 -    const merged = { ...DEFAULT_SETTINGS, ...next };
@@ -8914,32 +9895,20 @@ Byte-identical to V1.
 -    setCustomRanges(next);
 -    await saveKey("custom-ranges", next);
 -  };
-+  useEffect(() => {
-+    onToast((m) => setToastMsg(m));
-+    onStorageError((m) => setStorageMsg(m));
-+    return onEngineState((s) => setEngineState(s));
-+  }, []);
++  const waterChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      /* Two spellings of one fact, because the import wrote `volumeL` and the
++         recorder writes `litres`. Records already stored carry whichever was
++         written at the time, so this is the one place that knows they are the
++         same thing — rather than every screen learning it separately. */
++      litres: r.event.detail.litres ?? r.event.detail.volumeL ?? null,
++    })), [projection]);
  
 -  useEffect(() => { onStorageError((m) => setStorageMsg(m)); }, []);
-+  /* Reload everything this device holds. Called after every write, so no
-+     screen ever renders from a copy of the record that the record has since
-+     moved past. */
-+  const reload = useCallback(async () => {
-+    const [proj, cfg, ts, cs, hidden, correction] = await Promise.all([
-+      store.ledger.projection(),
-+      store.config.current(),
-+      store.tasks.tasks(),
-+      store.tasks.completions(),
-+      store.kvGet("hidden-notices"),
-+      store.kvGet("correction-dismissed"),
-+    ]);
-+    setProjection(proj);
-+    setConfig(cfg);
-+    setTasks(ts);
-+    setCompletions(cs);
-+    setHiddenNotices(hidden || {});
-+    setCorrectionDismissed(correction || null);
-+  }, [store]);
++  /* Dose CHANGES and the dose STATE the record starts from.
  
 -  /* The snapshot schedule: once the load has settled and the install check has
 -     run, and again whenever the app is backgrounded — the moment most likely
@@ -8956,18 +9925,33 @@ Byte-identical to V1.
 -    document.addEventListener("visibilitychange", onHide);
 -    return () => document.removeEventListener("visibilitychange", onHide);
 -  }, [loaded, install]);
-+  /* Ask the engine. Every write that could change the answer calls this, and
-+     nothing else calls the engine at all. */
-+  const assess = useCallback(async () => {
-+    try {
-+      const r = await runAssessment(store, nowAsOf());
-+      setAssessment(r);
-+    } catch (e) {
-+      setAssessment({ state: "ENGINE_FAILED", engineResult: null, error: e && e.message });
-+    }
-+  }, [store]);
++     The import writes the first dose row of each parameter as a `DOSE_STATE` —
++     what was running when the record begins — and every later one as a
++     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
++     read as "no dose changes recorded" while the app was assessing against a
++     dose it had. A starting point has no delta and is shown as what it is. */
++  const doseChanges = useMemo(() => projection
++    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
++      && isLive(r))
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      time: r.event.time.localTime || null,
++      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
++      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
++      /* `fromMlPerDay` on an imported change is this app reading the previous
++         recorded row, not something the keeper wrote down. The import marks it,
++         and the list says so rather than presenting it as his figure. */
++      fromDerived: !!r.event.detail.fromMlPerDayDerived,
++      isStart: r.event.kind === KIND.DOSE_STATE,
++      /* A recommendation, a recommendation the keeper adjusted, or his own
++         change. Absent on everything recorded before this existed and on every
++         imported row, where "his own change" is the only honest reading. */
++      origin: r.event.detail.origin || "KEEPER",
++      parameter: r.event.parameter || "ALK",
++    })), [projection]);
  
-   useEffect(() => {
+-  useEffect(() => {
 -    /* Carry an existing install's data out of the legacy `reefconsole:` prefix
 -       before anything is read from the live one. Removing the storage shim
 -       moved every read from the legacy copy to the mirror, and the old save
@@ -8976,7 +9960,8 @@ Byte-identical to V1.
 -       it silently reverts whatever the failed write was carrying. A custom
 -       target range is exactly that shape of value: lose it and the band falls
 -       back to the shipped default with nothing on screen to say so.
--
++  /* NEWEST FIRST, IN THE ORDER IT CLAIMS — owner finding 19.
+ 
 -       Synchronous and before the loads below, not inside them: `drainLegacyStore`
 -       records the keys it could not finish, and `loadKey` consults that record
 -       to keep preferring the legacy copy for them. Both halves have to have
@@ -8984,7 +9969,7 @@ Byte-identical to V1.
 -       wins anyway. Idempotent and a no-op on a device with nothing under the
 -       old prefix, which is every install made after the shim went. */
 -    drainLegacyStore();
-     (async () => {
+-    (async () => {
 -      const [r, i, ct, tl, lg, seeded, icpSeeded, wcSeeded, lightSeeded, strengthsFixed, rem, kc, dis, ap, corr, cap, mgp, cr, st, dl, wc] = await Promise.all([
 -        loadKey("readings", []),
 -        loadKey("icp-tests", []),
@@ -9008,7 +9993,11 @@ Byte-identical to V1.
 -        loadKey("dose-log", []),
 -        loadKey("water-changes", []),
 -      ]);
--
++     Setup sorted this list on the DATE alone. Two changes made on one day
++     compare equal, so they kept the order they came out of storage in, which is
++     oldest first — and the keeper's 8.8 sat at the top of a list headed "newest
++     first" above the 9.0 that had replaced it that morning.
+ 
 -      /* Is this a new device, or one that has been cleared? The two used to be
 -         indistinguishable — every marker below lives in the storage a clear
 -         erases, so their absence was read as "new install, seed away" and a
@@ -9023,7 +10012,11 @@ Byte-identical to V1.
 -        "light-seeded": lightSeeded, "strengths-fixed-v1": strengthsFixed,
 -      });
 -      setInstall(state);
--
++     `projection` is the ledger's own total order (`INV-A1`) and the app already
++     trusts it for "the latest reading". Reversing it is reading that one order
++     rather than forming a second opinion about which change is most recent. */
++  const doseChangesNewestFirst = useMemo(() => [...doseChanges].reverse(), [doseChanges]);
+ 
 -      /* Readings are measurements somebody took, so nothing is seeded into
 -         them — a clean device starts empty. The marker is still written on the
 -         first run so the state of an install stays readable. */
@@ -9032,16 +10025,10 @@ Byte-identical to V1.
 -        await saveKey("readings", finalReadings);
 -        await saveKey("historical-seeded", true);
 -      }
-+      await reload();
-+      setLoaded(true);
-+      /* Starting the runtime is a 12 MB decompress. Nothing else needs it, so
-+         it is started when the app is idle rather than blocking first paint:
-+         logging a reading, browsing history and completing a task all work
-+         before the engine has finished booting. */
-+      warmUp();
-+      assess();
-+    })();
-+  }, [reload, assess]);
++  /* THE DOSE THE PUMP IS RUNNING NOW. One answer, read by Setup, by the Dosing
++     tab and by the write path below, so no two of them can disagree about what
++     the previous figure was. */
++  const standingDose = doseChangesNewestFirst.length ? doseChangesNewestFirst[0].to : null;
  
 -      /* ICP panels are measurements too, and are seeded no more than readings
 -         are. */
@@ -9049,17 +10036,21 @@ Byte-identical to V1.
 -      if (!icpSeeded) {
 -        await saveKey("icp-seeded", true);
 -      }
-+  /* ---- the record, in the shape the ported screens read ---------------- */
-+  const paramDefs = useMemo(() => paramDefsFrom(config), [config]);
-+  const readings = useMemo(() => readingsFrom(projection), [projection]);
-+  const latestByParam = useMemo(() => latestByParamFrom(readings, paramDefs), [readings, paramDefs]);
-+  const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
++  const lightingChanges = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
++      && r.event.detail.husbandryKind === "LIGHTING" && isLive(r))
++    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
  
 -      /* Weekly water changes, seeded once and matched on date so anything
 -         already logged by hand is left alone.
-+  const waterChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
++  const icps = useMemo(() => projection
++    .filter((r) => r.event.kind === KIND.ICP_PANEL && isLive(r))
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      note: r.event.detail.note,
++      elements: r.event.detail.elements || {},
++    })), [projection]);
  
 -         Not seeded at all on a device that has been cleared, or one the check
 -         above could not account for. The marker is still written, so declining
@@ -9082,7 +10073,9 @@ Byte-identical to V1.
 -        }
 -        await saveKey("wc-seeded", true);
 -      }
-+  /* Dose CHANGES and the dose STATE the record starts from.
++  const scheduleView = useMemo(
++    () => computeSchedule(tasks, completions, todayStr(), remWindow),
++    [tasks, completions, remWindow]);
  
 -      let finalLighting = lg || [];
 -      if (!lightSeeded) {
@@ -9096,38 +10089,26 @@ Byte-identical to V1.
 -        }
 -        await saveKey("light-seeded", true);
 -      }
-+     The import writes the first dose row of each parameter as a `DOSE_STATE` —
-+     what was running when the record begins — and every later one as a
-+     `DOSE_CHANGE`. Listing only the changes made a freshly imported history
-+     read as "no dose changes recorded" while the app was assessing against a
-+     dose it had. A starting point has no delta and is shown as what it is. */
-+  const doseChanges = useMemo(() => projection
-+    .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({
-+      id: r.event.eventId,
-+      date: r.event.time.localDate,
-+      time: r.event.time.localTime || null,
-+      from: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.fromMlPerDay : null,
-+      to: r.event.kind === KIND.DOSE_CHANGE ? r.event.detail.toMlPerDay : r.event.detail.doseMlPerDay,
-+      /* `fromMlPerDay` on an imported change is this app reading the previous
-+         recorded row, not something the keeper wrote down. The import marks it,
-+         and the list says so rather than presenting it as his figure. */
-+      fromDerived: !!r.event.detail.fromMlPerDayDerived,
-+      isStart: r.event.kind === KIND.DOSE_STATE,
-+      parameter: r.event.parameter || "ALK",
-+    })), [projection]);
++  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
++  /* Why there is no engine result, when there is none. The states are
++     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
++     one this shell adds when the call itself threw. Null while the first
++     assessment is still running, which the screens render as "working it
++     out". */
++  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
++     screens get the right label without this having to correct one.
  
 -      /* Doses are seeded; product strengths are NOT, and must never be again.
 -         A strength is a fact about the user's own bottle, so there is nothing
 -         to seed it with — see DEFAULT_SETTINGS, which no longer carries one.
 -         An unset strength is refused and named, the same as an unset net
 -         volume (reef-chemistry.md §16, §12, §17).
-+  const lightingChanges = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-+      && r.event.detail.husbandryKind === "LIGHTING"
-+      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
++     The client's own state still wins where it says the engine failed, because
++     it knows before the first assessment is even attempted — that is what
++     turns a blank card into "the engine could not start" during boot rather
++     than after it. */
++  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
++  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
  
 -         Two blocks were removed here on 16 August, both of which wrote a
 -         default into storage and so would defeat the change entirely:
@@ -9150,14 +10131,7 @@ Byte-identical to V1.
 -        }
 -        await saveKey("tank-settings", finalSettings);
 -      }
-+  const icps = useMemo(() => projection
-+    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-+    .map((r) => ({
-+      id: r.event.eventId,
-+      date: r.event.time.localDate,
-+      note: r.event.detail.note,
-+      elements: r.event.detail.elements || {},
-+    })), [projection]);
++  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
  
 -      /* Test reminders exist from the start rather than needing to be created —
 -         the app already knows which parameters exist. Only the schedule is the
@@ -9186,9 +10160,12 @@ Byte-identical to V1.
 -      setCorrectionPlans(cplans || {});
 -      setCaPlan(cap || null);
 -      setMgPlan(mgp || null);
-+  const scheduleView = useMemo(
-+    () => computeSchedule(tasks, completions, todayStr(), remWindow),
-+    [tasks, completions, remWindow]);
++     Canon treats measurements taken within half an hour as one test and
++     resolves them to their middle value. Until this existed the words on a
++     card came from that resolved observation while the number beside them came
++     straight from the ledger, so five 9.0s and a 10.0 typed in one minute drew
++     "10.00 · IN RANGE". Read, never re-derived — see `present/episodes.js`. */
++  const episodes = useMemo(() => episodesFrom(engineResult), [engineResult]);
  
 -      setReadings(finalReadings); setIcps(finalIcps); setCustomTasks(ct); setTaskLog(tl);
 -      setLighting(finalLighting); setCustomRanges(cr || {}); setSettings(finalSettings);
@@ -9196,44 +10173,6 @@ Byte-identical to V1.
 -      setLoaded(true);
 -    })();
 -  }, []);
-+  const engineResult = assessment && assessment.engineResult ? assessment.engineResult : null;
-+  /* Why there is no engine result, when there is none. The states are
-+     `assess.js`'s own — `NO_CONFIGURATION`, `STORAGE_UNAVAILABLE` — plus the
-+     one this shell adds when the call itself threw. Null while the first
-+     assessment is still running, which the screens render as "working it
-+     out". */
-+  /* `assess.js` now returns `ENGINE_UNAVAILABLE` as its own state, so the
-+     screens get the right label without this having to correct one.
- 
--  /* A restore writes to storage directly, so mirror the merged result into
--     state — otherwise the screen would keep showing the pre-restore data until
--     the next reload. */
--  const saveReminders = async (next) => {
--    setReminders(next);
--    await saveKey("reminders", next);
--  };
-+     The client's own state still wins where it says the engine failed, because
-+     it knows before the first assessment is even attempted — that is what
-+     turns a blank card into "the engine could not start" during boot rather
-+     than after it. */
-+  const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
-+  const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
- 
--  /* Recording a replacement retires every comparison made with the old kit. */
--  const replaceKit = async (paramKey, date = todayStr()) => {
--    const next = { ...kitChanges, [paramKey]: date };
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    const def = paramDefs.find((d) => d.key === paramKey);
--    notify(`${def ? def.label : "Kit"} marked as replaced`);
--  };
--  const undoReplaceKit = async (paramKey) => {
--    const next = { ...kitChanges };
--    delete next[paramKey];
--    setKitChanges(next);
--    await saveKey("kit-changes", next);
--    notify("Replacement removed");
--  };
 +  /* One notice per parameter, from the engine, already worded — and filtered
 +     by what the keeper has put away. The identity and the signature are V1's
 +     mechanism over V2's reason codes: put one away and it comes back the
@@ -9244,6 +10183,44 @@ Byte-identical to V1.
 +    return findingHidden(c.notice, hiddenNotices) ? null : c.notice;
 +  }, [engineResult, assessmentState, hiddenNotices]);
  
+-  /* A restore writes to storage directly, so mirror the merged result into
+-     state — otherwise the screen would keep showing the pre-restore data until
+-     the next reload. */
+-  const saveReminders = async (next) => {
+-    setReminders(next);
+-    await saveKey("reminders", next);
++  const dismissNotice = async (f) => {
++    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice hidden");
+   };
+-
+-  /* Recording a replacement retires every comparison made with the old kit. */
+-  const replaceKit = async (paramKey, date = todayStr()) => {
+-    const next = { ...kitChanges, [paramKey]: date };
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    const def = paramDefs.find((d) => d.key === paramKey);
+-    notify(`${def ? def.label : "Kit"} marked as replaced`);
++  const restoreNotice = async (n) => {
++    const next = { ...hiddenNotices };
++    delete next[findingKey(n)];
++    await store.kvSet("hidden-notices", next);
++    setHiddenNotices(next);
++    notify("Notice shown again");
+   };
+-  const undoReplaceKit = async (paramKey) => {
+-    const next = { ...kitChanges };
+-    delete next[paramKey];
+-    setKitChanges(next);
+-    await saveKey("kit-changes", next);
+-    notify("Replacement removed");
++  const dismissCorrection = async (signature) => {
++    await store.kvSet("correction-dismissed", signature);
++    setCorrectionDismissed(signature);
+   };
+ 
 -  const dismissFinding = async (f) => {
 -    const prev = dismissed[findingKey(f)];
 -    const times = (prev && typeof prev === "object" && prev.times ? prev.times : 0) + 1;
@@ -9252,12 +10229,7 @@ Byte-identical to V1.
 -    setDismissed(next);
 -    await saveKey("findings-dismissed", next);
 -    notify("Hidden — it'll return if this changes");
-+  const dismissNotice = async (f) => {
-+    const next = { ...hiddenNotices, [findingKey(f)]: { sig: findingSignature(f), at: new Date().toISOString(), title: f.title, id: f.id } };
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice hidden");
-   };
+-  };
 -  /* A claim is put away by its own key rather than a finding id, because most
 -     claims are not findings — a drift or a parked pair is assembled from the
 -     readings themselves. */
@@ -9289,13 +10261,7 @@ Byte-identical to V1.
 -    notify(c.snoozeUntilTest
 -      ? "Put off \u2014 back after your next test"
 -      : "Hidden \u2014 it'll return if this changes");
-+  const restoreNotice = async (n) => {
-+    const next = { ...hiddenNotices };
-+    delete next[findingKey(n)];
-+    await store.kvSet("hidden-notices", next);
-+    setHiddenNotices(next);
-+    notify("Notice shown again");
-   };
+-  };
 -  /* One note back, by its own key — restoring everything was the only option
 -     before, which made hiding a thing you had to be sure about. */
 -  /* Start a temporary correction: set the dose and record why, so every
@@ -9320,9 +10286,10 @@ Byte-identical to V1.
 -    await addDoseChange({ date: todayStr(), ml: offer.dose, element: key,
 -      note: `correction toward ${offer.aimPoint}` });
 -    notify(`${key} dose set to ${fmtAmount(offer.dose)} mL/day — correcting toward ${offer.aimPoint}`);
-+  const dismissCorrection = async (signature) => {
-+    await store.kvSet("correction-dismissed", signature);
-+    setCorrectionDismissed(signature);
++  const restoreAllNotices = async () => {
++    await store.kvSet("hidden-notices", {});
++    setHiddenNotices({});
++    notify("All notices shown again");
    };
  
 -  /* Cancel: the dose goes back, the plan is deleted, and everything derived
@@ -9337,45 +10304,12 @@ Byte-identical to V1.
 -    if (plan.returnDose != null) {
 -      await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
 -        note: "correction cancelled" });
--    }
--    notify(`Correction cancelled — ${key} dose back to ${fmtAmount(plan.returnDose)} mL/day`);
-+  const restoreAllNotices = async () => {
-+    await store.kvSet("hidden-notices", {});
-+    setHiddenNotices({});
-+    notify("All notices shown again");
-   };
- 
--  /* Arrived: return to the maintenance dose and clear the plan in one action,
--     because leaving the elevated dose running is how a correction overshoots. */
--  const finishCorrection = async (key) => {
--    const plan = correctionPlans[key];
--    if (!plan) return;
--    const next = { ...correctionPlans };
--    delete next[key];
--    setCorrectionPlans(next);
--    await saveKey("correction-plans", next);
--    await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
--      note: "correction complete" });
--    notify(`${key} back to ${fmtAmount(plan.returnDose)} mL/day`);
--  };
 +  const hiddenList = useMemo(
 +    () => Object.entries(hiddenNotices).map(([k, v]) => ({ key: k, id: v.id, title: v.title })),
 +    [hiddenNotices]);
- 
--  const restoreOneNote = async (c) => {
--    if (!c || !c.dismissKey) return;
--    const next = { ...dismissed };
--    delete next[c.dismissKey];
--    setDismissed(next);
--    await saveKey("findings-dismissed", next);
--    notify("Shown again");
--  };
++
 +  /* ---- writing ---------------------------------------------------------- */
- 
--  const restoreNotes = async () => {
--    setDismissed({});
--    await saveKey("findings-dismissed", {});
--    notify("Hidden notices restored");
++
 +  /* A reading. Four elements went in, and the three things that follow are the
 +     three the brief asks for: it saves, it completes its test task, and the
 +     moment appears. */
@@ -9391,7 +10325,8 @@ Byte-identical to V1.
 +    } catch (e) {
 +      setStorageMsg(e && e.message);
 +      return;
-+    }
+     }
+-    notify(`Correction cancelled — ${key} dose back to ${fmtAmount(plan.returnDose)} mL/day`);
 +    await reload();
 +    notify("Reading saved");
 +    setLogResult({
@@ -9400,6 +10335,46 @@ Byte-identical to V1.
 +    });
 +    assess();
    };
+ 
+-  /* Arrived: return to the maintenance dose and clear the plan in one action,
+-     because leaving the elevated dose running is how a correction overshoots. */
+-  const finishCorrection = async (key) => {
+-    const plan = correctionPlans[key];
+-    if (!plan) return;
+-    const next = { ...correctionPlans };
+-    delete next[key];
+-    setCorrectionPlans(next);
+-    await saveKey("correction-plans", next);
+-    await addDoseChange({ date: todayStr(), ml: plan.returnDose, element: key,
+-      note: "correction complete" });
+-    notify(`${key} back to ${fmtAmount(plan.returnDose)} mL/day`);
+-  };
++  /* THE DELIVERED DOSE — ONE WRITE PATH, THREE WAYS IN (owner finding 19).
+ 
+-  const restoreOneNote = async (c) => {
+-    if (!c || !c.dismissKey) return;
+-    const next = { ...dismissed };
+-    delete next[c.dismissKey];
+-    setDismissed(next);
+-    await saveKey("findings-dismissed", next);
+-    notify("Shown again");
+-  };
++     Setup's field, accepting a recommendation on the Dosing tab, and "change
++     the dose anyway" are the same act and go through here. There is no second
++     code path for any of them; what differs is one field on the entry
++     afterwards, saying where the figure came from.
+ 
+-  const restoreNotes = async () => {
+-    setDismissed({});
+-    await saveKey("findings-dismissed", {});
+-    notify("Hidden notices restored");
+-  };
++     THE KEEPER SUPPLIES ONE NUMBER. The "to" is what he typed. The "from" is
++     `standingDose` — what the record already says was running — so the FROM/TO
++     form is gone rather than rearranged. Asking him to restate a figure the app
++     holds is asking him to get it wrong, and he did: he typed 9.0 in one box
++     and read "on record: 8.8" underneath it, because the two boxes wrote two
++     different kinds of record and neither knew about the other.
  
 -  const restoreFinding = async (key) => {
 -    const next = { ...dismissed };
@@ -9412,14 +10387,23 @@ Byte-identical to V1.
 -    setDismissed({});
 -    await saveKey("findings-dismissed", {});
 -    notify("All notes restored");
-+  const addDoseChange = async ({ fromMlPerDay, toMlPerDay, date, time }) => {
++     THE FIRST TIME IS NOT A DIFFERENT ACT. With nothing on record there is no
++     previous figure to move from, so the record BEGINS — a standing dose, which
++     is what `dosing.py` calls "a declaration of the standing rate". Every time
++     after it is a change. Same field, same path, same screen. */
++  const setDeliveredDose = async ({ toMlPerDay, date, time, origin = "KEEPER" }) => {
++    const from = standingDose;
 +    try {
-+      await recordDoseChange(store, { fromMlPerDay, toMlPerDay, date, time });
++      if (from == null) {
++        await recordDoseState(store, { doseMlPerDay: toMlPerDay, date, atTime: time });
++      } else {
++        await recordDoseChange(store, { fromMlPerDay: from, toMlPerDay, date, time, origin });
++      }
 +    } catch (e) { setStorageMsg(e && e.message); return; }
 +    await reload();
-+    notify("Dose change recorded");
++    notify(from == null ? t("dose.delivered.recorded") : t("dose.delivered.changed"));
 +    const def = paramDefs.find((d) => d.key === "ALK");
-+    setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
++    if (from != null) setDoseResult({ at: Date.now(), def, from, to: toMlPerDay, date, time });
 +    assess();
    };
  
@@ -9530,21 +10514,10 @@ Byte-identical to V1.
 -    await saveReminders(reminders.map((r) => (r.id === "rem-calcium"
 -      ? { ...r, dueOverride: null, dueTime: null, dueReason: null } : r)));
 -    notify("Plan cleared");
-+  /* The dose the keeper says his pump is running now. Stage 1 established, by
-+     measurement, that the engine had no readable record of this at all on a
-+     V1-imported history — and without it `consumption` is `NOT_RUN` and every
-+     figure that depends on it is withheld. */
-+  const setStandingDose = async (doseMlPerDay) => {
-+    try { await recordDoseState(store, { doseMlPerDay }); }
-+    catch (e) { setStorageMsg(e && e.message); return; }
-+    await reload();
-+    notify("Current dose recorded");
-+    assess();
-   };
+-  };
 -  const applyCaEffect = async (per100L) => {
 -    await saveSettings({ ...settings, caPpmPerMlPer100L: per100L });
 -    notify(`Calcium strength set to ${per100L} ppm/mL/100L`);
-+
 +  const addWaterChange = async ({ date, time, litres }) => {
 +    try {
 +      await recordWaterChange(store, { date, time, litres, netVolumeL: config && config.netVolumeL });
@@ -9621,16 +10594,14 @@ Byte-identical to V1.
  
 -  const updateReminder = async (id, patch) => {
 -    await saveReminders(reminders.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+-  };
 +  /* Something the keeper recorded on his calendar, taken back off it (owner
 +     finding 16). A completion is the task store's own record rather than a
 +     ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
 +     act is the same one and the keeper is told the same way. */
 +  const deleteCompletion = async (item) => {
-+    if (!item || !item.taskId || !item.date) return;
-+    await store.tasks.uncomplete(item.taskId, item.date);
-+    await reload();
-+    notify(t("delete.done.entry"));
-   };
++    if (!item) return;
++    /* OWNER FINDING 9's REAL CAUSE, AND ITS OTHER HALF.
  
 -  /* Nudging shifts only the next occurrence. The one after it is scheduled from
 -     the actual completion, so this never permanently skews the rhythm. */
@@ -9644,6 +10615,40 @@ Byte-identical to V1.
 -    await updateReminder(id, { dueOverride: iso, dueReason: "manual", adjustDays: 0 });
 -    const r = reminders.find((x) => x.id === id);
 -    notify(`${r ? r.label : "Task"} moved to ${fmtShort(iso)}`);
+-  };
++       Every row this calendar draws used to be deleted the same way — as a task
++       COMPLETION. That is right for a tick and wrong for anything else, and it
++       is why the owner deleted what he believed was a reading five times and it
++       never went: the tick came off, the due list noticed, and the reading was
++       never touched.
+ 
+-  const setReminderInterval = async (id, days) => {
+-    if (!isFinite(days) || days < 1) return;
+-    /* Changing the rhythm also releases any one-off move, or the new interval
+-       would appear to do nothing until the pinned date passed. */
+-    await updateReminder(id, { intervalDays: days, dueOverride: null, dueReason: null });
+-    notify(`Now ${intervalLabel(days).toLowerCase()}`);
++       A row now says which kind of record it is. A ledger event goes through the
++       one delete path, which takes the event, its annotations and every
++       assessment that read it; a tick is uncompleted. Nothing guesses. */
++    if (item.eventId) {
++      await deleteRecordById(item.eventId, t("delete.done.waterChange"));
++      return;
++    }
++    if (!item.taskId || !item.date) return;
++    await store.tasks.uncomplete(item.taskId, item.date);
++    await reload();
++    notify(t("delete.done.entry"));
+   };
+ 
+-  const skipReminder = async (id) => {
+-    const r = reminders.find((x) => x.id === id);
+-    if (!r) return;
+-    const st = reminderState(r, taskLog, todayStr());
+-    /* Skipping moves to the next occurrence rather than marking it done, so
+-       the history stays honest about what was actually tested. */
+-    await updateReminder(id, { dueOverride: addDays(st.due, r.intervalDays), dueReason: "skipped", adjustDays: 0 });
+-    notify(`Skipped — next ${fmtShort(addDays(st.due, r.intervalDays))}`);
 +  /* ---- the schedule ----------------------------------------------------- */
 +  const markDone = async (taskId, date = todayStr(), detail = null) => {
 +    const task = tasks.find((t) => t.id === taskId);
@@ -9660,44 +10665,17 @@ Byte-identical to V1.
 +    });
    };
  
--  const setReminderInterval = async (id, days) => {
--    if (!isFinite(days) || days < 1) return;
--    /* Changing the rhythm also releases any one-off move, or the new interval
--       would appear to do nothing until the pinned date passed. */
--    await updateReminder(id, { intervalDays: days, dueOverride: null, dueReason: null });
--    notify(`Now ${intervalLabel(days).toLowerCase()}`);
-+  const addTask = async (spec) => {
-+    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
-+    await store.tasks.saveTask(task);
-+    await reload();
-+    notify("Task added");
-   };
- 
--  const skipReminder = async (id) => {
--    const r = reminders.find((x) => x.id === id);
--    if (!r) return;
--    const st = reminderState(r, taskLog, todayStr());
--    /* Skipping moves to the next occurrence rather than marking it done, so
--       the history stays honest about what was actually tested. */
--    await updateReminder(id, { dueOverride: addDays(st.due, r.intervalDays), dueReason: "skipped", adjustDays: 0 });
--    notify(`Skipped — next ${fmtShort(addDays(st.due, r.intervalDays))}`);
-+  const updateTask = async (id, patch) => {
-+    const task = tasks.find((t) => t.id === id);
-+    if (!task) return;
-+    await store.tasks.saveTask({ ...task, ...patch });
-+    await reload();
-   };
- 
 -  /* Kept for the existing +1 day controls. */
 -  const nudgeReminder = async (id, days) => {
 -    const r = reminders.find((x) => x.id === id);
 -    if (!r) return;
 -    const st = reminderState(r, taskLog, todayStr());
 -    await setReminderDue(id, addDays(st.due, days));
-+  const deleteTask = async (id) => {
-+    await store.tasks.removeTask(id);
++  const addTask = async (spec) => {
++    const task = { ...makeTask(spec), oneOff: !!spec.oneOff };
++    await store.tasks.saveTask(task);
 +    await reload();
-+    notify("Task deleted");
++    notify("Task added");
    };
  
 -  const completeReminder = async (id, date = todayStr()) => {
@@ -9719,15 +10697,11 @@ Byte-identical to V1.
 -        history,
 -      });
 -    }
-+  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
-+     made against. `schedule.js` owns that rule; this passes the anchor. */
-+  const nudgeTask = async (id, days) => {
++  const updateTask = async (id, patch) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
-+    const st = scheduleView.states.find((s) => s.task.id === id);
-+    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
++    await store.tasks.saveTask({ ...task, ...patch });
 +    await reload();
-+    notify("Moved to tomorrow");
    };
  
 -  const applyRestore = (merged) => {
@@ -9744,6 +10718,37 @@ Byte-identical to V1.
 -    if (merged["kit-changes"]) setKitChanges(merged["kit-changes"]);
 -    if (merged["findings-dismissed"]) setDismissed(merged["findings-dismissed"]);
 -    if (merged["correction-plans"]) setCorrectionPlans(merged["correction-plans"]);
++  const deleteTask = async (id) => {
++    await store.tasks.removeTask(id);
++    await reload();
++    notify("Task deleted");
+   };
+ 
+-  /* Reminders replaced the old task list, so anything that used to look up a
+-     task name reads from there instead. Kept under the same name so the CSV
+-     export and due-list code didn't need rewriting. */
+-  const allTasks = useMemo(
+-    () => reminders.map((r) => ({ id: r.id, label: r.label, freqDays: r.intervalDays, builtin: r.builtin })),
+-    [reminders]);
++  /* A nudge moves ONLY the next occurrence, anchored to the completion it was
++     made against. `schedule.js` owns that rule; this passes the anchor. */
++  const nudgeTask = async (id, days) => {
++    const task = tasks.find((t) => t.id === id);
++    if (!task) return;
++    const st = scheduleView.states.find((s) => s.task.id === id);
++    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + days, adjustAnchor: st ? st.lastDone ?? null : null });
++    await reload();
++    notify("Moved to tomorrow");
++  };
+ 
+-  const latestByParam = useMemo(() => {
+-    const map = {};
+-    for (const def of paramDefs) {
+-      const rows = readings.filter((r) => r.param === def.key).sort(byNewest);
+-      map[def.key] = rows[0] || null;
+-    }
+-    return map;
+-  }, [readings, paramDefs]);
 +  const setTaskDue = async (id, date) => {
 +    const task = tasks.find((t) => t.id === id);
 +    if (!task) return;
@@ -9753,24 +10758,8 @@ Byte-identical to V1.
 +    await store.tasks.saveTask({ ...task, adjustDays: (task.adjustDays || 0) + shift, adjustAnchor: st ? st.lastDone ?? null : null });
 +    await reload();
 +    notify(`Moved to ${fmtShort(date)}`);
-   };
++  };
  
--  /* Reminders replaced the old task list, so anything that used to look up a
--     task name reads from there instead. Kept under the same name so the CSV
--     export and due-list code didn't need rewriting. */
--  const allTasks = useMemo(
--    () => reminders.map((r) => ({ id: r.id, label: r.label, freqDays: r.intervalDays, builtin: r.builtin })),
--    [reminders]);
--
--  const latestByParam = useMemo(() => {
--    const map = {};
--    for (const def of paramDefs) {
--      const rows = readings.filter((r) => r.param === def.key).sort(byNewest);
--      map[def.key] = rows[0] || null;
--    }
--    return map;
--  }, [readings, paramDefs]);
--
 -  const [remWindow, setRemWindow] = useState(14);
 -  const reminderView = useMemo(
 -    () => computeReminders(reminders, taskLog, todayStr(), remWindow),
@@ -10116,7 +11105,39 @@ Byte-identical to V1.
        <style>{`
          .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
          .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-+        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
++        /* Three declarations of one property, most-preferred last: a browser
++           with no dvh takes the first, one with dvh but no
++           visualViewport takes the second, and everything else takes the
++           live measurement. */
++        .app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }
++
++        /* OWNER FINDINGS 7 AND 22 — ONE RULE, NOT TWO.
++
++           Every sheet used to set its own height in vh (85, 88, 92), and a
++           sheet at 85% of the LARGE viewport is taller than 85% of the screen:
++           its lower portion falls below the fold, where the tab bar is, and a
++           fixed centred box has nothing to scroll to reach it. The tab bar was
++           never drawn in front of the sheet. The sheet was taller than the
++           screen.
++
++           One class, one measurement, every sheet. The gap leaves the sheet
++           clear of the bar rather than ending exactly on it, because a control
++           flush against the bar is a control that gets the wrong tap. */
++        .sheet-panel {
++          max-height: 85vh;
++          max-height: calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px));
++          max-height: calc(var(--app-vh, 100dvh) - var(--app-nav-h, 4rem) - 1.5rem);
++        }
++        /* The overlay a sheet sits in. Bounded the same way, so a sheet
++           anchored to the bottom of it cannot be anchored off the screen. */
++        .sheet-layer {
++          height: 100vh;
++          height: 100dvh;
++          height: var(--app-vh, 100dvh);
++          /* The bar's own row, kept clear. A sheet centred in the whole screen
++             has its lower edge behind the bar however short it is. */
++          padding-bottom: var(--app-nav-h, 4rem);
++        }
          .bg-app { background-color: #F3F7F6; }
 +        /* A raised surface on the pale-teal page. bg-card was USED by the
 +           correction sheet and the pinned close control and was never defined,
@@ -10132,7 +11153,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +754,26 @@
+@@ -1242,21 +858,26 @@
          }
        `}</style>
  
@@ -10169,7 +11190,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +783,35 @@
+@@ -1266,59 +887,35 @@
                );
              })}
            </nav>
@@ -10254,7 +11275,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +828,128 @@
+@@ -1335,105 +932,129 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -10282,7 +11303,7 @@ Byte-identical to V1.
 +            <Dashboard
 +              latestByParam={latestByParam} readings={readings} paramDefs={paramDefs}
 +              saveRange={saveRange} resetRange={resetRange} customRanges={{}}
-+              chartEvents={chartEvents} config={config}
++              chartEvents={chartEvents} config={config} episodes={episodes}
 +              engineResult={engineResult} assessmentState={assessmentState} scheduleView={scheduleView}
 +              tasks={tasks} completions={completions} waterChanges={waterChanges}
 +              onOpenParam={setModalParam} onOpenTest={openTestFor}
@@ -10291,7 +11312,8 @@ Byte-identical to V1.
 +              onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval}
 +              onSkipTask={skipTask} onUpdateTask={updateTask}
 +              onAddReading={addReading}
-+              onCorrectReading={fixReading} onDeleteReading={dropReading} />
++              onCorrectReading={fixReading} onDeleteReading={dropReading}
++              onGoDosing={() => setTab("dosing")} />
            )}
 +
            {tab === "log" && (
@@ -10305,7 +11327,7 @@ Byte-identical to V1.
 +                <div className="flex gap-1.5">
 +                  {[["tests", "My tests", readings.length], ["icp", "ICP panels", icps.length]].map(([k, label, n]) => (
 +                    <button key={k} onClick={() => setTestTab(k)}
-+                      className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
++                      className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
 +                      style={{ borderColor: testTab === k ? "#0B7C86" : "#E3ECEA",
 +                               color: testTab === k ? "#0B7C86" : "#45605F",
 +                               background: testTab === k ? "#0B7C8610" : "#fff" }}>
@@ -10314,7 +11336,7 @@ Byte-identical to V1.
 +                  ))}
 +                </div>
 +                <button onClick={() => setAllGraphs(true)}
-+                  className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
++                  className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
 +                  style={{ borderColor: "#E3ECEA", color: "#45605F" }}>
 +                  All graphs
 +                </button>
@@ -10322,7 +11344,8 @@ Byte-identical to V1.
 +
 +              {testTab === "tests" ? (
 +                <TestLab paramDefs={paramDefs} readings={readings} onAdd={addReading}
-+                  onOpenParam={setModalParam} scheduleView={scheduleView} />
++                  onOpenParam={setModalParam} scheduleView={scheduleView}
++                  episodes={episodes} onDeleteReading={dropReading} />
 +              ) : (
 +                <IcpPanel icps={icps} onAdd={addIcp} />
 +              )}
@@ -10361,12 +11384,9 @@ Byte-identical to V1.
 +              onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
 +              summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
 +              latestByParam={latestByParam}
-+              config={config} readings={readings} chartEvents={chartEvents}
-+              /* V1's, kept where a hold is recommended: a hold is advice, and
-+                 the keeper is allowed to disagree with it. It opens the same
-+                 dose-change form Setup uses; nothing here records a change by
-+                 itself (`ALK-RECOMMEND-ONLY-001`). */
-+              onChangeDoseAnyway={() => setTab("settings")} />
++              standingDose={standingDose} onSetDeliveredDose={setDeliveredDose}
++              config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
++              />
            )}
 +
            {tab === "tasks" && (
@@ -10405,8 +11425,8 @@ Byte-identical to V1.
 -              onRestoreAllFindings={restoreAllFindings} />
 +            <Setup config={config} onSaveConfig={saveConfig} paramDefs={paramDefs}
 +              engineResult={engineResult}
-+              doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
-+              onSetStandingDose={setStandingDose}
++              doseChanges={doseChangesNewestFirst} standingDose={standingDose}
++              onSetDeliveredDose={setDeliveredDose} onDeleteEvent={deleteEvent}
 +              onModeChange={() => setModeTick((n) => n + 1)}
 +              lightingChanges={lightingChanges}
 +              hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}
@@ -10443,6 +11463,7 @@ Byte-identical to V1.
 -            <ParamHistoryModal def={paramDefs.find((d) => d.key === modalParam)} readings={readings}
 +          {allGraphs && (
 +            <AllGraphsModal paramDefs={paramDefs} readings={readings} chartEvents={chartEvents}
++              episodes={episodes}
 +              onClose={() => setAllGraphs(false)} onOpenParam={setModalParam} />
 +          )}
 +
@@ -10454,7 +11475,8 @@ Byte-identical to V1.
 -              onAddReading={addReading} reminders={reminders} onDismissFinding={dismissFinding}
 -              dose={(doseStates || []).find((d) => d.key === modalParam) || null}
 +              isCustom={!modalDef.assessed && modalDef.hasRange}
-+              chartEvents={chartEvents}
++              chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
++              engineResult={engineResult}
 +              onAddReading={addReading}
 +              notice={noticeFor(modalDef)}
                onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />
@@ -10465,12 +11487,12 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +956,10 @@
+@@ -1440,10 +1061,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
 -      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
-+      <nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
++      <nav data-app-nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
          style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
          {NAV.map((n) => {
 -          const Icon = n.icon;
@@ -10483,7 +11505,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +973,96 @@
+@@ -1457,6 +1078,96 @@
    );
  }
  

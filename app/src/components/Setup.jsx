@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, Field, SectionTitle, inputCls } from './DoseExpectation.jsx'
+import { Btn, Field, SectionTitle, inputCls, shortInputCls } from './DoseExpectation.jsx'
 import { Card, DeleteButton } from './ErrorBoundary.jsx'
 import {
   Beaker, Bell, ChevronDown, ChevronUp, Download, Plus, Save, Settings2, SunMedium, Upload, Waves,
 } from '../icons.jsx'
-import { fmtAmount, fmtPotency, fmtTime } from '../lib/format.js'
+import { fmtAmount, fmtPotency, fmtQty, fmtTime } from '../lib/format.js'
 import { todayStr, fmtDate } from '../lib/dates.js'
 import { nowTime } from '../lib/clock.js'
 import { CHEMICALS, KEEPER_FACTS, POTENCY_FORM, potencyForThisTank } from '../store/config.js'
 import { ImportPanel } from './ImportPanel.jsx'
 import { TestMode } from './TestMode.jsx'
 import { MODE, currentMode } from '../store/mode.js'
+import { DeliveredDoseField, DoseHistory } from './DeliveredDose.jsx'
+import { LockedValue, SaveOrEdit } from './SetupLock.jsx'
+import { RangeSlider } from './RangeSlider.jsx'
 import { t } from '../strings.js'
 
 /* ---------------------------------- Setup ---------------------------------- */
@@ -114,7 +117,7 @@ function per100LFrom(config) {
 }
 
 export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = null,
-  doseChanges = [], onAddDoseChange, onDeleteEvent, onSetStandingDose,
+  doseChanges = [], onDeleteEvent, onSetDeliveredDose, standingDose = null,
   lightingChanges = [], hiddenNotices = [], onRestoreNotice, onRestoreAllNotices,
   onExport, store = null, onImported = null, onModeChange = null,
   storageHealth = null }) {
@@ -126,18 +129,41 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
   /* ---- the keeper's facts ---------------------------------------------- */
   const [facts, setFacts] = useState(() => factsFrom(config));
   const [factMsg, setFactMsg] = useState("");
+  /* OWNER FINDING 16. A group is locked once every value in it is on record and
+     the keeper is not editing it. Editing is a state of this screen and writes
+     nothing: the record changes when he saves and at no other moment. */
+  const [tankEditing, setTankEditing] = useState(false);
+  const tankSaved = !!(config && config.netVolumeL != null
+    && config.targetRangeMinDkh != null && config.targetRangeMaxDkh != null);
+  const tankLocked = tankSaved && !tankEditing;
+  const [strengthEditing, setStrengthEditing] = useState(false);
+  const strengthSaved = !!(config && (config.selectedPotencyDkhPerMl != null
+    || (config.chemical != null && config.stockConcentrationGPerL != null)));
+  const strengthLocked = strengthSaved && !strengthEditing;
+  const [stepEditing, setStepEditing] = useState(false);
+  const stepSaved = !!(config && config.recommendationPrecisionMlPerDay != null);
+  const stepLocked = stepSaved && !stepEditing;
 
   const saveFacts = async (keys) => {
     const values = {};
+    const empty = [];
     for (const k of keys) {
       const raw = facts[k];
-      if (raw === "" || raw == null) continue;
+      /* REEFKEEPER FINDING 13. An empty box was skipped and the screen still
+         said "Saved." — on the one screen that was missing the value every dose
+         is sized from, and which the import had just deleted. A save that wrote
+         nothing must not report that it wrote something. */
+      if (raw === "" || raw == null) { empty.push(k); continue; }
       const n = parseFloat(raw);
-      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
+      if (!Number.isFinite(n)) { setFactMsg(t("setup.needNumber")); return; }
       values[k] = n;
     }
+    if (empty.length) {
+      setFactMsg(t("setup.stillNeeded", { fields: empty.map((k) => t(labelOf(k))).join(", ") }));
+      return;
+    }
     await onSaveConfig(values);
-    setFactMsg("Saved.");
+    setFactMsg(t("setup.saved"));
     setTimeout(() => setFactMsg(""), 2500);
   };
 
@@ -158,29 +184,26 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
      permanently stuck at one however many times he pressed save — a screen
      telling him something was missing that he had already supplied, on the same
      screen he had supplied it. */
+  /* A field's own label, for a message that has to name it. */
+  const labelOf = (key) => (KEEPER_FACTS.find((f) => f.key === key) || {}).label || key;
+
   const ASKED_HERE = KEEPER_FACTS.filter(
     (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
   );
   const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
 
-  /* ---- dose changes ----------------------------------------------------- */
-  const [dcOpen, setDcOpen] = useState(false);
-  const [dcFrom, setDcFrom] = useState("");
-  const [dcTo, setDcTo] = useState("");
-  const [dcDate, setDcDate] = useState(todayStr());
-  const [dcTime, setDcTime] = useState(nowTime());
+  /* ---- the dose history --------------------------------------------------
 
-  const newestFirst = useMemo(
-    () => [...doseChanges].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-    [doseChanges]);
+     The FROM/TO form is gone entirely (owner finding 19). Its state went with
+     it: there is nothing left on this screen that asks the keeper for a figure
+     the record already holds.
 
-  const submitDoseChange = async () => {
-    const from = parseFloat(dcFrom), to = parseFloat(dcTo);
-    if (!Number.isFinite(from) || !Number.isFinite(to)) return;
-    await onAddDoseChange({ fromMlPerDay: from, toMlPerDay: to, date: dcDate, time: dcTime });
-    setDcFrom(""); setDcTo(""); setDcDate(todayStr()); setDcTime(nowTime());
-  };
-
+     Already newest-first, from the ledger's own total order. It was sorted here
+     on the DATE alone, which compares equal for two changes made on one day and
+     therefore left them in storage order — oldest at the top of a list headed
+     "newest first". A second opinion about which change is most recent is what
+     `MASTER RULE 1` forbids. */
+  const newestFirst = doseChanges;
   /* ---- ONE dosing section ------------------------------------------------
 
      "Never ask the same thing twice in different clothes." Solution strength,
@@ -201,9 +224,9 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
 
   /* THE RE-READ. One effect, one condition: the stored version changed.
 
-     `standing` and `current` are handled at their own declaration below, for
-     the same reason and by the same rule — the dose in force is a ledger fact,
-     not a configuration field, so it has its own key. */
+     The delivered dose is not here at all: it is a ledger fact rather than a
+     configuration field, it arrives from the shell, and `DeliveredDoseField`
+     owns its own re-read. */
   const syncedVersion = useRef(config ? config.configVersionId : null);
   useEffect(() => {
     const version = config ? config.configVersionId : null;
@@ -265,23 +288,6 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
     setTimeout(() => setStrengthMsg(""), 2500);
   };
 
-  /* The dose in force. This is the field whose absence stopped the engine
-     working out consumption at all — see `lib/record.js` `recordDoseState`. */
-  const standing = newestFirst.length ? newestFirst[0].to : null;
-  const [current, setCurrent] = useState(() => (standing != null ? String(standing) : ""));
-  const [currentMsg, setCurrentMsg] = useState("");
-
-  /* The same re-read as the configuration's, keyed on the ledger fact rather
-     than the configuration version, because that is where the standing dose
-     lives. Without it the box went on showing the dose that was in force when
-     the screen opened, however many changes had been recorded since. */
-  const syncedStanding = useRef(standing);
-  useEffect(() => {
-    if (standing === syncedStanding.current) return;
-    syncedStanding.current = standing;
-    setCurrent(standing != null ? String(standing) : "");
-  }, [standing]);
-
   /* What the card says about itself when it is shut: the two facts whose
      absence stops the engine answering, named rather than counted. */
   const dosingSubtitle = useMemo(() => {
@@ -290,17 +296,9 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
       && (config.selectedPotencyDkhPerMl != null
         || (config.chemical != null && config.stockConcentrationGPerL != null));
     if (!hasStrength) bits.push("solution strength needed");
-    if (standing == null) bits.push("current dose needed");
-    return bits.length ? bits.join(" · ") : `${fmtAmount(standing)} mL/day`;
-  }, [config, standing]);
-
-  const saveCurrent = async () => {
-    const v = parseFloat(current);
-    if (!Number.isFinite(v)) { setCurrentMsg("Enter a number."); return; }
-    await onSetStandingDose(v);
-    setCurrentMsg(t("dosing.currentSaved"));
-    setTimeout(() => setCurrentMsg(""), 2500);
-  };
+    if (standingDose == null) bits.push("current dose needed");
+    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
+  }, [config, standingDose]);
 
   return (
     <div>
@@ -317,20 +315,62 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
             threshold, a tolerance or a cadence — those are the canon's, and
             the app does not ask because it does not get to choose. */}
         <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-          These are the things only you know. The app will not guess at any of them, and it
-          says what it cannot work out without each one.
+          These are the things only you know. None of them is guessed at, and anything that
+          cannot be worked out without one is named rather than estimated.
         </p>
-        {ASKED_HERE.map((f) => (
-          <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-            <input type="number" inputMode="decimal" className={inputCls}
-              value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-              placeholder={t(f.hint)} />
-          </Field>
-        ))}
-        <Btn className="w-full mt-2"
-          onClick={() => saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"])}>
-          <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-        </Btn>
+        {tankLocked ? (
+          <>
+            {/* OWNER FINDING 16 — A SAVED VALUE LOOKS SAVED. It rendered as an
+                input that still accepted typing, so nothing on the screen said
+                the save had taken. */}
+            <LockedValue label={t("setup.volume")}
+              text={`${fmtAmount(config.netVolumeL)} ${t("setup.volumeUnit")}`} />
+            <LockedValue label={t("range.head")}
+              text={`${fmtQty(config.targetRangeMinDkh, "dkh")} \u2013 ${fmtQty(config.targetRangeMaxDkh, "dkh")} dKH`} />
+          </>
+        ) : (
+          <>
+            {/* OWNER FINDING 17 — A SHORT NUMBER LOOKS LIKE ONE. A net volume
+                is three digits and had a box the width of the screen, which
+                says "write me a sentence". */}
+            <Field label={t("setup.volume")} className="mb-3">
+              <div className="flex items-center gap-2">
+                <input type="number" inputMode="decimal"
+                  className={`${shortInputCls} shrink-0`}
+                  value={facts.netVolumeL}
+                  onChange={(e) => setFacts({ ...facts, netVolumeL: e.target.value })}
+                  placeholder={t("fact.netVolumeHint")} />
+                <span className="text-[13px] font-bold text-ink2">{t("setup.volumeUnit")}</span>
+              </div>
+            </Field>
+
+            {/* OWNER FINDING 18 — the range is a bar with two handles, and how
+                wide it is is itself the thing being judged. Graded, because
+                these are alkalinity's and the owner stated them for it. */}
+            <div className="mb-3">
+              <div className="text-[11px] font-extrabold uppercase tracking-wide text-ink2 mb-0.5">
+                {t("range.head")}
+              </div>
+              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
+                {t("range.lead")}
+              </p>
+              <RangeSlider graded unit="dKH"
+                min={parseFloat(facts.targetRangeMinDkh)}
+                max={parseFloat(facts.targetRangeMaxDkh)}
+                onChange={(lo, hi) => setFacts({
+                  ...facts,
+                  targetRangeMinDkh: String(Number(lo.toFixed(2))),
+                  targetRangeMaxDkh: String(Number(hi.toFixed(2))),
+                })} />
+            </div>
+          </>
+        )}
+        <SaveOrEdit locked={tankLocked}
+          onEdit={() => setTankEditing(true)}
+          onSave={async () => {
+            await saveFacts(["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]);
+            setTankEditing(false);
+          }} />
         {factMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{factMsg}</p>}
       </SetupSection>
 
@@ -376,6 +416,14 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
           <>
             {/* ---- solution strength: ONE fact, three ways of saying it ---- */}
             <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.strengthHead")}</h4>
+            {strengthLocked ? (
+              <LockedValue label={t("dosing.strengthHead")}
+                text={derived.value != null ? `${fmtPotency(derived.value)} dKH/mL`
+                  : config && config.selectedPotencyDkhPerMl != null
+                    ? `${fmtPotency(config.selectedPotencyDkhPerMl)} dKH/mL`
+                    : `${fmtAmount(config.stockConcentrationGPerL)} g/L`} />
+            ) : (
+              <>
             <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
               {t("dosing.strengthLead")}
             </p>
@@ -430,120 +478,77 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
               {derived.kind === "needsVolume" && t("dosing.derivedNeedsVolume")}
               {derived.kind === "afterSave" && t("dosing.derivedAfterSave")}
             </p>
-            <Btn className="w-full" onClick={saveStrength}>
-              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-            </Btn>
+              </>
+            )}
+            <SaveOrEdit locked={strengthLocked}
+              onEdit={() => setStrengthEditing(true)}
+              onSave={async () => { await saveStrength(); setStrengthEditing(false); }} />
             {strengthMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{strengthMsg}</p>}
 
-            {/* ---- the dose in force -------------------------------------- */}
+            {/* ---- THE DELIVERED DOSE — ONE FIELD (owner finding 19) --------
+
+                 Three things used to sit here for a single act: "what your
+                 pump is running now", a history, and a "record a dose change"
+                 form with FROM and TO. They wrote two different kinds of
+                 record and neither knew about the other, which is why the
+                 keeper typed 9.0, was told it was saved, and read "on record:
+                 8.8 mL/day" underneath it.
+
+                 One field now, and it is `DeliveredDoseField` — the SAME
+                 component the Dosing tab uses, so the two surfaces cannot
+                 drift. Both notes are gone: they said "the app", which the
+                 register forbids, and the first did not make sense as
+                 written. */}
             <div className="border-t border-app mt-4 pt-3">
-              <h4 className="text-[13px] font-black text-ink mb-1">{t("dosing.currentHead")}</h4>
-              <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-2">
-                {t("dosing.currentLead")}
-              </p>
-              <Field label={t("dosing.current")} className="mb-2">
-                <input type="number" inputMode="decimal" step="0.01" className={inputCls}
-                  value={current} onChange={(e) => setCurrent(e.target.value)} />
-              </Field>
-              <p className="text-[11px] font-bold text-ink2 mb-2">
-                {standing != null ? t("dosing.currentOnRecord", { dose: fmtAmount(standing) }) : t("dosing.currentNone")}
-              </p>
-              {standing != null && (
-                <p className="text-[11px] font-medium text-ink2 leading-relaxed mb-2">
-                  {t("dosing.currentUseChange")}
-                </p>
-              )}
-              <Btn className="w-full" onClick={saveCurrent}>
-                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-              </Btn>
-              {currentMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-2">{currentMsg}</p>}
+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.delivered.head")}</h4>
+              <DeliveredDoseField standing={standingDose} onSave={onSetDeliveredDose} />
             </div>
 
             {/* ---- the pump's step ---------------------------------------- */}
             <div className="border-t border-app mt-4 pt-3">
-              {KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
-                <Field key={f.key} label={`${t(f.label)}${f.unit ? ` (${f.unit})` : ""}`} className="mb-2">
-                  <input type="number" inputMode="decimal" className={inputCls}
-                    value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
-                    placeholder={t(f.hint)} />
-                </Field>
-              ))}
-              <Btn className="w-full" onClick={() => saveFacts(["recommendationPrecisionMlPerDay"])}>
-                <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span>
-              </Btn>
+              {stepLocked ? (
+                <LockedValue label={t("fact.pumpStep")}
+                  text={`${fmtQty(config.recommendationPrecisionMlPerDay, "mlPerDay")} mL/day`} />
+              ) : (
+                KEEPER_FACTS.filter((f) => f.key === "recommendationPrecisionMlPerDay").map((f) => (
+                  <Field key={f.key} label={t(f.label)} className="mb-2">
+                    {/* A pump step is one or two characters. Finding 17's rule
+                        applies to it as much as to the volume. */}
+                    <div className="flex items-center gap-2">
+                      <input type="number" inputMode="decimal"
+                        className={`${shortInputCls} shrink-0`}
+                        value={facts[f.key]} onChange={(e) => setFacts({ ...facts, [f.key]: e.target.value })}
+                        placeholder={t(f.hint)} />
+                      <span className="text-[13px] font-bold text-ink2">{f.unit}</span>
+                    </div>
+                  </Field>
+                ))
+              )}
+              <SaveOrEdit locked={stepLocked}
+                onEdit={() => setStepEditing(true)}
+                onSave={async () => {
+                  await saveFacts(["recommendationPrecisionMlPerDay"]);
+                  setStepEditing(false);
+                }} />
             </div>
 
-            {/* ---- every change to the dose ------------------------------- */}
+            {/* ---- the history, which writes itself ------------------------
+
+                 Newest first and in the order it claims, which it was not:
+                 it sorted on the date alone, so two changes made on one day
+                 kept storage order and the older sat on top. `doseChanges`
+                 arrives already ordered by the ledger, which is the app's one
+                 owner of "most recent".
+
+                 Nothing here can be edited. A dose change is a fact about a
+                 moment; correcting it means deleting it and entering it again,
+                 exactly as a reading does. */}
             <div className="border-t border-app mt-4 pt-3">
-              <h4 className="text-[13px] font-black text-ink mb-1">Dose changes</h4>
+              <h4 className="text-[13px] font-black text-ink mb-1">{t("dose.history.head")}</h4>
               <p className="text-[12px] text-ink2 font-medium leading-relaxed mb-3">
-                Every change to the daily dose, newest first. The date and time matter: the engine
-                measures the tank's response from the moment the change took effect, so a change made
-                at 9am and one made at 9pm are not the same change.
+                {t("dose.history.noEdit")}
               </p>
-        <button onClick={() => setDcOpen((v) => !v)}
-          className="w-full flex items-center justify-between gap-2 rounded-xl border border-app px-3 py-2.5 mb-3">
-          <span className="text-[12px] font-extrabold text-teal-brand">Record a dose change</span>
-          {dcOpen ? <ChevronUp size={14} className="text-ink2" /> : <ChevronDown size={14} className="text-ink2" />}
-        </button>
-
-        {dcOpen && (
-          <div className="mb-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="From (mL/day)">
-                <input type="number" inputMode="decimal" step="0.1" value={dcFrom}
-                  onChange={(e) => setDcFrom(e.target.value)} className={inputCls} />
-              </Field>
-              <Field label="To (mL/day)">
-                <input type="number" inputMode="decimal" step="0.1" value={dcTo}
-                  onChange={(e) => setDcTo(e.target.value)} className={inputCls} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <Field label="Date">
-                <input type="date" value={dcDate} max={todayStr()}
-                  onChange={(e) => setDcDate(e.target.value)} className={inputCls} />
-              </Field>
-              <Field label="Time">
-                <input type="time" value={dcTime} onChange={(e) => setDcTime(e.target.value)} className={inputCls} />
-              </Field>
-            </div>
-            <Btn className="w-full mt-3" onClick={submitDoseChange}>
-              <span className="flex items-center justify-center gap-1.5"><Save size={14} /> Record it</span>
-            </Btn>
-          </div>
-        )}
-
-        {newestFirst.length === 0 ? (
-          <p className="text-[13px] text-ink2 font-medium">No dose changes recorded yet.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {newestFirst.map((d) => (
-              <div key={d.id} className="flex items-center gap-2 rounded-lg bg-app px-2.5 py-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-black text-ink truncate">
-                    {d.isStart ? (
-                      <>{fmtAmount(d.to)} mL/day</>
-                    ) : (
-                      <>
-                        {fmtAmount(d.from)} → {fmtAmount(d.to)} mL/day
-                        <span className="text-ink2 font-bold ml-1">
-                          ({d.to > d.from ? "+" : ""}{fmtAmount(d.to - d.from)})
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-bold text-ink2">
-                    {fmtDate(d.date)}{fmtTime(d.time) ? ` · ${fmtTime(d.time)}` : ""}
-                    {d.isStart ? " · where the record begins" : ""}
-                    {d.fromDerived ? " · the earlier figure is read from the record, not typed" : ""}
-                  </div>
-                </div>
-                <DeleteButton onDelete={() => onDeleteEvent(d.id)} confirmMessage="Dose change removed" />
-              </div>
-            ))}
-          </div>
-        )}
+              <DoseHistory entries={newestFirst} onDelete={onDeleteEvent} />
             </div>
           </>
         )}

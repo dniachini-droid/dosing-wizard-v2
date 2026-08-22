@@ -13,8 +13,9 @@ import { AlertTriangle, Beaker, FlaskConical, LayoutDashboard, ListChecks, Setti
 import { NAV } from './lib/constants.js'
 import { todayStr, fmtShort } from './lib/dates.js'
 import { onStorageError, onToast, notify } from './lib/storage.js'
+import { watchViewport } from './lib/viewport.js'
 import {
-  chartEventsFrom, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
+  chartEventsFrom, isLive, latestByParamFrom, paramDefsFrom, readingsFrom, rowsFor,
 } from './lib/adapt.js'
 import {
   correctReading, deleteRecord,
@@ -32,9 +33,10 @@ import { nowIso } from './store/time.js'
 import { ENGINE_STATE, onEngineState, warmUp } from './engine/client.js'
 import { cardContent, cardStatusLine } from './present/card-content.js'
 import { selectCard, instructsDoseChange } from './present/cards.js'
+import { episodesFrom, latestEpisode } from './present/episodes.js'
 import { positionTone } from './present/position.js'
 import { sayVerb, sayAction, sayPosition } from './present/wording.js'
-import { fmtAmount } from './lib/format.js'
+import { fmtQty } from './lib/format.js'
 import { t } from './strings.js'
 
 /* The tab set is data in `lib/constants.js`, which imports nothing so it stays
@@ -118,7 +120,7 @@ function doseSummaries(engineResult, paramDefs, assessmentState) {
          PRESENT on results that recommend nothing at all, so reading its
          presence as a command turned a hold into "up 0.0 mL/day from 12.0". */
       headline: typeof rec === "number" && typeof cur === "number" && instructsDoseChange(engineResult)
-        ? `${fmtAmount(cur)} → ${fmtAmount(rec)}`
+        ? `${fmtQty(cur, "mlPerDay")} → ${fmtQty(rec, "mlPerDay")}`
         : sayVerb(card, dose.action),
       sub: sayPosition(engineResult.position),
       value: typeof engineResult.latestValidValueDkh === "number" ? engineResult.latestValidValueDkh : null,
@@ -194,6 +196,12 @@ export function ReefConsoleInner() {
     return onEngineState((s) => setEngineState(s));
   }, []);
 
+  /* How tall the screen actually is, published for the stylesheet — see
+     `lib/viewport.js`. The shell and every sheet measure themselves against it
+     instead of against `vh`, which on a phone is the height the page would
+     have if the toolbar were hidden and is therefore taller than the screen. */
+  useEffect(() => watchViewport(), []);
+
   /* Reload everything this device holds. Called after every write, so no
      screen ever renders from a copy of the record that the record has since
      moved past. */
@@ -245,8 +253,16 @@ export function ReefConsoleInner() {
   const chartEvents = useMemo(() => chartEventsFrom(projection), [projection]);
 
   const waterChanges = useMemo(() => projection
-    .filter((r) => r.event.kind === KIND.WATER_CHANGE && r.state !== "SUPERSEDED" && r.state !== "INVALID")
-    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
+    .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
+    .map((r) => ({
+      id: r.event.eventId,
+      date: r.event.time.localDate,
+      /* Two spellings of one fact, because the import wrote `volumeL` and the
+         recorder writes `litres`. Records already stored carry whichever was
+         written at the time, so this is the one place that knows they are the
+         same thing — rather than every screen learning it separately. */
+      litres: r.event.detail.litres ?? r.event.detail.volumeL ?? null,
+    })), [projection]);
 
   /* Dose CHANGES and the dose STATE the record starts from.
 
@@ -257,7 +273,7 @@ export function ReefConsoleInner() {
      dose it had. A starting point has no delta and is shown as what it is. */
   const doseChanges = useMemo(() => projection
     .filter((r) => (r.event.kind === KIND.DOSE_CHANGE || r.event.kind === KIND.DOSE_STATE)
-      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+      && isLive(r))
     .map((r) => ({
       id: r.event.eventId,
       date: r.event.time.localDate,
@@ -269,17 +285,37 @@ export function ReefConsoleInner() {
          and the list says so rather than presenting it as his figure. */
       fromDerived: !!r.event.detail.fromMlPerDayDerived,
       isStart: r.event.kind === KIND.DOSE_STATE,
+      /* A recommendation, a recommendation the keeper adjusted, or his own
+         change. Absent on everything recorded before this existed and on every
+         imported row, where "his own change" is the only honest reading. */
+      origin: r.event.detail.origin || "KEEPER",
       parameter: r.event.parameter || "ALK",
     })), [projection]);
 
+  /* NEWEST FIRST, IN THE ORDER IT CLAIMS — owner finding 19.
+
+     Setup sorted this list on the DATE alone. Two changes made on one day
+     compare equal, so they kept the order they came out of storage in, which is
+     oldest first — and the keeper's 8.8 sat at the top of a list headed "newest
+     first" above the 9.0 that had replaced it that morning.
+
+     `projection` is the ledger's own total order (`INV-A1`) and the app already
+     trusts it for "the latest reading". Reversing it is reading that one order
+     rather than forming a second opinion about which change is most recent. */
+  const doseChangesNewestFirst = useMemo(() => [...doseChanges].reverse(), [doseChanges]);
+
+  /* THE DOSE THE PUMP IS RUNNING NOW. One answer, read by Setup, by the Dosing
+     tab and by the write path below, so no two of them can disagree about what
+     the previous figure was. */
+  const standingDose = doseChangesNewestFirst.length ? doseChangesNewestFirst[0].to : null;
+
   const lightingChanges = useMemo(() => projection
     .filter((r) => r.event.kind === KIND.HUSBANDRY && r.event.detail
-      && r.event.detail.husbandryKind === "LIGHTING"
-      && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+      && r.event.detail.husbandryKind === "LIGHTING" && isLive(r))
     .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, note: r.event.detail.note })), [projection]);
 
   const icps = useMemo(() => projection
-    .filter((r) => r.event.kind === KIND.ICP_PANEL && r.state !== "SUPERSEDED" && r.state !== "INVALID")
+    .filter((r) => r.event.kind === KIND.ICP_PANEL && isLive(r))
     .map((r) => ({
       id: r.event.eventId,
       date: r.event.time.localDate,
@@ -306,6 +342,15 @@ export function ReefConsoleInner() {
      than after it. */
   const engineDown = engineState && engineState.state === ENGINE_STATE.FAILED;
   const assessmentState = engineDown ? "ENGINE_UNAVAILABLE" : assessment ? assessment.state : null;
+
+  /* THE ENGINE'S OWN OBSERVATIONS, FOR EVERY SCREEN THAT SHOWS A VALUE.
+
+     Canon treats measurements taken within half an hour as one test and
+     resolves them to their middle value. Until this existed the words on a
+     card came from that resolved observation while the number beside them came
+     straight from the ledger, so five 9.0s and a 10.0 typed in one minute drew
+     "10.00 · IN RANGE". Read, never re-derived — see `present/episodes.js`. */
+  const episodes = useMemo(() => episodesFrom(engineResult), [engineResult]);
 
   /* One notice per parameter, from the engine, already worded — and filtered
      by what the keeper has put away. The identity and the signature are V1's
@@ -372,14 +417,37 @@ export function ReefConsoleInner() {
     assess();
   };
 
-  const addDoseChange = async ({ fromMlPerDay, toMlPerDay, date, time }) => {
+  /* THE DELIVERED DOSE — ONE WRITE PATH, THREE WAYS IN (owner finding 19).
+
+     Setup's field, accepting a recommendation on the Dosing tab, and "change
+     the dose anyway" are the same act and go through here. There is no second
+     code path for any of them; what differs is one field on the entry
+     afterwards, saying where the figure came from.
+
+     THE KEEPER SUPPLIES ONE NUMBER. The "to" is what he typed. The "from" is
+     `standingDose` — what the record already says was running — so the FROM/TO
+     form is gone rather than rearranged. Asking him to restate a figure the app
+     holds is asking him to get it wrong, and he did: he typed 9.0 in one box
+     and read "on record: 8.8" underneath it, because the two boxes wrote two
+     different kinds of record and neither knew about the other.
+
+     THE FIRST TIME IS NOT A DIFFERENT ACT. With nothing on record there is no
+     previous figure to move from, so the record BEGINS — a standing dose, which
+     is what `dosing.py` calls "a declaration of the standing rate". Every time
+     after it is a change. Same field, same path, same screen. */
+  const setDeliveredDose = async ({ toMlPerDay, date, time, origin = "KEEPER" }) => {
+    const from = standingDose;
     try {
-      await recordDoseChange(store, { fromMlPerDay, toMlPerDay, date, time });
+      if (from == null) {
+        await recordDoseState(store, { doseMlPerDay: toMlPerDay, date, atTime: time });
+      } else {
+        await recordDoseChange(store, { fromMlPerDay: from, toMlPerDay, date, time, origin });
+      }
     } catch (e) { setStorageMsg(e && e.message); return; }
     await reload();
-    notify("Dose change recorded");
+    notify(from == null ? t("dose.delivered.recorded") : t("dose.delivered.changed"));
     const def = paramDefs.find((d) => d.key === "ALK");
-    setDoseResult({ at: Date.now(), def, from: fromMlPerDay, to: toMlPerDay, date, time });
+    if (from != null) setDoseResult({ at: Date.now(), def, from, to: toMlPerDay, date, time });
     assess();
   };
 
@@ -415,18 +483,6 @@ export function ReefConsoleInner() {
   };
 
   const dropReading = (eventId) => deleteRecordById(eventId, t("delete.done.reading"));
-
-  /* The dose the keeper says his pump is running now. Stage 1 established, by
-     measurement, that the engine had no readable record of this at all on a
-     V1-imported history — and without it `consumption` is `NOT_RUN` and every
-     figure that depends on it is withheld. */
-  const setStandingDose = async (doseMlPerDay) => {
-    try { await recordDoseState(store, { doseMlPerDay }); }
-    catch (e) { setStorageMsg(e && e.message); return; }
-    await reload();
-    notify("Current dose recorded");
-    assess();
-  };
 
   const addWaterChange = async ({ date, time, litres }) => {
     try {
@@ -474,7 +530,23 @@ export function ReefConsoleInner() {
      ledger event, so it is `uncomplete` rather than `deleteRecord` — but the
      act is the same one and the keeper is told the same way. */
   const deleteCompletion = async (item) => {
-    if (!item || !item.taskId || !item.date) return;
+    if (!item) return;
+    /* OWNER FINDING 9's REAL CAUSE, AND ITS OTHER HALF.
+
+       Every row this calendar draws used to be deleted the same way — as a task
+       COMPLETION. That is right for a tick and wrong for anything else, and it
+       is why the owner deleted what he believed was a reading five times and it
+       never went: the tick came off, the due list noticed, and the reading was
+       never touched.
+
+       A row now says which kind of record it is. A ledger event goes through the
+       one delete path, which takes the event, its annotations and every
+       assessment that read it; a tick is uncompleted. Nothing guesses. */
+    if (item.eventId) {
+      await deleteRecordById(item.eventId, t("delete.done.waterChange"));
+      return;
+    }
+    if (!item.taskId || !item.date) return;
     await store.tasks.uncomplete(item.taskId, item.date);
     await reload();
     notify(t("delete.done.entry"));
@@ -719,7 +791,39 @@ export function ReefConsoleInner() {
       <style>{`
         .font-display { font-family: 'Avenir Next', 'Avenir', 'Futura', 'Trebuchet MS', -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.02em; font-weight: 800; }
         .font-body { font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-        .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+        /* Three declarations of one property, most-preferred last: a browser
+           with no dvh takes the first, one with dvh but no
+           visualViewport takes the second, and everything else takes the
+           live measurement. */
+        .app-shell { height: 100vh; height: 100dvh; height: var(--app-vh, 100dvh); overflow: hidden; }
+
+        /* OWNER FINDINGS 7 AND 22 — ONE RULE, NOT TWO.
+
+           Every sheet used to set its own height in vh (85, 88, 92), and a
+           sheet at 85% of the LARGE viewport is taller than 85% of the screen:
+           its lower portion falls below the fold, where the tab bar is, and a
+           fixed centred box has nothing to scroll to reach it. The tab bar was
+           never drawn in front of the sheet. The sheet was taller than the
+           screen.
+
+           One class, one measurement, every sheet. The gap leaves the sheet
+           clear of the bar rather than ending exactly on it, because a control
+           flush against the bar is a control that gets the wrong tap. */
+        .sheet-panel {
+          max-height: 85vh;
+          max-height: calc(100dvh - 5.5rem - env(safe-area-inset-bottom, 0px));
+          max-height: calc(var(--app-vh, 100dvh) - var(--app-nav-h, 4rem) - 1.5rem);
+        }
+        /* The overlay a sheet sits in. Bounded the same way, so a sheet
+           anchored to the bottom of it cannot be anchored off the screen. */
+        .sheet-layer {
+          height: 100vh;
+          height: 100dvh;
+          height: var(--app-vh, 100dvh);
+          /* The bar's own row, kept clear. A sheet centred in the whole screen
+             has its lower edge behind the bar however short it is. */
+          padding-bottom: var(--app-nav-h, 4rem);
+        }
         .bg-app { background-color: #F3F7F6; }
         /* A raised surface on the pale-teal page. bg-card was USED by the
            correction sheet and the pinned close control and was never defined,
@@ -836,7 +940,7 @@ export function ReefConsoleInner() {
             <Dashboard
               latestByParam={latestByParam} readings={readings} paramDefs={paramDefs}
               saveRange={saveRange} resetRange={resetRange} customRanges={{}}
-              chartEvents={chartEvents} config={config}
+              chartEvents={chartEvents} config={config} episodes={episodes}
               engineResult={engineResult} assessmentState={assessmentState} scheduleView={scheduleView}
               tasks={tasks} completions={completions} waterChanges={waterChanges}
               onOpenParam={setModalParam} onOpenTest={openTestFor}
@@ -845,7 +949,8 @@ export function ReefConsoleInner() {
               onSetTaskDue={setTaskDue} onSetTaskInterval={setTaskInterval}
               onSkipTask={skipTask} onUpdateTask={updateTask}
               onAddReading={addReading}
-              onCorrectReading={fixReading} onDeleteReading={dropReading} />
+              onCorrectReading={fixReading} onDeleteReading={dropReading}
+              onGoDosing={() => setTab("dosing")} />
           )}
 
           {tab === "log" && (
@@ -855,7 +960,7 @@ export function ReefConsoleInner() {
                 <div className="flex gap-1.5">
                   {[["tests", "My tests", readings.length], ["icp", "ICP panels", icps.length]].map(([k, label, n]) => (
                     <button key={k} onClick={() => setTestTab(k)}
-                      className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
+                      className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
                       style={{ borderColor: testTab === k ? "#0B7C86" : "#E3ECEA",
                                color: testTab === k ? "#0B7C86" : "#45605F",
                                background: testTab === k ? "#0B7C8610" : "#fff" }}>
@@ -864,7 +969,7 @@ export function ReefConsoleInner() {
                   ))}
                 </div>
                 <button onClick={() => setAllGraphs(true)}
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold border-2"
+                  className="rounded-lg px-3 min-h-[44px] text-[12px] font-extrabold border-2"
                   style={{ borderColor: "#E3ECEA", color: "#45605F" }}>
                   All graphs
                 </button>
@@ -872,7 +977,8 @@ export function ReefConsoleInner() {
 
               {testTab === "tests" ? (
                 <TestLab paramDefs={paramDefs} readings={readings} onAdd={addReading}
-                  onOpenParam={setModalParam} scheduleView={scheduleView} />
+                  onOpenParam={setModalParam} scheduleView={scheduleView}
+                  episodes={episodes} onDeleteReading={dropReading} />
               ) : (
                 <IcpPanel icps={icps} onAdd={addIcp} />
               )}
@@ -886,12 +992,9 @@ export function ReefConsoleInner() {
               onAcceptPotency={acceptPotency} onKeepPotency={keepPotency}
               summaries={doseSummaries(engineResult, paramDefs, assessmentState)}
               latestByParam={latestByParam}
-              config={config} readings={readings} chartEvents={chartEvents}
-              /* V1's, kept where a hold is recommended: a hold is advice, and
-                 the keeper is allowed to disagree with it. It opens the same
-                 dose-change form Setup uses; nothing here records a change by
-                 itself (`ALK-RECOMMEND-ONLY-001`). */
-              onChangeDoseAnyway={() => setTab("settings")} />
+              standingDose={standingDose} onSetDeliveredDose={setDeliveredDose}
+              config={config} readings={readings} chartEvents={chartEvents} episodes={episodes}
+              />
           )}
 
           {tab === "tasks" && (
@@ -909,8 +1012,8 @@ export function ReefConsoleInner() {
           {tab === "setup" && (
             <Setup config={config} onSaveConfig={saveConfig} paramDefs={paramDefs}
               engineResult={engineResult}
-              doseChanges={doseChanges} onAddDoseChange={addDoseChange} onDeleteEvent={deleteEvent}
-              onSetStandingDose={setStandingDose}
+              doseChanges={doseChangesNewestFirst} standingDose={standingDose}
+              onSetDeliveredDose={setDeliveredDose} onDeleteEvent={deleteEvent}
               onModeChange={() => setModeTick((n) => n + 1)}
               lightingChanges={lightingChanges}
               hiddenNotices={hiddenList} onRestoreNotice={restoreNotice}
@@ -940,6 +1043,7 @@ export function ReefConsoleInner() {
 
           {allGraphs && (
             <AllGraphsModal paramDefs={paramDefs} readings={readings} chartEvents={chartEvents}
+              episodes={episodes}
               onClose={() => setAllGraphs(false)} onOpenParam={setModalParam} />
           )}
 
@@ -947,7 +1051,8 @@ export function ReefConsoleInner() {
             <ParamHistoryModal def={modalDef} readings={readings}
               onClose={() => setModalParam(null)} onSaveRange={saveRange} onResetRange={resetRange}
               isCustom={!modalDef.assessed && modalDef.hasRange}
-              chartEvents={chartEvents}
+              chartEvents={chartEvents} episodes={episodes} onDeleteReading={dropReading}
+              engineResult={engineResult}
               onAddReading={addReading}
               notice={noticeFor(modalDef)}
               onGoDosing={() => { setModalParam(null); setTab("dosing"); }} />
@@ -956,7 +1061,7 @@ export function ReefConsoleInner() {
       </div>
 
       {/* Bottom nav - mobile */}
-      <nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
+      <nav data-app-nav className="md:hidden shrink-0 bg-white border-t border-app flex justify-around py-2 z-20 shadow-[0_-1px_6px_rgba(15,40,45,0.06)]"
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {NAV.map((n) => {
           const Icon = NAV_ICON[n.icon];

@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok, throws } from "./harness.mjs";
-import { chartDataFrom } from "../../app/src/lib/adapt.js";
+import { chartGroupsFrom } from "../../app/src/present/episodes.js";
 import { ANNOTATION } from "../../app/src/store/ledger.js";
 import { fmtPotency, fmtVal } from "../../app/src/lib/format.js";
 
@@ -674,7 +674,13 @@ s.test("PORT-13", "which range is the keeper's has one owner, and nobody else ch
        and states his alkalinity range in the sidebar. Writing and displaying
        what he typed is not choosing which range applies. Named explicitly so
        a THIRD file cannot join it silently. */
-    .filter((f) => rel(f) !== "app/src/App.jsx");
+    .filter((f) => rel(f) !== "app/src/App.jsx")
+    /* Setup shows a SAVED range back as plain text once it is locked (owner
+       finding 16) and hands the two edges to the slider that edits them
+       (finding 18). Reading back what the keeper typed, in the one place he
+       typed it, is not choosing which range applies — same exemption, same
+       reason, and named here so a fourth file cannot join them silently. */
+    .filter((f) => rel(f) !== "app/src/components/Setup.jsx");
   eq(others.length, 0,
     others.length ? `these choose a range themselves: ${others.map(rel).join(", ")}` : "nobody else chooses");
 });
@@ -849,6 +855,41 @@ s.test("META-01", "every test in the application suite has at least one negative
   eq(stale.join(", "), "", `these are exempt and no longer need to be: ${stale.join(", ")}`);
 });
 
+s.test("META-03", "no two tests in the suite share an identifier", () => {
+  /* FOUND BY THE MUTATION ARM REPORTING A MISS IT COULD NOT EXPLAIN.
+
+     `AM-R55` named `IMP-40` and stayed green through a mutation that plainly
+     broke the check written for it. There were TWO tests called `IMP-40`: the
+     one written for the defect, and one about reminder counts written months
+     earlier. The runner stores results in a map keyed by identifier, so the
+     second overwrote the first, and every question asked about `IMP-40` — did
+     it pass, did the mutation turn it red, does it have a control — was
+     answered about the wrong test.
+
+     Worse than the miss: the DUPLICATE PASSED. Had the reminders test been the
+     one that failed, the volume test's green would have hidden it. And
+     `META-01` would have counted the id as covered, so a control naming it
+     would have satisfied both tests at once.
+
+     An identifier is how every other check in this file refers to a test. Two
+     tests answering to one name makes all of that unreliable, so it is an
+     error rather than a warning. */
+  const runner = fs.readFileSync(path.join(HERE, "run-app-tests.mjs"), "utf8");
+  const listed = [...runner.matchAll(/"(test-[\w-]+\.mjs)"/g)].map((m) => m[1]);
+
+  const seen = new Map();
+  const duplicates = [];
+  for (const file of listed) {
+    const text = fs.readFileSync(path.join(HERE, file), "utf8");
+    for (const m of text.matchAll(/s\.test\(\s*"([^"]+)"/g)) {
+      const id = m[1];
+      if (seen.has(id)) duplicates.push(`${id} (${seen.get(id)} and ${file})`);
+      else seen.set(id, file);
+    }
+  }
+  eq(duplicates.join(", "), "", `two tests answer to one name: ${duplicates.join(", ")}`);
+});
+
 s.test("META-02", "every file in the application is either ported from V1 or declared as V2's own", () => {
   /* THE PORT MANIFEST IS ONLY AS COMPLETE AS ITS MAP.
 
@@ -1021,9 +1062,15 @@ s.test("PORT-20", "the shell's viewport height has a fallback, not a floor", () 
   ok(rule, "the shell's height is a CSS rule, where one property may be declared twice");
   const decls = rule[1].split(";").map((d) => d.trim()).filter(Boolean);
   const heights = decls.filter((d) => /^height\s*:/.test(d));
-  eq(heights.length, 2, `two height declarations, the fallback and the dynamic one: ${heights.join("; ")}`);
-  ok(/100vh/.test(heights[0]), "the fallback comes first");
-  ok(/100dvh/.test(heights[1]), "and the dynamic one supersedes it");
+  /* ROUND FIVE. A third declaration joined these: `dvh` tracks the toolbar but
+     is not live — iOS does not reflow while it slides — so the shell also takes
+     the visible viewport, measured continuously (`lib/viewport.js`). Still one
+     property, still most-preferred last; there is simply one more rung on the
+     ladder. `VP-04` states the same ordering from the other side. */
+  eq(heights.length, 3, `three height declarations, weakest first: ${heights.join("; ")}`);
+  ok(/100vh/.test(heights[0]), "the oldest fallback comes first");
+  ok(/100dvh/.test(heights[1]), "the dynamic viewport supersedes it");
+  ok(/var\(--app-vh/.test(heights[2]), "and the live measurement supersedes both");
   ok(decls.some((d) => /^overflow\s*:\s*hidden$/.test(d)),
     "and the document itself cannot scroll, so nothing can run underneath the bar");
 });
@@ -1036,15 +1083,16 @@ s.test("PORT-21", "the Dosing chart's points carry the label its axis and its ma
      shape, `{ i, value, date, time }`, with no label in it. Neither the axis
      nor the markers had anything to find.
 
-     `chartDataFrom` is the shape every other chart in the app takes, and it is
-     where the label rule lives. A second point shape was the defect. */
+     `chartGroupsFrom` is the shape every other chart in the app takes, and it
+     is where the point rule lives — one x-position per TEST, labelled. A second
+     point shape was the defect. */
   const chart = fs.readFileSync(path.join(ROOT, "app/src/components/ZoomableChart.jsx"), "utf8");
   ok(/dataKey="label"/.test(chart), "the axis reads `label`");
   ok(/x=\{ev\.label\}/.test(chart), "and so does an event marker");
 
   const wizard = fs.readFileSync(path.join(ROOT, "app/src/components/DosingWizard.jsx"), "utf8");
   const code = wizard.replace(/\/\*[\s\S]*?\*\//g, "");
-  ok(/chartDataFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
+  ok(/chartGroupsFrom\(/.test(code), "the Dosing tab builds its points with the shared builder");
   ok(!/\.map\(\(r, i\) => \(\{ i, value/.test(code),
     "and does not build a second point shape of its own");
 
@@ -1053,7 +1101,7 @@ s.test("PORT-21", "the Dosing chart's points carry the label its axis and its ma
     { date: "2026-08-20", time: "09:00", value: 8.9, id: "a" },
     { date: "2026-08-22", time: null, value: 9.0, id: "b" },
   ];
-  const points = chartDataFrom(rows, (d) => d.slice(5));
+  const points = chartGroupsFrom(rows, null, (d) => d.slice(5));
   ok(points.every((p) => p.label), `every point is labelled: ${JSON.stringify(points.map((p) => p.label))}`);
   ok(points.every((p) => p.date), "and keeps its date, which is what a marker matches against");
 });
@@ -1072,10 +1120,42 @@ s.test("PORT-22", "Setup's tank section counts only the facts it asks for", () =
     "the counter is not taken over every keeper fact");
   ok(/const missing = ASKED_HERE\.filter/.test(code),
     "it is taken over the facts this section renders");
-  /* And the same list drives the fields, so the count and the form cannot
-     disagree about which facts the section is responsible for. */
-  ok(/\{ASKED_HERE\.map\(/.test(code),
-    "and the fields are rendered from that same list");
+  /* And the section renders every fact it counts, so the count and the form
+     cannot disagree about which facts it is responsible for.
+
+     Checked by NAME rather than by the shape of the loop: owner findings 17 and
+     18 replaced one `map` over three identical boxes with a short volume field
+     and a two-handled range bar, which is three facts rendered as two controls.
+     Asserting the loop would have been asserting the markup. */
+  /* SCOPED TO THE SECTION, and that scoping is the whole check.
+
+     `test-engineer` proved the first version of this edit was a real
+     weakening: it searched the WHOLE FILE for each field's name, and
+     `Setup.jsx` mentions `facts.netVolumeL` again further down for the
+     solution-strength derivation. Delete the net-volume INPUT from the tank
+     section entirely and the check still passed — which is finding 4's exact
+     shape, a counted list drifting from what is shown, walking straight
+     through the test written to catch it. */
+  const from = code.indexOf('heading="Your tank"');
+  ok(from >= 0, "the tank section is findable");
+  const section = code.slice(from, code.indexOf("</SetupSection>", from));
+  ok(section.length > 0, "and has a body");
+  for (const key of ["netVolumeL", "targetRangeMinDkh", "targetRangeMaxDkh"]) {
+    /* Bound to the EDITING state, `facts`, not merely mentioned. A section that
+       shows a saved value back and has lost the control that edits it counts a
+       fact the keeper can no longer supply — which is finding 4 again, reached
+       from the other side. The locked read-back reads `config` and is checked
+       separately below. */
+    ok(new RegExp(`facts\\.${key}\\b|facts\\[["']${key}`).test(section),
+      `the tank section binds a control to ${key}`);
+    ok(new RegExp(`config\\.${key}\\b`).test(section),
+      `and shows ${key} back once it is saved`);
+  }
+  /* And it renders them as controls the keeper can actually use, or as the
+     locked read-back of one. A section that named all three in comments and
+     rendered none would satisfy the loop above. */
+  ok(/<input|<RangeSlider|<LockedValue/.test(section),
+    "and renders them as fields or as their saved values");
 });
 
 s.test("PORT-23", "the service worker does not take over a page that is still loading a previous version", () => {

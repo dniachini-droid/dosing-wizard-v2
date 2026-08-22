@@ -187,9 +187,19 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
             <input type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)} className={inputCls} />
           </Field>
         </div>
-        <label className="flex items-center gap-2 mt-2">
-          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)} />
-          <span className="text-[12px] font-bold text-ink2">Just the once — turn it off after it is done</span>
+        {/* REEFKEEPER FINDING 21. A 13px checkbox is the browser's default and
+            it is the smallest target in the application. The whole label is the
+            control — a `<label>` wrapping its input already is one — so it is
+            given the height. But the BOX is what the finger lands on, and a
+            check that an ancestor can satisfy proves nothing — nor does a
+            transform, because hit-testing follows the transform and a box
+            scaled to look right is a box that is small again. So it is 44, and
+            it looks like 44. A control that can be hit is worth more than a
+            control that is the size the desktop drew it. */}
+        <label className="flex items-center gap-2 mt-2 min-h-[44px]">
+          <input type="checkbox" checked={oneOffTask} onChange={(e) => setOneOffTask(e.target.checked)}
+            className="w-11 h-11 shrink-0 accent-teal-brand" />
+          <span className="text-[13px] font-bold text-ink2">Just the once — turn it off after it is done</span>
         </label>
         <Btn onClick={submit} className="w-full mt-3">
           <span className="flex items-center justify-center gap-1.5"><Plus size={14} /> Add task</span>
@@ -216,7 +226,7 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
             it would create a wrong record rather than an incomplete one.
             Recorded as open in `docs/migration/PORT-OMISSIONS.md`. */}
         <button onClick={() => setOoOpen((v) => !v)}
-          className="w-full flex items-center gap-2 py-2 text-left border-t border-app first:border-0">
+          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app first:border-0">
           <Plus size={14} className="text-ink2 shrink-0" />
           <span className="text-[13px] font-black text-ink flex-1">A one-off addition by hand</span>
         </button>
@@ -251,7 +261,7 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
         )}
 
         <button onClick={() => setLightOpen((v) => !v)}
-          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
+          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
           <SunMedium size={14} className="text-ink2 shrink-0" />
           <span className="text-[13px] font-black text-ink flex-1">A lighting change</span>
         </button>
@@ -280,7 +290,7 @@ export function Tasks({ tasks = [], completions = [], scheduleView = null, param
         )}
 
         <button onClick={() => setNoteOpen((v) => !v)}
-          className="w-full flex items-center gap-2 py-2 text-left border-t border-app">
+          className="w-full flex items-center gap-2 min-h-[44px] py-2 text-left border-t border-app">
           <StickyNote size={14} className="text-ink2 shrink-0" />
           <span className="text-[13px] font-black text-ink flex-1">Something that changed what the tank uses</span>
         </button>

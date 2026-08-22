@@ -19,3 +19,9 @@ node_modules/
 # The Vite build output. Same principle as the two artefacts above: the
 # configuration is committed, the built artefact is not.
 app/dist/
+
+# The deploy tree and its zip. Derived from the build, which is derived from
+# the source: same rule as app/dist/ and app/vendor/pyodide/. The script that
+# makes them is committed; they are not.
+deploy/
+*.zip

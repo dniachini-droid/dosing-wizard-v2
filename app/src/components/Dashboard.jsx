@@ -7,12 +7,17 @@ import { QuickLog } from './LogReadingSheet.jsx'
 import { RemindersPanel, TodayPanel } from './TodayPanel.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
 import { ChevronDown, ChevronUp, RotateCcw, Save, Settings2, X } from '../icons.jsx'
-import { fmtVal } from '../lib/format.js'
+import { fmtVal, fmtWithUnit } from '../lib/format.js'
 import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-import { chartDataFrom, rowsFor, untimedCount } from '../lib/adapt.js'
+import { rowsFor, untimedCount } from '../lib/adapt.js'
+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 import { taskState } from '../store/schedule.js'
 import { cardContent } from '../present/card-content.js'
+import { recommendation } from '../present/dosing-tab.js'
+import { isOutOfRange, positionTone } from '../present/position.js'
+import { sayPosition } from '../present/wording.js'
+import { t } from '../strings.js'
 import { describeRows } from '../present/spread.js'
 
 /* ---------------------------------- Dashboard ---------------------------------- */
@@ -36,13 +41,69 @@ import { describeRows } from '../present/spread.js'
    screen reads fields off it without deciding anything.
 
    All of it is in `docs/migration/PORT-OMISSIONS.md`. */
+/* The one conclusion, at dashboard length.
+
+   It holds no rule of its own: which sentence applies is `recommendation()`'s
+   answer and which words describe a position is `sayPosition()`'s, both of
+   which the Dosing tab reads from too. This picks WHICH of the two to show and
+   how much of it, and that is all it does. */
+export function DosingNotice({ engineResult, assessmentState, paramDefs, readings, onOpen,
+  episodes = null }) {
+  const def = paramDefs.find((d) => d.assessed);
+  if (!def || !engineResult) return null;
+
+  /* TESTS, NOT MEASUREMENTS. `jake` found this while reviewing the sentence it
+     feeds: the Dosing tab was fixed to pass a count of TESTS and its own
+     comment claimed it was "the last surface that still counted the other
+     thing". It was not — this one still handed `recommendation()` a count of
+     raw rows.
+
+     Latent today, because only `rec.head` is rendered here and the count lives
+     in `rec.body`. Latent is not fixed: the day anything renders that body,
+     "You have 7 alkalinity tests recorded" prints beside a chart drawing five
+     points, which is finding 3 in its original form. */
+  const rows = rowsFor(readings, def.key);
+  const rec = recommendation(engineResult, chartGroupsFrom(rows, episodes, fmtShort).length);
+  const position = engineResult.position;
+  const outOfRange = isOutOfRange(position);
+
+  /* A recommendation to change the dose is the strongest thing this app says,
+     so it wins. An out-of-range level is next. Nothing else reaches here: a
+     hold on a tank sitting in range is not news, and a strip that is always
+     full is a strip nobody reads. */
+  const headline = rec && rec.suggestedDose != null ? rec.head
+    : outOfRange ? sayPosition(position)
+    : null;
+  if (!headline) return null;
+
+  const tone = positionTone(position);
+  return (
+    <button onClick={onOpen} disabled={!onOpen}
+      className="w-full text-left rounded-xl p-3 mb-4 border-2 active:opacity-80"
+      style={{ background: tone + "10", borderColor: tone + "44" }}>
+      <div className="text-[10px] font-extrabold uppercase tracking-wide mb-0.5" style={{ color: tone }}>
+        {def.label}
+      </div>
+      <div className="text-[14px] font-black text-ink leading-snug">{headline}</div>
+      {rec && rec.suggestedDose != null && outOfRange && (
+        <div className="text-[12px] font-bold text-ink2 mt-0.5">{sayPosition(position)}</div>
+      )}
+      {onOpen && (
+        <div className="text-[11px] font-extrabold mt-1" style={{ color: tone }}>
+          {t("dashboard.notice.open")}
+        </div>
+      )}
+    </button>
+  );
+}
+
 export function Dashboard({ latestByParam, readings, paramDefs,
   saveRange, resetRange, customRanges, chartEvents, config,
   engineResult, assessmentState = null, scheduleView, tasks = [], completions = [],
   onOpenParam, onOpenTest, onCompleteTask, onNudgeTask,
   remWindow = 14, setRemWindow = () => {},
   onSetTaskDue, onSetTaskInterval, onSkipTask, onUpdateTask,
-  onAddReading = null, waterChanges = [] }) {
+  onAddReading = null, waterChanges = [], episodes = null, onGoDosing = null }) {
 
   const [calOpen, setCalOpen] = useState(false);
 
@@ -50,9 +111,13 @@ export function Dashboard({ latestByParam, readings, paramDefs,
      rather than filtering the whole log inside each of eight cards. */
   const sparkRowsByParam = useMemo(() => {
     const m = {};
-    for (const d of paramDefs) m[d.key] = rowsFor(readings, d.key).slice(-14);
+    /* Grouped, so a repeat test is one point on the sparkline rather than
+       several — and so the last point is the figure the engine used. */
+    for (const d of paramDefs) {
+      m[d.key] = chartGroupsFrom(rowsFor(readings, d.key), episodes, (x) => x).slice(-14);
+    }
     return m;
-  }, [readings, paramDefs]);
+  }, [readings, paramDefs, episodes]);
 
   /* Where each parameter has been lately, so the range bar can show its recent
      travel rather than only where it is now. The window is a fixed number of
@@ -84,6 +149,26 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           upcoming item, each of which takes its reading in place. V1's own
           note on why: "going to another tab to type one number was the most
           repeated friction in the app." */}
+      {/* OWNER FINDINGS 13 AND 23 — THE STRONGEST THING THE APP HAS TO SAY,
+          WHERE THE KEEPER IS ACTUALLY LOOKING.
+
+          "A keeper opens this on the home screen at 7am with a coffee in the
+          other hand. He expects to be told. He should not have to go looking."
+
+          The dose recommendation lived on the Dosing tab and nowhere else, so
+          the app's most important conclusion was reachable only by opening a
+          tab he had no reason to open. It is here now, above the grid, in the
+          same words at a shorter length — one owner, `recommendation()`, which
+          the Dosing tab also renders.
+
+          And where there is no dose conclusion, an out-of-range parameter says
+          so here rather than only on its own card (finding 23). The rule that
+          the strip is ABSENT when the engine has no conclusion still holds; it
+          should simply be rare, and it was not rare because nothing but a dose
+          change could ever fill it. */}
+      <DosingNotice engineResult={engineResult} assessmentState={assessmentState}
+        paramDefs={paramDefs} readings={readings} onOpen={onGoDosing} episodes={episodes} />
+
       <TodayPanel view={scheduleView} onOpenTest={onOpenTest}
         onComplete={onCompleteTask} onNudge={onNudgeTask} onPickTask={setSheetId}
         paramDefs={paramDefs} onAddReading={onAddReading} />
@@ -105,8 +190,11 @@ export function Dashboard({ latestByParam, readings, paramDefs,
           const content = cardContent(def, engineResult, assessmentState,
             latestByParam[def.key],
             def.min != null && def.max != null ? { min: def.min, max: def.max } : null);
+          /* The figure and the words now come from the same place. */
+          const observation = currentObservationFor(def, engineResult, episodes, latestByParam[def.key]);
           return (
             <ParamCard key={def.key} def={def} reading={latestByParam[def.key]}
+              observation={observation}
               recent={recentRangeByParam[def.key]}
               position={content.position}
               statusLine={content.statusLine}
@@ -168,7 +256,7 @@ export function Dashboard({ latestByParam, readings, paramDefs,
    `docs/migration/PORT-OMISSIONS.md` records all of it. */
 export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onResetRange, isCustom,
   chartEvents = [], onAddReading = null, notice = null, onGoDosing = null,
-  onCorrectReading = null, onDeleteReading = null }) {
+  onCorrectReading = null, onDeleteReading = null, episodes = null, engineResult = null }) {
   /* Which reading the keeper has tapped to fix. `PORT-OMISSIONS.md`: there was
      no way to correct a mistyped reading anywhere in the build. */
   const [fixing, setFixing] = useState(null);
@@ -221,8 +309,11 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   /* Every window at once, so "tight recently, wide historically" reads as one
      story rather than two boxes appearing to disagree. */
   const windowStats = useMemo(
-    () => WINDOWS.map(([d, label]) => ({ days: d, label, c: describeRows(rowsInWindow(d), range) })),
-    [allRows, def.key, def.min, def.max]);
+    () => WINDOWS.map(([d, label]) => ({
+      days: d, label,
+      c: describeRows(chartGroupsFrom(rowsInWindow(d), episodes, fmtShort), range),
+    })),
+    [allRows, episodes, def.key, def.min, def.max]);
 
   /* Open on the shortest window that has anything in it. Testing cadence
      changes over time, so a fixed default can land on an empty view. */
@@ -242,7 +333,6 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   /* Everything below is scoped to the selected window, so the figures and the
      chart describe the same slice of time. */
   const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
-  const stats = useMemo(() => describeRows(rows, range), [rows, def.min, def.max]);
 
   /* Dose markers are tagged with their parameter, so a calcium doser change
      does not clutter the alkalinity chart. Untagged events — water changes,
@@ -251,23 +341,61 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
     () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
     [chartEvents, def.key]);
 
-  const chartData = chartDataFrom(rows, fmtShort);
+  /* One point per TEST, not per measurement — see `present/episodes.js`. A
+     repeat test is one x-position with its measurements stacked on it. */
+  const chartData = useMemo(
+    () => chartGroupsFrom(rows, episodes, fmtShort), [rows, episodes]);
   const untimed = untimedCount(rows);
+
+  /* THE FIGURES DESCRIBE TESTS, NOT MEASUREMENTS — REEFKEEPER FINDINGS 3 AND 10.
+
+     Latest, Min, Max, Median, the spread, the percentage in range and the count
+     beneath it were computed over the raw ledger rows, so a test run three times
+     counted three times, and its widest measurement became the sheet's Max. The
+     chart directly above them had already been fixed to draw one point per test;
+     the numbers under it still described something else, and the two disagreed
+     on the same screen.
+
+     `chartData` is the resolved set — one entry per test, carrying the value the
+     engine used — and it is the ONLY thing described here now, so the row, the
+     chart and the words come from one source by construction rather than by
+     agreement. The reconciling helper that stood between them is gone with the
+     disagreement it reconciled.
+
+     `describeRows` returns null where there is nothing, and everything reading
+     it is inside a guard for that: a regression the reefkeeper found on the
+     first tap of a new install took the whole application down. */
+  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
+  /* The whole log, resolved the same way, so "12 of 40" counts the same kind of
+     thing on both sides of the "of". */
+  const allTests = useMemo(
+    () => chartGroupsFrom(allRows, episodes, fmtShort).length, [allRows, episodes]);
 
   useEscape(onClose);
 
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-center justify-center p-4 sheet-layer" onClick={onClose}>
       {/* `relative`, so the pinned close control below has this box to sit
           against rather than the scrolling content inside it (finding 6). */}
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl relative">
         <SheetClose onClose={onClose} label={`Close ${def.label}`} />
-        <Card className="p-5 max-h-[85vh] overflow-y-auto">
+        <Card className="p-5 sheet-panel overflow-y-auto">
 
           {/* The notice sits at the top, as V1's dose banner did, and carries
               V2's wording: the engine's own reason code, worded by the strings
               file. Expandable, because the strip has room for a line and the
               engine often has more than a line to say. */}
+          {/* FINDING 13's third surface. The same conclusion the dashboard strip
+              and the Dosing tab carry, above everything else on this sheet —
+              because a keeper who taps a parameter's card is asking about that
+              parameter, and the app's answer about it should not be one tab
+              away. Only for the parameter the engine assesses; the others have
+              no conclusion to carry. */}
+          {def.assessed && (
+            <DosingNotice engineResult={engineResult} assessmentState={null}
+              paramDefs={[def]} readings={readings} onOpen={onGoDosing} episodes={episodes} />
+          )}
+
           {notice && (
             <div className="rounded-xl p-3 mb-4"
               style={{ background: notice.tone + "10", border: `1px solid ${notice.tone}33` }}>
@@ -303,11 +431,11 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
               <h2 className="text-2xl font-display text-ink">{def.label}</h2>
               <div className="text-[11px] text-ink2 font-bold mt-0.5">
                 {range
-                  ? `target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}${def.unit}`
-                  : "no target range set"} · {rows.length} of {allRows.length} readings
+                  ? `target range ${fmtVal(def, def.min)}–${fmtWithUnit(def, def.max)}`
+                  : "no target range set"} · {chartData.length} of {allTests} tests
                 {isCustom && <span className="ml-1 text-teal-brand">· custom</span>}
               </div>
-              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
+              <button onClick={() => setEditing((v) => !v)} className="mt-1.5 min-h-[44px] text-[11px] font-extrabold text-teal-brand flex items-center gap-1">
                 <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
               </button>
             </div>
@@ -363,7 +491,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                       <span className={`text-[11px] font-extrabold ${active ? "text-teal-brand" : "text-ink"}`}>{label}</span>
                     </div>
                     <div className="text-[11px] font-bold text-ink mt-0.5 truncate">
-                      {c ? `${fmtVal(def, c.spread)}${def.unit} spread` : "no data"}
+                      {c ? `${fmtWithUnit(def, c.spread)} spread` : "no data"}
                     </div>
                     <div className="text-[10px] font-semibold text-ink2">
                       {c ? (c.pct == null ? `${c.n} reading${c.n === 1 ? "" : "s"}` : `${c.pct}% in range`) : "—"}
@@ -378,11 +506,29 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
             <div className="py-10 text-center text-ink2 font-semibold text-sm">No readings for {def.labelMid || def.label.toLowerCase()} in this window</div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-3 mb-5">
+              {/* OWNER FINDING 25 — THESE WERE UNREADABLE.
+
+                  Four figures across a phone, each "10.00dKH" on one line at
+                  `text-lg`, in a cell that then clipped it: the row read
+                  "10.00… 9.00d… 10.00… 9.00d…", which is worse than showing
+                  nothing because it looks like data.
+
+                  The unit moves to its own line. It is the same for all four
+                  and repeating it four times across the narrowest row in the
+                  app was what cost the digits their space. Nothing is clipped
+                  now — `truncate` is gone rather than being given more room,
+                  because a number that silently loses its last digit is a
+                  number the keeper cannot trust anywhere. */}
+              <div className="grid grid-cols-4 gap-2 mb-5">
                 {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
                   <div key={label} className="text-center min-w-0">
                     <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
-                    <div className="text-lg font-black text-ink mt-0.5 truncate">{fmtVal(def, v)}{def.unit}</div>
+                    <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">
+                      {fmtVal(def, v)}
+                    </div>
+                    {def.unit && (
+                      <div className="text-[9px] font-bold text-ink2 leading-none">{def.unit}</div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -396,7 +542,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                     {winLabel}
                   </span>
                   <span className="text-[12px] font-black text-ink">
-                    usually {fmtVal(def, stats.p05)}–{fmtVal(def, stats.p95)}{def.unit}
+                    usually {fmtVal(def, stats.p05)}–{fmtWithUnit(def, stats.p95)}
                   </span>
                 </div>
 
@@ -406,7 +552,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                     <div className="h-full rounded-full" style={{ width: "100%", background: def.color + "55" }} />
                   </div>
                   <span className="text-[10px] font-bold w-24 text-right shrink-0" style={{ color: def.color }}>
-                    {fmtVal(def, stats.spread)}{def.unit} spread
+                    {fmtWithUnit(def, stats.spread)} spread
                   </span>
                 </div>
 
@@ -430,7 +576,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                 )}
 
                 <button onClick={() => setDetailOpen((v) => !v)}
-                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 border-t"
+                  className="w-full flex items-center justify-center gap-1 mt-2 pt-2 min-h-[44px] border-t"
                   style={{ borderColor: def.color + "26" }}>
                   <span className="text-[11px] font-extrabold" style={{ color: def.color }}>
                     {detailOpen ? "Hide detail" : "Where these figures come from"}

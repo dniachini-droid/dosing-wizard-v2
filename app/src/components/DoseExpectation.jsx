@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Card } from './ErrorBoundary.jsx'
 import { Activity, AlertTriangle, ArrowDown, ArrowUp, Beaker, Droplets, FlaskConical, Gauge, Plus, Scale, Target, Waves } from '../icons.jsx'
-import { fmtAmount, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
+import { fmtQty, fmtVal, fmtTime, fmtFriendly } from '../lib/format.js'
 import { ParamGauge, useEscape } from '../lib/backup.jsx'
 import { fmtShort } from '../lib/dates.js'
 import { positionTone } from '../present/position.js'
+import { shownObservation } from '../present/episodes.js'
+import { t } from '../strings.js'
 
 /* --- The dose-change moment ---
  *
@@ -70,11 +72,11 @@ export function DoseChangePopup({ result, onClose }) {
             {up ? <ArrowUp size={30} strokeWidth={2.6} /> : <ArrowDown size={30} strokeWidth={2.6} />}
           </div>
           <div className="mt-3 flex items-baseline justify-center gap-1.5">
-            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtAmount(from)}</span>
+            <span className="text-[19px] font-black text-ink2 tabular-nums">{fmtQty(from, "mlPerDay")}</span>
             <span className="text-[15px] font-bold text-ink2">{"\u2192"}</span>
             <span className={`rc-value text-[32px] font-black leading-none tabular-nums${phase >= 1 ? " landed" : ""}`}
               style={{ color: tone }}>
-              <span className="rc-sheen">{fmtAmount(to)}</span>
+              <span className="rc-sheen">{fmtQty(to, "mlPerDay")}</span>
             </span>
             <span className="text-[12px] font-bold text-ink2">mL/day</span>
           </div>
@@ -96,11 +98,11 @@ export function DoseChangePopup({ result, onClose }) {
             <div className="mt-3 rounded-xl p-3" style={{ background: "#F7FAFA", animationDelay: "150ms" }}>
               <div className="flex items-center justify-between gap-2 py-1">
                 <span className="text-[11px] font-bold text-ink2">Was</span>
-                <span className="text-[12px] font-black text-ink">{fmtAmount(from)} mL/day</span>
+                <span className="text-[12px] font-black text-ink">{fmtQty(from, "mlPerDay")} mL/day</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
                 <span className="text-[11px] font-bold text-ink2">Now</span>
-                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtAmount(to)} mL/day</span>
+                <span className="text-[12px] font-black" style={{ color: tone }}>{fmtQty(to, "mlPerDay")} mL/day</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-1 border-t border-app">
                 <span className="text-[11px] font-bold text-ink2">Effective from</span>
@@ -284,7 +286,11 @@ export function MicroSpark({ rows, def, colour }) {
    trajectory where there is one, and there is no arrow anywhere else.
    Recorded in `docs/migration/PORT-OMISSIONS.md`. */
 export function ParamCard({ def, reading, recent, position = null, statusLine = null,
-  direction = null, notice = null, rows, onOpen, onLog = null }) {
+  direction = null, notice = null, rows, onOpen, onLog = null, observation = null }) {
+  /* The number and the words describe the same test. `observation` is the one
+     owner of "the current value" (`present/episodes.js`); `reading` is kept
+     only for the callers that have not been given one yet. */
+  const shown = shownObservation(observation, reading);
   const tone = positionTone(position);
   const Icon = PARAM_ICON[def.key] || Beaker;
 
@@ -316,12 +322,22 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
               cannot land on top of the trend arrow. Nested inside the card's
               own button, so it stops the event to log rather than open. */}
           {onLog && (
+            /* REEFKEEPER FINDING 21. Drawn at 18px and hit at 18px: the
+               smallest control in the application, on the card he taps most,
+               used one-handed at the tank with wet fingers. The BADGE is still
+               18px — it is a marker on a dense card and making it big would
+               take the card's room. The TARGET is 44, and the negative margin
+               gives the header row its spacing back, so the finger has
+               somewhere to land and the picture is unchanged. */
             <span role="button" tabIndex={0}
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onLog(def.key); }}
               aria-label={`Log a ${def.label.toLowerCase()} reading`}
-              className="shrink-0 rounded-md flex items-center justify-center cursor-pointer"
-              style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
-              <Plus size={11} strokeWidth={3} />
+              className="shrink-0 flex items-center justify-center cursor-pointer -my-[13px] -mr-[13px]"
+              style={{ width: 44, height: 44 }}>
+              <span className="rounded-md flex items-center justify-center"
+                style={{ width: 18, height: 18, background: def.color + "26", color: def.color }}>
+                <Plus size={11} strokeWidth={3} />
+              </span>
             </span>
           )}
         </div>
@@ -329,12 +345,21 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
         <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
           <div className="flex items-baseline gap-1">
             <span className="font-black text-[24px] leading-none tabular-nums" style={{ color: tone }}>
-              {reading ? fmtVal(def, reading.value) : "\u2014"}
+              {shown ? fmtVal(def, shown.value) : "\u2014"}
             </span>
             <span className="text-[10px] font-bold text-ink2">{def.unit}</span>
+            {/* A test run more than once says so, because otherwise the figure
+                shown is not one the keeper ever typed and nothing on the card
+                explains where it came from. */}
+            {shown && shown.count > 1 && (
+              <span className="text-[9px] font-extrabold rounded px-1 py-[1px] shrink-0"
+                style={{ background: def.color + "1F", color: def.color }}>
+                {t("group.badgeShort", { count: shown.count })}
+              </span>
+            )}
           </div>
 
-          <ParamGauge def={def} value={reading ? reading.value : null} recent={recent}
+          <ParamGauge def={def} value={shown ? shown.value : null} recent={recent}
             position={position} compact />
 
           <MicroSpark rows={rows} def={def} colour={def.color} />
@@ -350,7 +375,7 @@ export function ParamCard({ def, reading, recent, position = null, statusLine = 
               {statusLine || ""}
             </span>
             <span className="text-[9px] font-bold text-ink2 shrink-0">
-              {reading ? fmtShort(reading.date) : ""}
+              {shown && shown.date ? fmtShort(shown.date) : ""}
             </span>
           </div>
 
@@ -393,7 +418,9 @@ export function Btn({ children, onClick, variant = "primary", type = "button", c
   };
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={`px-3.5 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
+      /* REEFKEEPER FINDING 21. Every button in the application comes through
+         here, so the floor is set here once rather than on each of them. */
+      className={`px-3.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]} ${className}`}>
       {children}
     </button>
   );
@@ -408,4 +435,19 @@ export function Field({ label, children, className = "" }) {
   );
 }
 
-export const inputCls = "w-full min-w-0 max-w-full bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
+export const inputCls = "w-full min-w-0 max-w-full min-h-[44px] bg-white border-2 border-app rounded-lg px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink2/50 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-teal-brand/40 focus:border-teal-brand";
+
+/* OWNER FINDING 17 — A SHORT NUMBER SHOULD LOOK LIKE ONE.
+
+   A net water volume is three digits and a pump step is two, and both had a box
+   the width of the phone. A box that big says "write me a sentence" when the
+   keeper has four characters to type, and it makes a form of short numbers read
+   as a form of essays.
+
+   Same class as `inputCls` in every other respect, because they must focus,
+   round and space identically — this only settles the width, right-aligned so
+   the digits line up with the unit beside them. It replaces the width rather
+   than being added to it: Tailwind emits both classes and the later one in the
+   stylesheet wins, not the later one in the attribute, so "w-full w-24" is a
+   coin toss. */
+export const shortInputCls = inputCls.replace("w-full", "w-24") + " text-right";

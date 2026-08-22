@@ -228,10 +228,14 @@ export function ReminderSheet({ rem, state, onClose, onSetDue, onSetInterval, on
   const intervalOk = isFinite(intervalNum) && intervalNum >= 1 && intervalNum <= 365;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sheet-layer"
       style={{ background: "rgba(8,25,29,0.5)" }} onClick={onClose}>
+      {/* Bounded to the screen and scrollable, like every other sheet — owner
+          finding 22. It was `overflow-hidden` with no height limit, so on a
+          short viewport its lower half was simply not reachable: the controls
+          were rendered, they were off the bottom, and nothing scrolled. */}
       <div onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden"
+        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-y-auto sheet-panel"
         style={{ boxShadow: "0 -8px 40px rgba(8,25,29,0.3)" }}>
 
         <div className="px-4 pt-4 pb-3" style={{ background: tone + "10" }}>
@@ -349,9 +353,14 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
   const year = cursor.getFullYear(), month = cursor.getMonth();
   const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
+  /* A completion whose task is no longer on record — every imported one, since
+     the import brings the history without recreating the tasks — used to render
+     its internal id: the keeper's calendar read "t-skimmer". A database key is
+     never a thing to show him. */
   const labelFor = (id) => {
     const r = (reminders || []).find((x) => x.id === id);
-    return r ? r.label : id;
+    if (r) return r.label;
+    return t("calendar.unknownTask");
   };
 
   /* Completions grouped by day, with water-change volumes folded in so the
@@ -364,11 +373,36 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
         id: l.id, label: labelFor(l.taskId), taskId: l.taskId, date: l.date, auto: !!l.auto, done: true,
       });
     }
+    /* OWNER FINDING 3 — WHY 25 WATER CHANGES WERE ON THE CHARTS AND NOWHERE
+       ELSE.
+
+       This folded a water change into a day that already had a task completion
+       on it, and did nothing at all where there was none. The owner's imported
+       history holds 25 water changes and no completion matching any of them, so
+       every one of them was skipped here — while the charts, which read the
+       ledger directly, drew all 25. He was looking at markers for events he
+       could not find, could not check and could not delete.
+
+       They are real: the import wrote 25 `WATER_CHANGE` events, and they came
+       from his own V1 backup. So they belong on the calendar, as themselves. */
     for (const w of waterChanges || []) {
-      const day = map[w.date];
-      if (!day) continue;
+      if (!w.date) continue;
+      const day = (map[w.date] = map[w.date] || []);
+      const size = w.litres == null ? null : `${w.litres} L`;
       const row = day.find((x) => x.taskId === "waterchange");
-      if (row) row.detail = `${w.litres}L`;
+      if (row) { if (size) row.detail = size; continue; }
+      day.push({
+        id: w.id,
+        label: t("water.label"),
+        taskId: "waterchange",
+        date: w.date,
+        detail: size,
+        done: true,
+        /* A ledger event rather than a task completion, so the caller deletes
+           the right thing. The calendar's trash used to remove the TICK on
+           every row it drew, whatever the row actually was. */
+        eventId: w.id,
+      });
     }
     return map;
   }, [taskLog, waterChanges, reminders]);
@@ -525,9 +559,9 @@ export function CalendarModal({ taskLog, reminders, waterChanges, onClose, onPic
   onDeleteDone = null }) {
   useEscape(onClose);
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 sheet-layer"
       onClick={onClose}>
-      <div className="bg-app w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+      <div className="bg-app w-full sm:max-w-lg sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="sticky top-0 bg-app px-4 pt-4 pb-2 flex items-center justify-between gap-2 z-10">

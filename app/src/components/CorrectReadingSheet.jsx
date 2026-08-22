@@ -64,12 +64,12 @@ export function CorrectReadingSheet({ reading, def, onCorrect, onDelete, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sheet-layer"
       onClick={onClose}>
       {/* `relative` on the sheet, so the close control sits against the sheet
           and not against the content scrolling inside it (finding 6). The
           scroll region is the inner box. */}
-      <div className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl relative max-h-[88vh] flex flex-col"
+      <div className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl relative sheet-panel flex flex-col"
         onClick={(e) => e.stopPropagation()}>
         <SheetClose onClose={onClose} label={t("correct.title")} />
         <div className="p-4 overflow-y-auto">

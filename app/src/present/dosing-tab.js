@@ -134,6 +134,10 @@ export function recommendation(result, readingCount = 0) {
     }
     return {
       head: t(`${p}.head`, { dose: fmtQty(recommended, "mlPerDay") }),
+      /* The figure the keeper is being offered, so the tab can hand it to the
+         delivered-dose field rather than making him retype it. Reading it out
+         is not deciding anything — the engine chose it. */
+      suggestedDose: recommended,
       body,
       canExplain: true,
       offerChangeAnyway: false,
@@ -145,6 +149,10 @@ export function recommendation(result, readingCount = 0) {
     body.push(t("dosing.reco.hold.isARecommendation"));
     return {
       head: t("dosing.reco.hold.head", { dose: fmtQty(current, "mlPerDay") }),
+      /* A hold recommends no change, so there is nothing to offer. "Change the
+         dose anyway" opens the field empty of a suggestion, and whatever the
+         keeper puts in it is his own change. */
+      suggestedDose: null,
       body: body.filter(Boolean),
       canExplain: true,
       /* V1's, kept: a hold is advice, and the keeper may disagree with it. */
@@ -282,9 +290,19 @@ export function boxes(result) {
        (`materialityMarginDkhPerDay`), and that is the figure used. */
     const margin = num(cons.materialityMarginDkhPerDay);
     const matching = margin != null ? Math.abs(gap) <= margin : fmtMag(gap) === fmtQty(0, "dkhPerDay");
+    /* REEFKEEPER FINDING 14. The two boxes beside this one print rounded
+       figures, so a gap the engine has correctly judged too small to act on is
+       still a gap the keeper can SEE — "uses 0.42, supplies 0.35, dosing is
+       matching consumption" reads as the app contradicting its own arithmetic
+       one line later. Where the two printed figures differ, the difference is
+       named and the reason it is not acted on is given. */
+    const visibleGap = fmtQty(c, "dkhPerDay") !== fmtQty(supplied, "dkhPerDay");
     difference = matching
       ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.matching"),
-          sub: t("dosing.boxes.diff.matchingSub"), prose: true }
+          sub: visibleGap
+            ? t("dosing.boxes.diff.matchingSubGap", { gap: fmtMag(gap) })
+            : t("dosing.boxes.diff.matchingSub"),
+          prose: true }
       : gap > 0
         ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.short", { gap: fmtMag(gap) }),
             sub: t("dosing.boxes.diff.shortSub"), prose: true }
@@ -537,6 +555,51 @@ export function potencyBox(result, config = null) {
   };
 
   if (learned == null) {
+    /* OWNER FINDING 12 — THE BOX CONTRADICTED ITS OWN WORKING.
+
+       "Not enough yet to check your solution against your tank" sat directly
+       above a Show working that read "…which puts the strength at 0.0702 dKH
+       per mL". Both were true and together they read as a lie: the engine had
+       OBSERVED a strength and had not gathered enough to be CONFIDENT in one,
+       and the box only had wording for the second.
+
+       Canon needs three observations from two interventions before it will
+       learn a figure. So one dose change genuinely produces an observation and
+       genuinely produces no learned strength, and the honest sentence names
+       both — which is more useful than refusing to show a number the app has
+       already worked out.
+
+       The observation is READ, not computed. `observedPotencyDkhPerMl` is the
+       engine's own figure for that dosing period; nothing here averages,
+       weights or combines them, because combining observations into a strength
+       is exactly what the learner does and it has one owner. Where there are
+       several, the most recent is named and the count is stated. */
+    /* A NON-POSITIVE STRENGTH IS NOT A LOW ESTIMATE, IT IS IMPOSSIBLE.
+
+       The reefkeeper watched this box report "the real strength may be around
+       -0.0301 dKH per mL" and offer to settle it with a few more readings. A
+       negative strength says every millilitre of soda ash REMOVES alkalinity.
+       It happens when the tank moved for some other reason across a dose
+       change, and the honest thing to say is that the response does not add up
+       yet — not to print an impossibility as an estimate.
+
+       Nothing is recomputed and no threshold is invented: zero is not a
+       threshold, it is the boundary of what the quantity can be. */
+    const observed = [...observations]
+      .filter((o) => num(o.observedPotencyDkhPerMl) > 0)
+      .pop();
+    if (observed) {
+      return {
+        ...base,
+        /* One reading of the tank's response, or several — the same four things
+           said, with the count named where there is more than one. Two keys
+           rather than a branch inside one, so every value a sentence declares
+           is a value that sentence renders. */
+        state: observations.length > 1 ? "observedOnlyMany" : "observedOnly",
+        observed: num(observed.observedPotencyDkhPerMl),
+        offersChoice: false,
+      };
+    }
     return { ...base, state: "notYet", offersChoice: false };
   }
 
@@ -958,15 +1021,72 @@ const SAYS_NOTHING = new Set([
   "OUTPUT_INSUFFICIENT_DATA_ACTIONABLE",
 ]);
 
+/* OWNER FINDING 10 — WHICH OF THESE THE KEEPER IS ACTUALLY SHOWN.
+
+   Round four stopped these appearing under "what's holding this back", which
+   was right: they are `INFO`, they gate the potency LEARNER and they hold up
+   no dose. They still reached the screen, inside Show working, and the owner
+   read all four for the third round running.
+
+   Two of them are not his to act on and never will be:
+
+     · DELIVERY CONTEXT. This build does pump-delivered maintenance dosing and
+       nothing else. There is no question to answer, so Setup does not ask one —
+       and a line reporting that an unasked question is unanswered has been
+       removed twice and come back twice. It is named here so it cannot come
+       back a fourth time by accident.
+
+     · THE CALIBRATION SNAPSHOT. "There is no rule yet for the record a strength
+       calibration would be measured against" is the application talking about
+       a gap in its own specification. True, and none of the keeper's business.
+
+   The two that remain are things he can do something about, and they leave the
+   list the moment he does. */
+const KEEPER_CAN_ACT = new Set([
+  "CAPABILITY_SOLUTION_CONTEXT_MISSING",
+  "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED",
+]);
+
 /* Read by the potency box, which shows what the learner could not do beside
    the estimate it could not make. Exported so there is ONE list and the two
    surfaces cannot drift apart. */
+/* Is this limit still a live one, given what the result itself shows?
+
+   Read off the engine's own output — the potency it resolved and the dose it
+   assessed against — rather than from configuration, so it cannot disagree with
+   the figures printed beside it. */
+function stillMissing(code, result) {
+  const pot = (result && result.potency) || {};
+  const dose = (result && result.doseRecommendation) || {};
+  if (code === "CAPABILITY_SOLUTION_CONTEXT_MISSING") {
+    return num(pot.selectedPotencyDkhPerMl) == null
+      && num(pot.theoreticalPotencyDkhPerMl) == null;
+  }
+  if (code === "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED") {
+    return num(dose.currentDoseMlPerDay) == null;
+  }
+  return true;
+}
+
 export function learnerLimits(result) {
   if (!result) return [];
   const seen = new Set();
   const out = [];
   for (const c of result.reasonCodes || []) {
-    if (!LEARNER_ONLY.has(c.code) || seen.has(c.code)) continue;
+    if (!LEARNER_ONLY.has(c.code) || !KEEPER_CAN_ACT.has(c.code) || seen.has(c.code)) continue;
+    /* AND ONLY WHERE IT IS STILL TRUE.
+
+       The reefkeeper found both survivors printed four inches under the very
+       figures they said were missing: "Which solution you are dosing is not on
+       record" above "against the 0.0693 you entered", and "The dose your pump
+       is running is not confirmed" beside "8.8 mL/day at 0.0693 dKH per mL".
+
+       The engine raises these against the state at the assessment instant and
+       is not wrong to. What was wrong was showing them as things the keeper
+       must go and do when the screen he is on already displays them done. A
+       blocker that is not true undermines every number beside it — which is
+       the whole of finding 10, reappearing one round later in a new place. */
+    if (!stillMissing(c.code, result)) continue;
     seen.add(c.code);
     out.push({ code: c.code, severity: c.severity, payload: c.payload || {}, count: 1 });
   }

@@ -672,7 +672,11 @@ function planConfiguration(d, problems) {
        `== null` test as though it had been supplied, so the app believed it
        knew the tank's size and every water-change fraction silently vanished.
        An absent value is absent, and the keeper is asked for it. */
-    ...(Number.isFinite(volume) && volume > 0 ? { netVolumeL: volume } : {}),
+    /* Carried as the plan found it, sound or not. Whether it reaches the stored
+       configuration is decided in ONE place, where the append happens — see the
+       note there. Two guards on one value meant a mutation of either was
+       silently covered by the other, which is a rule with two owners. */
+    netVolumeL: volume,
     /* The two figures the file carries that are NOT written as settings. The
        standing dose is already in the ledger, put there by the dose log, and a
        second copy in the configuration would be a second owner of what the
@@ -741,8 +745,20 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
   const running = new Map();
   /* Seeded from what the ledger ALREADY knows, so a second import — the
      documented cutover path, since the keeper re-exports — writes a dose
-     CHANGE from the value in the record rather than a second standing dose. */
-  for (const [parameter, dose] of Object.entries(await ledgerDoses(store))) running.set(parameter, dose);
+     CHANGE from the value in the record rather than a second standing dose.
+
+     AS AT THE START OF THE IMPORTED HISTORY, not as at now (reefkeeper finding
+     17). A dose the keeper declared today says nothing about what was running
+     last March, and seeding from it turned the first row of his history into a
+     change away from a figure that did not yet exist. */
+  const startsAt = {};
+  for (const r of planned.doses) {
+    const key = `${r.date} ${r.time || "00:00"}`;
+    if (!startsAt[r.parameter] || key < startsAt[r.parameter]) startsAt[r.parameter] = key;
+  }
+  for (const [parameter, dose] of Object.entries(await ledgerDoses(store, startsAt))) {
+    running.set(parameter, dose);
+  }
 
   for (const r of [...planned.doses].sort(byWhen)) {
     const prior = running.get(r.parameter);
@@ -804,6 +820,18 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
   for (const r of planned.waterChanges) {
     const detail = {
       volumeL: r.litres,
+      /* THE APP'S OWN KEY FOR THE SAME FACT, written alongside.
+
+         `recordWaterChange` stores `litres` and every screen reads `litres`;
+         the import stored only `volumeL`, so an imported water change rendered
+         as "Water change · undefinedL" the moment one reached a surface that
+         showed its size. Two spellings of one fact, which is how it went
+         unnoticed: nothing read the import's spelling.
+
+         `volumeL` is kept because records already written carry it and this
+         build does not rewrite stored events. The reader tolerates both and is
+         the one place that knows they are the same thing. */
+      litres: r.litres,
       /* The engine's input is a fraction of the system, so the volume is
          divided by the tank's. Where no volume is on record the litres are
          kept and no fraction is invented — the engine then has no water change
@@ -894,7 +922,22 @@ export async function applyImport(store, planned, { asOf, correctedPotencyDkhPer
   const cfg = planned.configuration;
   const values = {
     ...(await carriedForward(store)),
-    netVolumeL: cfg.netVolumeL,
+    /* CONDITIONAL, like the two range fields beside it, and for the reason the
+       reefkeeper found by importing over a tank that was already set up.
+
+       `planned.configuration` only carries a volume when the backup stated one.
+       Written unconditionally, an absent one put `netVolumeL: undefined` over
+       the value already on record — so importing a history, which is the one
+       operation a keeper performs precisely to KEEP his data, silently deleted
+       the number every dose in the app is sized from. Nothing on screen said
+       so; the Setup potency line quietly degraded from "0.0693 dKH/mL" to
+       "101 g/L" because it could no longer do the conversion, and the Dosing
+       tab carried on recommending as though nothing had happened.
+
+       An import may ADD what the record lacks. It may not remove what is
+       already there. */
+    ...(Number.isFinite(cfg.netVolumeL) && cfg.netVolumeL > 0
+      ? { netVolumeL: cfg.netVolumeL } : {}),
     ...(cfg.targetRangeMinDkh != null ? { targetRangeMinDkh: cfg.targetRangeMinDkh } : {}),
     ...(cfg.targetRangeMaxDkh != null ? { targetRangeMaxDkh: cfg.targetRangeMaxDkh } : {}),
     parameterRanges: cfg.parameterRanges,
@@ -936,16 +979,28 @@ async function carriedForward(store) {
 
 /* What the ledger already believes each pump is set to. Read before the first
    write, so a second import continues the record rather than restarting it. */
-async function ledgerDoses(store) {
+async function ledgerDoses(store, notAfter = null) {
   const projected = await store.ledger.projection();
   const out = {};
   const at = {};
   for (const row of projected) {
-    if (row.state === "SUPERSEDED" || row.state === "INVALID") continue;
+    if (row.state === "SUPERSEDED") continue;
     const e = row.event;
     if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
     const parameter = e.parameter || "ALK";
     const key = `${e.time.localDate} ${e.time.localTime || "00:00"}`;
+    /* WHAT WAS RUNNING BY A GIVEN MOMENT, not what is running now.
+
+       REEFKEEPER FINDING 17. He set the app up, typed the dose he is currently
+       delivering, and then imported his history. This function reported that
+       figure — dated TODAY — as the dose the record established, so every
+       imported change was written as a move FROM a number that did not exist
+       when it happened, and the baseline of his whole history was a row
+       stamped today sitting above changes from months before it.
+
+       A dose recorded after the moment being asked about is not evidence of
+       what was running at that moment. */
+    if (notAfter && notAfter[parameter] && key > notAfter[parameter]) continue;
     if (at[parameter] && key < at[parameter]) continue;
     at[parameter] = key;
     out[parameter] = e.kind === KIND.DOSE_STATE ? e.detail.doseMlPerDay : e.detail.toMlPerDay;
@@ -1004,7 +1059,7 @@ function iso(ms) {
 export function firstDoseDate(projected) {
   let first = null;
   for (const r of projected || []) {
-    if (r.state === "SUPERSEDED" || r.state === "INVALID") continue;
+    if (r.state === "SUPERSEDED") continue;
     const e = r.event;
     if (e.kind !== KIND.DOSE_STATE && e.kind !== KIND.DOSE_CHANGE) continue;
     if ((e.parameter || "ALK") !== "ALK") continue;

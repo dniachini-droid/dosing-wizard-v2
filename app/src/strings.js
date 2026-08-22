@@ -80,7 +80,6 @@ export const STRINGS = Object.freeze({
     "and the other tabs still work.",
   "crash.toToday": "Go to Today",
   "crash.toSettings": "Settings and export",
-  "crash.dev": "Developer view",
 
   /* ======================================================================
      TODAY
@@ -217,8 +216,8 @@ export const STRINGS = Object.freeze({
 
   "today.setup.title": "Tell the app about your tank",
   "today.setup.body":
-    "Nothing can be assessed until the app knows your net water volume, your target range, how strong " +
-    "your solution is and what step your pump makes. These are facts only you have; the app will not " +
+    "Nothing can be assessed without your net water volume, your target range, how strong " +
+    "your solution is and what step your pump makes. These are facts only you have, and none of them " +
     "guess any of them.",
   "today.setup.action": "Set the tank up",
 
@@ -238,7 +237,6 @@ export const STRINGS = Object.freeze({
 
   "today.state.superseded": "replaced by a later entry",
   "today.state.suspect": "you marked this suspect",
-  "today.state.invalid": "you marked this invalid",
 
   /* ======================================================================
      THE ASSESSMENT CARD
@@ -284,10 +282,9 @@ export const STRINGS = Object.freeze({
     "Both are shown whenever both exist, so a smaller acted-on figure is never mistaken for the measurement.",
 
   "assessment.reco.none": "No recommendation",
-  "assessment.reco.unclassified.head": "This build has no card for what the engine returned",
+  "assessment.reco.unclassified.head": "No wording for this one",
   "assessment.reco.unclassified.body":
-    "The engine answered and the app does not recognise the shape of the answer. Nothing is hidden: " +
-    "the full result is in the developer view at the foot of this screen. Do not act on this card.",
+    "Something came back with no plain-English wording for it. Do not act on anything shown here.",
   "assessment.reco.safety.body":
     "This is a different situation from being outside your target range, and it is treated differently. " +
     "The safety figures below are stated separately from the ordinary maintenance conclusion.",
@@ -345,7 +342,6 @@ export const STRINGS = Object.freeze({
   "assessment.legend.excluded": "Not eligible for the trend",
   "assessment.legend.repeats": "Repeats, shown as one",
 
-  "assessment.dev.summary": "Developer view — contract vocabulary",
   "assessment.dev.note":
     "Everything below is the engine's own output, unaltered. It uses the contract's names on purpose; " +
     "nothing outside this box does.",
@@ -540,7 +536,6 @@ export const STRINGS = Object.freeze({
   "entry.state.current": "current",
   "entry.state.superseded": "replaced by a later entry, and kept",
   "entry.state.suspect": "you marked this suspect",
-  "entry.state.invalid": "you marked this invalid",
 
   "entry.dateOnly.head": "This entry has a date and no time.",
   "entry.dateOnly.body":
@@ -576,7 +571,6 @@ export const STRINGS = Object.freeze({
   "entry.mark.suspect": "Mark it suspect",
   "entry.mark.suspectTitle": "Mark this suspect",
   "entry.mark.unsuspect": "Remove the suspect mark",
-  "entry.mark.invalid": "Mark it invalid",
   "entry.mark.invalidTitle": "Mark this invalid",
   "entry.mark.suspectBody":
     "The entry stays exactly as it is and stays in the record. The mark is recorded alongside it, with today's date.",
@@ -846,6 +840,50 @@ export const STRINGS = Object.freeze({
     `${label} chart, ${n} readings in ${unit || "no unit"}, from ${from} on ${fromDate} to ${to} on ${toDate}.`,
   "chart.point.aria": ({ label, value, unit, date }) => `${label} ${value} ${unit} on ${date}`,
 
+  /* ==================================================================
+     ONE TEST, RUN MORE THAN ONCE
+     ------------------------------------------------------------------
+     Measurements of one parameter taken within half an hour are one test
+     run several times, and the figure everything is worked out from is
+     the middle one of them. The keeper is entitled to see both: the
+     values he actually typed, and which of them was used.
+
+     The middle value is deliberate and is not the average. One fumbled
+     titration drags an average and does not move the middle one, which
+     is exactly what a keeper wants from a repeat test.
+     ================================================================== */
+  "group.duplicate": ({ value, unit }) =>
+    `Two tests taken within half an hour, so they are treated as one test run in duplicate. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  "group.triplicate": ({ value, unit }) =>
+    `Three tests taken within half an hour, so they are treated as one test run in triplicate. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  "group.many": ({ count, value, unit }) =>
+    `${count} tests taken within half an hour, so they are treated as one test run ${count} times over. `
+    + `The value used is ${value}${unit ? ` ${unit}` : ""}.`,
+  /* THIS SENTENCE WAS FALSE HALF THE TIME, and `jake` found it while reviewing
+     the wording around it. It said "not the average" — which holds for three
+     runs, where the middle of three IS one of the numbers typed. On TWO runs
+     there is no middle one, and `OI-MEDIAN-001` settles what happens instead:
+     the two central values are averaged. `kernel.py` says so in as many words.
+
+     So on a duplicate the figure used is the average, and the tooltip explaining
+     it said it was not. It says what the rule actually is, and says the thing
+     that rule is FOR — which is what the keeper is asking when he taps. */
+  "group.median":
+    "The middle value is the one used, so one wild result cannot drag it. On two, where there is no " +
+    "middle one, the two are averaged.",
+  "group.spread": ({ spread, unit }) =>
+    `They ranged ${spread}${unit ? ` ${unit}` : ""} apart.`,
+  "group.wideSpread": ({ spread, unit }) =>
+    `They ranged ${spread}${unit ? ` ${unit}` : ""} apart, which is wider than repeats of one test usually sit. `
+    + `Worth running it again.`,
+  "group.badgeShort": ({ count }) => `${count} tests`,
+  "group.legend.measurement": "each test",
+  "group.legend.used": "the value used",
+  "group.aria": ({ count, value, unit, date }) =>
+    `A test run ${count} times on ${date}; the value used is ${value}${unit ? ` ${unit}` : ""}`,
+
   "err.assumedNeedsOffset":
     "A time built from an assumption needs the offset that was assumed. Without one there is nothing to " +
     "build it from.",
@@ -1028,6 +1066,12 @@ export const STRINGS = Object.freeze({
   "dosing.reco.hold.roundsToCurrent": ({ rawDelta, step }) =>
     `The figures justify ${rawDelta} mL/day, and your pump moves in steps of ${step} mL. ` +
     `That rounds back to the dose you are already on. `,
+  /* REEFKEEPER FINDING 16. The engine's recommendation does not move until
+     readings taken on the new dose arrive, so the tab kept offering a dose he
+     had already set. It says where he is instead. */
+  "dosing.reco.alreadyThere": ({ dose }) =>
+    `You are already on ${dose} mL/day. Nothing to change until you have tested again on this dose.`,
+
   "dosing.reco.hold.isARecommendation":
     "A hold is a recommendation. The app looked and found nothing worth changing.",
 
@@ -1061,14 +1105,17 @@ export const STRINGS = Object.freeze({
      canon's, and a sentence here asserting one would be a chemistry rule
      living in the strings file. */
   "dosing.reco.fresh.head": "Not enough yet to size a dose",
+  /* TESTS, not measurements — reefkeeper findings 3, 7 and 10. This counted raw
+     readings while the chart beside it drew one point per test, so a keeper who
+     tests in duplicate was told he had more than the app could see. */
   "dosing.reco.fresh.body": ({ n }) =>
-    `You have ${n} alkalinity reading${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
-    `and tell the app what your pump is set to — those two things are all it needs. ` +
-    `The recommendation appears here on its own when your readings can carry one.`,
+    `You have ${n} alkalinity test${n === 1 ? "" : "s"} recorded. Keep logging tests as you do them, ` +
+    `and set down what your pump is dosing — that is all it takes. ` +
+    `A recommendation appears here on its own once your tests can carry one.`,
   "dosing.reco.fresh.bodyNone":
-    "No alkalinity readings are recorded yet. Log tests as you do them, and tell the app what your " +
-    "pump is set to — those two things are all it needs. The recommendation appears here on its own " +
-    "when your readings can carry one.",
+    "No alkalinity tests are recorded yet. Log them as you do them, and set down what your pump is " +
+    "dosing — that is all it takes. A recommendation appears here on its own once your tests can " +
+    "carry one.",
   "dosing.reco.fresh.nothingWrong":
     "Nothing is wrong and there is nothing to fix. A dose sized from one or two readings would be a " +
     "guess with a decimal point on it.",
@@ -1080,6 +1127,7 @@ export const STRINGS = Object.freeze({
   "dosing.reco.showWorking": "Show working",
   "dosing.reco.why": "Why?",
   "dosing.reco.changeAnyway": "Change the dose anyway",
+  "dosing.reco.setDose": ({ dose }) => `Set the dose to ${dose}`,
 
   /* ---- the three boxes -------------------------------------------------
      "Current calculated consumption" became "What your tank uses": "calculated"
@@ -1098,6 +1146,11 @@ export const STRINGS = Object.freeze({
   "dosing.boxes.diff.excessSub": "your dose supplies more than the tank uses",
   "dosing.boxes.diff.matching": "dosing is matching consumption",
   "dosing.boxes.diff.matchingSub": "no difference the readings can show",
+  /* REEFKEEPER FINDING 14. The boxes on either side are rounded, so the keeper
+     can read two different numbers and then be told they match. Where he can
+     see the gap, the gap is named. */
+  "dosing.boxes.diff.matchingSubGap": ({ gap }) =>
+    `${gap} dKH/day apart, which is less than your readings can show`,
 
   "dosing.boxes.notWorkedOut": "Not worked out",
   "dosing.boxes.notWorkedOutSub": ({ missing }) => `needs ${missing}`,
@@ -1134,7 +1187,13 @@ export const STRINGS = Object.freeze({
   "dosing.working.uses": "What your tank uses",
   "dosing.working.movement": "The movement we can stand behind",
   "dosing.working.dose": "The dose",
-  "dosing.working.readings": "The readings used",
+  /* REEFKEEPER FINDING 7. The count under this heading is the engine's
+     `independentClusters` — the number of separate TEST RUNS it could read a
+     trend across — and the heading called them readings. A keeper who has
+     tested in duplicate has more readings than test runs, so the sentence
+     stated a number he could not find anywhere in his own list and looked
+     like an arithmetic mistake. It counts tests; it says tests. */
+  "dosing.working.readings": "The tests used",
 
   "dosing.working.uses.falling": ({ dose, potency, supplied, slope, consumption }) =>
     `${dose} mL/day at ${potency} dKH per mL puts in ${supplied} dKH a day. Your readings fell ` +
@@ -1164,8 +1223,11 @@ export const STRINGS = Object.freeze({
      number. The counts ("n=10, 45 pairwise slopes") are method trivia and go. */
   /* The drift, with what it was drawn from. Finding 14: a bare "0.00" tells a
      keeper nothing about how much history stands behind it. */
+  /* TESTS, and "about". The identical quantity — `independentClusters` — is
+     rendered as "5 separate tests" two sections above this one, and this called
+     them readings. Two sections of one panel, one number, two nouns. */
   "dosing.working.movement.drawnFrom": ({ observed, n, span }) =>
-    `Your readings drift ${observed} dKH a day, across ${n} readings over approximately ${span}.`,
+    `Your readings drift ${observed} dKH a day, across ${n} tests over about ${span}.`,
 
   "dosing.working.movement.method":
     "The drift is the middle of every pair of your readings, so one odd result cannot drag it.",
@@ -1186,16 +1248,15 @@ export const STRINGS = Object.freeze({
     `${dose}.`,
 
   "dosing.working.readings.line": ({ n, span, first, last }) =>
-    `${n} readings over approximately ${span}, from ${first} to ${last}.`,
-  "dosing.working.readings.lineOne": ({ first }) => `One reading, on ${first}.`,
+    `${n} separate tests over about ${span}, from ${first} to ${last}. Readings taken within half an ` +
+    `hour of each other count as one test, so this can be fewer than the readings in your log.`,
+  "dosing.working.readings.lineOne": ({ first }) => `One test, on ${first}.`,
 
   "dosing.working.excluded.tooClose": ({ date }) =>
     `The ${date} reading wasn't used — it was taken too close to the one before it.`,
   "dosing.working.excluded.noTime": ({ date }) =>
     `The ${date} reading wasn't used — it has a date but no time of day, so the gap to the next one ` +
     `isn't a known length of time. It stays in your history.`,
-  "dosing.working.excluded.invalid": ({ date }) =>
-    `The ${date} reading wasn't used — you marked it invalid.`,
   "dosing.working.excluded.beforeChange": ({ date }) =>
     `Readings before ${date} weren't used — the dose changed then, and the stretch starts clean.`,
   "dosing.working.excluded.confounded": ({ from, to }) =>
@@ -1295,7 +1356,7 @@ export const STRINGS = Object.freeze({
      that is the recommendation's statement, and it is made on this tab by the
      hold. This sentence claims the first and not the second. */
   "dosing.correction.worked":
-    "The change worked. Alkalinity moved by about as much as the app predicted, " +
+    "The change worked. Alkalinity moved by about as much as the new dose was sized to move it, " +
     "so there is nothing more to watch here.",
 
   "dosing.correction.partial":
@@ -1362,6 +1423,28 @@ export const STRINGS = Object.freeze({
     `Not enough yet to check your solution against your tank. That needs readings either side of a ` +
     `dose change big enough to read the response from. Until then every figure here is built on the ` +
     `${entered} dKH per mL you entered.`,
+
+  /* OWNER FINDING 12 — AN ESTIMATE EXISTS BUT CONFIDENCE DOES NOT.
+
+     The state the box had no wording for, and the reason it contradicted its
+     own Show working. Four things, in the owner's own order: what the tank's
+     response suggests, what he entered, what would settle it, and which figure
+     is being used in the meantime.
+
+     It does NOT say the two figures are "close". How close is close enough is a
+     threshold, thresholds about strength are the canon's, and there is none for
+     this. Both numbers are stated side by side and the keeper can see the gap
+     for himself. */
+  "dosing.potency.observedOnly": ({ observed, entered }) =>
+    `Your tank's response so far suggests the real strength may be around ${observed} dKH per mL, `
+    + `against the ${entered} you entered. One dose change is not enough to be sure — a few more `
+    + `readings, and your next dose change, will settle it. Until then every figure here uses the `
+    + `strength you entered.`,
+  "dosing.potency.observedOnlyMany": ({ observed, entered, count }) =>
+    `Your tank's response so far suggests the real strength may be around ${observed} dKH per mL, `
+    + `against the ${entered} you entered. ${count} dose changes have been read and that is still `
+    + `not enough to be sure — a few more readings, and your next dose change, will settle it. `
+    + `Until then every figure here uses the strength you entered.`,
 
   /* An estimate exists and is not settled enough to act on. It is still shown
      — hiding a figure the app holds is how the keeper stops trusting the box —
@@ -1486,6 +1569,114 @@ export const STRINGS = Object.freeze({
      The confirmation asks plainly and names the act. It does not ask "are you
      sure", which invites a reflex rather than a decision, and it does not
      promise the record can be got back, because it cannot. */
+  /* ==================================================================
+     THE DELIVERED DOSE — ONE FIELD, FOREVER
+     ------------------------------------------------------------------
+     Not a setup field. It is the dose the pump is running: filled the
+     first time it establishes the dose, filled again it records a
+     change. The keeper never types the previous figure — the record
+     holds it.
+
+     No sentence here says "the app". The register forbids any observer,
+     and the two notes that used to sit above and below this field were
+     the fourth and fifth places it had appeared.
+     ================================================================== */
+  "dose.delivered.head": "The dose your pump is running now",
+  "dose.delivered.lead":
+    "Type the new figure when you change the dial. The date and time matter, because the tank's "
+    + "response is measured from the moment the change took effect.",
+  "dose.delivered.leadFirst":
+    "What your doser is delivering each day. The date and time matter, because everything about "
+    + "the tank's response is measured from them.",
+  "dose.delivered.field": "mL per day",
+  "dose.delivered.date": "Date",
+  "dose.delivered.time": "Time",
+  "dose.delivered.save": "Save the change",
+  "dose.delivered.saveFirst": "Save",
+  "dose.delivered.recorded": "Recorded.",
+  "dose.delivered.changed": "Change recorded.",
+  "dose.delivered.needNumber": "Enter a number.",
+  "dose.delivered.needPositive": "A dose cannot be less than nothing.",
+
+  "dose.history.head": "Dose changes",
+  "dose.history.none": "No dose recorded yet.",
+  "dose.history.moved": ({ from, to }) => `Moved from ${from} mL/day to ${to} mL/day`,
+  "dose.history.start": ({ dose }) => `${dose} mL/day \u2014 where the record begins`,
+  "dose.history.fromDerived": "the earlier figure is read from the record, not typed",
+  "dose.history.noEdit":
+    "A dose change cannot be edited. Delete it and enter it again with the right date and time.",
+  "dose.history.deleteAria": ({ date }) => `Delete the dose change from ${date}`,
+
+  "dose.origin.recommendation": "a recommendation",
+  "dose.origin.adjusted": "a recommendation you adjusted",
+  "dose.origin.keeper": "your own change",
+
+  "dose.change.head": "Change the dose",
+  "dose.change.close": "Never mind",
+
+  /* ==================================================================
+     THE RAW READINGS, WHERE THE KEEPER CAN REACH THEM
+     ------------------------------------------------------------------
+     Owner findings 8, 11 and 27. There was no list of readings anywhere
+     in the app. The calendar answers "what did I do on this day"; it
+     does not answer "where is that reading I typed wrong".
+     ================================================================== */
+  /* ==================================================================
+     THE TARGET RANGE AS A BAR — owner finding 18
+     ------------------------------------------------------------------
+     The three widths are the OWNER'S, stated by him for ALKALINITY in
+     dKH. They are not canon figures and do not transfer to calcium or
+     magnesium; the bar grades itself only where the caller says they
+     apply.
+     ================================================================== */
+  "range.width": ({ width, unit }) => `${width} ${unit} wide`,
+  "range.lowAria": "The bottom of your target range",
+  "range.highAria": "The top of your target range",
+  "range.grade.tight": "Tight control.",
+  "range.grade.fair": "Acceptable control.",
+  "range.grade.loose": "Loose \u2014 a tighter range is worth considering.",
+  "range.head": "Where you want alkalinity to sit",
+  "range.lead":
+    "Drag both handles. How wide you make it is the thing being judged: a range nothing "
+    + "ever falls outside is not a target.",
+
+  "setup.save": "Save",
+  "setup.saved": "Saved.",
+  "setup.needNumber": "Enter a number.",
+  /* Named, not counted. "1 still needed" on a screen with four boxes does not
+     say which one (reefkeeper finding 13). */
+  "setup.stillNeeded": ({ fields }) => `Still needed: ${fields}. Nothing was saved.`,
+  "setup.edit": "Edit",
+  "setup.volume": "Net water volume",
+  "setup.volumeUnit": "litres",
+
+  /* A water change, named where it appears on its own rather than folded
+     into a task that happened to share its day (owner finding 3). */
+  "dashboard.notice.open": "Open dosing",
+  "water.label": "Water change",
+  /* A completion carried across from an older record whose task no longer
+     exists. Naming it as what it is beats printing its database key. */
+  "calendar.unknownTask": "A task you no longer have",
+
+  "testlab.showReadings": ({ parameter }) => `Show every ${parameter} reading`,
+  "testlab.hideReadings": ({ parameter }) => `Hide the ${parameter} readings`,
+  "testlab.noReadings": ({ parameter }) => `No ${parameter} readings yet.`,
+  "testlab.partOf.duplicate": ({ value, unit }) =>
+    `one of two tests half an hour apart \u00b7 ${value}${unit} used`,
+  "testlab.partOf.triplicate": ({ value, unit }) =>
+    `one of three tests half an hour apart \u00b7 ${value}${unit} used`,
+  "testlab.partOf.many": ({ count, value, unit }) =>
+    `one of ${count} tests half an hour apart \u00b7 ${value}${unit} used`,
+
+  /* REEFKEEPER FINDING 10. The parameter's own row showed the last measurement
+     typed, which on a duplicated test is a number that appears nowhere else on
+     the screen. It shows the figure the test resolved to, and says how many
+     measurements are behind it so the keeper is not left wondering why it is
+     not one of the ones he typed. */
+  "testlab.ofN.duplicate": () => "run twice",
+  "testlab.ofN.triplicate": () => "run three times",
+  "testlab.ofN.many": ({ count }) => `run ${count} times`,
+
   "delete.confirm.reading": "Delete this reading? It will be gone, and everything is worked out again without it.",
   "delete.confirm.dose": "Delete this dose change? It will be gone, and everything is worked out again without it.",
   "delete.confirm.entry": "Delete this entry? It will be gone, and everything is worked out again without it.",
@@ -2149,6 +2340,7 @@ export const STRINGS = Object.freeze({
   /* Every parameter this build does not assess. It states what the app does
      with these readings, which is true, rather than classifying them — there
      is no engine for them, so there is no position and none is invented. */
+  "card.status.noReadings": "NO READINGS YET",
   "card.status.notAssessed": "LOGGED · NOT ASSESSED",
 
   "trajectory.RISING": "Rising",
@@ -2493,9 +2685,9 @@ export const STRINGS = Object.freeze({
 
      Some are messages the keeper reads directly — an empty field, a value
      that is not a number. Some are invariant violations that should never
-     happen and, if they do, surface in the crash screen's developer view. The
-     second kind is still text a human might read, so it lives here too rather
-     than being an exception to the rule.
+     happen and, if they do, surface on the crash screen. The second kind is
+     still text a human might read, so it lives here too rather than being an
+     exception to the rule.
      ================================================================== */
 
   "err.exactInstantNeedsBoth":
@@ -2561,8 +2753,18 @@ export const STRINGS = Object.freeze({
      the canon is right and the sentence is a defect. Those gaps stay open.
      ================================================================== */
 
+  /* REEFKEEPER FINDING 8. This sentence sent the keeper to a "developer view"
+     that does not exist anywhere in the application — no screen renders one,
+     and the three other sentences that mentioned one were never rendered at
+     all. A message that points at a surface the app does not have is worse
+     than one that says nothing: it makes the keeper hunt for a screen and then
+     doubt the rest of what he is reading.
+
+     It says what is actually true instead: the engine had something to say and
+     this build has no wording for it. */
   "reason.fallback":
-    "The engine gave a reason this build has no plain-English wording for. It is shown in full in the developer view.",
+    "No plain-English wording for this one yet. Nothing is being kept from you; the sentence simply has " +
+    "not been written.",
 
   "reason.CONFIG_VERSION_RESOLVED": "The settings in force at the time of this assessment were used.",
   "reason.CONFIG_HISTORICAL_UNAVAILABLE":
@@ -2815,12 +3017,14 @@ export const STRINGS = Object.freeze({
   "reason.RETEST_RETURN_PLAN_CADENCE_UNAVAILABLE":
     "Return-plan timing has no rule yet, so it was not considered.",
 
+  /* No observer. It says what is missing from the record and what it would
+     take to supply it, which is the only thing the keeper can do with it. */
   "reason.CAPABILITY_SOLUTION_CONTEXT_MISSING":
-    "The app has not been told which solution and batch you are dosing.",
+    "Which solution you are dosing is not on record. Setting its strength in Setup supplies it.",
   "reason.CAPABILITY_DELIVERY_CONTEXT_MISSING":
     "The app has not been told how the dose is delivered.",
   "reason.CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED":
-    "The dose currently set on the pump has not been confirmed.",
+    "The dose your pump is running is not confirmed. Entering it in Setup confirms it.",
   "reason.CAPABILITY_HISTORICAL_BRACKET_UNAVAILABLE":
     "There is not enough history to say what this tank normally needs.",
   "reason.CAPABILITY_MAGNESIUM_STATE_UNKNOWN": "Magnesium is not tracked in this build.",

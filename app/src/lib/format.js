@@ -17,9 +17,30 @@
 /* A reading, at the precision its parameter is recorded to. `decimals` comes
    from `PARAMETERS` in the ledger, where it sits beside the unit it belongs
    with — it is not a judgement made here. */
+export const EM_DASH = "\u2014";
+
 export function fmtVal(def, v) {
-  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return "—";
+  if (v == null || typeof v !== "number" || !Number.isFinite(v)) return EM_DASH;
   return v.toFixed(def && Number.isFinite(def.decimals) ? def.decimals : 2);
+}
+
+/* A VALUE AND ITS UNIT, WITH THE SPACE BETWEEN THEM — REEFKEEPER FINDING 22.
+
+   `9.10dKH`. `0.20dKH spread`. `usually 8.90–9.20dKH`. Five places on the
+   screens he used ran the figure into its unit, and the same app writes
+   `9.10 dKH` correctly in more than a dozen sentences in `strings.js` — so it
+   is not that nobody decided, it is that the decision lived in the sentences
+   and the markup never learned it.
+
+   It lives here now, and it handles the case that makes hand-written spacing
+   go wrong: pH has NO unit, and `${value} ${""}` leaves a trailing space that
+   pushes a centred figure off-centre. */
+export function fmtWithUnit(def, v) {
+  const shown = fmtVal(def, v);
+  /* An em dash is `fmtVal`'s way of saying there is no figure, and "— dKH" is
+     a unit on a measurement that does not exist. */
+  if (shown === EM_DASH) return shown;
+  return def && def.unit ? `${shown} ${def.unit}` : shown;
 }
 
 /* A SOLUTION STRENGTH, IN dKH PER MILLILITRE — ONE ARGUMENT, SO THERE IS
@@ -108,7 +129,7 @@ export const fmtFriendly = (iso) => {
    rounding; it never performs it. */
 const PRECISION = Object.freeze({
   dkh: 2,          /* a reading: 9.00 dKH */
-  mlPerDay: 2,     /* a dose: 8.80 mL/day */
+  mlPerDay: 2,     /* a dose: 8.8 mL/day — see TRIM_TRAILING below */
   dkhPerDay: 3,    /* a slope or a consumption: 0.030 dKH/day */
   dkhPerMl: 4,     /* a solution strength: 0.0692 dKH/mL */
   days: 1,         /* a span: 5.0 days — but prefer `spanInWords` in prose */
@@ -116,10 +137,27 @@ const PRECISION = Object.freeze({
   count: 0,        /* readings, clusters, periods */
 });
 
+/* Quantities whose SECOND decimal is only ever shown when it says something.
+
+   A dose is written 8.8 mL/day, not 8.80 — the owner's own spelling, and the
+   one everybody uses for a doser. The place is kept where it carries a digit,
+   so a pump set to 8.75 still reads 8.75; only a trailing zero goes.
+
+   A reading is NOT in this set and must not be. `9.00 dKH` and `9.0 dKH` say
+   different things about how the tank was measured, and alkalinity is written
+   to two places everywhere in this app and in the canon.
+
+   One decimal always survives. `9.0 mL/day` is a dose; `9 mL/day` reads like a
+   count of bottles. */
+const TRIM_TRAILING = new Set(["mlPerDay"]);
+
 export function fmtQty(v, kind = "dkh") {
   if (v == null || typeof v !== "number" || !Number.isFinite(v)) return null;
   const dp = PRECISION[kind];
-  return v.toFixed(dp === undefined ? 2 : dp);
+  const text = v.toFixed(dp === undefined ? 2 : dp);
+  if (!TRIM_TRAILING.has(kind)) return text;
+  /* Only a trailing zero, and never the last decimal place. */
+  return text.replace(/(\.\d)0+$/, "$1");
 }
 
 /* The same, as a MAGNITUDE. `jake`'s rule for this tab: prose never prints a

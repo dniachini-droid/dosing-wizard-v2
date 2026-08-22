@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
+import { DeleteControl } from './DeleteControl.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
-import { Check, X } from '../icons.jsx'
-import { fmtVal, fmtTime } from '../lib/format.js'
+import { Check, ChevronDown, ChevronUp, X } from '../icons.jsx'
+import { fmtVal, fmtTime, fmtWithUnit } from '../lib/format.js'
 import { nowTime } from '../lib/clock.js'
 import { useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
-import { rowsFor, chartDataFrom } from '../lib/adapt.js'
+import { rowsFor } from '../lib/adapt.js'
+import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey, shownReading } from '../present/episodes.js'
+import { t } from '../strings.js'
 
 /* --- Enter every parameter on one screen ---
  *
@@ -15,10 +18,71 @@ import { rowsFor, chartDataFrom } from '../lib/adapt.js'
  * Log, move on. The date applies to all of them, since a testing session
  * happens at one sitting.
  */
-export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null }) {
+/* This parameter's readings, newest first.
+
+   `rowsFor` is the app's one answer to "this parameter's readings, in order",
+   and the ledger's order is the app's one answer to which is most recent — so
+   this reverses that rather than sorting on a date, which is the mistake that
+   put the dose history in the wrong order. */
+function readingsNewestFirst(readings, key) {
+  return [...rowsFor(readings, key)].reverse();
+}
+
+/* Value, date, time and a trash icon each — the owner's own list.
+
+   A reading that was one of several taken close together says so, because
+   otherwise the keeper sees three rows at 09:07 and cannot tell why the card
+   above shows a figure that is none of them. Deleting one recomputes the group
+   from the ledger: the engine forms the episode again from what is left, and
+   every surface follows. Nothing here is cached and nothing is patched. */
+function ReadingRows({ rows, def, episodes, onDelete }) {
+  if (!rows.length) {
+    return (
+      <p className="text-[12px] font-medium text-ink2 px-1 pb-2 pt-1">
+        {t("testlab.noReadings", { parameter: def.labelMid || def.label.toLowerCase() })}
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-1 pt-2 pb-1">
+      {rows.map((r) => {
+        const ep = episodeForReading(episodes, r.id);
+        const grouped = !!(ep && ep.count > 1);
+        return (
+          <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-app px-2.5 py-2">
+            <span className="text-[13px] font-black text-ink tabular-nums shrink-0">
+              {fmtVal(def, r.value)}
+              <span className="text-ink2 font-bold text-[11px] ml-0.5">{def.unit}</span>
+            </span>
+            <span className="text-[11px] font-bold text-ink2 flex-1 min-w-0">
+              {fmtShort(r.date)}{fmtTime(r.time) ? ` · ${fmtTime(r.time)}` : ""}
+              {grouped && (
+                <span className="block text-[10px] font-bold" style={{ color: def.color }}>
+                  {t(`testlab.partOf.${groupWordKey(ep.count)}`, {
+                    count: ep.count, value: fmtVal(def, ep.valueDkh), unit: def.unit })}
+                </span>
+              )}
+            </span>
+            {onDelete && (
+              <DeleteControl onDelete={() => onDelete(r.id)}
+                label={t("delete.aria.reading", { date: fmtShort(r.date) })}
+                ask={t("delete.confirm.reading")} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView = null,
+  episodes = null, onDeleteReading = null }) {
   const [date, setDate] = useState(todayStr());
   const [time, setTime] = useState(nowTime());
   const [values, setValues] = useState({});
+  /* Which parameter's readings are showing. One at a time: eight open lists on
+     a phone is a page nobody can find anything in. */
+  const [openKey, setOpenKey] = useState(null);
 
   const setVal = (k, v) => setValues((p) => ({ ...p, [k]: v }));
 
@@ -123,20 +187,25 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Date</span>
             <input type="date" value={date} max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
           </label>
           <label className="block">
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-ink2">Time</span>
             <input type="time" value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full mt-0.5 rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
+              className="w-full mt-0.5 min-h-[44px] rounded-lg border border-app bg-white px-2 py-2 text-[13px] font-bold text-ink" />
           </label>
         </div>
       </div>
 
       <div className="divide-y divide-app">
         {paramDefs.map((def) => {
-          const last = latest[def.key];
+          /* REEFKEEPER FINDING 10. The row read the ledger's last measurement,
+             so a test run three times printed 10.00 here while the card above
+             it and every other surface printed 9.10. `shownReading` asks the
+             episode index what that reading was resolved to; it computes
+             nothing. */
+          const last = shownReading(episodes, latest[def.key]);
           const st = dueFor(def.key);
           const filled = values[def.key] !== undefined && values[def.key] !== "";
           /* Tested today: the row reads as ticked off rather than merely
@@ -155,7 +224,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
               style={{ background: rowBg, borderLeft: `3px solid ${stripe}`,
                        opacity: idle ? 0.62 : 1 }}>
               <div className="flex items-center gap-2">
-                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left">
+                <button onClick={() => onOpenParam(def.key)} className="min-w-0 flex-1 text-left min-h-[44px]">
                   <div className="flex items-center gap-1.5">
                     {doneToday ? (
                       <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 tp-tick"
@@ -179,13 +248,14 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                     style={{ color: doneToday ? "#0B7C86" : "#45605F" }}>
                     {doneToday ? (
                       <span className="font-extrabold">
-                        Done · {fmtVal(def, last.value)}{def.unit}
+                        Done · {fmtWithUnit(def, last.value)}
                         {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
+                        {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
                       </span>
                     ) : (
                       <>
                         {last
-                          ? `last ${fmtVal(def, last.value)}${def.unit} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
+                          ? `last ${fmtWithUnit(def, last.value)} · ${fmtShort(last.date)}${fmtTime(last.time) ? ` ${fmtTime(last.time)}` : ""}`
                           : "no readings yet"}
                         {st && st.daysOut > 0 && (
                           <span className="ml-1">· next {fmtShort(st.due)}</span>
@@ -199,7 +269,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                   value={values[def.key] ?? ""} onChange={(e) => setVal(def.key, e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") log(def); }}
                   placeholder={def.unit}
-                  className="w-20 shrink-0 rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
+                  className="w-20 shrink-0 min-h-[44px] rounded-lg border border-app bg-white px-2 py-1.5 text-[14px] font-bold text-ink text-right" />
 
                 <button onClick={() => log(def)} disabled={!filled}
                   className="shrink-0 rounded-lg px-3 py-2 text-[12px] font-extrabold transition-colors"
@@ -210,9 +280,33 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                     : { background: "#EDF3F2", color: "#9FB0AE" }}>
                   {doneToday && !filled ? "Again" : "Log"}
                 </button>
+
+                {/* OWNER FINDINGS 8, 11 AND 27 — THE RAW READINGS, REACHABLE.
+
+                    There was no list of readings anywhere he could get to. The
+                    calendar answers "what did I do on this day"; it does not
+                    answer "where is that reading I typed wrong", and its trash
+                    icon deletes the TICK rather than the reading — which is why
+                    deleting from it changed one surface and nothing else.
+
+                    So the readings live here, under the parameter they belong
+                    to, which is how he asked for them: expand a parameter, see
+                    its own readings newest first. */}
+                <button onClick={() => setOpenKey(openKey === def.key ? null : def.key)}
+                  aria-label={t(openKey === def.key ? "testlab.hideReadings" : "testlab.showReadings",
+                    { parameter: def.labelMid || def.label.toLowerCase() })}
+                  aria-expanded={openKey === def.key}
+                  /* REEFKEEPER FINDING 21: 27px, beside seven others like it,
+                     on a list read one-handed at the tank. */
+                  className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-ink2 active:bg-app">
+                  {openKey === def.key ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </button>
               </div>
 
-
+              {openKey === def.key && (
+                <ReadingRows rows={readingsNewestFirst(readings, def.key)} def={def}
+                  episodes={episodes} onDelete={onDeleteReading} />
+              )}
             </div>
           );
         })}
@@ -223,7 +317,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
 
 /* Every chart in one place, stripped of commentary — for when you want to scan
    the tank's whole history rather than study one parameter. */
-export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam }) {
+export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOpenParam, episodes = null }) {
   useEscape(onClose);
   /* One window setting for every chart, so they're comparable at a glance —
      charts on different timescales invite the wrong conclusion. */
@@ -233,15 +327,15 @@ export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOp
   const series = paramDefs
     .map((def) => ({
       def,
-      data: chartDataFrom(
-        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), fmtShort),
+      data: chartGroupsFrom(
+        rowsFor(readings, def.key).filter((r) => !cutoff || r.date >= cutoff), episodes, fmtShort),
     }))
     .filter((x) => x.data.length >= 2);
 
   return (
-    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4"
+    <div className="fixed inset-0 bg-[#08191D]/60 z-50 flex items-end sm:items-center justify-center sm:p-4 sheet-layer"
       onClick={onClose}>
-      <div className="bg-app w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl"
+      <div className="bg-app w-full sm:max-w-2xl sheet-panel overflow-y-auto rounded-t-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {/* The header sticks, so the window control stays reachable however far
@@ -282,7 +376,7 @@ export function AllGraphsModal({ paramDefs, readings, chartEvents, onClose, onOp
                   <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                 </span>
                 <span className="text-[11px] font-bold text-ink2 shrink-0">
-                  {fmtVal(def, data[data.length - 1].value)}{def.unit}
+                  {fmtWithUnit(def, data[data.length - 1].value)}
                   {def.min != null && def.max != null
                     ? ` · target range ${fmtVal(def, def.min)}–${fmtVal(def, def.max)}`
                     : ""}

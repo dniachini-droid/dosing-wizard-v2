@@ -44,6 +44,7 @@ import {
   timeFor,
   firstDoseDate,
 } from "../../app/src/store/import-v1.js";
+import { recordDoseState } from "../../app/src/lib/record.js";
 
 const s = suite("importing V1 history");
 
@@ -1145,6 +1146,91 @@ s.test("IMP-32", "a second import continues the dose record rather than restarti
   eq(sept.kind, KIND.DOSE_CHANGE, "the new dose is a change, not a second standing dose");
   eq(sept.detail.fromMlPerDay, 8.8, "from the value the record already established");
   eq(sept.detail.toMlPerDay, 12, "to the new one");
+});
+
+s.test("IMP-44", "importing a history never deletes the tank volume already on record", async () => {
+  /* REEFKEEPER FINDING 2, and the worst thing he found after the crash.
+
+     He set the tank up completely — 77 litres saved, the section reading "all
+     set" — then imported his history, which is the one operation a keeper
+     performs precisely to KEEP his data. `netVolumeL` was gone from the stored
+     configuration afterwards. Nothing said so. The Setup potency line quietly
+     degraded from "0.0693 dKH/mL" to "101 g/L" because it could no longer do
+     the conversion, and the Dosing tab carried on recommending against a tank
+     whose size it no longer knew.
+
+     An import may ADD what the record lacks. It may not remove what is there. */
+  const store = createMemoryStore();
+  await store.config.append({ netVolumeL: 77, targetRangeMinDkh: 8.6, targetRangeMaxDkh: 9.2 },
+    "2026-01-01T00:00:00Z");
+
+  const noVolume = backup();
+  delete noVolume.data["tank-settings"].volumeL;
+  /* PLANNED WITHOUT THE CONFIGURATION, which is the shape that produces the
+     defect: the plan then carries no volume at all, and an unconditional write
+     puts that absence straight over the number already stored. Whether a caller
+     always supplies the configuration is not something the write should have to
+     rely on — an import may ADD what the record lacks and may not remove what
+     is there. */
+  const planned = planImport(noVolume, {
+    existing: await store.ledger.projection(),
+    existingCompletions: await store.tasks.completions(),
+    assumption: ASSUMED,
+  });
+  await applyImport(store, planned, {
+    asOf: "2026-08-21T10:00:00Z", correctedPotencyDkhPerMl: null, assumption: ASSUMED,
+  });
+
+  const cfg = await store.config.current();
+  eq(cfg.netVolumeL, 77, "the volume he saved survives an import that carries none");
+  eq((await store.config.missingFacts()).includes("netVolumeL"), false,
+    "and it is not reported as still needed");
+});
+
+s.test("IMP-45", "a dose declared today is not evidence of what was running last March", async () => {
+  /* REEFKEEPER FINDING 17.
+
+     The order he did it in is the order the app asks for: set the tank up, tell
+     it what you are currently dosing, then bring your history across. The
+     import seeded "what was running" from the LATEST dose on record — the
+     figure he had typed minutes earlier, dated today — so the oldest row in his
+     imported history was written as a CHANGE away from a number that did not
+     exist when it happened, and the baseline of his whole record was stamped
+     today and sat above changes from months before it.
+
+     A dose recorded after a moment is not evidence about that moment. */
+  const store = createMemoryStore();
+  await recordDoseState(store, { doseMlPerDay: 8.8, date: "2026-08-21", atTime: "09:00" });
+
+  const planned = planImport(backup(), {
+    existing: await store.ledger.projection(),
+    existingCompletions: await store.tasks.completions(),
+    assumption: ASSUMED,
+  });
+  await applyImport(store, planned, {
+    asOf: "2026-08-21T10:00:00Z", correctedPotencyDkhPerMl: null, assumption: ASSUMED,
+  });
+
+  const doses = (await store.ledger.projection())
+    .filter((r) => r.event.kind === KIND.DOSE_STATE || r.event.kind === KIND.DOSE_CHANGE)
+    .map((r) => ({
+      kind: r.event.kind,
+      date: r.event.time.localDate,
+      from: r.event.detail.fromMlPerDay ?? null,
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  ok(doses.length >= 2, `the history came across (${doses.length} dose rows)`);
+  const first = doses[0];
+  eq(first.kind, KIND.DOSE_STATE,
+    "the earliest row in the record is where the record BEGINS, not a change away from something");
+  eq(first.from, null, "so it states no figure it was moved from");
+  ok(first.date < "2026-08-21",
+    `and the baseline is dated when the history starts, not today (${first.date})`);
+
+  /* And the declaration he typed is still there, still the latest fact, so the
+     app has not lost the dose he is actually delivering. */
+  ok(doses.some((d) => d.date === "2026-08-21"), "his own declaration survives the import");
 });
 
 s.test("IMP-33", "the configuration refuses a value it was not given", async () => {

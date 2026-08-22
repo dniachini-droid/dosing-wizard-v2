@@ -39,8 +39,8 @@ export function positionTone(position) {
 
    Round three, item 13: the seven parameters this build does not assess
    rendered their value, their range marker and their status line in grey,
-   which reads as broken. It is not broken. A reading is a fact — 410 mg/L is
-   410 mg/L whether or not an engine has an opinion about it — and where it
+   which reads as broken. It is not broken. A reading is a fact — 410 ppm is
+   410 ppm whether or not an engine has an opinion about it — and where it
    sits between 400 and 450 is arithmetic against two numbers the KEEPER typed.
 
    The distinction that makes this lawful is the one `store/config.js` already
@@ -98,4 +98,19 @@ export function positionIsInRange(position) {
 export function positionWord(position) {
   if (!knownPosition(position)) return null;
   return has(`positionShort.${position}`) ? t(`positionShort.${position}`) : null;
+}
+
+/* Is the tank outside the keeper's range?
+
+   The engine's own position vocabulary lives here and in the rest of
+   `present/`, and nowhere else — `PORT-02` scans for it. A component asking
+   `position !== "IN_RANGE"` would be an interface file testing a contract
+   value, which is the shape `DEC-003` and `X-INV-004` forbid: today it is a
+   comparison, tomorrow it is a comparison plus a threshold.
+
+   It decides nothing about chemistry. The engine has already said where the
+   level sits; this reports whether that answer is one worth putting in front
+   of the keeper unprompted (owner finding 23). */
+export function isOutOfRange(position) {
+  return !!position && position !== "IN_RANGE" && position !== "UNKNOWN";
 }

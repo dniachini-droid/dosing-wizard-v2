@@ -150,7 +150,27 @@ s.test("STR-04", "an unknown reason code falls back honestly, without naming its
   ok(said.length > 0, "something is said");
   ok(!CONTRACT_SHAPED.test(said), "and it is not the identifier");
   ok(!said.includes("SOME_CODE"), "the identifier does not appear inside it either");
-  ok(/developer view/i.test(said), "and it says where the identifier can be found");
+  /* REEFKEEPER FINDING 8. This used to require the sentence to send the keeper
+     to "the developer view", and there is no developer view: no screen in the
+     application renders one. The check was pinning the defect in place. What
+     the sentence has to do is be honest about the gap without inventing a
+     place to go and look. */
+  ok(!/developer view|debug|console/i.test(said), "and it sends him to no screen the app does not have");
+});
+
+s.test("STR-11", "no message points the keeper at a screen the application does not have", () => {
+  /* REEFKEEPER FINDING 8, generalised. He read "the full result is in the
+     developer view at the foot of this screen", scrolled to the foot of the
+     screen, and found the foot of the screen. Three further sentences named
+     the same imaginary surface and were never rendered at all.
+
+     A promise of a surface is checkable: the phrase names a screen, so some
+     component has to render it. None did. */
+  const strings = fs.readFileSync(path.join(ROOT, "app/src/strings.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const offenders = [...strings.matchAll(/^.*\b(developer view|debug (?:view|screen|panel))\b.*$/gim)]
+    .map((m) => m[0].trim());
+  eq(offenders.join("\n"), "", `these sentences name a screen that is not built:\n${offenders.join("\n")}`);
 });
 
 s.test("STR-05", "every declined state renders as words, with a reason", () => {
@@ -327,6 +347,24 @@ s.test("STR-09", "the file is the only place, and it holds a substantial number 
   for (const k of keys()) {
     const v = STRINGS[k];
     ok(typeof v === "string" || typeof v === "function", `${k} is a string or a function`);
+  }
+});
+
+s.test("STR-12", "a figure in a sentence carries its unit", () => {
+  /* `jake` found `dosing.boxes.diff.matchingSubGap` rendering "0.070 apart"
+     under a box headed "The difference", between two boxes reading "0.420
+     dKH/day" and "0.350 dKH/day" — a bare number where its two siblings six
+     lines above print the unit. That string exists BECAUSE of a
+     figures-and-units contradiction; it shipped with the same one.
+
+     `fmtQty` returns a bare number by design, so every sentence that
+     interpolates one owns the unit. This checks the family where the mistake
+     happened rather than the whole register: a scan of every string in the file
+     would be a scan nobody could keep green. */
+  for (const key of ["dosing.boxes.diff.short", "dosing.boxes.diff.excess",
+                     "dosing.boxes.diff.matchingSubGap"]) {
+    const said = t(key, { gap: "0.070" });
+    ok(/dKH\/day/.test(said), `${key} says what the figure is measured in: "${said}"`);
   }
 });
 

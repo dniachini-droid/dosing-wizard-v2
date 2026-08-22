@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Btn, PARAM_ICON, SectionTitle } from './DoseExpectation.jsx'
 import { Card } from './ErrorBoundary.jsx'
 import { ZoomableLineChart } from './ZoomableChart.jsx'
+import { DeliveredDoseField } from './DeliveredDose.jsx'
 import { Beaker, ChevronDown, ChevronUp } from '../icons.jsx'
 import { fmtDate, fmtShort } from '../lib/dates.js'
-import { chartDataFrom } from '../lib/adapt.js'
+import { chartGroupsFrom, shownReading } from '../present/episodes.js'
 import { fmtPotency, fmtQty } from '../lib/format.js'
 import { positionTone } from '../present/position.js'
 import {
@@ -12,6 +13,7 @@ import {
   statusParts, whyPanel, working,
 } from '../present/dosing-tab.js'
 import { sayPayloadKey, sayPayloadValue, sayReason } from '../present/wording.js'
+import { alreadyAtDose } from '../present/dose-origin.js'
 import { t } from '../strings.js'
 
 /* ============================================================================
@@ -185,7 +187,7 @@ function ShowWorking({ result, config, canExplain }) {
   return (
     <div className="mt-2">
       <button onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-[12px] font-extrabold text-teal-brand">
+        className="flex items-center gap-1 min-h-[44px] text-[12px] font-extrabold text-teal-brand">
         {canExplain ? t("dosing.reco.showWorking") : t("dosing.reco.why")}
         {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
@@ -307,7 +309,7 @@ function CorrectionPanel({ result, asOf, dismissed, onDismiss }) {
    belongs in the working, where it is named in words — a second, weaker
    version of it drawn on the chart is exactly the duplicate ownership
    `MASTER RULE 1` forbids. */
-function DosingChart({ def, rows, chartEvents }) {
+function DosingChart({ def, rows, chartEvents, episodes = null }) {
   const [days, setDays] = useState(7);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const shown = rows.filter((r) => r.date >= cutoff);
@@ -320,18 +322,19 @@ function DosingChart({ def, rows, chartEvents }) {
      the axis drew no dates and the owner's four imported dose changes drew
      nothing — on a chart that was already being handed them.
 
-     `chartDataFrom` is the shape every other chart in the app uses, and it is
-     where the label rule lives: where a day carries more than one reading the
-     label carries the time too, so two points on one day stay distinguishable.
-     Building a second point shape here was the defect; there is one now. */
-  const data = chartDataFrom(shown, fmtShort);
+     `chartGroupsFrom` is the shape every other chart in the app uses, and it
+     is where the point rule lives: one x-position per TEST, with the
+     measurements of a repeat test stacked on it rather than spread along the
+     axis as if they were separate tests. Building a second point shape here
+     was the defect; there is one now. */
+  const data = chartGroupsFrom(shown, episodes, fmtShort);
 
   return (
     <div className="mb-4">
       <div className="flex gap-1.5 mb-2" role="group" aria-label={t("dosing.graph.aria")}>
         {[[7, t("dosing.graph.7")], [14, t("dosing.graph.14")]].map(([d, label]) => (
           <button key={d} onClick={() => setDays(d)}
-            className="rounded-lg px-3 py-1.5 text-[11px] font-extrabold border-2"
+            className="rounded-lg px-3 min-h-[44px] text-[11px] font-extrabold border-2"
             style={{ borderColor: days === d ? def.color : "#E3ECEA",
                      color: days === d ? def.color : "#45605F" }}>
             {label}
@@ -360,6 +363,10 @@ function PotencyBox({ box, onAccept, onKeep }) {
     learned: box.learned == null ? "—" : fmtPotency(box.learned),
     entered: fmtPotency(box.entered),
     accepted: fmtPotency(box.entered),
+    /* The engine's own observed figure, for the state where it has read a
+       strength but not gathered enough to be confident in one (finding 12). */
+    observed: box.observed == null ? "—" : fmtPotency(box.observed),
+    count: box.observations,
   };
 
   return (
@@ -432,7 +439,11 @@ function PotencyBox({ box, onAccept, onKeep }) {
 export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestByParam = {},
   config = null, readings = [], chartEvents = [], onChangeDoseAnyway = null,
   asOf = null, correctionDismissed = null, onDismissCorrection = null,
-  onAcceptPotency = null, onKeepPotency = null }) {
+  onAcceptPotency = null, onKeepPotency = null, episodes = null,
+  standingDose = null, onSetDeliveredDose = null }) {
+  /* Whether the delivered-dose field is open on this tab. One flag: there is
+     one field, and it is the same field however it was reached. */
+  const [doseOpen, setDoseOpen] = useState(false);
 
   const KEYS = ["ALK", "CA", "MG"];
   const items = KEYS.map((key) => ({ key, def: paramDefs.find((d) => d.key === key) })).filter((x) => x.def);
@@ -441,11 +452,22 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
   const def = active ? active.def : null;
 
   const rows = readings.filter((r) => def && r.param === def.key);
-  const latest = def ? latestByParam[def.key] : null;
+  /* THE INSTANT THE FIGURE ABOVE IT WAS TAKEN AT — findings 26 and 28's fifth
+     surface. The headline said 9.10 dKH, the line beneath it said "Measured 19
+     August at 09:08", and 09:08 is when the 10.00 was typed. The figure came
+     from the resolved test at 09:07 and the timestamp came from the ledger's
+     last row: two sources, one sentence. */
+  const latest = shownReading(episodes, def ? latestByParam[def.key] : null);
   const assessed = def && def.assessed && engineResult;
 
   const status = assessed ? statusParts(engineResult) : null;
-  const rec = assessed ? recommendation(engineResult, rows.length) : null;
+  /* TESTS, NOT MEASUREMENTS — reefkeeper findings 3, 7 and 10, on the last
+     surface that still counted the other thing. "You have 7 alkalinity readings
+     recorded" beside a chart drawing five points is the app disagreeing with
+     itself about how much it has been told. */
+  const testCount = useMemo(
+    () => chartGroupsFrom(rows, episodes, fmtShort).length, [rows, episodes]);
+  const rec = assessed ? recommendation(engineResult, testCount) : null;
   const three = assessed ? boxes(engineResult) : null;
   const potency = assessed ? potencyBox(engineResult, config) : null;
 
@@ -505,22 +527,75 @@ export function DosingWizard({ paramDefs, engineResult, summaries = {}, latestBy
           {rec && (
             <Card className="p-4 mb-4">
               <h3 className="text-[17px] font-black text-ink leading-tight mb-1.5">{rec.head}</h3>
-              <p className="text-[13px] text-ink font-medium leading-relaxed">{rec.body.join("")}</p>
+              {/* JOINED WITH A SPACE, not with nothing. Some of these sentences
+                  carry a trailing space and some do not, so the screen read
+                  "...your readings can carry one.Nothing is wrong..." — found in
+                  a screenshot, not by any check. Trimmed first so the ones that
+                  do carry a space do not end up with two. */}
+              <p className="text-[13px] text-ink font-medium leading-relaxed">
+                {rec.body.map((s) => String(s).trim()).filter(Boolean).join(" ")}
+              </p>
               <ShowWorking result={engineResult} config={config} canExplain={rec.canExplain} />
               <p className="text-[11px] text-ink2 font-medium leading-relaxed mt-2">
                 {t("dosing.reco.note")}
               </p>
-              {/* V1's, kept where a hold is recommended: a hold is advice, and
-                  the keeper is allowed to disagree with it. */}
-              {rec.offerChangeAnyway && onChangeDoseAnyway && (
-                <Btn className="w-full mt-3" onClick={onChangeDoseAnyway}>
-                  {t("dosing.reco.changeAnyway")}
-                </Btn>
+              {/* THE DOSE IS SET FROM HERE, AND IT IS THE SAME FIELD SETUP USES
+                  (owner finding 19).
+
+                  Two ways in, one of them opening with the engine's figure and
+                  one with nothing suggested, both writing through the shell's
+                  single path. Whether the keeper took the recommendation or
+                  changed it is decided from the figure he saved, not from which
+                  button he pressed, so the history is right either way.
+
+                  It opens HERE rather than sending him to Setup: a
+                  recommendation he is acting on is on this screen, and a button
+                  that navigates away from it loses the thing he was reading. It
+                  also used to navigate to a tab that did not exist and leave
+                  him on a blank page (finding 20). */}
+              {onSetDeliveredDose && (rec.suggestedDose != null || rec.offerChangeAnyway) && (
+                doseOpen ? (
+                  <div className="mt-3 rounded-xl border border-app p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="text-[13px] font-black text-ink">{t("dose.delivered.head")}</h4>
+                      <button onClick={() => setDoseOpen(false)}
+                        className="text-[11px] font-extrabold text-ink2">
+                        {t("dose.change.close")}
+                      </button>
+                    </div>
+                    <DeliveredDoseField standing={standingDose}
+                      suggested={rec.suggestedDose} autoFocus compact
+                      onSave={async (args) => { await onSetDeliveredDose(args); setDoseOpen(false); }} />
+                  </div>
+                ) : alreadyAtDose(rec.suggestedDose, standingDose) ? (
+                  /* REEFKEEPER FINDING 16. He took the recommendation, set 9.0,
+                     and the button went on saying "Set the dose to 9.0 mL/day".
+                     The engine's answer does not move until readings taken on
+                     the new dose arrive — correct of the engine, unreadable on
+                     the screen — so he set it again and the history carried a
+                     change from 9.0 to 9.0. The screen says where he is, and
+                     leaves the door open rather than removing it. */
+                  <div className="mt-3">
+                    <p className="text-[12px] font-bold text-ink leading-relaxed">
+                      {t("dosing.reco.alreadyThere", { dose: fmtQty(standingDose, "mlPerDay") })}
+                    </p>
+                    <button onClick={() => setDoseOpen(true)}
+                      className="text-[11px] font-extrabold text-ink2 underline mt-1 min-h-[44px]">
+                      {t("dosing.reco.changeAnyway")}
+                    </button>
+                  </div>
+                ) : (
+                  <Btn className="w-full mt-3" onClick={() => setDoseOpen(true)}>
+                    {rec.suggestedDose != null
+                      ? t("dosing.reco.setDose", { dose: fmtQty(rec.suggestedDose, "mlPerDay") })
+                      : t("dosing.reco.changeAnyway")}
+                  </Btn>
+                )
               )}
             </Card>
           )}
 
-          <DosingChart def={def} rows={rows} chartEvents={chartEvents} />
+          <DosingChart def={def} rows={rows} chartEvents={chartEvents} episodes={episodes} />
 
           {three && (
             <div className="grid grid-cols-2 gap-2 mb-4">
