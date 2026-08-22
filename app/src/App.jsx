@@ -254,7 +254,15 @@ export function ReefConsoleInner() {
 
   const waterChanges = useMemo(() => projection
     .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
-    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
+    .map((r) => ({
+      id: r.event.eventId,
+      date: r.event.time.localDate,
+      /* Two spellings of one fact, because the import wrote `volumeL` and the
+         recorder writes `litres`. Records already stored carry whichever was
+         written at the time, so this is the one place that knows they are the
+         same thing — rather than every screen learning it separately. */
+      litres: r.event.detail.litres ?? r.event.detail.volumeL ?? null,
+    })), [projection]);
 
   /* Dose CHANGES and the dose STATE the record starts from.
 

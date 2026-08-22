@@ -56,6 +56,29 @@ function nearestRank(sorted, fraction) {
   return sorted[i];
 }
 
+/* THE MIDDLE VALUE, AND FOR AN EVEN COUNT THAT IS THE MIDPOINT OF THE TWO.
+
+   Nearest rank is right for `p05` and `p95` above: a percentile that
+   interpolates invents a value nobody measured, and "usually 8.6 to 9.0" reads
+   better as two real readings. The MEDIAN is different, because the word on the
+   screen makes a promise about what the number is.
+
+   The reefkeeper caught this by checking the arithmetic: two nitrate readings
+   of 5.00 and 7.00 showed a "median" of 7.00, out by a full ppm. And the app
+   already holds the correct answer elsewhere — delete one of three measurements
+   and the engine resolves the remaining pair by averaging them, so two medians
+   in one app disagreed, which is `MASTER RULE 1`'s defect in a statistic.
+
+   This does not touch the engine's median and could not: that one is canon's,
+   it resolves a testing episode, and it is in `engine/alk_v2/kernel.py`. This
+   is the descriptive figure on the history sheet, and it now agrees with it. */
+function middleValue(sorted) {
+  if (!sorted.length) return null;
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid];
+  return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 /* One window's figures. `range` is the keeper's own `{min, max}` or null; with
    no range there is no in-range count, and the caller renders the spread
    alone. */
@@ -79,7 +102,7 @@ export function describeRows(rows, range) {
     latest: rows[rows.length - 1].value,
     min,
     max,
-    median: nearestRank(sorted, 0.5),
+    median: middleValue(sorted),
     p05: nearestRank(sorted, 0.05),
     p95: nearestRank(sorted, 0.95),
     /* The measure V1 graded and this does not. It is `max - min` and it is

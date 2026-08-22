@@ -49,7 +49,12 @@ const ENGINE_STATE_KEY = Object.freeze({
   ENGINE_FAILED: "card.status.engineUnavailable",
 });
 
-export function cardStatusLine(engineResult, { assessed, assessmentState }) {
+export function cardStatusLine(engineResult, { assessed, assessmentState, hasReading = true }) {
+  /* REEFKEEPER FINDING 19. Every card on a brand-new tank read "LOGGED · NOT
+     ASSESSED" over a dash. Nothing had been logged. It is the first screen a
+     keeper ever sees and it opens by describing something that did not
+     happen. */
+  if (!hasReading) return t("card.status.noReadings");
   if (!assessed) return t("card.status.notAssessed");
   /* Why there is no answer matters, and each reason says itself. "Awaiting a
      reading" is only true when the engine ran and had nothing to work from;
@@ -193,7 +198,7 @@ export function cardContent(def, engineResult, assessmentState = null, latest = 
     tone: positionTone(position),
     card: result ? selectCard(result) : null,
     direction: result ? cardDirection(result) : null,
-    statusLine: cardStatusLine(result, { assessed, assessmentState }),
+    statusLine: cardStatusLine(result, { assessed, assessmentState, hasReading: !!latest }),
     notice: result ? cardNotice(result) : null,
   };
 }

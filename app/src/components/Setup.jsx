@@ -146,15 +146,24 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
 
   const saveFacts = async (keys) => {
     const values = {};
+    const empty = [];
     for (const k of keys) {
       const raw = facts[k];
-      if (raw === "" || raw == null) continue;
+      /* REEFKEEPER FINDING 13. An empty box was skipped and the screen still
+         said "Saved." — on the one screen that was missing the value every dose
+         is sized from, and which the import had just deleted. A save that wrote
+         nothing must not report that it wrote something. */
+      if (raw === "" || raw == null) { empty.push(k); continue; }
       const n = parseFloat(raw);
-      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
+      if (!Number.isFinite(n)) { setFactMsg(t("setup.needNumber")); return; }
       values[k] = n;
     }
+    if (empty.length) {
+      setFactMsg(t("setup.stillNeeded", { fields: empty.map((k) => t(labelOf(k))).join(", ") }));
+      return;
+    }
     await onSaveConfig(values);
-    setFactMsg("Saved.");
+    setFactMsg(t("setup.saved"));
     setTimeout(() => setFactMsg(""), 2500);
   };
 
@@ -175,6 +184,9 @@ export function Setup({ config, onSaveConfig, paramDefs = [], engineResult = nul
      permanently stuck at one however many times he pressed save — a screen
      telling him something was missing that he had already supplied, on the same
      screen he had supplied it. */
+  /* A field's own label, for a message that has to name it. */
+  const labelOf = (key) => (KEEPER_FACTS.find((f) => f.key === key) || {}).label || key;
+
   const ASKED_HERE = KEEPER_FACTS.filter(
     (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
   );

@@ -251,15 +251,32 @@ s.test("DOS-07b", "a limit on the potency learner is not shown as a limit on the
     "delivery method is not reported as missing, because it is never asked for");
   ok(!limits.includes("POTENCY_CALIBRATION_SNAPSHOT_UNAVAILABLE"),
     "and neither is a rule the specification has not written yet");
-  ok(limits.includes("CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED"),
-    "the programmed dose state is stated, because he can confirm it");
-  ok(limits.includes("CAPABILITY_SOLUTION_CONTEXT_MISSING"),
-    "and so is the solution, because he can state it");
+  /* AND ONLY WHILE IT IS STILL TRUE. `FALLING` carries a dose and a potency, so
+     on this result neither is missing and neither is listed — the reefkeeper
+     found both printed four inches under the very figures they claimed were
+     absent. */
+  ok(!limits.includes("CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED"),
+    "the dose is not called unconfirmed on a result that states it");
+  ok(!limits.includes("CAPABILITY_SOLUTION_CONTEXT_MISSING"),
+    "and the solution is not called missing on a result that uses it");
+
+  /* Where they genuinely ARE missing, they are said. */
+  const bare = learnerLimits({
+    ...result,
+    potency: {},
+    doseRecommendation: { action: "HOLD_CURRENT_DOSE", currentDoseMlPerDay: "UNKNOWN" },
+  }).map((r) => r.code);
+  ok(bare.includes("CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED"),
+    "an unconfirmed dose is stated, because he can confirm it");
+  ok(bare.includes("CAPABILITY_SOLUTION_CONTEXT_MISSING"),
+    "and so is an absent solution, because he can state it");
   ok(!limits.includes("TRAJECTORY_UNCERTAINTY_LIMITED"),
     "a real dose limit is not swallowed by the potency box");
 
-  /* And none of the survivors talks about the software. */
-  for (const code of limits) {
+  /* And none of the survivors talks about the software. Checked over the state
+     where they are actually listed — on `FALLING` both are satisfied, so the
+     list is empty and the loop had nothing to read. */
+  for (const code of bare) {
     const said = sayReason(code);
     ok(!/\bthe app\b/i.test(said), `no observer in "${said}"`);
   }
@@ -472,6 +489,39 @@ s.test("DOS-10g", "the working shows the arithmetic behind the estimate, and eve
   ok(/0\.0742/.test(text), "including the second one");
   ok(/0\.0740/.test(text), "and the pooled figure");
   ok(/0\.0692/.test(text), "against the one the keeper entered");
+});
+
+s.test("DOS-12", "\"matching\" never contradicts the two figures printed beside it", () => {
+  /* REEFKEEPER FINDING 14. The three boxes read, in a row: what your tank uses,
+     what your dose supplies, the difference. He read 0.64 and 0.61 and then
+     "dosing is matching consumption", and stopped trusting the row.
+
+     The engine is right — the margin below which a difference is not one the
+     readings can show is its figure and this module does not invent one. What
+     was wrong is that the app said "no difference" while printing two numbers
+     that plainly differ. Where he can see the gap, the gap is named. */
+  const gapped = JSON.parse(JSON.stringify(FALLING));
+  /* A difference INSIDE the engine's margin, and large enough to survive the
+     rounding both boxes are printed at. */
+  gapped.consumption.consumptionDkhPerDay = 0.6200;
+  gapped.consumption.materialityMarginDkhPerDay = 0.05;
+  gapped.consumption.doseHistoryMeanMlPerDay = 8.8;
+  gapped.consumption.selectedPotencyDkhPerMl = 0.0692;
+
+  const [uses, supplies, difference] = boxes(gapped);
+  ok(uses.value !== supplies.value,
+    `the two boxes print different figures (${uses.value} vs ${supplies.value})`);
+  eq(difference.value, t("dosing.boxes.diff.matching"), "and the verdict is still the engine's");
+  ok(/apart/.test(difference.sub),
+    `and the line beneath it names the difference he can see: "${difference.sub}"`);
+
+  /* And where the two printed figures are the SAME, naming a difference would
+     be inventing one. */
+  const level = JSON.parse(JSON.stringify(gapped));
+  level.consumption.consumptionDkhPerDay = 8.8 * 0.0692;
+  const [u2, s2, d2] = boxes(level);
+  eq(u2.value, s2.value, "the same figure in both boxes");
+  eq(d2.sub, t("dosing.boxes.diff.matchingSub"), "and nothing invented to explain it");
 });
 
 s.test("DOS-11", "every response the engine can reach has a keeper-facing state, and a word for it", () => {

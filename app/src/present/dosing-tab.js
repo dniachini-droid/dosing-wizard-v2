@@ -290,9 +290,19 @@ export function boxes(result) {
        (`materialityMarginDkhPerDay`), and that is the figure used. */
     const margin = num(cons.materialityMarginDkhPerDay);
     const matching = margin != null ? Math.abs(gap) <= margin : fmtMag(gap) === fmtQty(0, "dkhPerDay");
+    /* REEFKEEPER FINDING 14. The two boxes beside this one print rounded
+       figures, so a gap the engine has correctly judged too small to act on is
+       still a gap the keeper can SEE — "uses 0.42, supplies 0.35, dosing is
+       matching consumption" reads as the app contradicting its own arithmetic
+       one line later. Where the two printed figures differ, the difference is
+       named and the reason it is not acted on is given. */
+    const visibleGap = fmtQty(c, "dkhPerDay") !== fmtQty(supplied, "dkhPerDay");
     difference = matching
       ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.matching"),
-          sub: t("dosing.boxes.diff.matchingSub"), prose: true }
+          sub: visibleGap
+            ? t("dosing.boxes.diff.matchingSubGap", { gap: fmtMag(gap) })
+            : t("dosing.boxes.diff.matchingSub"),
+          prose: true }
       : gap > 0
         ? { label: t("dosing.boxes.difference"), value: t("dosing.boxes.diff.short", { gap: fmtMag(gap) }),
             sub: t("dosing.boxes.diff.shortSub"), prose: true }
@@ -564,8 +574,19 @@ export function potencyBox(result, config = null) {
        weights or combines them, because combining observations into a strength
        is exactly what the learner does and it has one owner. Where there are
        several, the most recent is named and the count is stated. */
+    /* A NON-POSITIVE STRENGTH IS NOT A LOW ESTIMATE, IT IS IMPOSSIBLE.
+
+       The reefkeeper watched this box report "the real strength may be around
+       -0.0301 dKH per mL" and offer to settle it with a few more readings. A
+       negative strength says every millilitre of soda ash REMOVES alkalinity.
+       It happens when the tank moved for some other reason across a dose
+       change, and the honest thing to say is that the response does not add up
+       yet — not to print an impossibility as an estimate.
+
+       Nothing is recomputed and no threshold is invented: zero is not a
+       threshold, it is the boundary of what the quantity can be. */
     const observed = [...observations]
-      .filter((o) => num(o.observedPotencyDkhPerMl) != null)
+      .filter((o) => num(o.observedPotencyDkhPerMl) > 0)
       .pop();
     if (observed) {
       return {
@@ -1029,12 +1050,43 @@ const KEEPER_CAN_ACT = new Set([
 /* Read by the potency box, which shows what the learner could not do beside
    the estimate it could not make. Exported so there is ONE list and the two
    surfaces cannot drift apart. */
+/* Is this limit still a live one, given what the result itself shows?
+
+   Read off the engine's own output — the potency it resolved and the dose it
+   assessed against — rather than from configuration, so it cannot disagree with
+   the figures printed beside it. */
+function stillMissing(code, result) {
+  const pot = (result && result.potency) || {};
+  const dose = (result && result.doseRecommendation) || {};
+  if (code === "CAPABILITY_SOLUTION_CONTEXT_MISSING") {
+    return num(pot.selectedPotencyDkhPerMl) == null
+      && num(pot.theoreticalPotencyDkhPerMl) == null;
+  }
+  if (code === "CAPABILITY_PROGRAMMED_DOSE_STATE_UNCONFIRMED") {
+    return num(dose.currentDoseMlPerDay) == null;
+  }
+  return true;
+}
+
 export function learnerLimits(result) {
   if (!result) return [];
   const seen = new Set();
   const out = [];
   for (const c of result.reasonCodes || []) {
     if (!LEARNER_ONLY.has(c.code) || !KEEPER_CAN_ACT.has(c.code) || seen.has(c.code)) continue;
+    /* AND ONLY WHERE IT IS STILL TRUE.
+
+       The reefkeeper found both survivors printed four inches under the very
+       figures they said were missing: "Which solution you are dosing is not on
+       record" above "against the 0.0693 you entered", and "The dose your pump
+       is running is not confirmed" beside "8.8 mL/day at 0.0693 dKH per mL".
+
+       The engine raises these against the state at the assessment instant and
+       is not wrong to. What was wrong was showing them as things the keeper
+       must go and do when the screen he is on already displays them done. A
+       blocker that is not true undermines every number beside it — which is
+       the whole of finding 10, reappearing one round later in a new place. */
+    if (!stillMissing(c.code, result)) continue;
     seen.add(c.code);
     out.push({ code: c.code, severity: c.severity, payload: c.payload || {}, count: 1 });
   }

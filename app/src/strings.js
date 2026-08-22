@@ -80,7 +80,6 @@ export const STRINGS = Object.freeze({
     "and the other tabs still work.",
   "crash.toToday": "Go to Today",
   "crash.toSettings": "Settings and export",
-  "crash.dev": "Developer view",
 
   /* ======================================================================
      TODAY
@@ -285,8 +284,7 @@ export const STRINGS = Object.freeze({
   "assessment.reco.none": "No recommendation",
   "assessment.reco.unclassified.head": "This build has no card for what the engine returned",
   "assessment.reco.unclassified.body":
-    "The engine answered and the app does not recognise the shape of the answer. Nothing is hidden: " +
-    "the full result is in the developer view at the foot of this screen. Do not act on this card.",
+    "The engine answered and the app does not recognise the shape of the answer. Do not act on this card.",
   "assessment.reco.safety.body":
     "This is a different situation from being outside your target range, and it is treated differently. " +
     "The safety figures below are stated separately from the ordinary maintenance conclusion.",
@@ -344,7 +342,6 @@ export const STRINGS = Object.freeze({
   "assessment.legend.excluded": "Not eligible for the trend",
   "assessment.legend.repeats": "Repeats, shown as one",
 
-  "assessment.dev.summary": "Developer view — contract vocabulary",
   "assessment.dev.note":
     "Everything below is the engine's own output, unaltered. It uses the contract's names on purpose; " +
     "nothing outside this box does.",
@@ -1129,6 +1126,11 @@ export const STRINGS = Object.freeze({
   "dosing.boxes.diff.excessSub": "your dose supplies more than the tank uses",
   "dosing.boxes.diff.matching": "dosing is matching consumption",
   "dosing.boxes.diff.matchingSub": "no difference the readings can show",
+  /* REEFKEEPER FINDING 14. The boxes on either side are rounded, so the keeper
+     can read two different numbers and then be told they match. Where he can
+     see the gap, the gap is named. */
+  "dosing.boxes.diff.matchingSubGap": ({ gap }) =>
+    `${gap} apart, which is smaller than your readings can tell apart`,
 
   "dosing.boxes.notWorkedOut": "Not worked out",
   "dosing.boxes.notWorkedOutSub": ({ missing }) => `needs ${missing}`,
@@ -1165,7 +1167,13 @@ export const STRINGS = Object.freeze({
   "dosing.working.uses": "What your tank uses",
   "dosing.working.movement": "The movement we can stand behind",
   "dosing.working.dose": "The dose",
-  "dosing.working.readings": "The readings used",
+  /* REEFKEEPER FINDING 7. The count under this heading is the engine's
+     `independentClusters` — the number of separate TEST RUNS it could read a
+     trend across — and the heading called them readings. A keeper who has
+     tested in duplicate has more readings than test runs, so the sentence
+     stated a number he could not find anywhere in his own list and looked
+     like an arithmetic mistake. It counts tests; it says tests. */
+  "dosing.working.readings": "The tests used",
 
   "dosing.working.uses.falling": ({ dose, potency, supplied, slope, consumption }) =>
     `${dose} mL/day at ${potency} dKH per mL puts in ${supplied} dKH a day. Your readings fell ` +
@@ -1217,8 +1225,9 @@ export const STRINGS = Object.freeze({
     `${dose}.`,
 
   "dosing.working.readings.line": ({ n, span, first, last }) =>
-    `${n} readings over approximately ${span}, from ${first} to ${last}.`,
-  "dosing.working.readings.lineOne": ({ first }) => `One reading, on ${first}.`,
+    `${n} separate tests over approximately ${span}, from ${first} to ${last}. Where you tested twice ` +
+    `within half an hour that counts once, so this can be fewer than the readings in your log.`,
+  "dosing.working.readings.lineOne": ({ first }) => `One test, on ${first}.`,
 
   "dosing.working.excluded.tooClose": ({ date }) =>
     `The ${date} reading wasn't used — it was taken too close to the one before it.`,
@@ -1609,6 +1618,11 @@ export const STRINGS = Object.freeze({
     + "ever falls outside is not a target.",
 
   "setup.save": "Save",
+  "setup.saved": "Saved.",
+  "setup.needNumber": "Enter a number.",
+  /* Named, not counted. "1 still needed" on a screen with four boxes does not
+     say which one (reefkeeper finding 13). */
+  "setup.stillNeeded": ({ fields }) => `Still needed: ${fields}. Nothing was saved.`,
   "setup.edit": "Edit",
   "setup.volume": "Net water volume",
   "setup.volumeUnit": "litres",
@@ -1617,6 +1631,9 @@ export const STRINGS = Object.freeze({
      into a task that happened to share its day (owner finding 3). */
   "dashboard.notice.open": "Open dosing",
   "water.label": "Water change",
+  /* A completion carried across from an older record whose task no longer
+     exists. Naming it as what it is beats printing its database key. */
+  "calendar.unknownTask": "A task you no longer have",
 
   "testlab.showReadings": ({ parameter }) => `Show every ${parameter} reading`,
   "testlab.hideReadings": ({ parameter }) => `Hide the ${parameter} readings`,
@@ -1627,6 +1644,15 @@ export const STRINGS = Object.freeze({
     `one of three tests half an hour apart \u00b7 ${value}${unit} used`,
   "testlab.partOf.many": ({ count, value, unit }) =>
     `one of ${count} tests half an hour apart \u00b7 ${value}${unit} used`,
+
+  /* REEFKEEPER FINDING 10. The parameter's own row showed the last measurement
+     typed, which on a duplicated test is a number that appears nowhere else on
+     the screen. It shows the figure the test resolved to, and says how many
+     measurements are behind it so the keeper is not left wondering why it is
+     not one of the ones he typed. */
+  "testlab.ofN.duplicate": () => "run twice",
+  "testlab.ofN.triplicate": () => "run three times",
+  "testlab.ofN.many": ({ count }) => `run ${count} times`,
 
   "delete.confirm.reading": "Delete this reading? It will be gone, and everything is worked out again without it.",
   "delete.confirm.dose": "Delete this dose change? It will be gone, and everything is worked out again without it.",
@@ -2291,6 +2317,7 @@ export const STRINGS = Object.freeze({
   /* Every parameter this build does not assess. It states what the app does
      with these readings, which is true, rather than classifying them — there
      is no engine for them, so there is no position and none is invented. */
+  "card.status.noReadings": "NO READINGS YET",
   "card.status.notAssessed": "LOGGED · NOT ASSESSED",
 
   "trajectory.RISING": "Rising",
@@ -2635,9 +2662,9 @@ export const STRINGS = Object.freeze({
 
      Some are messages the keeper reads directly — an empty field, a value
      that is not a number. Some are invariant violations that should never
-     happen and, if they do, surface in the crash screen's developer view. The
-     second kind is still text a human might read, so it lives here too rather
-     than being an exception to the rule.
+     happen and, if they do, surface on the crash screen. The second kind is
+     still text a human might read, so it lives here too rather than being an
+     exception to the rule.
      ================================================================== */
 
   "err.exactInstantNeedsBoth":
@@ -2703,8 +2730,18 @@ export const STRINGS = Object.freeze({
      the canon is right and the sentence is a defect. Those gaps stay open.
      ================================================================== */
 
+  /* REEFKEEPER FINDING 8. This sentence sent the keeper to a "developer view"
+     that does not exist anywhere in the application — no screen renders one,
+     and the three other sentences that mentioned one were never rendered at
+     all. A message that points at a surface the app does not have is worse
+     than one that says nothing: it makes the keeper hunt for a screen and then
+     doubt the rest of what he is reading.
+
+     It says what is actually true instead: the engine had something to say and
+     this build has no wording for it. */
   "reason.fallback":
-    "The engine gave a reason this build has no plain-English wording for. It is shown in full in the developer view.",
+    "The engine gave a reason this build has no plain-English wording for. Nothing about it is hidden — " +
+    "it simply has no sentence yet.",
 
   "reason.CONFIG_VERSION_RESOLVED": "The settings in force at the time of this assessment were used.",
   "reason.CONFIG_HISTORICAL_UNAVAILABLE":

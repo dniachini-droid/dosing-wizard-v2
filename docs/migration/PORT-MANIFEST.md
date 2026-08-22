@@ -898,7 +898,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `6a653e082be3108bada05c4945ec81b7e4ed6a44ef2886dbb8a37cd2bc9f91e7` |
 | V1 blob | `797a55c25cd2a632afb85e84946fbf709759a71f` |
-| Ported SHA-256 | `e8b6a275bc2d0d0706f68290c9ec87b4c78112350cf61a852dc291775f1313f0` |
+| Ported SHA-256 | `6229498af7784f143c86b8e19702a087ade1e3f294310f7aca0de13acf66ff36` |
 | Differences | 12 |
 
 1. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
@@ -1464,7 +1464,7 @@ Byte-identical to V1.
 8. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -626,11 +340,15 @@
+@@ -626,18 +340,27 @@
    );
  }
  
@@ -1482,12 +1482,25 @@ Byte-identical to V1.
    const cursor = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
    const year = cursor.getFullYear(), month = cursor.getMonth();
    const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+ 
++  /* A completion whose task is no longer on record — every imported one, since
++     the import brings the history without recreating the tasks — used to render
++     its internal id: the keeper's calendar read "t-skimmer". A database key is
++     never a thing to show him. */
+   const labelFor = (id) => {
+     const r = (reminders || []).find((x) => x.id === id);
+-    return r ? r.label : id;
++    if (r) return r.label;
++    return t("calendar.unknownTask");
+   };
+ 
+   /* Completions grouped by day, with water-change volumes folded in so the
 ```
 
 9. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -647,14 +365,38 @@
+@@ -647,14 +370,39 @@
      for (const l of taskLog || []) {
        if (!l.date) continue;
        (map[l.date] = map[l.date] || []).push({
@@ -1512,15 +1525,16 @@ Byte-identical to V1.
 -      if (!day) continue;
 +      if (!w.date) continue;
 +      const day = (map[w.date] = map[w.date] || []);
++      const size = w.litres == null ? null : `${w.litres} L`;
        const row = day.find((x) => x.taskId === "waterchange");
 -      if (row) row.detail = `${w.litres}L`;
-+      if (row) { row.detail = `${w.litres}L`; continue; }
++      if (row) { if (size) row.detail = size; continue; }
 +      day.push({
 +        id: w.id,
 +        label: t("water.label"),
 +        taskId: "waterchange",
 +        date: w.date,
-+        detail: `${w.litres}L`,
++        detail: size,
 +        done: true,
 +        /* A ledger event rather than a task completion, so the caller deletes
 +           the right thing. The calendar's trash used to remove the TICK on
@@ -1535,7 +1549,7 @@ Byte-identical to V1.
 10. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -756,11 +498,15 @@
+@@ -756,11 +504,15 @@
            ) : (
              <div className="space-y-1">
                {(byDay[picked] || []).map((it) => (
@@ -1557,7 +1571,7 @@ Byte-identical to V1.
 11. **defect fixed — owner finding 22: the Tasks sheet was overflow-hidden with no height limit, so on a short viewport its lower half was rendered off the bottom with nothing to scroll. It takes the one sheet rule now, like every other sheet.**
 
 ```diff
-@@ -803,12 +549,13 @@
+@@ -803,12 +555,13 @@
  
  /* The calendar as an overlay, so it can be reached from the dashboard without
     losing your place. */
@@ -1579,7 +1593,7 @@ Byte-identical to V1.
 12. **data source rewired — the calendar can take a completion back off the record, through V2's task store; owner decision 32 makes anything the keeper recorded deletable, and finding 16 names the calendar as one of the places he goes looking for it**
 
 ```diff
-@@ -821,7 +568,7 @@
+@@ -821,7 +574,7 @@
          </div>
          <div className="px-4 pb-4">
            <CompletionCalendar taskLog={taskLog} reminders={reminders} waterChanges={waterChanges}
@@ -4352,7 +4366,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `128660561bf84a12193a3aef79ac2060b853a7407ef557c237cc0d06cb1198af` |
 | V1 blob | `acff1179fce1df9ed0dc5e13ff84004207421ef3` |
-| Ported SHA-256 | `8f4f2e99bcbe9924397d09aae79281eff3ff35a97d3023904d1ccd7452aed24a` |
+| Ported SHA-256 | `5b3c0ceacd39997d0fa2be2456fc8165bbe85fb80d1ca8e75491d7f4cf0d2fab` |
 | Differences | 11 |
 
 1. **chemistry removed — the detail sheet's signature drops V1's settings, dose log, findings and dose state, and takes the engine's notice instead**
@@ -4385,7 +4399,7 @@ Byte-identical to V1.
 -import { STABILITY_RULES } from '../lib/stability-engine.js'
 +import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 +import { rowsFor, untimedCount } from '../lib/adapt.js'
-+import { chartGroupsFrom, currentObservationFor, latestShownValue } from '../present/episodes.js'
++import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 +import { taskState } from '../store/schedule.js'
 +import { cardContent } from '../present/card-content.js'
 +import { recommendation } from '../present/dosing-tab.js'
@@ -4784,7 +4798,7 @@ Byte-identical to V1.
 5. **chemistry removed — the four periods are one fixed set instead of being chosen by `def.freqDays`, which is a test cadence, and the rows come from the read adapter**
 
 ```diff
-@@ -222,36 +279,35 @@
+@@ -222,36 +279,38 @@
  
    const [winDays, setWinDays] = useState(null);
  
@@ -4819,13 +4833,13 @@ Byte-identical to V1.
 +  /* Every window at once, so "tight recently, wide historically" reads as one
 +     story rather than two boxes appearing to disagree. */
    const windowStats = useMemo(
--    () => WINDOWS.map(([d, label]) => ({
--      days: d, label,
+     () => WINDOWS.map(([d, label]) => ({
+       days: d, label,
 -      c: computeControl(def, readings, d >= 99999 ? 100000 : d),
--    })),
++      c: describeRows(chartGroupsFrom(rowsInWindow(d), episodes, fmtShort), range),
+     })),
 -    [def, readings]);
-+    () => WINDOWS.map(([d, label]) => ({ days: d, label, c: describeRows(rowsInWindow(d), range) })),
-+    [allRows, def.key, def.min, def.max]);
++    [allRows, episodes, def.key, def.min, def.max]);
  
 -  /* Open on the shortest window that has enough readings to judge. Testing
 -     cadence changes over time, so a fixed default can land on an empty view. */
@@ -4846,7 +4860,7 @@ Byte-identical to V1.
 6. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -260,91 +316,79 @@
+@@ -260,91 +319,94 @@
  
    useEffect(() => { setWinDays(null); }, [def.key]);
  
@@ -4857,35 +4871,54 @@ Byte-identical to V1.
 -    const cutoff = addDaysFromToday(-activeWin);
 -    return allRows.filter((r) => r.date >= cutoff);
 -  }, [allRows, activeWin]);
--
--
++  /* Everything below is scoped to the selected window, so the figures and the
++     chart describe the same slice of time. */
++  const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
+ 
++  /* Dose markers are tagged with their parameter, so a calcium doser change
++     does not clutter the alkalinity chart. Untagged events — water changes,
++     lighting, ICP — remain relevant to every parameter. */
++  const relevantEvents = useMemo(
++    () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
++    [chartEvents, def.key]);
+ 
 -  const control = useMemo(
 -    () => computeControl(def, readings, activeWin >= 99999 ? 100000 : activeWin),
 -    [def, readings, activeWin]);
--
++  /* One point per TEST, not per measurement — see `present/episodes.js`. A
++     repeat test is one x-position with its measurements stacked on it. */
++  const chartData = useMemo(
++    () => chartGroupsFrom(rows, episodes, fmtShort), [rows, episodes]);
++  const untimed = untimedCount(rows);
+ 
 -  const rates = useMemo(
 -    () => computeRates(def, readings, activeWin >= 99999 ? 100000 : activeWin),
 -    [def, readings, activeWin]);
--
++  /* THE FIGURES DESCRIBE TESTS, NOT MEASUREMENTS — REEFKEEPER FINDINGS 3 AND 10.
+ 
 -  const elementUse = useMemo(
 -    () => (CONSUMPTION_RULES[def.key]
 -      ? computeElementConsumption(def.key, readings, waterChanges, settings)
 -      : null),
 -    [def.key, readings, waterChanges, settings]);
-+  /* Everything below is scoped to the selected window, so the figures and the
-+     chart describe the same slice of time. */
-+  const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
-+  const stats = useMemo(() => describeRows(rows, range), [rows, def.min, def.max]);
++     Latest, Min, Max, Median, the spread, the percentage in range and the count
++     beneath it were computed over the raw ledger rows, so a test run three times
++     counted three times, and its widest measurement became the sheet's Max. The
++     chart directly above them had already been fixed to draw one point per test;
++     the numbers under it still described something else, and the two disagreed
++     on the same screen.
  
 -  /* Dose markers are tagged with their element, so a calcium doser change
 -     doesn't clutter the alkalinity chart. Untagged events (water changes,
 -     lighting, ICP) remain relevant to every parameter. */
-+  /* Dose markers are tagged with their parameter, so a calcium doser change
-+     does not clutter the alkalinity chart. Untagged events — water changes,
-+     lighting, ICP — remain relevant to every parameter. */
-   const relevantEvents = useMemo(
-     () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
-     [chartEvents, def.key]);
+-  const relevantEvents = useMemo(
+-    () => chartEvents.filter((ev) => !ev.param || ev.param === def.key),
+-    [chartEvents, def.key]);
++     `chartData` is the resolved set — one entry per test, carrying the value the
++     engine used — and it is the ONLY thing described here now, so the row, the
++     chart and the words come from one source by construction rather than by
++     agreement. The reconciling helper that stood between them is gone with the
++     disagreement it reconciled.
  
 -  /* When a day holds more than one reading, label by time so the two points
 -     are distinguishable rather than both reading "10 Aug". */
@@ -4900,16 +4933,11 @@ Byte-identical to V1.
 -  const min = values.length ? Math.min(...values) : null;
 -  const max = values.length ? Math.max(...values) : null;
 -  const avg = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : null;
-+  /* One point per TEST, not per measurement — see `present/episodes.js`. A
-+     repeat test is one x-position with its measurements stacked on it. */
-+  const chartData = chartGroupsFrom(rows, episodes, fmtShort);
-+  const untimed = untimedCount(rows);
++     `describeRows` returns null where there is nothing, and everything reading
++     it is inside a guard for that: a regression the reefkeeper found on the
++     first tap of a new install took the whole application down. */
++  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
  
-+  /* "Latest" means the same thing here as it does on the card and on Dosing:
-+     the value the engine used. It read the raw last reading, so a repeat test
-+     put 10.00 in this row while every word on the screen described 9.00. */
-+  const latestShown = latestShownValue(chartData, stats.latest);
-+
    useEscape(onClose);
  
    return (
@@ -5002,7 +5030,7 @@ Byte-identical to V1.
 7. **chemistry removed — the target range is stated only where the keeper has one**
 
 ```diff
-@@ -353,7 +397,9 @@
+@@ -353,7 +415,9 @@
                <div className="text-[11px] uppercase tracking-[0.14em] text-teal-brand font-extrabold mb-1">History</div>
                <h2 className="text-2xl font-display text-ink">{def.label}</h2>
                <div className="text-[11px] text-ink2 font-bold mt-0.5">
@@ -5018,7 +5046,7 @@ Byte-identical to V1.
 8. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -360,7 +406,9 @@
+@@ -360,7 +424,9 @@
                  <Settings2 size={12} /> {editing ? "Cancel" : "Edit target range"}
                </button>
              </div>
@@ -5034,7 +5062,7 @@ Byte-identical to V1.
 9. **wording replaced with engine output — the range editor says what changing the range actually does in V2, which differs between the assessed parameter and the rest**
 
 ```diff
-@@ -378,10 +426,16 @@
+@@ -378,10 +444,16 @@
                </div>
                <div className="flex gap-2 flex-wrap">
                  <Btn onClick={commitRange} className="flex-1 sm:flex-none"><span className="flex items-center justify-center gap-1.5"><Save size={14} /> Save</span></Btn>
@@ -5058,7 +5086,7 @@ Byte-identical to V1.
 10. **chemistry removed — each period box shows the spread and the in-range count instead of V1's graded consistency and its colour**
 
 ```diff
-@@ -395,20 +449,19 @@
+@@ -395,20 +467,19 @@
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                {windowStats.map(({ days, label, c }) => {
                  const active = activeWin === days;
@@ -5087,7 +5115,7 @@ Byte-identical to V1.
 11. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -417,280 +470,139 @@
+@@ -417,280 +488,139 @@
            </div>
  
            {rows.length === 0 ? (
@@ -5126,7 +5154,7 @@ Byte-identical to V1.
 +                  because a number that silently loses its last digit is a
 +                  number the keeper cannot trust anywhere. */}
 +              <div className="grid grid-cols-4 gap-2 mb-5">
-+                {[["Latest", latestShown], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
++                {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
 +                  <div key={label} className="text-center min-w-0">
 +                    <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
 +                    <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">
@@ -5484,8 +5512,8 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `929279af7c6cc4d041fe44d0e6e5593e2d879a55ab9ab7940fe3cde1fef24e06` |
 | V1 blob | `6d1264095e15729802f35a0039d9e756ca0b8fc8` |
-| Ported SHA-256 | `1aa2c5e29fe2d99ca6088b91403e254696821aef563052ff77a9fcb38303153a` |
-| Differences | 11 |
+| Ported SHA-256 | `447d693dcda035938e7c122ec2a3a02ac3bd2569f965d5daeb7b45773d7a3d85` |
+| Differences | 13 |
 
 1. **data source rewired — imports repointed onto V2's formatting, application clock and read adapter**
 
@@ -5504,7 +5532,7 @@ Byte-identical to V1.
  import { useEscape } from '../lib/backup.jsx'
  import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 +import { rowsFor } from '../lib/adapt.js'
-+import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey } from '../present/episodes.js'
++import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey, shownReading } from '../present/episodes.js'
 +import { t } from '../strings.js'
  
  /* --- Enter every parameter on one screen ---
@@ -5674,10 +5702,42 @@ Byte-identical to V1.
              </span>
 ```
 
-8. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
+8. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
 
 ```diff
-@@ -206,9 +274,31 @@
+@@ -132,7 +200,12 @@
+ 
+       <div className="divide-y divide-app">
+         {paramDefs.map((def) => {
+-          const last = latest[def.key];
++          /* REEFKEEPER FINDING 10. The row read the ledger's last measurement,
++             so a test run three times printed 10.00 here while the card above
++             it and every other surface printed 9.10. `shownReading` asks the
++             episode index what that reading was resolved to; it computes
++             nothing. */
++          const last = shownReading(episodes, latest[def.key]);
+           const st = dueFor(def.key);
+           const filled = values[def.key] !== undefined && values[def.key] !== "";
+           /* Tested today: the row reads as ticked off rather than merely
+```
+
+9. **defect fixed — the Test tab's per-parameter row printed the ledger's last measurement, so a test run three times showed a figure that appeared on no other surface (reefkeeper finding 10)**
+
+```diff
+@@ -177,6 +250,7 @@
+                       <span className="font-extrabold">
+                         Done · {fmtVal(def, last.value)}{def.unit}
+                         {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
++                        {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
+                       </span>
+                     ) : (
+                       <>
+```
+
+10. **defect fixed — owner findings 8, 11 and 27: there was no list of raw readings anywhere in the app, so a reading typed wrong could not be found or removed. Each parameter now opens its own, newest first, with value, date, time and a trash icon, and a reading taken as one of several says so.**
+
+```diff
+@@ -206,9 +280,31 @@
                      : { background: "#EDF3F2", color: "#9FB0AE" }}>
                    {doneToday && !filled ? "Again" : "Log"}
                  </button>
@@ -5712,10 +5772,10 @@ Byte-identical to V1.
          })}
 ```
 
-9. **data source rewired — All graphs builds its series through the read adapter**
+11. **data source rewired — All graphs builds its series through the read adapter**
 
 ```diff
-@@ -219,7 +309,7 @@
+@@ -219,7 +315,7 @@
  
  /* Every chart in one place, stripped of commentary — for when you want to scan
     the tank's whole history rather than study one parameter. */
@@ -5726,10 +5786,10 @@ Byte-identical to V1.
       charts on different timescales invite the wrong conclusion. */
 ```
 
-10. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
+12. **defect fixed — owner finding 29: the all-graphs charts plotted every raw measurement as a separate point, so a repeat test read as several tests. They take the grouped points now.**
 
 ```diff
-@@ -229,16 +319,15 @@
+@@ -229,16 +325,15 @@
    const series = paramDefs
      .map((def) => ({
        def,
@@ -5752,10 +5812,10 @@ Byte-identical to V1.
          {/* The header sticks, so the window control stays reachable however far
 ```
 
-11. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
+13. **chemistry removed — the target range is stated and shaded only where the keeper has one, and the chart is passed its unit and parameter name**
 
 ```diff
-@@ -279,10 +368,15 @@
+@@ -279,10 +374,15 @@
                    <span className="text-[13px] font-black text-ink truncate">{def.label}</span>
                  </span>
                  <span className="text-[11px] font-bold text-ink2 shrink-0">
@@ -7434,13 +7494,13 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `eb41bf87ba1c612bab5c1c7295718d76200aeb9f8fcff61871804f57b64a6e49` |
 | V1 blob | `cba41937bdbfc9ea9649ac541785d17276217ffb` |
-| Ported SHA-256 | `123925052c1810bdba14c1ec22f9a433d58a57355338db7edec49222a16e234a` |
+| Ported SHA-256 | `eac4338faae0bae0446abd9fcf15768ce9ef08ce87507491c6d14b42e4e782f6` |
 | Differences | 1 |
 
 1. **styling token substituted — the panel and the three consumption boxes were the same pale teal as the page behind them, so nothing read as a distinct element; owner finding 10 asks for a teal page with white boxes and the consumption boxes raised in a darker teal with text chosen for the ground**
 
 ```diff
-@@ -1,931 +1,641 @@
+@@ -1,931 +1,653 @@
  import { useEffect, useMemo, useRef, useState } from 'react'
 -import { Btn, Field, SectionTitle, findingKey, inputCls } from './DoseExpectation.jsx'
 +import { Btn, Field, SectionTitle, inputCls, shortInputCls } from './DoseExpectation.jsx'
@@ -7768,15 +7828,24 @@ Byte-identical to V1.
 -    setLightNote("");
 +  const saveFacts = async (keys) => {
 +    const values = {};
++    const empty = [];
 +    for (const k of keys) {
 +      const raw = facts[k];
-+      if (raw === "" || raw == null) continue;
++      /* REEFKEEPER FINDING 13. An empty box was skipped and the screen still
++         said "Saved." — on the one screen that was missing the value every dose
++         is sized from, and which the import had just deleted. A save that wrote
++         nothing must not report that it wrote something. */
++      if (raw === "" || raw == null) { empty.push(k); continue; }
 +      const n = parseFloat(raw);
-+      if (!Number.isFinite(n)) { setFactMsg("Enter a number."); return; }
++      if (!Number.isFinite(n)) { setFactMsg(t("setup.needNumber")); return; }
 +      values[k] = n;
 +    }
++    if (empty.length) {
++      setFactMsg(t("setup.stillNeeded", { fields: empty.map((k) => t(labelOf(k))).join(", ") }));
++      return;
++    }
 +    await onSaveConfig(values);
-+    setFactMsg("Saved.");
++    setFactMsg(t("setup.saved"));
 +    setTimeout(() => setFactMsg(""), 2500);
    };
  
@@ -7852,23 +7921,22 @@ Byte-identical to V1.
 +     permanently stuck at one however many times he pressed save — a screen
 +     telling him something was missing that he had already supplied, on the same
 +     screen he had supplied it. */
++  /* A field's own label, for a message that has to name it. */
++  const labelOf = (key) => (KEEPER_FACTS.find((f) => f.key === key) || {}).label || key;
+ 
+-      <Card className="p-4 mb-4">
+-        <div className="text-sm font-black text-ink mb-3">Dosing</div>
 +  const ASKED_HERE = KEEPER_FACTS.filter(
 +    (f) => f.key === "netVolumeL" || f.key.startsWith("targetRange")
 +  );
 +  const missing = ASKED_HERE.filter((f) => !config || config[f.key] == null).length;
- 
--      <Card className="p-4 mb-4">
--        <div className="text-sm font-black text-ink mb-3">Dosing</div>
-+  /* ---- the dose history --------------------------------------------------
  
 -        <Field label="Element">
 -          <select value={elemKey} onChange={(e) => setElemKey(e.target.value)} className={inputCls}>
 -            {DOSE_ELEMENTS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
 -          </select>
 -        </Field>
-+     The FROM/TO form is gone entirely (owner finding 19). Its state went with
-+     it: there is nothing left on this screen that asks the keeper for a figure
-+     the record already holds.
++  /* ---- the dose history --------------------------------------------------
  
 -        {/* One field for the dose. Changing it IS the event — it records itself
 -            with today's date, so there's no second "new rate" box to fill in. */}
@@ -7903,13 +7971,9 @@ Byte-identical to V1.
 -          )}
 -          {saveMsg && <p className="text-[11px] font-extrabold text-teal-brand mt-1.5">{saveMsg}</p>}
 -        </div>
-+     Already newest-first, from the ledger's own total order. It was sorted here
-+     on the DATE alone, which compares equal for two changes made on one day and
-+     therefore left them in storage order — oldest at the top of a list headed
-+     "newest first". A second opinion about which change is most recent is what
-+     `MASTER RULE 1` forbids. */
-+  const newestFirst = doseChanges;
-+  /* ---- ONE dosing section ------------------------------------------------
++     The FROM/TO form is gone entirely (owner finding 19). Its state went with
++     it: there is nothing left on this screen that asks the keeper for a figure
++     the record already holds.
  
 -        {/* Strength is set once per product, so it stays tucked away. */}
 -        <button onClick={() => setShowStrength((v) => !v)}
@@ -7935,15 +7999,13 @@ Byte-identical to V1.
 -            <p className="text-[11px] text-ink2 font-medium mt-2 leading-relaxed">{elem.hint}</p>
 -          </div>
 -        )}
-+     "Never ask the same thing twice in different clothes." Solution strength,
-+     the dose in force and the pump's step used to sit in one card while the
-+     dose-change history sat in another, and "solution strength" was asked for
-+     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
-+     have. Both are one section now, and the strength is asked for once in
-+     whichever of three forms he actually holds. */
-+  const DOSED = ["ALK", "CA", "MG"];
-+  const [dosedKey, setDosedKey] = useState("ALK");
-+  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
++     Already newest-first, from the ledger's own total order. It was sorted here
++     on the DATE alone, which compares equal for two changes made on one day and
++     therefore left them in storage order — oldest at the top of a list headed
++     "newest first". A second opinion about which change is most recent is what
++     `MASTER RULE 1` forbids. */
++  const newestFirst = doseChanges;
++  /* ---- ONE dosing section ------------------------------------------------
  
 -        {/* Kit precision drives the testing-cadence advice */}
 -        <button onClick={() => setShowSigma((v) => !v)}
@@ -7973,11 +8035,15 @@ Byte-identical to V1.
 -            </p>
 -          </div>
 -        )}
-+  const [form, setForm] = useState(() => formFrom(config));
-+  const [chemical, setChemical] = useState(() => chemicalFrom(config));
-+  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
-+  const [per100L, setPer100L] = useState(() => per100LFrom(config));
-+  const [strengthMsg, setStrengthMsg] = useState("");
++     "Never ask the same thing twice in different clothes." Solution strength,
++     the dose in force and the pump's step used to sit in one card while the
++     dose-change history sat in another, and "solution strength" was asked for
++     in dKH/mL only — the one form a keeper who mixes his own soda ash does not
++     have. Both are one section now, and the strength is asked for once in
++     whichever of three forms he actually holds. */
++  const DOSED = ["ALK", "CA", "MG"];
++  const [dosedKey, setDosedKey] = useState("ALK");
++  const dosedDef = paramDefs.find((d) => d.key === dosedKey);
  
 -        {/* This element's change history */}
 -        {elemLog.length > 0 && (
@@ -7999,7 +8065,11 @@ Byte-identical to V1.
 -          </div>
 -        )}
 -      </Card>
-+  /* THE RE-READ. One effect, one condition: the stored version changed.
++  const [form, setForm] = useState(() => formFrom(config));
++  const [chemical, setChemical] = useState(() => chemicalFrom(config));
++  const [gPerL, setGPerL] = useState(() => gPerLFrom(config));
++  const [per100L, setPer100L] = useState(() => per100LFrom(config));
++  const [strengthMsg, setStrengthMsg] = useState("");
  
 -      {/* --- Full dosing history across all elements --- */}
 -      {doseLog.length > 0 && (
@@ -8041,6 +8111,9 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
++  /* THE RE-READ. One effect, one condition: the stored version changed.
+ 
+-      {/* --- One-off corrections, as their own kind of entry ---
 +     The delivered dose is not here at all: it is a ledger fact rather than a
 +     configuration field, it arrives from the shell, and `DeliveredDoseField`
 +     owns its own re-read. */
@@ -8055,9 +8128,6 @@ Byte-identical to V1.
 +    setGPerL(gPerLFrom(config));
 +    setPer100L(per100LFrom(config));
 +  }, [config]);
- 
--      {/* --- One-off corrections, as their own kind of entry ---
-+  const netVolumeL = parseFloat(facts.netVolumeL);
  
 -          A correction is not a dose change and is not a reading, and it was
 -          previously neither listed nor exported anywhere. The engines have
@@ -8102,22 +8172,7 @@ Byte-identical to V1.
 -          </p>
 -        </InfoBlock>
 -      )}
-+  /* What the app can honestly show back as the derived figure, and where it
-+     came from. For the grams-per-litre form that is the ENGINE's own number —
-+     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
-+     what the engine returned rather than recomputing it. */
-+  const derived = useMemo(() => {
-+    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
-+    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
-+      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
-+      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
-+      return { kind: "fromVolume", value: v, volume: netVolumeL };
-+    }
-+    const p = engineResult && engineResult.potency;
-+    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
-+      ? p.theoreticalPotencyDkhPerMl : null;
-+    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
-+  }, [form, per100L, netVolumeL, engineResult]);
++  const netVolumeL = parseFloat(facts.netVolumeL);
  
 -      {/* --- 9. Correction calculator --- */}
 -      <InfoBlock icon={Calculator} eyebrow="Actions" title="Correction calculator" tone="#B8541A"
@@ -8187,6 +8242,23 @@ Byte-identical to V1.
 -          </div>
 -        )}
 -      </InfoBlock>
++  /* What the app can honestly show back as the derived figure, and where it
++     came from. For the grams-per-litre form that is the ENGINE's own number —
++     `P = factor · C / V` is `ALK-014` and has one owner, so the app renders
++     what the engine returned rather than recomputing it. */
++  const derived = useMemo(() => {
++    if (form === POTENCY_FORM.DKH_PER_ML) return { kind: "stated" };
++    if (form === POTENCY_FORM.DKH_PER_ML_PER_100L) {
++      const v = potencyForThisTank(parseFloat(per100L), netVolumeL);
++      if (v == null) return { kind: Number.isFinite(netVolumeL) ? "none" : "needsVolume" };
++      return { kind: "fromVolume", value: v, volume: netVolumeL };
++    }
++    const p = engineResult && engineResult.potency;
++    const v = p && typeof p.theoreticalPotencyDkhPerMl === "number"
++      ? p.theoreticalPotencyDkhPerMl : null;
++    return v == null ? { kind: "afterSave" } : { kind: "fromEngine", value: v };
++  }, [form, per100L, netVolumeL, engineResult]);
+ 
 +  const saveStrength = async () => {
 +    const values = {};
 +    if (form === POTENCY_FORM.GRAMS_PER_LITRE) {
@@ -8217,18 +8289,6 @@ Byte-identical to V1.
 +    setTimeout(() => setStrengthMsg(""), 2500);
 +  };
  
-+  /* What the card says about itself when it is shut: the two facts whose
-+     absence stops the engine answering, named rather than counted. */
-+  const dosingSubtitle = useMemo(() => {
-+    const bits = [];
-+    const hasStrength = config
-+      && (config.selectedPotencyDkhPerMl != null
-+        || (config.chemical != null && config.stockConcentrationGPerL != null));
-+    if (!hasStrength) bits.push("solution strength needed");
-+    if (standingDose == null) bits.push("current dose needed");
-+    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
-+  }, [config, standingDose]);
- 
 -      {/* --- Lighting log --- */}
 -      <InfoBlock icon={SunMedium} eyebrow="AI Blade" title="Lighting changes" tone="#926A09"
 -        collapsible
@@ -8251,6 +8311,18 @@ Byte-identical to V1.
 -        </form>
 -        {lighting.length === 0 ? (
 -          <p className="text-[13px] text-ink2 font-medium">No lighting changes logged yet.</p>
++  /* What the card says about itself when it is shut: the two facts whose
++     absence stops the engine answering, named rather than counted. */
++  const dosingSubtitle = useMemo(() => {
++    const bits = [];
++    const hasStrength = config
++      && (config.selectedPotencyDkhPerMl != null
++        || (config.chemical != null && config.stockConcentrationGPerL != null));
++    if (!hasStrength) bits.push("solution strength needed");
++    if (standingDose == null) bits.push("current dose needed");
++    return bits.length ? bits.join(" · ") : `${fmtQty(standingDose, "mlPerDay")} mL/day`;
++  }, [config, standingDose]);
++
 +  return (
 +    <div>
 +      <SectionTitle eyebrow="Configuration" title="Setup" />
@@ -8947,7 +9019,7 @@ Byte-identical to V1.
 | V1 commit | `9276a2ca254e88d19e0f02dced42a1b896499780` |
 | V1 SHA-256 | `022f7b075372bec3783a8099216e0ed8a50b291d7e0bba228204c10e6229ba63` |
 | V1 blob | `d03c3726f2c38088cfb0ff18577a042506e69a0c` |
-| Ported SHA-256 | `4dcec737fc78a781097610639c0f21c83cbcf7eeed5d757f5bc02598b90c162c` |
+| Ported SHA-256 | `3dbffac0860694695dd97446b8f261f725e84bb24b48b75f1ba216818910024d` |
 | Differences | 7 |
 
 1. **chemistry removed — V1's nine analytics and dosing imports deleted; the shell imports V2's store, the read and write adapters, the assessment entry point and the present layer**
@@ -9090,7 +9162,7 @@ Byte-identical to V1.
 2. **chemistry removed — `deriveTankState` deleted: V1 computed the findings, three dose assessments, the stability of every parameter, the overview, the briefing, the score and the correction offers in the app root. One call to `runAssessment` replaces it, and every handler writes through the write adapter**
 
 ```diff
-@@ -66,1155 +89,740 @@
+@@ -66,1155 +89,748 @@
    return out;
  }
  
@@ -9626,7 +9698,15 @@ Byte-identical to V1.
 -  };
 +  const waterChanges = useMemo(() => projection
 +    .filter((r) => r.event.kind === KIND.WATER_CHANGE && isLive(r))
-+    .map((r) => ({ id: r.event.eventId, date: r.event.time.localDate, litres: r.event.detail.litres })), [projection]);
++    .map((r) => ({
++      id: r.event.eventId,
++      date: r.event.time.localDate,
++      /* Two spellings of one fact, because the import wrote `volumeL` and the
++         recorder writes `litres`. Records already stored carry whichever was
++         written at the time, so this is the one place that knows they are the
++         same thing — rather than every screen learning it separately. */
++      litres: r.event.detail.litres ?? r.event.detail.volumeL ?? null,
++    })), [projection]);
  
 -  useEffect(() => { onStorageError((m) => setStorageMsg(m)); }, []);
 +  /* Dose CHANGES and the dose STATE the record starts from.
@@ -10874,7 +10954,7 @@ Byte-identical to V1.
 3. **data source rewired — the sidebar states the app's own name and the keeper's configured net volume instead of V1's hard-coded tank identity**
 
 ```diff
-@@ -1242,21 +850,26 @@
+@@ -1242,21 +858,26 @@
          }
        `}</style>
  
@@ -10911,7 +10991,7 @@ Byte-identical to V1.
 4. **data source rewired — V1's wipe-notice banner deleted with the storage layer that produced it; the install witness survives in V2's store with no surface, and that is recorded**
 
 ```diff
-@@ -1266,59 +879,35 @@
+@@ -1266,59 +887,35 @@
                );
              })}
            </nav>
@@ -10996,7 +11076,7 @@ Byte-identical to V1.
 5. **chemistry removed — V1's fixed block of target ranges in the sidebar deleted; the keeper's own alkalinity range is read back from his configuration**
 
 ```diff
-@@ -1335,105 +924,129 @@
+@@ -1335,105 +932,129 @@
              <div className="w-8 h-8 rounded-lg bg-teal-brand flex items-center justify-center">
                <Waves size={16} className="text-white" />
              </div>
@@ -11208,7 +11288,7 @@ Byte-identical to V1.
 6. **defect fixed — a module of constants that could not be loaded outside the bundler could not be tested. `lib/constants.js` now imports nothing and `NAV` carries an icon KEY; the shell binds the key to a glyph here**
 
 ```diff
-@@ -1440,10 +1053,10 @@
+@@ -1440,10 +1061,10 @@
        </div>
  
        {/* Bottom nav - mobile */}
@@ -11226,7 +11306,7 @@ Byte-identical to V1.
 7. **data source rewired — the root error boundary's rescue export reads V2's store directly instead of V1's `buildBackup`, because V2's record is in IndexedDB rather than localStorage**
 
 ```diff
-@@ -1457,6 +1070,96 @@
+@@ -1457,6 +1078,96 @@
    );
  }
  

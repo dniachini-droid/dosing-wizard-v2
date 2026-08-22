@@ -296,12 +296,30 @@ export function shownObservation(observation, reading) {
   return { value: reading.value, date: reading.date, count: 1, resolved: false };
 }
 
-/* The most recent point of a grouped series, for a surface that shows one
-   figure and calls it the latest.
+/* WHAT A LIST ROW SHOWS FOR "THE LAST READING".
 
-   `groups` is `chartGroupsFrom`'s output, so its last entry's value is the
-   figure the engine used for the most recent test — not the last measurement
-   typed. `fallback` covers a caller with no groups at all. */
-export function latestShownValue(groups, fallback) {
-  return groups && groups.length ? groups[groups.length - 1].value : fallback;
+   REEFKEEPER FINDING 10, and the fourth surface of findings 26 and 28. The
+   Test tab's per-parameter row printed the ledger's last measurement — so a
+   test run three times put `10.00` on that row while the card above it, the
+   parameter sheet and the Dosing tab all said `9.10`.
+
+   It answers the same question `shownObservation` answers, from the other end:
+   there the engine's observation is in hand and the raw reading is the
+   fallback; here only a raw reading is in hand and the episode index is asked
+   whether it belongs to a test that was resolved to something else. Neither
+   computes the grouping or the median — both read what the engine already
+   said. */
+export function shownReading(index, reading) {
+  if (!reading) return null;
+  const ep = episodeForReading(index, reading.id);
+  if (!ep || ep.count <= 1) {
+    return { value: reading.value, date: reading.date, time: reading.time, count: 1, resolved: false };
+  }
+  return {
+    value: ep.valueDkh,
+    date: ep.at ? ep.at.slice(0, 10) : reading.date,
+    time: ep.at ? ep.at.slice(11, 16) : reading.time,
+    count: ep.count,
+    resolved: true,
+  };
 }

@@ -855,6 +855,41 @@ s.test("META-01", "every test in the application suite has at least one negative
   eq(stale.join(", "), "", `these are exempt and no longer need to be: ${stale.join(", ")}`);
 });
 
+s.test("META-03", "no two tests in the suite share an identifier", () => {
+  /* FOUND BY THE MUTATION ARM REPORTING A MISS IT COULD NOT EXPLAIN.
+
+     `AM-R55` named `IMP-40` and stayed green through a mutation that plainly
+     broke the check written for it. There were TWO tests called `IMP-40`: the
+     one written for the defect, and one about reminder counts written months
+     earlier. The runner stores results in a map keyed by identifier, so the
+     second overwrote the first, and every question asked about `IMP-40` — did
+     it pass, did the mutation turn it red, does it have a control — was
+     answered about the wrong test.
+
+     Worse than the miss: the DUPLICATE PASSED. Had the reminders test been the
+     one that failed, the volume test's green would have hidden it. And
+     `META-01` would have counted the id as covered, so a control naming it
+     would have satisfied both tests at once.
+
+     An identifier is how every other check in this file refers to a test. Two
+     tests answering to one name makes all of that unreliable, so it is an
+     error rather than a warning. */
+  const runner = fs.readFileSync(path.join(HERE, "run-app-tests.mjs"), "utf8");
+  const listed = [...runner.matchAll(/"(test-[\w-]+\.mjs)"/g)].map((m) => m[1]);
+
+  const seen = new Map();
+  const duplicates = [];
+  for (const file of listed) {
+    const text = fs.readFileSync(path.join(HERE, file), "utf8");
+    for (const m of text.matchAll(/s\.test\(\s*"([^"]+)"/g)) {
+      const id = m[1];
+      if (seen.has(id)) duplicates.push(`${id} (${seen.get(id)} and ${file})`);
+      else seen.set(id, file);
+    }
+  }
+  eq(duplicates.join(", "), "", `two tests answer to one name: ${duplicates.join(", ")}`);
+});
+
 s.test("META-02", "every file in the application is either ported from V1 or declared as V2's own", () => {
   /* THE PORT MANIFEST IS ONLY AS COMPLETE AS ITS MAP.
 

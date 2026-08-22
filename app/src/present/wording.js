@@ -192,7 +192,7 @@ export function sayPayloadValue(v, key = null) {
 
   if (has(`value.${s}`)) return t(`value.${s}`);
   if (INSTANT.test(s)) return sayInstant(s);
-  if (CONTRACT_SHAPED.test(s)) return null; /* to the developer view instead */
+  if (CONTRACT_SHAPED.test(s)) return null; /* not shown at all, rather than shown raw */
   if (CANON_ID.test(s)) return null;
   if (FIELD_NAME.test(s)) return null;
   return s;

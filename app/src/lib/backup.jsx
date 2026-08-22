@@ -353,9 +353,14 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
   const year = cursor.getFullYear(), month = cursor.getMonth();
   const monthLabel = cursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
+  /* A completion whose task is no longer on record — every imported one, since
+     the import brings the history without recreating the tasks — used to render
+     its internal id: the keeper's calendar read "t-skimmer". A database key is
+     never a thing to show him. */
   const labelFor = (id) => {
     const r = (reminders || []).find((x) => x.id === id);
-    return r ? r.label : id;
+    if (r) return r.label;
+    return t("calendar.unknownTask");
   };
 
   /* Completions grouped by day, with water-change volumes folded in so the
@@ -383,14 +388,15 @@ export function CompletionCalendar({ taskLog, reminders, waterChanges, onPickTas
     for (const w of waterChanges || []) {
       if (!w.date) continue;
       const day = (map[w.date] = map[w.date] || []);
+      const size = w.litres == null ? null : `${w.litres} L`;
       const row = day.find((x) => x.taskId === "waterchange");
-      if (row) { row.detail = `${w.litres}L`; continue; }
+      if (row) { if (size) row.detail = size; continue; }
       day.push({
         id: w.id,
         label: t("water.label"),
         taskId: "waterchange",
         date: w.date,
-        detail: `${w.litres}L`,
+        detail: size,
         done: true,
         /* A ledger event rather than a task completion, so the caller deletes
            the right thing. The calendar's trash used to remove the TICK on

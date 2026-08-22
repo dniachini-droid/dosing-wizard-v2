@@ -11,7 +11,7 @@ import { fmtVal } from '../lib/format.js'
 import { CalendarModal, ReminderSheet, useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 import { rowsFor, untimedCount } from '../lib/adapt.js'
-import { chartGroupsFrom, currentObservationFor, latestShownValue } from '../present/episodes.js'
+import { chartGroupsFrom, currentObservationFor } from '../present/episodes.js'
 import { taskState } from '../store/schedule.js'
 import { cardContent } from '../present/card-content.js'
 import { recommendation } from '../present/dosing-tab.js'
@@ -298,8 +298,11 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   /* Every window at once, so "tight recently, wide historically" reads as one
      story rather than two boxes appearing to disagree. */
   const windowStats = useMemo(
-    () => WINDOWS.map(([d, label]) => ({ days: d, label, c: describeRows(rowsInWindow(d), range) })),
-    [allRows, def.key, def.min, def.max]);
+    () => WINDOWS.map(([d, label]) => ({
+      days: d, label,
+      c: describeRows(chartGroupsFrom(rowsInWindow(d), episodes, fmtShort), range),
+    })),
+    [allRows, episodes, def.key, def.min, def.max]);
 
   /* Open on the shortest window that has anything in it. Testing cadence
      changes over time, so a fixed default can land on an empty view. */
@@ -319,7 +322,6 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
   /* Everything below is scoped to the selected window, so the figures and the
      chart describe the same slice of time. */
   const rows = useMemo(() => rowsInWindow(activeWin), [allRows, activeWin]);
-  const stats = useMemo(() => describeRows(rows, range), [rows, def.min, def.max]);
 
   /* Dose markers are tagged with their parameter, so a calcium doser change
      does not clutter the alkalinity chart. Untagged events — water changes,
@@ -330,13 +332,29 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
 
   /* One point per TEST, not per measurement — see `present/episodes.js`. A
      repeat test is one x-position with its measurements stacked on it. */
-  const chartData = chartGroupsFrom(rows, episodes, fmtShort);
+  const chartData = useMemo(
+    () => chartGroupsFrom(rows, episodes, fmtShort), [rows, episodes]);
   const untimed = untimedCount(rows);
 
-  /* "Latest" means the same thing here as it does on the card and on Dosing:
-     the value the engine used. It read the raw last reading, so a repeat test
-     put 10.00 in this row while every word on the screen described 9.00. */
-  const latestShown = latestShownValue(chartData, stats.latest);
+  /* THE FIGURES DESCRIBE TESTS, NOT MEASUREMENTS — REEFKEEPER FINDINGS 3 AND 10.
+
+     Latest, Min, Max, Median, the spread, the percentage in range and the count
+     beneath it were computed over the raw ledger rows, so a test run three times
+     counted three times, and its widest measurement became the sheet's Max. The
+     chart directly above them had already been fixed to draw one point per test;
+     the numbers under it still described something else, and the two disagreed
+     on the same screen.
+
+     `chartData` is the resolved set — one entry per test, carrying the value the
+     engine used — and it is the ONLY thing described here now, so the row, the
+     chart and the words come from one source by construction rather than by
+     agreement. The reconciling helper that stood between them is gone with the
+     disagreement it reconciled.
+
+     `describeRows` returns null where there is nothing, and everything reading
+     it is inside a guard for that: a regression the reefkeeper found on the
+     first tap of a new install took the whole application down. */
+  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);
 
   useEscape(onClose);
 
@@ -487,7 +505,7 @@ export function ParamHistoryModal({ def, readings, onClose, onSaveRange, onReset
                   because a number that silently loses its last digit is a
                   number the keeper cannot trust anywhere. */}
               <div className="grid grid-cols-4 gap-2 mb-5">
-                {[["Latest", latestShown], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
+                {[["Latest", stats.latest], ["Min", stats.min], ["Max", stats.max], ["Median", stats.median]].map(([label, v]) => (
                   <div key={label} className="text-center min-w-0">
                     <div className="text-[10px] text-ink2 uppercase tracking-wide font-extrabold">{label}</div>
                     <div className="text-[17px] leading-tight font-black text-ink mt-0.5 tabular-nums">

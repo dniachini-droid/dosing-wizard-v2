@@ -27,6 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { suite, eq, ok } from "./harness.mjs";
+import { describeRows } from "../../app/src/present/spread.js";
 import {
   chartGroupsFrom,
   currentObservationFor,
@@ -34,8 +35,8 @@ import {
   episodesFrom,
   groupWordKey,
   latestEpisode,
-  latestShownValue,
   shownObservation,
+  shownReading,
 } from "../../app/src/present/episodes.js";
 
 const s = suite("episodes");
@@ -287,16 +288,66 @@ s.test("EP-13", "with no engine answer, the card shows the reading and does not 
   eq(shownObservation(null, null), null, "nothing at all where there is nothing");
 });
 
-s.test("EP-14", "\"Latest\" is the last TEST's figure, not the last measurement typed", () => {
-  /* The parameter sheet's Latest/Min/Max/Median row. It read the raw last
-     reading, so a repeat test put 10.00 in this cell while every word on the
-     screen described 9.10. Also uncovered until `test-engineer` said so. */
-  const groups = [
-    { value: 8.9, grouped: false },
-    { value: 9.1, grouped: true, members: [{ value: 9.0 }, { value: 9.1 }, { value: 10.0 }] },
-  ];
-  eq(latestShownValue(groups, 10.0), 9.1, "the figure the engine used");
-  eq(latestShownValue([], 8.7), 8.7, "and the fallback where there are no groups");
+s.test("EP-14", "every figure on the parameter sheet describes a TEST, not a measurement", () => {
+  /* REEFKEEPER FINDINGS 3 AND 10, and the last place the round-one defect was
+     still alive.
+
+     The chart above this row was fixed to draw one point per test. The row
+     under it — Latest, Min, Max, Median — and the "N inside your own range"
+     count beneath THAT were still computed over the raw ledger rows. So a test
+     run three times counted three times, its wild measurement became the
+     sheet's Max, and the "Latest" cell read 10.00 above a chart whose last
+     point was drawn at 9.10.
+
+     The resolved set is the same array the chart is drawn from, so there is
+     nothing here to keep in step: one source, two renderings of it. */
+  const index = episodesFrom(engineWith());
+  const groups = chartGroupsFrom(ROWS, index, shortLabel);
+  const d = describeRows(groups, { min: 8.6, max: 9.2 });
+
+  eq(d.n, 2, "four measurements over two testing sessions are TWO tests");
+  eq(d.latest, 9.1, "Latest is the figure the engine used, not the last number typed");
+  eq(d.max, 9.1, "and the wild 10.00 inside the group is not the sheet's Max");
+  eq(d.min, 8.9, "the earlier single test is the Min");
+  eq(d.inRange, 2, "both tests are inside the range");
+  eq(d.above, 0, "and nothing is counted above it on the strength of a member");
+
+  /* The other half: what the screen actually hands it. A correct helper called
+     with the wrong array is the defect all over again. */
+  const dash = code("app/src/components/Dashboard.jsx");
+  const modal = dash.slice(dash.indexOf("export function ParamHistoryModal"));
+  ok(/describeRows\(chartData, range\)/.test(modal),
+    "the sheet describes the resolved set the chart is drawn from");
+  ok(!/describeRows\(rows[,)]/.test(modal),
+    "and never the raw rows");
+  ok(/describeRows\(chartGroupsFrom\(rowsInWindow/.test(modal),
+    "and the 7d/30d/90d/All strip is resolved the same way");
+});
+
+s.test("EP-15", "the Test tab's row for a parameter shows the test's figure, not the last number typed", () => {
+  /* REEFKEEPER FINDING 10, and the fourth surface of findings 26 and 28. He
+     tested alkalinity three times inside two minutes. The card said 9.10, the
+     parameter sheet said 9.10, the Dosing tab said 9.10, and the Test tab's own
+     row said "Done · 10.00 dKH" — a figure that appeared nowhere else, on the
+     screen where he had just typed it. */
+  const index = episodesFrom(engineWith());
+  const shown = shownReading(index, ROWS[ROWS.length - 1]);
+  eq(shown.value, 9.1, "the figure the test resolved to");
+  eq(shown.count, 3, "and how many measurements are behind it");
+  ok(shown.resolved, "and that it was resolved rather than read off the ledger");
+  eq(shown.time, "09:07", "at the instant the engine placed the test, not the last measurement's");
+
+  /* A reading that stands alone is shown as itself and claims nothing. */
+  const alone = shownReading(index, ROWS[0]);
+  eq(alone.value, 8.9, "a single test is its own reading");
+  eq(alone.count, 1, "one measurement");
+  eq(alone.resolved, false, "and it does not claim to have been resolved");
+  eq(shownReading(index, null), null, "and nothing at all where there is nothing");
+
+  /* The other half: the row has to actually ask. */
+  const sheet = code("app/src/components/AllParametersSheet.jsx");
+  ok(/const last = shownReading\(episodes, latest\[def\.key\]\)/.test(sheet),
+    "the row reads the resolved figure");
 });
 
 export default s;

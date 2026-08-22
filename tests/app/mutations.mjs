@@ -1598,7 +1598,7 @@ export const MUTATIONS = [
     id: "AM-136",
     why: "a second import restarts the dose record rather than continuing it, writing a change as a standing dose and losing what it changed from",
     file: "app/src/store/import-v1.js",
-    find: "  for (const [parameter, dose] of Object.entries(await ledgerDoses(store))) running.set(parameter, dose);",
+    find: "  for (const [parameter, dose] of Object.entries(await ledgerDoses(store, startsAt))) {\n    running.set(parameter, dose);\n  }",
     replace: "",
     breaks: ["IMP-32"],
   },
@@ -1616,8 +1616,10 @@ export const MUTATIONS = [
     id: "AM-138",
     why: "an export with no tank volume stores NaN, which missingFacts reports as supplied — so the app believes it knows the tank's size",
     file: "app/src/store/import-v1.js",
-    find: "    ...(Number.isFinite(volume) && volume > 0 ? { netVolumeL: volume } : {}),",
-    replace: "    netVolumeL: volume,",
+    /* Re-aimed at the append, which is now the ONE place that decides whether a
+       planned volume reaches the stored configuration. */
+    find: "    ...(Number.isFinite(cfg.netVolumeL) && cfg.netVolumeL > 0\n      ? { netVolumeL: cfg.netVolumeL } : {}),",
+    replace: "    netVolumeL: cfg.netVolumeL,",
     breaks: ["IMP-33"],
   },
 
@@ -2644,10 +2646,10 @@ export const MUTATIONS = [
   },
   {
     id: "AM-R51",
-    why: "the \"Latest\" cell in the parameter sheet goes back to the last measurement typed, so a repeat test puts 10.00 there while every word on the screen describes 9.10. Also uncovered until test-engineer said so",
-    file: "app/src/present/episodes.js",
-    find: "  return groups && groups.length ? groups[groups.length - 1].value : fallback;",
-    replace: "  return fallback;",
+    why: "the parameter sheet's Latest/Min/Max/Median row and its in-range count go back to describing raw measurements, so a repeat test counts three times and its wild measurement becomes the sheet's Max — reefkeeper findings 3 and 10",
+    file: "app/src/components/Dashboard.jsx",
+    find: "  const stats = useMemo(() => describeRows(chartData, range), [chartData, def.min, def.max]);",
+    replace: "  const stats = useMemo(() => describeRows(rows, range), [rows, def.min, def.max]);",
     breaks: ["EP-14"],
   },
   {
@@ -2673,6 +2675,77 @@ export const MUTATIONS = [
     find: '        <Card className="p-5 sheet-panel overflow-y-auto">',
     replace: '        <Card className="p-5 overflow-y-auto" style={{ maxHeight: "85vh" }}>',
     breaks: ["VP-01"],
+  },
+
+  {
+    id: "AM-R57",
+    why: "a message points the keeper at a \"developer view\" that no screen in the application renders, so he scrolls to the foot of the screen looking for it and finds the foot of the screen — reefkeeper finding 8",
+    file: "app/src/strings.js",
+    find: '    "it simply has no sentence yet.",',
+    replace: '    "the full result is in the developer view at the foot of this screen.",',
+    breaks: ["STR-04", "STR-11"],
+  },
+
+  {
+    id: "AM-R58",
+    why: "the Test tab's row for a parameter goes back to the ledger's last measurement, so a test run three times reads \"Done · 10.00 dKH\" on the very screen it was typed on, while every other surface reads 9.10 — reefkeeper finding 10",
+    file: "app/src/components/AllParametersSheet.jsx",
+    find: "          const last = shownReading(episodes, latest[def.key]);",
+    replace: "          const last = latest[def.key];",
+    breaks: ["EP-15"],
+  },
+  {
+    id: "AM-R59",
+    why: "a resolved test is reported at the last measurement's value rather than the engine's, which is the whole of findings 26 and 28 arriving through a different door",
+    file: "app/src/present/episodes.js",
+    find: "    value: ep.valueDkh,\n    date: ep.at ? ep.at.slice(0, 10) : reading.date,",
+    replace: "    value: reading.value,\n    date: ep.at ? ep.at.slice(0, 10) : reading.date,",
+    breaks: ["EP-15"],
+  },
+
+  {
+    id: "AM-R60",
+    why: "the same handle is always on top of the other, so dragging both up against the ceiling strands the low one underneath it and the target range cannot be widened again without leaving the screen — reefkeeper finding 12",
+    file: "app/src/components/RangeSlider.jsx",
+    find: "  const loOnTop = lo > floor + span / 2;",
+    replace: "  const loOnTop = false;",
+    breaks: ["SC-11"],
+  },
+
+  {
+    id: "AM-R61",
+    why: "the import seeds \"what was running\" from the LATEST dose on record rather than from what the record knew when the imported history begins, so a figure the keeper typed today is written as the dose he was on last March and the baseline of his whole history becomes a change away from a number that did not exist — reefkeeper finding 17",
+    file: "app/src/store/import-v1.js",
+    find: "    if (notAfter && notAfter[parameter] && key > notAfter[parameter]) continue;",
+    replace: "",
+    breaks: ["IMP-45"],
+  },
+
+  {
+    id: "AM-R62",
+    why: "the difference box says \"no difference the readings can show\" while the two boxes beside it print figures that plainly differ, so the row contradicts its own arithmetic one line later — reefkeeper finding 14",
+    file: "app/src/present/dosing-tab.js",
+    find: '    const visibleGap = fmtQty(c, "dkhPerDay") !== fmtQty(supplied, "dkhPerDay");',
+    replace: "    const visibleGap = false;",
+    breaks: ["DOS-12"],
+  },
+
+  {
+    id: "AM-R56",
+    why: "a test is given an identifier another test already answers to, so the runner's map keeps one result under that name and every question asked about it is answered about the wrong test — exactly what hid AM-R55's miss",
+    file: "tests/app/test-import.mjs",
+    find: 's.test("IMP-44", "importing a history never deletes the tank volume already on record"',
+    replace: 's.test("IMP-40", "importing a history never deletes the tank volume already on record"',
+    breaks: ["META-03"],
+  },
+
+  {
+    id: "AM-R55",
+    why: "the import writes its planned volume over the stored configuration even when the plan carries none, so importing a history DELETES a tank volume the keeper had already saved — reefkeeper finding 2, and the worst thing he found after the crash",
+    file: "app/src/store/import-v1.js",
+    find: "    ...(Number.isFinite(cfg.netVolumeL) && cfg.netVolumeL > 0\n      ? { netVolumeL: cfg.netVolumeL } : {}),",
+    replace: "    netVolumeL: cfg.netVolumeL || undefined,",
+    breaks: ["IMP-44"],
   },
 
 ];

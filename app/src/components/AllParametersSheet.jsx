@@ -8,7 +8,7 @@ import { nowTime } from '../lib/clock.js'
 import { useEscape } from '../lib/backup.jsx'
 import { addDaysFromToday, fmtShort, todayStr } from '../lib/dates.js'
 import { rowsFor } from '../lib/adapt.js'
-import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey } from '../present/episodes.js'
+import { chartGroupsFrom, currentObservationFor, episodeForReading, groupWordKey, shownReading } from '../present/episodes.js'
 import { t } from '../strings.js'
 
 /* --- Enter every parameter on one screen ---
@@ -200,7 +200,12 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
 
       <div className="divide-y divide-app">
         {paramDefs.map((def) => {
-          const last = latest[def.key];
+          /* REEFKEEPER FINDING 10. The row read the ledger's last measurement,
+             so a test run three times printed 10.00 here while the card above
+             it and every other surface printed 9.10. `shownReading` asks the
+             episode index what that reading was resolved to; it computes
+             nothing. */
+          const last = shownReading(episodes, latest[def.key]);
           const st = dueFor(def.key);
           const filled = values[def.key] !== undefined && values[def.key] !== "";
           /* Tested today: the row reads as ticked off rather than merely
@@ -245,6 +250,7 @@ export function TestLab({ paramDefs, readings, onAdd, onOpenParam, scheduleView 
                       <span className="font-extrabold">
                         Done · {fmtVal(def, last.value)}{def.unit}
                         {fmtTime(last.time) ? ` at ${fmtTime(last.time)}` : ""}
+                        {last.count > 1 && ` · ${t(`testlab.ofN.${groupWordKey(last.count)}`, { count: last.count })}`}
                       </span>
                     ) : (
                       <>

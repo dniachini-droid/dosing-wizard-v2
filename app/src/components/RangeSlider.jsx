@@ -49,6 +49,22 @@ export function RangeSlider({
   const setLo = (v) => onChange(Math.min(v, hi - step), hi);
   const setHi = (v) => onChange(lo, Math.max(v, lo + step));
 
+  /* WHICH HANDLE IS ON TOP WHERE THEY MEET — REEFKEEPER FINDING 12.
+
+     Two inputs stacked on one another, and one step apart the two 26px thumbs
+     overlap almost exactly. The one later in the document wins the touch, and
+     that is the HIGH handle. Drag them both up against the ceiling and the high
+     handle can go no further right, is blocked from going left by the low one,
+     and the low one is underneath it: the bar is stuck and the only way out is
+     to leave the screen and come back.
+
+     So the handle with room to move is the one on top. Past the middle of the
+     travel that is the LOW handle — it has the whole left of the bar — and
+     below the middle it is the high handle. Reachability, not decoration: at
+     either end of the bar exactly one of them can still move, and that is the
+     one the thumb lands on. */
+  const loOnTop = lo > floor + span / 2;
+
   return (
     <div className={disabled ? "opacity-60" : undefined}>
       <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -68,9 +84,11 @@ export function RangeSlider({
           style={{ left: `${pct(lo)}%`, width: `${pct(hi) - pct(lo)}%`,
                    background: grade ? grade.tone : "#0B7C86" }} />
         <input type="range" className="tw-range" aria-label={t("range.lowAria")}
+          style={{ zIndex: loOnTop ? 3 : 2 }}
           min={floor} max={ceiling} step={step} value={lo} disabled={disabled}
           onChange={(e) => setLo(parseFloat(e.target.value))} />
         <input type="range" className="tw-range" aria-label={t("range.highAria")}
+          style={{ zIndex: loOnTop ? 2 : 3 }}
           min={floor} max={ceiling} step={step} value={hi} disabled={disabled}
           onChange={(e) => setHi(parseFloat(e.target.value))} />
       </div>

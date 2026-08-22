@@ -111,6 +111,27 @@ s.test("SC-07", "the handles cannot cross", () => {
   ok(/Math\.max\(v, lo \+ step\)/.test(slider), "and the high one above the low");
 });
 
+s.test("SC-11", "the handle with room to move is the one the thumb lands on", () => {
+  /* REEFKEEPER FINDING 12. One step apart, the two 26px thumbs sit on top of
+     one another and the one later in the document takes the touch. Dragged up
+     against the ceiling together, the high handle can go no further right, the
+     low one blocks it going left, and the low one is underneath: the bar is
+     stuck, and leaving the screen is the only way out.
+
+     The rule cannot be a constant — a constant is a bar that is stuck at one
+     end or the other. It has to depend on where the pair sits in the travel. */
+  const slider = code("app/src/components/RangeSlider.jsx");
+  const decl = /const loOnTop = ([^;]+);/.exec(slider);
+  ok(decl, "which handle is on top is decided");
+  const rule = decl[1].replace(/\s+/g, " ").trim();
+  eq(rule, "lo > floor + span / 2",
+    `on top past the middle of the travel, where the left of the bar is its room: got "${rule}"`);
+  /* And both inputs actually carry it, in opposite directions. A z-index on one
+     of them only is the same bug with an extra line. */
+  ok(/zIndex: loOnTop \? 3 : 2/.test(slider), "the low handle rises past the middle");
+  ok(/zIndex: loOnTop \? 2 : 3/.test(slider), "and the high one falls at the same moment");
+});
+
 s.test("SC-08", "reefkeeping units, on every parameter that has one", () => {
   /* FINDING 24. Chemically mg/L and ppm are the same quantity in seawater; one
      of them is the word on the test kit. */
