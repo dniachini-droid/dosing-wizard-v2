@@ -99,8 +99,12 @@ Phase 0 — Preserve and found V2
   `CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE`) and `VALIDATION_TIMESTAMP_INVALID` is narrowed.
   The prohibition on fabricating a time is **untouched and absolute**; the amendment
   changes what is reported, never what is recorded. It resolves `OI-EPISODEDATEONLY-001`
-  and the contract contradiction recorded as `AI-008`. `INV-H6` and `E-28` … `E-31` pin it,
-  and `DEC-025` records the harness consequences.
+  and the contract contradiction recorded as `AI-008`. `INV-H6`, the eight `AD-TIME-*`
+  fixtures and `E-28` … `E-32` pin it, `INV-I7` became executable, and `DEC-025` records the
+  harness consequences. `test-engineer` reviewed it and demonstrated four ways the first
+  version reported more safety than it held; all four are fixed, and the review's own record
+  is `docs/process/runs/2026-08-21-alk-v2-decision-30.md`. Two questions it raised are open
+  rather than answered: `OI-UNTIMEDSAMEDAY-001` and `OI-EVENTNOINSTANT-001`.
   The harness is **RED today, and every red is accounted for**. An engine now exists, so
   the `ENGINE_ABSENT` failures are gone; what remains is the five mechanical checks
   reporting pre-existing document defects that predate all of this work
@@ -111,7 +115,7 @@ Phase 0 — Preserve and found V2
   closed one line inside `CHK-RC-CATALOGUE` as a side effect of restating two group counts
   it had to restate anyway; the `SAFETY_` line of that same defect is untouched and still
   open.
-  **The mutation set is GREEN**: 80 mutations defined, 69 caught, 0 missed, 11 blocked
+  **The mutation set is GREEN**: 85 mutations defined, 74 caught, 0 missed, 11 blocked
   with their unblocking conditions stated. Twenty-seven of them are new engine mutations
   under `DEC-020` clause 3.
 - An **executable fixture format** is defined in

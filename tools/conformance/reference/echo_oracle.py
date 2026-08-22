@@ -168,37 +168,43 @@ def _content_ordinal(event: Dict[str, Any]) -> str:
     ).hexdigest()
 
 
-def _sort_key(event: Dict[str, Any], ordinal: int):
-    """(absoluteInstant, eventOrdinal, eventId) -- the determinism contract.
+#: Sorts after every real day. An event that states neither an instant nor a
+#: day has no position in time at all and goes last, as it always did.
+_NO_DAY = "9999-12-31"
 
-    An event with no usable instant sorts by the day it states, at the **end**
-    of that day: canon Part II §2.3A.2 clause 2 puts a record carrying a usable
-    instant *before* one that carries none within the same day, because the
-    record without a time cannot be shown to be later. An event that states
-    neither an instant nor a day sorts last, as it always did.
+
+def _sort_key(event: Dict[str, Any], ordinal: int):
+    """(day, hasInstant, absoluteInstant, eventOrdinal, eventId).
+
+    **The day comes first, and it is the day the record states**, in the offset
+    it states it in -- canon Part II §2.3A.2 clause 1: never converted through
+    an assumed zone. With a single offset in play this is the same order as
+    sorting by instant; with mixed offsets it is the order canon asks for and
+    the instant is not.
+
+    `hasInstant` then makes a record carrying a usable instant sort **after**
+    one that carries none within the same day (clause 2). That is not a claim
+    about the tank: the record with no time cannot be *shown* to be later, so it
+    does not get to be.
+
+    The first version of this written for owner decision 30 had clause 2
+    inverted -- it ranked an untimed record at the *end* of its day, so it
+    overtook every instant in that day. No fixture reached it. `AD-TIME-003` now
+    does.
 
     `ordinal` is accepted for signature compatibility and deliberately unused;
     see `_content_ordinal`.
     """
     instant = _parse_instant(event.get("measuredAt") or event.get("effectiveAt"))
     if instant is not None:
-        rank = (instant.timestamp(), 0)
-    else:
-        day = _declared_day(event)
-        if day is None:
-            rank = (float("inf"), 1)
-        else:
-            # End of the stated day, so an instant anywhere in that day sorts
-            # first. `+ 86399` rather than the next midnight, so a day-only
-            # record never overtakes an instant on the following day.
-            midnight = _parse_instant(day + "T00:00:00+00:00")
-            rank = ((midnight.timestamp() if midnight else float("inf")) + 86399.0, 1)
-    return (
-        rank[0],
-        rank[1],
-        _content_ordinal(event),
-        str(event.get("eventId", "")),
-    )
+        stated = event.get("measuredAt") or event.get("effectiveAt")
+        return (str(stated)[:10], 1, instant.timestamp(),
+                _content_ordinal(event), str(event.get("eventId", "")))
+    day = _declared_day(event)
+    if day is None:
+        return (_NO_DAY, 1, float("inf"),
+                _content_ordinal(event), str(event.get("eventId", "")))
+    return (day, 0, 0.0, _content_ordinal(event), str(event.get("eventId", "")))
 
 
 class EchoOracle:

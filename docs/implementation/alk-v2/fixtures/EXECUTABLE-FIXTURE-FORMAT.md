@@ -16,7 +16,7 @@ a fixture asserts is not a conversion; it is a canon edit wearing a disguise.
 
 ## 1. The problem this solves
 
-Of 204 fixtures, 6 can be submitted to an engine. The corpus was written to pin
+Of 211 fixtures, 31 can be submitted to an engine (6 when this format was written). The corpus was written to pin
 canon behaviour **for a human reader**, before any engine or interface existed,
 so the other 198 describe their scenario in whatever vocabulary suited the
 paragraph they came from — `sPreDkhPerDay`, `readings: 4`, `day0: {...}`,

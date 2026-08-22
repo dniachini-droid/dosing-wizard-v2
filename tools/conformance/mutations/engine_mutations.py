@@ -341,6 +341,27 @@ def _position_ignores_untimed(eps, cfg, untimed=()):
     return _ORIGINAL["position"](eps, cfg, ())
 
 
+def _day_from_a_field_the_contract_forbids(e, provenance):
+    """`_declared_day` falls back to the record's own `measuredAt`.
+
+    The second fabrication route, and the one `E-31` does not cover. `E-31`
+    materialises an instant *from* a stated day; this takes the day *out of* a
+    field the contract says must be ABSENT on this provenance — so the day is
+    whatever a fabricator chose to put there, and the record is accepted as
+    honoured instead of refused. It is the more likely of the two mistakes,
+    because it looks like leniency rather than invention.
+    """
+    from alk_v2 import ledger as L
+
+    raw = e.get(L._DAY_FIELD[provenance])
+    if not isinstance(raw, str):
+        raw = e.get("measuredAt")
+    if not isinstance(raw, str):
+        return None
+    day = raw[:10]
+    return day if L._DAY.match(day) else None
+
+
 def _fabricate_midnight(led):
     """A date-only record gains an instant at midnight.
 
@@ -948,5 +969,26 @@ ENGINE_MUTATIONS: List[Mutation] = [
         expect_red=["fixture:AD-TIME-002"],
         expect_mechanism="movementEvidence",
         hooks={"alk_v2.ledger:_readings": _fabricate_midnight},
+    ),
+    Mutation(
+        mid="E-32",
+        title="Take a record's day out of a field its provenance says it must not carry",
+        defect_class="fabricated timestamp",
+        status=EXECUTABLE,
+        target=ENGINE,
+        sabotage="`_declared_day` falls back to `measuredAt` when the declared day field is absent",
+        guards=(
+            "`ALK-V2-DATA-CONTRACT.md` §1 `ObservedTime` and "
+            "`SHARED-LEGACY-TIME-001`'s forbidden list. A `DATE_ONLY` record "
+            "carries `calendarDate` and **no** `absoluteInstant`; reading its day "
+            "out of `measuredAt` reads the day whoever fabricated it chose, and "
+            "turns a malformed record into an accepted one. `E-31` covers "
+            "materialising an instant from a day; this covers the opposite "
+            "direction, which looks like leniency rather than invention and is "
+            "the likelier mistake."
+        ),
+        expect_red=["fixture:AD-TIME-005B"],
+        expect_mechanism="VALIDATION_TIMESTAMP_INVALID",
+        hooks={"alk_v2.ledger:_declared_day": _day_from_a_field_the_contract_forbids},
     ),
 ]

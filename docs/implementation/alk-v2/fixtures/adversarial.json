@@ -1132,6 +1132,520 @@
       }
     },
     {
+      "fixtureId": "AD-TIME-003",
+      "title": "Within one day the record carrying a usable instant is the later one, and the day is the day it states",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.2"
+        ],
+        "note": "Added by owner decision 30. Pins BOTH clauses of the position ordering at once. The timed reading is stamped 08:00+10:00, whose UTC day is the PREVIOUS day — so a reading of clause 1 that converted the day through a zone would put the two records on different days, the tie in clause 2 would never be reached, and the untimed record would win. Only the canon reading gives 9.5."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "CORE-POSITION-001"
+      ],
+      "openIssues": [
+        "OI-EPISODEDATEONLY-001 - RESOLVED by owner decision 30"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-UNTIMED",
+            "calendarDate": "2026-09-01",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 7.0
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-TIMED",
+            "measuredAt": "2026-09-01T08:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 9.5
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "ABOVE_RANGE",
+        "latestValidValueDkh": 9.5,
+        "latestValidClusterId": "CL-2026-09-01T08:00:00+10:00",
+        "movementEvidence": "INSUFFICIENT",
+        "note": "Both records state 2026-09-01. The one carrying a usable instant is taken as later, because the other cannot be SHOWN to be later and position is never decided by an assumption. Nothing says which record won or why."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE",
+          "VALIDATION_TIMESTAMP_INVALID"
+        ],
+        "latestValidValueDkh": 7.0,
+        "latestValidClusterId": "NONE",
+        "cases": [
+          "ordering the two records by an assumed time-of-day for the untimed one",
+          "converting either record's day through UTC or the host zone before comparing them",
+          "letting the untimed record win because it was submitted first, or last"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - the corpus's existing anchor.",
+          "The timed reading is at 08:00+10:00 rather than the corpus's usual 09:00 so that its UTC day differs from its stated day. That is the whole point of the fixture and not an incidental choice."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-004",
+      "title": "Two records with no usable instant on one day: a position resolves, and which of them is current is not asserted",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.2"
+        ],
+        "note": "Added by owner decision 30. Reaches clause 3's eventOrdinal branch, which no other fixture does. It deliberately asserts ONLY what canon determines: both values sit on the same side of every threshold, so the position is the same whichever record is taken as current. WHICH one is current is OI-UNTIMEDSAMEDAY-001 and is not asserted here — pinning it would pin an answer nobody has chosen."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "CORE-POSITION-001"
+      ],
+      "openIssues": [
+        "OI-EPISODEDATEONLY-001 - RESOLVED by owner decision 30",
+        "OI-UNTIMEDSAMEDAY-001 - OPEN: which of two same-day records with no usable instant is current"
+      ],
+      "input": {
+        "asOf": "2026-09-02T09:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-SAMEDAY-A",
+            "calendarDate": "2026-09-01",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.4
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-SAMEDAY-B",
+            "calendarDate": "2026-09-01",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.6
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "IN_RANGE",
+        "latestValidClusterId": "NONE",
+        "movementEvidence": "INSUFFICIENT",
+        "action": "INSUFFICIENT_DATA",
+        "note": "8.4 and 8.6 are both inside the target range, so IN_RANGE holds whichever is taken as current. Determinism across submission order is carried by INV-A1 and INV-A3, which reverse and rotate this ledger like every other executable one."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE",
+          "VALIDATION_TIMESTAMP_INVALID"
+        ],
+        "position": "UNKNOWN",
+        "cases": [
+          "refusing a position because the two records cannot be ordered by time",
+          "forming one testing episode from two records that have no position inside a 30-minute window",
+          "letting the answer depend on the order the two records were submitted in"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "input.asOf is stated: DEC-021's default is the instant of the last READING and neither reading has one.",
+          "Both values are inside the target range BY CONSTRUCTION, so the fixture asserts a position without asserting which record produced it."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-005A",
+      "title": "A provenance the contract does not declare is refused, and named",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.1",
+          "PII-3.3"
+        ],
+        "note": "Added by owner decision 30. The narrowing of VALIDATION_TIMESTAMP_INVALID left the code with no positive test at all — both of its occurrences in the corpus were in `forbidden`, so the whole code could have been deleted and nothing would have gone red. This is the first of three fixtures that assert it FIRES."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "PII-3.3"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-GOOD",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.5
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-BADPROV",
+            "measuredAt": "2026-09-01T10:00:00+10:00",
+            "timeProvenance": "GUESSED",
+            "rawValueDkh": 8.7
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "IN_RANGE",
+        "latestValidValueDkh": 8.5,
+        "latestValidClusterId": "CL-2026-09-01T09:00:00+10:00",
+        "note": "The malformed record is refused and NAMED. The valid reading is unaffected: a bad record withholds itself, not the assessment."
+      },
+      "expectedReasonCodes": [
+        "VALIDATION_TIMESTAMP_INVALID",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"
+        ],
+        "cases": [
+          "treating an unrecognised provenance as EXACT_ABSOLUTE because a parseable instant happens to be present",
+          "inventing a fifth behaviour for a name the closed vocabulary does not contain",
+          "reading the malformed record as though it carried a usable instant",
+          "dropping the malformed record without a word — the keeper who entered three readings must never be told about two with no account of the third"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - the corpus's existing anchor.",
+          "R-GOOD is present so the ledger has an absolute-timed reading for DEC-021 to name, and so the fixture asserts that ONE bad record does not take the assessment with it."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-005B",
+      "title": "A record claiming DATE_ONLY without the day field that provenance declares is refused, and named",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.1",
+          "PII-3.3"
+        ],
+        "note": "Added by owner decision 30, and it is the engine-side pin for AI-014. This is exactly the shape the application writes today — `timeProvenance: DATE_ONLY` with the calendar day in `measuredAt` and no `calendarDate`. The contract calls that malformed, and the engine says so. When AI-014 closes, the application stops producing this shape; the fixture stays, because a record that claims a provenance and omits its declared field is still malformed whoever sends it."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "PII-3.3"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-GOOD",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.5
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-NODAY",
+            "measuredAt": "2026-09-02",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 8.7
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "IN_RANGE",
+        "latestValidValueDkh": 8.5,
+        "latestValidClusterId": "CL-2026-09-01T09:00:00+10:00",
+        "note": "The malformed record is refused and NAMED. The valid reading is unaffected: a bad record withholds itself, not the assessment."
+      },
+      "expectedReasonCodes": [
+        "VALIDATION_TIMESTAMP_INVALID",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"
+        ],
+        "cases": [
+          "taking the day out of `measuredAt` for a provenance the contract says carries no absoluteInstant — that is taking the day whoever fabricated it chose",
+          "accepting the record silently, which would make a malformed record indistinguishable from an honoured one",
+          "reading the malformed record as though it carried a usable instant",
+          "dropping the malformed record without a word — the keeper who entered three readings must never be told about two with no account of the third"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - the corpus's existing anchor.",
+          "R-GOOD is present so the ledger has an absolute-timed reading for DEC-021 to name, and so the fixture asserts that ONE bad record does not take the assessment with it."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-005C",
+      "title": "A record claiming a usable instant and supplying an unreadable one is refused, and named",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A.1",
+          "PII-3.3"
+        ],
+        "note": "Added by owner decision 30. This is the substance the catalogue says VALIDATION_TIMESTAMP_INVALID KEEPS after the narrowing: a record that claims an absolute instant and does not have a readable one. If this fixture ever goes green while 005A and 005B are red, the narrowing has been applied too widely."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "PII-3.3"
+      ],
+      "input": {
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-GOOD",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.5
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-BADSTAMP",
+            "measuredAt": "not-a-time",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.7
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "IN_RANGE",
+        "latestValidValueDkh": 8.5,
+        "latestValidClusterId": "CL-2026-09-01T09:00:00+10:00",
+        "note": "The malformed record is refused and NAMED. The valid reading is unaffected: a bad record withholds itself, not the assessment."
+      },
+      "expectedReasonCodes": [
+        "VALIDATION_TIMESTAMP_INVALID",
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE"
+        ],
+        "cases": [
+          "parsing a timestamp with no offset as though the offset were ours to supply",
+          "reading the malformed record as though it carried a usable instant",
+          "dropping the malformed record without a word — the keeper who entered three readings must never be told about two with no account of the third"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "DOSE_STATE.effectiveAt = 2026-08-20T09:00:00+10:00 - the corpus's existing anchor.",
+          "R-GOOD is present so the ledger has an absolute-timed reading for DEC-021 to name, and so the fixture asserts that ONE bad record does not take the assessment with it."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
+      "fixtureId": "AD-TIME-006",
+      "title": "A record with no usable instant supports position only if it is otherwise valid",
+      "provenance": {
+        "class": "CANON_DERIVED",
+        "canonSource": [
+          "SHARED-LEGACY-TIME-001",
+          "PII-2.3A",
+          "PII-2.3A.2",
+          "ALK-004"
+        ],
+        "note": "Added by owner decision 30. Canon says such a record 'may support current position IF OTHERWISE VALID', and nothing tested the qualifier. One fixture carries both halves, and the INVALID record is dated a day LATER than the SUSPECT one on purpose: on the same day the two would tie and the winner would fall to the eventOrdinal branch, so a wrongly admitted INVALID record would change the answer only about half the time and the control would be unreliable. Dated later it is decisive — if admitted the answer is 3.0 and ALERT_LOW, and if the SUSPECT record were excluded it is 8.5 and IN_RANGE. Only the canon reading gives 7.9 and BELOW_RANGE, and both wrong answers are named as forbidden."
+      },
+      "rulesExercised": [
+        "SHARED-LEGACY-TIME-001",
+        "CORE-POSITION-001",
+        "ALK-004"
+      ],
+      "input": {
+        "asOf": "2026-09-06T12:00:00+10:00",
+        "events": [
+          {
+            "kind": "DOSE_STATE",
+            "programmedDoseMlPerDay": 9.0,
+            "effectiveAt": "2026-08-20T09:00:00+10:00",
+            "effectiveAtConfidence": "EXACT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-GOOD",
+            "measuredAt": "2026-09-01T09:00:00+10:00",
+            "timeProvenance": "EXACT_ABSOLUTE",
+            "rawValueDkh": 8.5
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-SUSPECT",
+            "calendarDate": "2026-09-05",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 7.9,
+            "status": "SUSPECT"
+          },
+          {
+            "kind": "READING",
+            "eventId": "R-INVALID",
+            "calendarDate": "2026-09-06",
+            "timeProvenance": "DATE_ONLY",
+            "rawValueDkh": 3.0,
+            "status": "INVALID"
+          }
+        ]
+      },
+      "expectedAction": {
+        "position": "BELOW_RANGE",
+        "latestValidValueDkh": 7.9,
+        "latestValidClusterId": "NONE",
+        "outerBoundState": "WITHIN_BOUNDS",
+        "note": "SUSPECT is usable for position — it is the same eligibility the timed path applies, and a suspect reading is a measurement the keeper flagged, not one the engine disbelieves. INVALID is retained in the record and excluded from the answer, even though it is the latest record of all. The exclusion is by STATUS; it has nothing to do with the record having no time, which stays silent."
+      },
+      "expectedReasonCodes": [
+        "EVIDENCE_INSUFFICIENT_CLUSTERS",
+        "EVIDENCE_INSUFFICIENT_SPAN"
+      ],
+      "forbidden": {
+        "reasonCodes": [
+          "TIME_PROVENANCE_DATE_ONLY",
+          "TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN",
+          "TIME_PROVENANCE_EXACT",
+          "TIME_PROVENANCE_RECONSTRUCTED",
+          "TIME_EXACT_ELAPSED_UNAVAILABLE",
+          "CAPABILITY_MEASUREMENT_TIME_IMPRECISE",
+          "CAPABILITY_ABSOLUTE_TIME_UNAVAILABLE",
+          "VALIDATION_TIMESTAMP_INVALID"
+        ],
+        "latestValidValueDkh": 3.0,
+        "position": "ALERT_LOW",
+        "cases": [
+          "admitting an INVALID record to position because it has no time to disqualify it",
+          "excluding a SUSPECT record from position when the timed path admits one",
+          "reporting a safety return from a reading the keeper marked invalid"
+        ]
+      },
+      "documentType": "WORKED_EXAMPLE",
+      "conversion": {
+        "convertedUnder": "owner decision 30",
+        "timeConvention": "_schema.json#/timeConvention",
+        "asOfSource": "DEC-021",
+        "assertionsUnchanged": true,
+        "suppliedByConversion": [
+          "input.asOf is stated: the latest READING carrying an absolute instant is R-GOOD on 2026-09-01, and using it would place asOf before the two records under test.",
+          "The INVALID record is dated one day after the SUSPECT one rather than sharing its day, so that admitting it would definitely change the answer rather than changing it only when a content hash happened to fall that way. Sharing a day makes this control unreliable, which was found by probing it."
+        ],
+        "prosePromoted": [],
+        "questionsRaised": []
+      }
+    },
+    {
       "fixtureId": "AD-CON-001",
       "title": "Missing dose context makes consumption ineligible, not approximate",
       "provenance": {

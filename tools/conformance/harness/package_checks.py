@@ -713,6 +713,14 @@ def run_package_checks() -> Tuple[List[CheckOutcome], int]:
                 if len(pts)>=2:
                     try: inst=[datetime.datetime.fromisoformat(x) for x,_ in pts]
                     except Exception: return None,None
+                    # A `measuredAt` with no offset is not an instant, and mixing one
+                    # into this list makes `min()` raise rather than fail a check --
+                    # which stops every absorbed check after this one and reports 256
+                    # assertions as unrun. `kernel.parse_instant` rejects the same
+                    # shape; a fixture may legitimately contain such a record, because
+                    # asserting that the engine REFUSES it is a real assertion
+                    # (`AD-TIME-005B`). This series simply has no arithmetic to check.
+                    if any(x.tzinfo is None for x in inst): return None,None
                     t0=min(inst)
                     days=[(x-t0).total_seconds()/86400.0 for x in inst]
                     by=collections.OrderedDict()

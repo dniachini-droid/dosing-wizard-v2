@@ -17,7 +17,7 @@
   "finding"
  ],
  "totals": {
-  "rules": 283,
+  "rules": 284,
   "byOwner": {
    "AUDIT": 12,
    "CAPABILITY": 20,
@@ -34,7 +34,7 @@
    "SUPPORT": 2,
    "TREND": 19,
    "UNCERTAINTY": 11,
-   "VALIDATION": 23
+   "VALIDATION": 24
   },
   "byFinding": {
    "NO_PROBLEM (RESOLVED by owner decision 18)": 1,
@@ -412,7 +412,7 @@
      "output": "elapsed days",
      "equation": "dDays = dHours / 24 = dSeconds / 86400",
      "reasonCodes": "—",
-     "fixtures": "TIME-001, WG-ALK-066",
+     "fixtures": "TIME-001, WG-ALK-066, AD-TIME-001",
      "boundaries": "never infer elapsed time from date labels; an operand with no usable instant is never offered to this calculation (owner decision 30)",
      "dependencies": "SHARED-LEGACY-TIME-001",
      "activeInAlkOnlyV2": "ACTIVE",
@@ -1032,9 +1032,24 @@
      "output": "EXACT_ABSOLUTE | RECONSTRUCTED_WITH_PROVENANCE | LOCAL_TIME_ZONE_UNKNOWN | DATE_ONLY",
      "equation": "a record with no usable instant is SILENTLY ineligible for elapsed-time inference (owner decision 30); it is retained for history, chart, descriptive statistics and position",
      "reasonCodes": "—",
-     "fixtures": "WG-ALK-066, AD-TIME-001, INV-TIME-001",
+     "fixtures": "WG-ALK-066, AD-TIME-001, AD-TIME-002, AD-TIME-003, AD-TIME-004, AD-TIME-005A, AD-TIME-005B, AD-TIME-005C, AD-TIME-006, INV-TIME-001",
      "boundaries": "forbidden: assigning noon, midnight, the current timezone, or treating local HH:MM as absolute; forbidden: announcing the ineligibility, in either direction",
      "dependencies": "M-8",
+     "activeInAlkOnlyV2": "ACTIVE",
+     "finding": "NO_PROBLEM"
+    },
+    {
+     "id": "PII-2.3A.2",
+     "canon": "PII-2.3A.2",
+     "title": "Position ordering without a usable instant",
+     "owner": "VALIDATION",
+     "inputs": "records with and without usable instants",
+     "output": "the record the current value is taken from",
+     "equation": "by stated calendar day; within one day a record carrying a usable instant is later than one carrying none; between two carrying none, eventOrdinal",
+     "reasonCodes": "—",
+     "fixtures": "AD-TIME-002, AD-TIME-003, AD-TIME-004, AD-TIME-006",
+     "boundaries": "never an elapsed-time operand; the day is never converted through an assumed zone; which of two same-day records with no usable instant is current is OI-UNTIMEDSAMEDAY-001, open",
+     "dependencies": "SHARED-LEGACY-TIME-001",
      "activeInAlkOnlyV2": "ACTIVE",
      "finding": "NO_PROBLEM"
     },
@@ -4027,7 +4042,7 @@
      "output": "OK",
      "equation": "no degradation: the measurements the trend consumes all carry usable instants by construction (owner decision 30)",
      "reasonCodes": "—",
-     "fixtures": "WG-ALK-066, AD-TIME-001",
+     "fixtures": "WG-ALK-066, AD-TIME-001, AD-TIME-002",
      "boundaries": "measuredAt is the biological sampling time",
      "dependencies": "SHARED-LEGACY-TIME-001",
      "activeInAlkOnlyV2": "ACTIVE",
@@ -4102,7 +4117,7 @@
      "output": "OK",
      "equation": "no degradation: an operand with no usable instant is never offered to an elapsed-time calculation (owner decision 30)",
      "reasonCodes": "—",
-     "fixtures": "WG-ALK-066, AD-TIME-001, INV-TIME-001",
+     "fixtures": "WG-ALK-066, AD-TIME-001, AD-TIME-002, INV-TIME-001",
      "boundaries": "no noon or current-timezone backfill",
      "dependencies": "SHARED-LEGACY-TIME-001",
      "activeInAlkOnlyV2": "ACTIVE",

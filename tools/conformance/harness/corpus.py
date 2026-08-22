@@ -311,12 +311,25 @@ def default_as_of(inp: Any) -> Optional[str]:
 
 
 def _instant_sort_key(text: str):
+    """The instant's epoch seconds, or `None` if it is not one.
+
+    **Offset-aware only.** `datetime.fromisoformat` accepts `2026-09-02` and
+    returns a naive midnight, so without this guard `DEC-021` could derive an
+    assessment instant from a bare calendar day — supplying the offset that
+    `SHARED-LEGACY-TIME-001` says is not ours to supply, and handing the engine
+    a third argument it correctly refuses. `kernel.parse_instant` rejects the
+    same shape for the same reason; this is that rule applied where the harness
+    chooses the instant rather than where the engine reads one.
+
+    Found by `AD-TIME-005B`, whose malformed record carries exactly that shape.
+    """
     from datetime import datetime
 
     try:
-        return datetime.fromisoformat(text).timestamp()
+        when = datetime.fromisoformat(text)
     except ValueError:
         return None
+    return None if when.tzinfo is None else when.timestamp()
 
 
 def _unreadable_expectations(body: Dict[str, Any]) -> List[str]:

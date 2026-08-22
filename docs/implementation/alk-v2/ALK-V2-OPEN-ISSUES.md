@@ -3227,6 +3227,43 @@ count — and therefore whether a trend exists at all — differs. **Not decided
 
 ---
 
+## OI-UNTIMEDSAMEDAY-001 — which of two same-day records with no usable instant is the current value
+
+- **Class:** `CANON_DEFECT`
+- **Status:** **OPEN.** Found by `test-engineer` reviewing owner decision 30, and deliberately
+  left.
+- **Canon:** `SHARED-LEGACY-TIME-001` Part II §2.3A.2 clause 3; Part II §2.4
+
+Clause 3 breaks a same-day tie between two records with no usable instant **by
+`eventOrdinal`**. Part II §2.4 defines `eventOrdinal` as a "monotonic insertion sequence".
+`ledger.build` deliberately does **not** implement it that way: it derives the ordinal from a
+SHA-256 of the event's own content, and its docstring gives the reason — taking it from the
+position in the submitted array would make the sort key depend on the array order it exists
+to defeat, and `INV-A1` requires that independence.
+
+Both readings are defensible and they were indistinguishable until this decision. Before it,
+the content ordinal only separated events sharing an instant. It now decides **which
+measurement the keeper is shown as their current alkalinity**.
+
+**Failure scenario.** Two date-only readings on one day, 8.4 and 8.6. Which is current is
+decided by a hash. `test-engineer` demonstrated that adding an inert `"note"` field to one of
+them flips `latestValidValueDkh` from 7.0 to 9.5 and `position` from `BELOW_RANGE` to
+`ABOVE_RANGE` on a comparable ledger — deterministic, reproducible, and unrelated to
+anything about time.
+
+**Why it is not decided here.** Owner decision 30 is about *reporting*. Which of two records
+neither of which can be shown to be later is "the latest" is a different question, it sets
+behaviour, and neither reading of `eventOrdinal` follows from the decision. Answering it
+would also reopen `ledger.build`'s array-order independence, which `INV-A1` depends on.
+
+**What the engine does meanwhile, and what is tested.** The content ordinal decides, which is
+deterministic and array-order independent — `INV-A1` and `INV-A3` reverse and rotate
+`AD-TIME-004`'s ledger and require byte-identical output. `AD-TIME-004` deliberately puts
+both values on the same side of every threshold, so it asserts the position without asserting
+**which** record produced it. Pinning that would pin an answer nobody has chosen.
+
+---
+
 ## OI-EVENTNOINSTANT-001 — what a non-measurement event with no usable instant does is unstated
 
 - **Class:** `CANON_DEFECT`

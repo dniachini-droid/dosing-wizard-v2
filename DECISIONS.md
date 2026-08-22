@@ -1074,12 +1074,25 @@ exactly the list the owner asked never to be produced. That is why all four
   via the mechanism it names.
 - `ORIGINAL_TARGETS` gains `alk_v2.capability:evaluate` and `alk_v2.ledger:_readings`, so
   those sabotages delegate to the real implementation rather than reimplementing it.
-- `reference/echo_oracle.py`'s event sort key stops tie-breaking on the event's position in
-  the submitted array and uses a content hash, matching `ledger._content_ordinal`. The array
-  index made the oracle's own output depend on the ordering `INV-A1` exists to defeat; it had
+- `reference/echo_oracle.py`'s event sort key is rewritten to `(stated day, hasInstant,
+  instant, content ordinal, eventId)`. Two defects, both found by fixtures written after the
+  first version: it tie-broke on the event's **position in the submitted array**, and it
+  ranked a record with no usable instant at the **end** of its day, inverting §2.3A.2
+  clause 2. The array index made the oracle's own output depend on the ordering `INV-A1` exists to defeat; it had
   never shown because no fixture until `AD-TIME-002` held two events the key could not
   separate. The control that names `INV-A1` — `M-1` — was itself disabled by the defect,
-  since a subject already failing at baseline cannot be turned red by a mutation.
+  since a subject already failing at baseline cannot be turned red by a mutation. The clause-2
+  inversion was invisible until `AD-TIME-003` existed, and is why that fixture is the one the
+  review ranked highest of the five it asked for.
+- `corpus._instant_sort_key` requires an offset-aware instant. `datetime.fromisoformat`
+  parses `2026-09-02` into a naive midnight, so `DEC-021` could derive an assessment instant
+  from a bare calendar day — supplying the offset `SHARED-LEGACY-TIME-001` says is not ours
+  to supply. `kernel.parse_instant` has always rejected that shape; this is the same rule
+  applied where the *harness* chooses the instant.
+- `package_checks`'s fixture-arithmetic reader skips a series carrying a naive `measuredAt`
+  rather than raising. `min()` over a mixed naive/aware list raised `TypeError`, which
+  stopped every absorbed check after it and reported 256 assertions as unrun — a crash where
+  a failure was wanted.
 - The gate's absolute verdict is unchanged in kind: `CHK-RC-CATALOGUE`'s `CAPABILITY_`
   coverage line is closed as a side effect of restating a count that had to change anyway,
   and its `SAFETY_` line is a pre-existing defect that stays open and is out of scope here.

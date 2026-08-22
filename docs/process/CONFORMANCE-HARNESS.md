@@ -67,13 +67,17 @@ loudly instead of reporting a small, clean pass.
 
 ## What it cannot cover — the important section
 
-**Of 204 fixtures, 11 can be executed against an engine.**
+**Of 211 fixtures, 31 can be executed against an engine.**
 
 (Counts here are as of `ALK_V2_FREEZE_5`. Every one of them is computed by the
 harness at run time; none is transcribed. `ALK_V2_FREEZE_5` added 44 fixtures
 and **none of them was executable**. The count moved from 6 to 11 when
 `AD-RET-001`..`AD-RET-005` were converted to the event-ledger form defined in
-`fixtures/EXECUTABLE-FIXTURE-FORMAT.md`.)
+`fixtures/EXECUTABLE-FIXTURE-FORMAT.md`, to 23 by later conversions, and
+to 31 under owner decision 30 — eight of those are the `AD-TIME-*` family, and
+the corpus's event-ledger test was widened to read the two wire fields that
+decision added, `calendarDate` and `localDateTime`, so that a ledger of records
+carrying **no** absolute instant is still a ledger an engine can read.)
 
 The documented interface is one pure function of
 `(eventLedger, configurationHistory, asOf)` (`ALK-V2-IMPLEMENTATION-CONTRACT.md`

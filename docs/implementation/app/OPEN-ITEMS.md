@@ -599,8 +599,30 @@ the shape it wrote before the amendment, so the engine — which now reads the d
 or reports the record malformed — does not yet see those 325 readings as the honoured
 records they are.
 
+**Measured, not inferred.** `test-engineer` ran the application's exact payload — three
+`DATE_ONLY` readings of 8.6 / 8.4 / 8.2, each with the calendar day in `measuredAt` and no
+`calendarDate` — through the amended engine:
+
+```text
+position          : UNKNOWN
+latestValidValueDkh : NOT_RUN
+VALIDATION_TIMESTAMP_INVALID  x3
+```
+
+Three refusals, one per reading, and *"the engine does not know your alkalinity"* while
+holding three measurements of it. **This is identical at the base commit** — the amendment
+does not cause it. What the amendment does is make it fixable by one field rename instead of
+by a contract ruling, which is what `AI-008` was blocked on.
+
 **Why it is left.** The amendment brief forbade touching the interface. The change is a
 field rename in the writer and nothing more; no logic moves, and no reading gains a time.
+
+**What now pins it.** `AD-TIME-005B` is the engine-side half: a record claiming `DATE_ONLY`
+without the `calendarDate` that provenance declares is refused **and named**, and mutation
+`E-32` turns the gate red if the engine ever "helps" by taking the day out of `measuredAt`
+instead. What is still missing, and `test-engineer` is right to name it, is a test on the
+**producer** — an app-suite case over `toEngineEvents` that is red while this item is open and
+green when it closes. That test belongs with the fix, in the application's own workflow.
 
 **What would close it.** `toEngineEvents` stops putting a day in `measuredAt` and emits
 `calendarDate` (or `localDateTime`) beside `timeProvenance` instead. The storage record does

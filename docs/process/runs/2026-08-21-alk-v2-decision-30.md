@@ -126,6 +126,32 @@ a canon-authority question about a different clause of the same rule. It is unto
 
 ---
 
+## Fixtures: how many changed, and what could not be converted
+
+**Three fixtures asserted the old behaviour. All three were converted; none could not be.**
+
+| Fixture | Was | Is |
+|---|---|---|
+| `AD-TIME-001` | `ABSTRACT_INPUT`, required `TIME_PROVENANCE_DATE_ONLY` and `TIME_EXACT_ELAPSED_UNAVAILABLE` | `EXECUTABLE`, requires the two insufficiency codes and **forbids all seven retired codes** |
+| `WG-ALK-066` | required `TIME_PROVENANCE_LOCAL_ZONE_UNKNOWN` and `TIME_EXACT_ELAPSED_UNAVAILABLE`, and asserted `exactElapsedTimeAnalysis: NOT_RUN` | requires no code at all; asserts the record is stored as `localDateTime` with no `absoluteInstant`, and that its ineligibility is not announced |
+| `INV-TIME-001` | a `PROPERTY` fixture whose `mustHold` covered storage only | two clauses added: no output names such a record or states its provenance in either direction, and `M-8` / `M-13` report `OK` with no code however many such records the ledger holds |
+
+Every superseded expectation is preserved verbatim in a `supersededExpectation` block rather
+than deleted, which is the corpus's own convention. In each case the *substantive* claims
+survived unchanged — the records stay visible, stay out of the trend, keep their provenance,
+and position still comes from the latest valid reading. What was removed in all three was the
+announcement.
+
+**Five fixtures were added**, all on `test-engineer`'s ranking: `AD-TIME-002` (every reading
+in the window lacks a time), `AD-TIME-003` (the same-day tie, and the day in its own terms),
+`AD-TIME-004` (two untimed records on one day), `AD-TIME-005A/B/C` (`VALIDATION_TIMESTAMP_INVALID`
+fires, in each of its three situations) and `AD-TIME-006` (status eligibility). That is eight
+`AD-TIME-*` fixtures in total, and the corpus goes from 204 to 211, of which 31 are
+executable — up from 23.
+
+**Nothing was retired.** No fixture in the corpus became unsatisfiable under the amendment,
+so none had to be dropped.
+
 ## What the gate says
 
 | | Baseline `a335abc` | After |
@@ -134,7 +160,7 @@ a canon-authority question about a different clause of the same rule. It is unto
 | check failures | 5 | 5 |
 | invariant failures | 3 | 3 |
 | corpus problems | 0 | 0 |
-| mutations | 80 defined, 69 caught, 0 missed, 11 blocked — GREEN | 84 defined, 73 caught, 0 missed, 11 blocked — GREEN |
+| mutations | 80 defined, 69 caught, 0 missed, 11 blocked — GREEN | 85 defined, 74 caught, 0 missed, 11 blocked — GREEN |
 | application suite | 165 checks, 0 failures — GREEN | 165 checks, 0 failures — GREEN |
 
 The absolute verdict is RED before and after, for the reasons `PROJECT-STATE.md` already
@@ -156,6 +182,73 @@ Four new engine mutations, all caught, each via the mechanism it named:
 | `E-29` | report an honoured record as an unreadable timestamp | `VALIDATION_TIMESTAMP_INVALID` emitted |
 | `E-30` | drop untimed readings from position | `position` `BELOW_RANGE` → `UNKNOWN` |
 | `E-31` | give a date-only record an instant at midnight | `movementEvidence` `INSUFFICIENT` → `SUFFICIENT` |
+| `E-32` | take a record's day out of `measuredAt`, which its provenance forbids | `VALIDATION_TIMESTAMP_INVALID` not emitted |
+
+## The review pass
+
+`test-engineer` reviewed the change and demonstrated, rather than argued, four things the
+first version of this work reported more safety than it held. All four are fixed in the one
+implementation pass the brief allows.
+
+**1. `INV-H6` executed one of the four clauses its own text asserted.** Its text says the
+result must carry "no `DEGRADE` on `M-8` or `M-13`". The implementation swept string values
+only, so restoring the pre-decision-30 degradation **with the reason code removed** added
+**zero** failing subjects — the exact regression the invariant was written for, invisible to
+it. Fixed by a differential check that transcribes nothing: the same ledger is submitted
+twice, once with the untimed readings removed, and `capabilities[]` must be byte-identical.
+That states the property directly — *their presence changes nothing about what the engine
+says it could look at* — and it now fails on the silent degrade.
+
+**2. `INV-H6` selected its subjects by the wrong predicate and could empty silently.** It
+looked for readings with no absolute-time field; the engine routes by *provenance*, so a
+record carrying `calendarDate` **and** a stray `measuredAt` was routed to `untimed` and was
+invisible to the check. Worse, an empty subject set returned `NOT_EXECUTABLE`, which is not
+counted as a failure — a vacuous `INV-H6` reported as a clean run. The predicate is now
+"carries one of the contract's declared day fields", and an empty subject set is a failure.
+
+**3. The day sweep both over- and under-fired.** It skipped exactly the days where the tie
+rule lives, and it would have false-positived on any fixture whose untimed record is dated on
+the assessment day, because `assessmentAsOf` and the window ends derived from it legitimately
+contain that day. Now: caller-instant fields are excluded by path, the assessment day joins
+the uninformative set, and **the number of days skipped as uninformative is reported in the
+check's own output** — so it can never silently claim coverage it does not have.
+
+**4. `E-28`'s title overclaimed.** It is titled "restore the `M-8`/`M-13` degradation" and it
+went red through the *reason code*, which is `INV-I7`'s job. With fix 1 in place the
+degradation itself is now detected, and the control means what its title says.
+
+Five fixtures were added on `test-engineer`'s ranking, and one mutation:
+
+| | What it pins | What it cost to have missed |
+|---|---|---|
+| `AD-TIME-003` | §2.3A.2 clauses 1 **and** 2 at once — the timed reading is stamped `08:00+10:00`, whose UTC day is the previous day, so converting the day through a zone gives the wrong winner | the tie rule was untested, and the echo oracle had it inverted |
+| `AD-TIME-004` | clause 3's `eventOrdinal` branch, which no fixture reached | see `OI-UNTIMEDSAMEDAY-001` |
+| `AD-TIME-005A/B/C` | `VALIDATION_TIMESTAMP_INVALID` **fires**, in each of its three situations | both corpus occurrences were in `forbidden`; the whole code could have been deleted with nothing going red |
+| `AD-TIME-006` | "may support position **if otherwise valid**" — `SUSPECT` admitted, `INVALID` excluded | an `INVALID` reading of 3.0 dKH could have become the reported alkalinity and driven a safety return |
+| `E-32` | the second fabrication route: taking a record's day out of `measuredAt`, a field its provenance says it must not carry | `E-31` covers materialising an instant *from* a day; this covers the opposite direction, which looks like leniency rather than invention |
+
+`AD-TIME-006` carries both halves in one ledger: if the `INVALID` record were admitted the
+answer is 3.0 and `ALERT_LOW`; if the `SUSPECT` record were excluded it is 8.5 and
+`IN_RANGE`. Only the canon reading gives 7.9 and `BELOW_RANGE`, and both wrong answers are
+named as forbidden.
+
+### Two more harness defects the new fixtures exposed, and fixed
+
+Both were latent, both are the same class — a routine that reads `measuredAt` and assumes it
+is offset-aware — and both were found because `AD-TIME-005B` legitimately contains a record
+where it is not.
+
+- **`DEC-021`'s default assessment instant could be a bare calendar day.**
+  `corpus._instant_sort_key` used `datetime.fromisoformat`, which parses `2026-09-02` into a
+  naive midnight. So the harness could derive an `asOf` from a day nobody stated a time
+  for — supplying the offset that `SHARED-LEGACY-TIME-001` says is not ours to supply — and
+  hand the engine a third argument it correctly refuses. Now offset-aware only, matching
+  `kernel.parse_instant`.
+- **`CHK-FIXTURE-ARITHMETIC` crashed rather than failing.** `min()` over a mixed naive/aware
+  list raised `TypeError`, which stopped every absorbed check after it and reported **256
+  assertions as unrun**. A fixture may legitimately contain such a record — asserting that
+  the engine *refuses* it is a real assertion — so the series is now skipped as having no
+  arithmetic to check.
 
 ### One harness defect the new fixtures exposed, and fixed
 
@@ -193,31 +286,46 @@ The application suite is unchanged and GREEN: 165 checks, 0 failures.
 
 ## Recorded and left open
 
-1. **`OI-EVENTNOINSTANT-001` (new, canon).** Decision 30 says what happens to a
+1. **`OI-UNTIMEDSAMEDAY-001` (new, canon).** Clause 3 breaks a same-day tie between two
+   records with no usable instant by `eventOrdinal`; Part II §2.4 calls that a "monotonic
+   insertion sequence", and `ledger.build` deliberately derives it from a content hash
+   instead so that array order cannot affect it — which `INV-A1` depends on. Both readings
+   were indistinguishable until this decision, and the content ordinal now decides which
+   measurement the keeper is shown as their current alkalinity. `test-engineer` demonstrated
+   that adding an inert `"note"` field to one of two same-day readings flips the reported
+   value and the position. `AD-TIME-004` reaches the branch and asserts only what canon
+   determines; which record wins is not pinned, because pinning it would pin an answer nobody
+   has chosen.
+2. **`OI-EVENTNOINSTANT-001` (new, canon).** Decision 30 says what happens to a
    *measurement* with no usable instant. It says nothing about a dose change, correction,
    water change or delivery anomaly with one — and the provenance vocabulary is available to
    every event kind. The two readings differ by a whole recommendation. The engine's split is
    scoped to `READING` and every other kind is parsed exactly as before, which is the
    pre-existing behaviour, unchanged and not endorsed.
-2. **`SAFETY_` coverage-summary count** — declared 18, 19 rows parsed. Pre-existing,
+3. **`SAFETY_` coverage-summary count** — declared 18, 19 rows parsed. Pre-existing,
    untouched, still red. Nothing in decision 30 gives anyone grounds to decide whether the
    missing row is a duplicate, a row that should not be there, or a mistyped count.
-3. **`CHK-CONTRACT-STRUCTURE` anchors on the canon's *first* mention of a backticked rule
+4. **A test on the *producer* of the wire shape.** `AD-TIME-005B` and `E-32` pin the
+   engine's half of `AI-014`; there is still no test that is red while the application writes
+   a bare day into `measuredAt` and green when it stops. `test-engineer` is right that
+   `MASTER RULE 5` asks for one. It belongs with the one-line writer fix, in the
+   application's own workflow, and both are out of this brief's scope.
+5. **`CHK-CONTRACT-STRUCTURE` anchors on the canon's *first* mention of a backticked rule
    id** and reads a fixed 7000-character window from it. Adding an earlier mention anywhere
    in the canon silently moves that window and produces a false failure — which is what
    happened here, and the amendment's wording was changed to work around it rather than the
    gate being loosened. A gate that can be broken by an unrelated cross-reference is worth
    fixing; it is not fixed here because doing so is a change to a check nobody asked for.
-4. **`AI-014` (app).** The application still writes a bare calendar day into `measuredAt`
+6. **`AI-014` (app).** The application still writes a bare calendar day into `measuredAt`
    (`store/ledger.js:462`) rather than the `calendarDate` the amended contract declares. A
    field rename in the writer; the storage record does not change. Left because the brief
    forbade touching the interface.
-5. **`AI-015` (app).** `strings.js` retains wording for the two retired `CAPABILITY_` codes.
+7. **`AI-015` (app).** `strings.js` retains wording for the two retired `CAPABILITY_` codes.
    Unreachable, so nothing renders it — and named because dead announcement wording sitting
    in the string table is exactly how an announcement comes back: the next build has a
    sentence ready and only needs a code to hang it on.
-6. **Whether `RECONSTRUCTED_WITH_PROVENANCE` may admit an assumption** — see above. Open.
-7. **62 invariants are still registered `NO_ENGINE_BEHAVIOUR`, whose stated reason is now
+8. **Whether `RECONSTRUCTED_WITH_PROVENANCE` may admit an assumption** — see above. Open.
+9. **62 invariants are still registered `NO_ENGINE_BEHAVIOUR`, whose stated reason is now
    false.** The text reads *"needs engine behaviour; no V2 engine exists
    (`PROJECT-STATE.md`)"*, and one does. `INV-I7` was moved out of that set here because it
    was directly in scope; the other 62 were not looked at, and each needs its own judgement
@@ -227,5 +335,5 @@ The application suite is unchanged and GREEN: 165 checks, 0 failures.
    the type split in `ledger.py`. `INV-H1`'s own generator is an app-level import/export
    round trip rather than an engine property, so promoting it is not simply a matter of
    deleting its registration.
-8. **`OI-FREEZEIDBEHAVIOUR-001`.** Decision 30 is the fifteenth behaviour change under an
+10. **`OI-FREEZEIDBEHAVIOUR-001`.** Decision 30 is the fifteenth behaviour change under an
    unchanged `ALK_V2_FREEZE_5`. Already open; noted again because this pass adds to it.
