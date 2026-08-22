@@ -77,7 +77,55 @@ the **mechanism it names**: `run-mutations.py` reports `NOT CAUGHT BY ITS NAMED
 MECHANISM` when a sabotage turns something else red instead, which is how a
 checker that cannot fire gets published as demonstrated.
 
-## 2 — Choose the reviewers
+## 2 — First, if the change touches the UI: `unimpressed-reefkeeper`
+
+**If the changed paths include anything the owner will look at — a screen, a
+number, a word, a control — `unimpressed-reefkeeper` runs before any other
+reviewer.** A change confined to the engine or the canon skips it; say that you
+skipped it and why.
+
+It drives the running app in a browser and reports what does not make sense. It
+reads no code and no canon, so it is the one reviewer that gets **no diff, no
+changed-path list and no stated intent** — give it the running app and nothing
+else. Withholding the diff is the point: every other reviewer in the table below
+checks the change against an authority, and this gate exists partly because
+authority-checking reviewers have passed, as correct and fully tested, faults
+that were obvious within seconds of using the app.
+
+**It runs first because a fault it can see in ten seconds should not wait for a
+specialist to prove it from a document.**
+
+**Two prerequisites. It stops without them, and stopping is correct.**
+
+1. **The app running in a browser it can drive**, at a phone viewport, built
+   from the head commit. `npm run dev`. Not screenshots, not source.
+2. **A written summary of what is in the tank's data** — how many readings of
+   each parameter, how many dose changes, how many water changes, how many
+   tasks.
+
+Produce the summary yourself, by **counting the records in the data you loaded**,
+before you dispatch it. Do not write it from memory, from the fixture's own
+declared totals, or from what you expect the tank to contain. **A wrong summary
+is worse than none**: the agent measures the whole app against it, so an error
+sends it wrong in both directions — real markers called invented, invented
+markers accepted as real.
+
+If you cannot drive a browser in this session, **do not dispatch it, and say so
+under `not examined`.** Half a review from this agent is worse than none,
+because it will be trusted. Never let it fall back to reading source.
+
+Its findings enter the round like any other reviewer's: severities and
+dispositions as in step 4, `jake` sorts them at the end, and **this workflow
+still fixes nothing.** Its three escalations — anything touching chemistry or
+the canon, anything it flags as *"was this decided?"*, and anything where it
+names two options rather than one answer — are owner decisions, and go in the
+report's `owner decisions raised` line and into
+`docs/process/OPEN-OWNER-DECISIONS.md`.
+
+It does not count against the "default: one reviewer" rule below, and it is
+never the reviewer that rule selects. It answers a different question.
+
+## 3 — Choose the reviewers
 
 **Default: one.** Pick the one whose subject the change actually is:
 
@@ -109,7 +157,7 @@ where a wrong answer reaches a tank.
 Reviewers run concurrently in fresh context, each with the same brief and no
 knowledge of the others' findings.
 
-## 3 — Adjudicate only if you need to, then `jake`
+## 4 — Adjudicate only if you need to, then `jake`
 
 Invoke `adjudicator` when reviewers disagree, when a serious finding is
 contested, or when there are enough findings that deduplication is real work.
@@ -135,7 +183,7 @@ him to sort and you say so. Where `adjudicator` also ran, it goes first and
 The two labels are read together and neither replaces the other: `BLOCKER` +
 `EDGE CASE` is a verified defect nobody will meet, and the report carries both.
 
-## 4 — One classification
+## 5 — One classification
 
 | Classification | Meaning |
 |---|---|
@@ -147,11 +195,13 @@ The two labels are read together and neither replaces the other: `BLOCKER` +
 
 Where more than one applies, report the most severe and list the others.
 
-## 5 — Report
+## 6 — Report
 
 ```
 target: (base..head, changed paths, stated intent)
 independence: (was this reviewed by a session that did not write it?)
+unimpressed-reefkeeper: (run? if not, why not — engine/canon-only change, or
+                         no driveable browser)
 reviewers run: (and which were considered and skipped, with reasons)
 conformance harness: (base verdict vs head verdict; any subject newly failing;
                      mutation harness green?; what it reported as NOT COVERED)
