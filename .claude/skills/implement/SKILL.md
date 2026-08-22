@@ -93,7 +93,51 @@ for you to choose.
 Run the suite. Paste real output into the run record — never a summary of
 output you did not see.
 
-## 5 — One independent reviewer, in fresh context
+## 5 — First, if the round touched the UI: `unimpressed-reefkeeper`
+
+**If this round changed anything the owner will look at — a screen, a number, a
+word, a control — `unimpressed-reefkeeper` runs before any other reviewer.**
+Rounds that touched only the engine or the canon skip it and say so.
+
+It drives the running app in a browser and reports what does not make sense. It
+reads no code and no canon; do not give it either, do not give it the diff, and
+do not give it a specification. Every other reviewer here checks the change
+against an authority. This one checks it against a keeper's eyes, and it exists
+because authority-checking reviewers have passed, as correct and fully tested,
+faults that were obvious within seconds of using the app.
+
+**Two prerequisites. It stops without them, and stopping is correct.**
+
+1. **The app running in a browser it can drive**, at a phone viewport, on this
+   round's build. `npm run dev`. Not screenshots, not source.
+2. **A written summary of what is in the tank's data** — how many readings of
+   each parameter, how many dose changes, how many water changes, how many
+   tasks.
+
+Produce the summary yourself, by **counting the records in the data you loaded**,
+before you dispatch it. Do not write it from memory, from the fixture's own
+declared totals, or from what you expect the tank to contain. **A wrong summary
+is worse than none**: the agent measures the whole app against it, so an error
+sends it wrong in both directions — real markers called invented, invented
+markers accepted as real.
+
+If you cannot drive a browser in this session, **do not dispatch it, and say so
+in the run record.** Half a review from this agent is worse than none, because
+it will be trusted. Never let it fall back to reading source.
+
+**Its findings are fixed in this round**, in the step 6 fix pass, ahead of the
+other findings. The owner is told what was fixed and why; he does not arbitrate
+them. Three exceptions are not fixed and go to him instead, in
+`docs/process/OPEN-OWNER-DECISIONS.md`:
+
+- anything touching chemistry or the canon
+- anything it flags as *"was this decided?"*
+- anything where it names two options rather than one answer
+
+It is not a substitute for the reviewer below. It reports what is wrong on
+screen; the reviewer below still says whether the change is right.
+
+## 5a — One independent reviewer, in fresh context
 
 **By default, exactly one:** `integrator` for documentation and cross-cutting
 changes, `test-engineer` where the risk is that nothing would fail if the code
@@ -128,7 +172,8 @@ execute yet, so it reports in specification mode and says so.
 work does not need it.
 
 **`jake`, after the reviewers and before the fix pass, and only if they found
-something.** He is not a reviewer and does not extend the review (`DEC-017`); he
+something.** He sorts step 5 and step 5a findings alike. He is not a reviewer
+and does not extend the review (`DEC-017`); he
 sorts finished findings into `BUG`, `EDGE CASE` or `ALREADY COVERED` by whether
 the reference system would plausibly reach the state, so that the one fix pass
 at step 6 goes to what matters. He changes no severity: a `BLOCKER` marked
