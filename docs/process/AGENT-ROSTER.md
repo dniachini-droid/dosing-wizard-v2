@@ -1,6 +1,6 @@
 # V2 agent roster
 
-Eleven agents. Each has one job that no other agent has. This document is the
+Twelve agents. Each has one job that no other agent has. This document is the
 authority on what each may and may not do; the definitions in `.claude/agents/`
 are the operative copies and must match it.
 
@@ -9,6 +9,15 @@ Nine of them look for failure or for authority. The two added on 2026-08-20 —
 things is the same as asking whether the product works for the person using it.
 They share one standard, `docs/process/PRODUCT-REVIEW-CRITERIA.md`, which is a
 file rather than prompt text precisely so that there is one copy of it.
+
+`unimpressed-reefkeeper`, added 2026-08-22, is a third of that kind and is
+deliberately **not** held to that standard or any other. It reads no code, no
+canon and no criteria; it drives the running app and reports what does not make
+sense to somebody who has kept reef tanks for twenty years. Its value is that it
+is outside every authority this repository recognises — so where a rule produces
+something absurd on screen, it is the only reviewer positioned to say the rule
+was obeyed and the result is still wrong. It runs **before** any other reviewer
+on any round that touched something the owner will look at.
 
 ## Shape of the workforce
 
@@ -47,10 +56,13 @@ freeze identifier, not to reconcile a contradiction.
 | `adjudicator` | ✓ | ✓ | ✓ | — | — | — |
 | `jake` | ✓ | ✓ | ✓ | — | — | — |
 | `normal-operation-reviewer` | ✓ | ✓ | ✓ | — | — | — |
+| `unimpressed-reefkeeper` | ✓ | ✓ | ✓ | ✓ | — | **unrestricted — see below** |
 
-`Bash` goes to exactly two agents, because their work requires executing
-something: `breaker` must reproduce a failure to be allowed to report it, and
-`test-engineer` must observe a suite actually running. `WebFetch`/`WebSearch` go
+`Bash` goes to three agents, because their work requires executing something:
+`breaker` must reproduce a failure to be allowed to report it, `test-engineer`
+must observe a suite actually running, and `unimpressed-reefkeeper` must drive a
+real browser — its brief refuses screenshots and refuses source, so without the
+means to click there is nothing it can honestly report. `WebFetch`/`WebSearch` go
 to exactly two, both required to source claims from current primary material.
 
 **`normal-operation-reviewer` has no `Bash`, and that is a live limitation
@@ -62,6 +74,19 @@ instead, and says so in every report. When an executable engine exists, whether
 to grant it `Bash` — or to have the invoking session supply engine output for
 comparison, which is the design as written — is an owner decision, not a change
 an agent or a run makes on its own initiative.
+
+**`unimpressed-reefkeeper` is the one agent whose definition declares no tool
+restriction, and it therefore does not carry the read-only guarantee the rest of
+this table describes.** Its file was supplied by the owner and is committed
+byte-for-byte as written; it has no `tools:` line, so it inherits the full tool
+set, `Edit` and `Write` included. Nothing in its brief asks it to write — it is
+told to drive the app and report — but that is prompt text, and this document is
+explicit elsewhere that prompt text is not a boundary. Until the owner decides
+otherwise the mitigation is procedural: it is dispatched to review, never to
+change anything, and its diff is expected to be empty. **Closing it properly
+means adding a `tools:` line to the agent file, which edits an owner-supplied
+document and is therefore the owner's call, not a run's.** Filed as an open
+question rather than settled here.
 
 **Stated plainly: `Bash` is not a read-only grant.** It can write to disk by
 redirection, and it carries `curl` and therefore the whole GitHub API. The
@@ -86,9 +111,9 @@ bind file-editing tools and not `Bash`. Everything else is process discipline.
 
 | Work | Workflow | Reviewers |
 |---|---|---|
-| Ordinary implementation | `/implement` | one by default; specialists where materially relevant; `jake` after, if there are findings |
+| Ordinary implementation | `/implement` | `unimpressed-reefkeeper` first if the UI changed; then one by default; specialists where materially relevant; `jake` after, if there are findings |
 | Chemistry, controller, dosing, safety rails | `/implement-chemistry` | harness, fixtures and invariants, then `canon-conformance-auditor` + `breaker`; `jake` after the sequence |
-| Reviewing an existing PR or diff | `/pr-gate` | risk-based; one by default; `jake` after, if there are findings |
+| Reviewing an existing PR or diff | `/pr-gate` | `unimpressed-reefkeeper` first if the UI changed; then risk-based, one by default; `jake` after, if there are findings |
 | One unresolved blocking question | `/research-sprint` | `domain-verifier` if scientific |
 | Unattended overnight work | **withdrawn** — see `/overnight-cycle` | — |
 
@@ -113,6 +138,7 @@ the skill.
 
 | Situation | Reviewers, in order | Notes |
 |---|---|---|
+| **Any round that changed something the owner will look at** | **`unimpressed-reefkeeper`, before every other reviewer** | `/implement` step 5 and `/pr-gate` step 2. Skipped, with a stated reason, only on engine-only or canon-only rounds. Needs a driveable browser and a counted data summary, and stops without them |
 | Documentation or cross-document change | `integrator` | The primary reviewer while the repository is documentation-only |
 | Ordinary implementation | one reviewer whose subject the change is in, plus specialists it triggers | `/implement` step 5 lists the triggers |
 | Chemistry, controller, dosing, safety rails | fixtures and invariants and the conformance harness, then `canon-conformance-auditor` + `breaker` concurrently, then one fix pass | `/implement-chemistry` steps 3–6. **This reviewer sequence is fixed and closed to extension.** |
@@ -130,6 +156,14 @@ reviewer sequence stays closed. He takes the same slot `adjudicator` does, and
 for the same reason: his sorting is only useful if it reaches the fix pass.
 Running him before the reviewers have finished gives him a partial finding set
 to sort, and his output looks identical either way.
+
+**`unimpressed-reefkeeper` is not in `/implement-chemistry`'s fixed sequence
+either, and for the same reason** — that sequence is closed to extension, and
+chemistry and controller work is exactly the engine-only case its own brief says
+it does not need. Where such a round *also* changes a displayed number or
+sentence, the UI half is reviewed under `/implement` or `/pr-gate`, not by
+reopening the fixed sequence. Whether that split is right is the same question
+as `OD-004` and is open with it.
 
 **`normal-operation-reviewer` is a reviewer, and that difference is
 load-bearing.** It is wired into `/implement` and `/pr-gate` as a specialist
